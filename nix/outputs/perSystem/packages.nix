@@ -21,10 +21,12 @@
     in
     {
       default = rustPlatform.buildRustPackage {
-        pname = "tome-editor";
+        pname = "tome";
         version = "0.1.0";
         src = rootSrc;
         cargoLock.lockFile = rootSrc + "/Cargo.lock";
       };
+
+      kakoune = pkgs.kakoune-unwrapped;
     };
 }
