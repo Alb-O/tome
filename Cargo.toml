@@ -1,0 +1,15 @@
+[package]
+name = "tome-editor"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "tome"
+path = "src/main.rs"
+
+[dependencies]
+
+[dev-dependencies]
