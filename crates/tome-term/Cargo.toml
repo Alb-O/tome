@@ -1,0 +1,15 @@
+[package]
+name = "tome-term"
+description = "Terminal frontend for Tome editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "tome"
+path = "src/main.rs"
+
+[dependencies]
+crossterm.workspace = true
+ratatui.workspace = true
+tome-core.workspace = true

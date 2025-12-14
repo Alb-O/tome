@@ -25,20 +25,15 @@
         version = "0.1.0";
         src = rootSrc;
         cargoLock.lockFile = rootSrc + "/Cargo.lock";
+        buildAndTestSubdir = "crates/tome-term";
       };
 
-      kak-ffi = rustPlatform.buildRustPackage {
-        pname = "kak-ffi";
+      tome-core = rustPlatform.buildRustPackage {
+        pname = "tome-core";
         version = "0.1.0";
         src = rootSrc;
         cargoLock.lockFile = rootSrc + "/Cargo.lock";
-        buildAndTestSubdir = "crates/kak-ffi";
-        postInstall = ''
-          mkdir -p $out/include
-          cp crates/kak-ffi/include/kak_ffi.h $out/include/
-        '';
+        buildAndTestSubdir = "crates/tome-core";
       };
-
-      kakoune = pkgs.kakoune-unwrapped;
     };
 }

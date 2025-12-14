@@ -1,19 +1,18 @@
+[workspace]
+resolver = "3"
+members = ["crates/tome-core", "crates/tome-term"]
 
-[package]
-name = "tome-editor"
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
-[workspace]
-members = ["crates/kak-ffi"]
-resolver = "3"
+license = "MIT"
+repository = "https://github.com/albertlarsan68/tome"
 
-[lib]
-path = "src/lib.rs"
-
-[[bin]]
-name = "tome"
-path = "src/main.rs"
-
-[dependencies]
-
-[dev-dependencies]
+[workspace.dependencies]
+crossterm = "0.28"
+ratatui = "0.29"
+ropey = "1.6"
+smallvec = "1.15"
+tome-core = { path = "crates/tome-core" }
+unicode-segmentation = "1.2"
+unicode-width = "0.2"

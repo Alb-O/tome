@@ -1,0 +1,14 @@
+[package]
+name = "tome-core"
+description = "Core editing primitives for Tome editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ropey.workspace = true
+smallvec.workspace = true
+unicode-segmentation.workspace = true
+unicode-width.workspace = true
+
+[dev-dependencies]
