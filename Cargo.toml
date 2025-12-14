@@ -1,7 +1,11 @@
+
 [package]
 name = "tome-editor"
 version = "0.1.0"
 edition = "2024"
+[workspace]
+members = ["crates/kak-ffi"]
+resolver = "3"
 
 [lib]
 path = "src/lib.rs"
