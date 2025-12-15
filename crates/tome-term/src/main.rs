@@ -300,7 +300,8 @@ impl Editor {
 
     fn execute_command(&mut self, cmd: Command, count: u32, extend: bool) -> bool {
         let slice = self.doc.slice(..);
-        let count_usize = count as usize;
+        // count of 0 means "no count specified", treat as 1
+        let count_usize = if count == 0 { 1 } else { count as usize };
 
         match cmd {
             Command::MoveLeft => {
@@ -829,8 +830,11 @@ fn run_editor(mut editor: Editor) -> io::Result<()> {
             terminal.draw(|frame| editor.render(frame))?;
 
             if let Event::Key(key) = crossterm::event::read()? {
-                if editor.handle_key(key) {
-                    break;
+                // Only handle key press events, not release or repeat
+                if key.kind == crossterm::event::KeyEventKind::Press {
+                    if editor.handle_key(key) {
+                        break;
+                    }
                 }
             }
         }
@@ -971,5 +975,32 @@ mod tests {
         editor.handle_key(KeyEvent::new(KeyCode::Char('U'), KeyModifiers::SHIFT));
         assert_eq!(editor.redo_stack.len(), 0, "redo stack should be empty after redo");
         assert_eq!(editor.doc.to_string(), "", "after redo");
+    }
+
+    #[test]
+    fn test_insert_mode_arrow_keys() {
+        let mut editor = test_editor("hello world");
+        assert_eq!(editor.selection.primary().head, 0, "start at position 0");
+
+        // Enter insert mode with 'i'
+        editor.handle_key(KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE));
+        assert!(matches!(editor.mode(), Mode::Insert), "should be in insert mode");
+
+        // Move right with arrow key
+        editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
+        assert_eq!(editor.selection.primary().head, 1, "after Right arrow, cursor at 1");
+
+        // Move right again
+        editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
+        assert_eq!(editor.selection.primary().head, 2, "after Right arrow, cursor at 2");
+
+        // Move left
+        editor.handle_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE));
+        assert_eq!(editor.selection.primary().head, 1, "after Left arrow, cursor at 1");
+
+        // Move down (should go to next line if we had one, but we don't - stays same)
+        editor.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+        // Still in insert mode
+        assert!(matches!(editor.mode(), Mode::Insert), "still in insert mode after arrows");
     }
 }

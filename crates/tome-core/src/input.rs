@@ -719,6 +719,27 @@ mod tests {
     }
 
     #[test]
+    fn test_insert_mode_arrow_keys() {
+        let mut handler = InputHandler::new();
+        handler.mode = Mode::Insert;
+
+        let result = handler.handle_key(Key::special(SpecialKey::Left));
+        assert!(matches!(result, KeyResult::Command(Command::MoveLeft, _)));
+
+        let result = handler.handle_key(Key::special(SpecialKey::Right));
+        assert!(matches!(result, KeyResult::Command(Command::MoveRight, _)));
+
+        let result = handler.handle_key(Key::special(SpecialKey::Up));
+        assert!(matches!(result, KeyResult::Command(Command::MoveUp, _)));
+
+        let result = handler.handle_key(Key::special(SpecialKey::Down));
+        assert!(matches!(result, KeyResult::Command(Command::MoveDown, _)));
+
+        // Should still be in insert mode
+        assert!(matches!(handler.mode, Mode::Insert));
+    }
+
+    #[test]
     fn test_status() {
         let mut handler = InputHandler::new();
         assert_eq!(handler.status(), "NORMAL");
