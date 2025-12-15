@@ -712,9 +712,19 @@ impl Editor {
                 spans.push(Span::styled(ch.to_string(), style));
             }
 
-            // Cursor at end of line (after last char, on or past the newline)
+            // Cursor at end of line (after last char, before the next line starts)
+            // For lines ending with newline: cursor can be on the newline char (line_end - 1 if there's a newline)
+            // For last line without newline: cursor can be at line_end (EOF position)
             let line_content_end = line_start + line_text.chars().count();
-            if primary.head >= line_content_end && primary.head <= line_end {
+            let is_last_line = line_idx + 1 >= self.doc.len_lines();
+            let cursor_at_eol = if is_last_line {
+                // Last line: cursor can be at or after content, up to and including EOF
+                primary.head >= line_content_end && primary.head <= line_end
+            } else {
+                // Non-last line: cursor can be at content end (on the newline), but not past it
+                primary.head >= line_content_end && primary.head < line_end
+            };
+            if cursor_at_eol {
                 // Only show cursor here if it wasn't already rendered in the loop
                 let cursor_in_content = primary.head < line_content_end;
                 if !cursor_in_content {
@@ -975,6 +985,62 @@ mod tests {
         editor.handle_key(KeyEvent::new(KeyCode::Char('U'), KeyModifiers::SHIFT));
         assert_eq!(editor.redo_stack.len(), 0, "redo stack should be empty after redo");
         assert_eq!(editor.doc.to_string(), "", "after redo");
+    }
+
+    #[test]
+    fn test_insert_newline_single_cursor() {
+        // Bug: in empty file, enter insert mode, press Enter creates 2 blank lines
+        // with cursors appearing on BOTH lines instead of just the second line
+        use ratatui::style::{Color, Modifier};
+        
+        let mut editor = test_editor("");
+        
+        // Enter insert mode
+        editor.handle_key(KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE));
+        assert!(matches!(editor.mode(), Mode::Insert));
+        
+        // Press Enter to create a new line
+        editor.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        
+        // Should have 2 lines now (empty first line + cursor on second)
+        assert_eq!(editor.doc.len_lines(), 2, "should have 2 lines after Enter");
+        
+        // Cursor should be at position 1 (after the newline)
+        assert_eq!(editor.selection.primary().head, 1, "cursor should be at position 1");
+        
+        // Render
+        let mut terminal = Terminal::new(TestBackend::new(80, 10)).unwrap();
+        terminal.draw(|frame| editor.render(frame)).unwrap();
+        
+        // Count cells with cursor styling (white bg, black fg, bold)
+        // The cursor style is: bg=White, fg=Black, bold
+        let buffer = terminal.backend().buffer();
+        let mut cursor_cells = Vec::new();
+        for row in 0..8 {  // Only check document area, not status line
+            for col in 0..80 {
+                let cell = &buffer[(col, row)];
+                if cell.bg == Color::White && cell.fg == Color::Black 
+                   && cell.modifier.contains(Modifier::BOLD) {
+                    cursor_cells.push((col, row));
+                }
+            }
+        }
+        
+        // Should have exactly ONE cursor cell, on line 2 (row index 1)
+        assert_eq!(
+            cursor_cells.len(), 
+            1, 
+            "Expected 1 cursor cell, found {} at positions: {:?}", 
+            cursor_cells.len(), 
+            cursor_cells
+        );
+        assert_eq!(
+            cursor_cells[0], 
+            (0, 1), 
+            "Cursor should be at column 0, row 1 (second line)"
+        );
+        
+        assert_snapshot!(terminal.backend());
     }
 
     #[test]
