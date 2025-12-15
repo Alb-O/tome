@@ -337,6 +337,10 @@ impl Editor {
                 .bg(Color::Yellow)
                 .fg(Color::Black)
                 .add_modifier(Modifier::BOLD),
+            Mode::PendingAction(_) => Style::default()
+                .bg(Color::Yellow)
+                .fg(Color::Black)
+                .add_modifier(Modifier::BOLD),
         };
 
         let modified = if self.modified { " [+]" } else { "" };

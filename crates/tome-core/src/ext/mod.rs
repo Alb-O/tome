@@ -39,7 +39,8 @@ mod objects;
 mod options;
 
 pub use actions::{
-    ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, PendingAction,
+    ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, EditAction,
+    ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount, ScrollDir, VisualDirection,
     ACTIONS, execute_action, find_action,
 };
 pub use hooks::{

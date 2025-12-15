@@ -4,7 +4,7 @@
 //! manages the mode stack (Normal, Insert, Goto, View, etc.),
 //! and handles count prefixes like Kakoune.
 
-use crate::ext::{find_binding, BindingMode};
+use crate::ext::{find_binding, BindingMode, PendingKind, ObjectSelectionKind};
 use crate::key::{Key, KeyCode, MouseButton, MouseEvent, ScrollDirection, SpecialKey};
 use crate::keymap::{
     lookup, Command, CommandParams, Mode, ObjectSelection, PendingCommand, GOTO_KEYMAP,
@@ -22,6 +22,14 @@ pub enum KeyResult {
         count: usize,
         extend: bool,
         register: Option<char>,
+    },
+    /// An action with a character argument (from pending completion).
+    ActionWithChar {
+        name: &'static str,
+        count: usize,
+        extend: bool,
+        register: Option<char>,
+        char_arg: char,
     },
     /// Mode changed (to show in status).
     ModeChange(Mode),
@@ -111,6 +119,11 @@ impl InputHandler {
                 PendingCommand::Register => "REG",
                 PendingCommand::Object(_) => "OBJECT",
             },
+            Mode::PendingAction(kind) => match kind {
+                PendingKind::FindChar { .. } | PendingKind::FindCharReverse { .. } => "FIND",
+                PendingKind::ReplaceChar => "REPLACE",
+                PendingKind::Object(_) => "OBJECT",
+            },
         }
     }
 
@@ -170,6 +183,10 @@ impl InputHandler {
             Mode::Pending(pending) => {
                 let pending = *pending;
                 self.handle_pending_key(key, pending)
+            }
+            Mode::PendingAction(kind) => {
+                let kind = *kind;
+                self.handle_pending_action_key(key, kind)
             }
         }
     }
@@ -709,6 +726,86 @@ impl InputHandler {
         }
     }
 
+    fn handle_pending_action_key(&mut self, key: Key, kind: PendingKind) -> KeyResult {
+        if matches!(key.code, KeyCode::Special(SpecialKey::Escape)) {
+            self.mode = Mode::Normal;
+            self.reset_params();
+            return KeyResult::ModeChange(Mode::Normal);
+        }
+
+        let Some(c) = key.codepoint() else {
+            self.mode = Mode::Normal;
+            self.reset_params();
+            return KeyResult::Unhandled;
+        };
+
+        let count = self.effective_count() as usize;
+        let extend = self.extend;
+        let register = self.register;
+
+        self.mode = Mode::Normal;
+
+        let action_name: &'static str = match kind {
+            PendingKind::FindChar { inclusive: true } => {
+                self.last_find = Some((c, true, false));
+                "find_char"
+            }
+            PendingKind::FindChar { inclusive: false } => {
+                self.last_find = Some((c, false, false));
+                "find_char_to"
+            }
+            PendingKind::FindCharReverse { inclusive: true } => {
+                self.last_find = Some((c, true, true));
+                "find_char_reverse"
+            }
+            PendingKind::FindCharReverse { inclusive: false } => {
+                self.last_find = Some((c, false, true));
+                "find_char_to_reverse"
+            }
+            PendingKind::ReplaceChar => {
+                self.reset_params();
+                return KeyResult::ActionWithChar {
+                    name: "replace_char",
+                    count,
+                    extend,
+                    register,
+                    char_arg: c,
+                };
+            }
+            PendingKind::Object(sel_kind) => {
+                let selection = match sel_kind {
+                    ObjectSelectionKind::Inner => ObjectSelection::Inner,
+                    ObjectSelectionKind::Around => ObjectSelection::Around,
+                    ObjectSelectionKind::ToStart => ObjectSelection::ToStart,
+                    ObjectSelectionKind::ToEnd => ObjectSelection::ToEnd,
+                };
+                self.last_object = Some((selection, c));
+                self.reset_params();
+                return KeyResult::ActionWithChar {
+                    name: match sel_kind {
+                        ObjectSelectionKind::Inner => "select_object_inner",
+                        ObjectSelectionKind::Around => "select_object_around",
+                        ObjectSelectionKind::ToStart => "select_object_to_start",
+                        ObjectSelectionKind::ToEnd => "select_object_to_end",
+                    },
+                    count,
+                    extend,
+                    register,
+                    char_arg: c,
+                };
+            }
+        };
+
+        self.reset_params();
+        KeyResult::ActionWithChar {
+            name: action_name,
+            count,
+            extend,
+            register,
+            char_arg: c,
+        }
+    }
+
     /// Get status info for display.
     pub fn status(&self) -> String {
         let mut parts = Vec::new();
@@ -775,9 +872,11 @@ mod tests {
         let result = handler.handle_key(Key::char('i'));
         assert!(matches!(
             result,
-            KeyResult::Command(Command::InsertBefore, _)
+            KeyResult::Action { name: "insert_before", .. }
         ));
-        assert_eq!(handler.mode, Mode::Insert);
+        // Note: mode change happens in the editor when it executes the action,
+        // not in the InputHandler. The handler stays in Normal mode until
+        // the editor calls set_mode(Insert).
     }
 
     #[test]
@@ -905,8 +1004,8 @@ mod tests {
         let mut handler = InputHandler::new();
 
         let result = handler.handle_key(Key::char(':'));
-        assert!(matches!(result, KeyResult::ModeChange(Mode::Command { .. })));
-        assert!(matches!(handler.mode(), Mode::Command { prompt: ':', .. }));
+        assert!(matches!(result, KeyResult::Action { name: "command_mode", .. }));
+        handler.set_mode(Mode::Command { prompt: ':', input: String::new() });
 
         handler.handle_key(Key::char('q'));
         assert_eq!(handler.command_line(), Some((':', "q")));
@@ -920,7 +1019,7 @@ mod tests {
     fn test_command_mode_escape() {
         let mut handler = InputHandler::new();
 
-        handler.handle_key(Key::char(':'));
+        handler.set_mode(Mode::Command { prompt: ':', input: String::new() });
         handler.handle_key(Key::char('w'));
         handler.handle_key(Key::char('q'));
 
@@ -933,28 +1032,39 @@ mod tests {
     fn test_find_char_repeat() {
         let mut handler = InputHandler::new();
 
+        // f key now returns an Action that will cause PendingAction mode
         let result = handler.handle_key(Key::char('f'));
-        assert!(matches!(result, KeyResult::Pending(_)));
+        assert!(matches!(result, KeyResult::Action { name: "find_char", .. }));
 
+        // Simulate the editor setting PendingAction mode (as the action returns Pending)
+        handler.set_mode(Mode::PendingAction(PendingKind::FindChar { inclusive: true }));
+
+        // Now typing 'x' should complete the find
         let result = handler.handle_key(Key::char('x'));
         assert!(matches!(
             result,
-            KeyResult::Command(Command::FindCharForward { inclusive: true, ch: Some('x') }, _)
+            KeyResult::ActionWithChar { name: "find_char", char_arg: 'x', .. }
         ));
 
+        // Repeat with alt+. (still uses legacy system for now)
         let result = handler.handle_key(Key::alt('.'));
         assert!(matches!(
             result,
             KeyResult::Command(Command::FindCharForward { inclusive: true, ch: Some('x') }, _)
         ));
 
-        handler.handle_key(Key::alt('f'));
+        // alt+f for reverse find
+        let result = handler.handle_key(Key::alt('f'));
+        assert!(matches!(result, KeyResult::Action { name: "find_char_reverse", .. }));
+
+        handler.set_mode(Mode::PendingAction(PendingKind::FindCharReverse { inclusive: true }));
         let result = handler.handle_key(Key::char('y'));
         assert!(matches!(
             result,
-            KeyResult::Command(Command::FindCharBackward { inclusive: true, ch: Some('y') }, _)
+            KeyResult::ActionWithChar { name: "find_char_reverse", char_arg: 'y', .. }
         ));
 
+        // Repeat with alt+. uses legacy repeat
         let result = handler.handle_key(Key::alt('.'));
         assert!(matches!(
             result,

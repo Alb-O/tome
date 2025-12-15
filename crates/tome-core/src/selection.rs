@@ -137,6 +137,25 @@ impl Selection {
     pub fn direction(&self) -> Direction {
         self.primary().direction()
     }
+
+    pub fn rotate_forward(&mut self) {
+        if self.ranges.len() > 1 {
+            self.primary_index = (self.primary_index + 1) % self.ranges.len();
+        }
+    }
+
+    pub fn rotate_backward(&mut self) {
+        if self.ranges.len() > 1 {
+            self.primary_index = (self.primary_index + self.ranges.len() - 1) % self.ranges.len();
+        }
+    }
+
+    pub fn remove_primary(&mut self) {
+        if self.ranges.len() > 1 {
+            self.ranges.remove(self.primary_index);
+            self.primary_index = self.primary_index.min(self.ranges.len().saturating_sub(1));
+        }
+    }
 }
 
 impl Default for Selection {

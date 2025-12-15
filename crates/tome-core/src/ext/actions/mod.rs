@@ -4,9 +4,14 @@
 //! triggered by keybindings. This replaces the hardcoded `Command` enum with
 //! a dynamic, extensible registry.
 
+mod editing;
+mod find;
+mod insert;
 mod modes;
 mod motions;
 mod scroll;
+mod selection_ops;
+mod text_objects;
 
 use linkme::distributed_slice;
 use ropey::RopeSlice;
@@ -20,12 +25,16 @@ pub static ACTIONS: [ActionDef];
 /// The result of executing an action.
 #[derive(Debug, Clone)]
 pub enum ActionResult {
-    /// Action completed successfully, no mode change.
+    /// Action completed successfully, no state change.
     Ok,
     /// Action requests a mode change.
     ModeChange(ActionMode),
     /// Action is a motion that produces a new selection.
     Motion(Selection),
+    /// Apply motion then enter insert mode.
+    InsertWithMotion(Selection),
+    /// Action modifies the document (delete, insert, etc.).
+    Edit(EditAction),
     /// Action requests quitting the editor.
     Quit,
     /// Action requests quitting without saving.
@@ -34,6 +43,71 @@ pub enum ActionResult {
     Error(String),
     /// Action needs more input (e.g., awaiting a character for 'f' find).
     Pending(PendingAction),
+}
+
+/// An edit operation to apply to the document.
+#[derive(Debug, Clone)]
+pub enum EditAction {
+    /// Delete the current selection (optionally yank first).
+    Delete { yank: bool },
+    /// Delete selection and enter insert mode.
+    Change { yank: bool },
+    /// Yank the current selection to the register.
+    Yank,
+    /// Paste from register.
+    Paste { before: bool },
+    /// Paste all register contents.
+    PasteAll { before: bool },
+    /// Replace selection with character.
+    ReplaceWithChar { ch: char },
+    /// Undo the last change.
+    Undo,
+    /// Redo the last undone change.
+    Redo,
+    /// Indent the selection.
+    Indent,
+    /// Deindent the selection.
+    Deindent,
+    /// Convert selection to lowercase.
+    ToLowerCase,
+    /// Convert selection to uppercase.
+    ToUpperCase,
+    /// Swap case of selection.
+    SwapCase,
+    /// Join lines.
+    JoinLines,
+    /// Delete character before cursor (backspace).
+    DeleteBack,
+    /// Open a new line below and enter insert mode.
+    OpenBelow,
+    /// Open a new line above and enter insert mode.
+    OpenAbove,
+    /// Move cursor visually (respects soft wrap).
+    MoveVisual { direction: VisualDirection, count: usize, extend: bool },
+    /// Scroll view (move viewport and optionally cursor).
+    Scroll { direction: ScrollDir, amount: ScrollAmount },
+}
+
+/// Direction for visual movement (respects soft wrap).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VisualDirection {
+    Up,
+    Down,
+}
+
+/// Direction for scrolling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollDir {
+    Up,
+    Down,
+}
+
+/// Amount to scroll.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollAmount {
+    Line(usize),
+    HalfPage,
+    FullPage,
 }
 
 /// Mode to switch to after an action.
@@ -49,8 +123,34 @@ pub enum ActionMode {
 /// An action that needs additional input to complete.
 #[derive(Debug, Clone)]
 pub struct PendingAction {
-    pub action: &'static str,
+    pub kind: PendingKind,
     pub prompt: String,
+}
+
+/// The kind of pending input needed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PendingKind {
+    /// Find character forward (f/t)
+    FindChar { inclusive: bool },
+    /// Find character backward (alt-f/alt-t)
+    FindCharReverse { inclusive: bool },
+    /// Replace with character (r)
+    ReplaceChar,
+    /// Select text object (alt-i/alt-a/[/])
+    Object(ObjectSelectionKind),
+}
+
+/// How to select a text object.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ObjectSelectionKind {
+    /// Select content inside delimiters (alt-i).
+    Inner,
+    /// Select content including delimiters (alt-a).
+    Around,
+    /// Select from cursor to object start ([).
+    ToStart,
+    /// Select from cursor to object end (]).
+    ToEnd,
 }
 
 /// Context passed to action handlers.

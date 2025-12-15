@@ -376,6 +376,9 @@ impl Editor {
             KeyResult::Action { name, count, extend, register } => {
                 self.execute_action(name, count, extend, register)
             }
+            KeyResult::ActionWithChar { name, count, extend, register, char_arg } => {
+                self.execute_action_with_char(name, count, extend, register, char_arg)
+            }
             KeyResult::Command(cmd, params) => {
                 commands::execute_command(self, cmd, params.count, params.extend)
             }
@@ -551,6 +554,14 @@ impl Editor {
                 self.selection = new_selection;
                 false
             }
+            ActionResult::InsertWithMotion(new_selection) => {
+                self.selection = new_selection;
+                self.input.set_mode(Mode::Insert);
+                false
+            }
+            ActionResult::Edit(edit_action) => {
+                self.execute_edit_action(edit_action, extend)
+            }
             ActionResult::ModeChange(mode) => {
                 use ext::ActionMode;
                 match mode {
@@ -574,9 +585,313 @@ impl Editor {
                 false
             }
             ActionResult::Pending(pending) => {
-                self.message = Some(pending.prompt);
+                self.message = Some(pending.prompt.clone());
+                self.input.set_mode(Mode::PendingAction(pending.kind));
                 false
             }
+        }
+    }
+
+    fn execute_action_with_char(
+        &mut self,
+        name: &str,
+        count: usize,
+        extend: bool,
+        register: Option<char>,
+        char_arg: char,
+    ) -> bool {
+        use ext::{ActionContext, ActionArgs, ActionResult, find_action};
+
+        let action = match find_action(name) {
+            Some(a) => a,
+            None => {
+                self.message = Some(format!("Unknown action: {}", name));
+                return false;
+            }
+        };
+
+        let ctx = ActionContext {
+            text: self.doc.slice(..),
+            selection: &self.selection,
+            count,
+            extend,
+            register,
+            args: ActionArgs {
+                char: Some(char_arg),
+                string: None,
+            },
+        };
+
+        match (action.handler)(&ctx) {
+            ActionResult::Ok => false,
+            ActionResult::Motion(new_selection) => {
+                self.selection = new_selection;
+                false
+            }
+            ActionResult::InsertWithMotion(new_selection) => {
+                self.selection = new_selection;
+                self.input.set_mode(Mode::Insert);
+                false
+            }
+            ActionResult::Edit(edit_action) => {
+                self.execute_edit_action(edit_action, extend)
+            }
+            ActionResult::ModeChange(mode) => {
+                use ext::ActionMode;
+                match mode {
+                    ActionMode::Normal => self.input.set_mode(Mode::Normal),
+                    ActionMode::Insert => self.input.set_mode(Mode::Insert),
+                    ActionMode::Goto => self.input.set_mode(Mode::Goto),
+                    ActionMode::View => self.input.set_mode(Mode::View),
+                    ActionMode::Command => {
+                        self.input.set_mode(Mode::Command {
+                            prompt: ':',
+                            input: String::new(),
+                        });
+                    }
+                }
+                false
+            }
+            ActionResult::Quit => true,
+            ActionResult::ForceQuit => true,
+            ActionResult::Error(msg) => {
+                self.message = Some(msg);
+                false
+            }
+            ActionResult::Pending(pending) => {
+                self.message = Some(pending.prompt.clone());
+                self.input.set_mode(Mode::PendingAction(pending.kind));
+                false
+            }
+        }
+    }
+
+    fn execute_edit_action(&mut self, action: ext::EditAction, _extend: bool) -> bool {
+        use ext::EditAction;
+        use tome_core::range::Direction as MoveDir;
+
+        match action {
+            EditAction::Delete { yank } => {
+                if yank {
+                    self.yank_selection();
+                }
+                if self.selection.primary().is_empty() {
+                    let slice = self.doc.slice(..);
+                    self.selection.transform_mut(|r| {
+                        *r = movement::move_horizontally(slice, *r, MoveDir::Forward, 1, true);
+                    });
+                }
+                if !self.selection.primary().is_empty() {
+                    self.save_undo_state();
+                    let tx = Transaction::delete(self.doc.slice(..), &self.selection);
+                    self.selection = tx.map_selection(&self.selection);
+                    tx.apply(&mut self.doc);
+                    self.modified = true;
+                }
+            }
+            EditAction::Change { yank } => {
+                if yank {
+                    self.yank_selection();
+                }
+                if !self.selection.primary().is_empty() {
+                    self.save_undo_state();
+                    let tx = Transaction::delete(self.doc.slice(..), &self.selection);
+                    self.selection = tx.map_selection(&self.selection);
+                    tx.apply(&mut self.doc);
+                    self.modified = true;
+                }
+                self.input.set_mode(Mode::Insert);
+            }
+            EditAction::Yank => {
+                self.yank_selection();
+            }
+            EditAction::Paste { before } => {
+                if before {
+                    self.paste_before();
+                } else {
+                    self.paste_after();
+                }
+            }
+            EditAction::PasteAll { before } => {
+                if before {
+                    self.paste_before();
+                } else {
+                    self.paste_after();
+                }
+            }
+            EditAction::ReplaceWithChar { ch } => {
+                let primary = self.selection.primary();
+                let from = primary.from();
+                let to = primary.to();
+                if from < to {
+                    self.save_undo_state();
+                    let len = to - from;
+                    let replacement = std::iter::repeat_n(ch, len).collect::<String>();
+                    let tx = Transaction::delete(self.doc.slice(..), &self.selection);
+                    self.selection = tx.map_selection(&self.selection);
+                    tx.apply(&mut self.doc);
+                    let tx = Transaction::insert(self.doc.slice(..), &self.selection, replacement);
+                    tx.apply(&mut self.doc);
+                    let head = self.selection.primary().head + len;
+                    self.selection = Selection::point(head);
+                    self.modified = true;
+                } else {
+                    self.save_undo_state();
+                    self.selection = Selection::single(from, from + 1);
+                    let tx = Transaction::delete(self.doc.slice(..), &self.selection);
+                    self.selection = tx.map_selection(&self.selection);
+                    tx.apply(&mut self.doc);
+                    let tx = Transaction::insert(self.doc.slice(..), &self.selection, ch.to_string());
+                    tx.apply(&mut self.doc);
+                    let head = self.selection.primary().head + 1;
+                    self.selection = Selection::point(head);
+                    self.modified = true;
+                }
+            }
+            EditAction::Undo => {
+                self.undo();
+            }
+            EditAction::Redo => {
+                self.redo();
+            }
+            EditAction::Indent => {
+                let slice = self.doc.slice(..);
+                self.selection.transform_mut(|r| {
+                    *r = movement::move_to_line_start(slice, *r, false);
+                });
+                self.insert_text("    ");
+            }
+            EditAction::Deindent => {
+                let line = self.doc.char_to_line(self.selection.primary().head);
+                let line_start = self.doc.line_to_char(line);
+                let line_text: String = self.doc.line(line).chars().take(4).collect();
+                let spaces = line_text.chars().take_while(|c| *c == ' ').count().min(4);
+                if spaces > 0 {
+                    self.save_undo_state();
+                    self.selection = Selection::single(line_start, line_start + spaces);
+                    let tx = Transaction::delete(self.doc.slice(..), &self.selection);
+                    self.selection = tx.map_selection(&self.selection);
+                    tx.apply(&mut self.doc);
+                    self.modified = true;
+                }
+            }
+            EditAction::ToLowerCase => {
+                self.apply_case_conversion(|c| Box::new(c.to_lowercase()));
+            }
+            EditAction::ToUpperCase => {
+                self.apply_case_conversion(|c| Box::new(c.to_uppercase()));
+            }
+            EditAction::SwapCase => {
+                self.apply_case_conversion(|c| {
+                    if c.is_uppercase() {
+                        Box::new(c.to_lowercase())
+                    } else {
+                        Box::new(c.to_uppercase())
+                    }
+                });
+            }
+            EditAction::JoinLines => {
+                let primary = self.selection.primary();
+                let line = self.doc.char_to_line(primary.head);
+                if line + 1 < self.doc.len_lines() {
+                    self.save_undo_state();
+                    let end_of_line = self.doc.line_to_char(line + 1) - 1;
+                    self.selection = Selection::single(end_of_line, end_of_line + 1);
+                    let tx = Transaction::delete(self.doc.slice(..), &self.selection);
+                    self.selection = tx.map_selection(&self.selection);
+                    tx.apply(&mut self.doc);
+                    let tx = Transaction::insert(self.doc.slice(..), &self.selection, " ".to_string());
+                    tx.apply(&mut self.doc);
+                    let head = self.selection.primary().head + 1;
+                    self.selection = Selection::point(head);
+                    self.modified = true;
+                }
+            }
+            EditAction::DeleteBack => {
+                let head = self.selection.primary().head;
+                if head > 0 {
+                    self.save_undo_state();
+                    self.selection = Selection::single(head - 1, head);
+                    let tx = Transaction::delete(self.doc.slice(..), &self.selection);
+                    self.selection = tx.map_selection(&self.selection);
+                    tx.apply(&mut self.doc);
+                    self.modified = true;
+                }
+            }
+            EditAction::OpenBelow => {
+                let slice = self.doc.slice(..);
+                self.selection.transform_mut(|r| {
+                    *r = movement::move_to_line_end(slice, *r, false);
+                });
+                self.insert_text("\n");
+                self.input.set_mode(Mode::Insert);
+            }
+            EditAction::OpenAbove => {
+                let slice = self.doc.slice(..);
+                self.selection.transform_mut(|r| {
+                    *r = movement::move_to_line_start(slice, *r, false);
+                });
+                self.insert_text("\n");
+                self.selection.transform_mut(|r| {
+                    *r = movement::move_vertically(
+                        self.doc.slice(..),
+                        *r,
+                        MoveDir::Backward,
+                        1,
+                        false,
+                    );
+                });
+                self.input.set_mode(Mode::Insert);
+            }
+            EditAction::MoveVisual { direction, count, extend } => {
+                use ext::VisualDirection;
+                let dir = match direction {
+                    VisualDirection::Up => MoveDir::Backward,
+                    VisualDirection::Down => MoveDir::Forward,
+                };
+                self.move_visual_vertical(dir, count, extend);
+            }
+            EditAction::Scroll { direction, amount } => {
+                use ext::{ScrollAmount, ScrollDir};
+                let count = match amount {
+                    ScrollAmount::Line(n) => n,
+                    ScrollAmount::HalfPage => 10,
+                    ScrollAmount::FullPage => 20,
+                };
+                let dir = match direction {
+                    ScrollDir::Up => MoveDir::Backward,
+                    ScrollDir::Down => MoveDir::Forward,
+                };
+                self.move_visual_vertical(dir, count, false);
+            }
+        }
+        false
+    }
+
+    fn apply_case_conversion<F>(&mut self, char_mapper: F)
+    where
+        F: Fn(char) -> Box<dyn Iterator<Item = char>>,
+    {
+        let primary = self.selection.primary();
+        let from = primary.from();
+        let to = primary.to();
+        if from < to {
+            self.save_undo_state();
+            let text: String = self
+                .doc
+                .slice(from..to)
+                .chars()
+                .flat_map(char_mapper)
+                .collect();
+            let new_len = text.chars().count();
+            let tx = Transaction::delete(self.doc.slice(..), &self.selection);
+            self.selection = tx.map_selection(&self.selection);
+            tx.apply(&mut self.doc);
+            let tx = Transaction::insert(self.doc.slice(..), &self.selection, text);
+            tx.apply(&mut self.doc);
+            let head = self.selection.primary().head + new_len;
+            self.selection = Selection::point(head);
+            self.modified = true;
         }
     }
 

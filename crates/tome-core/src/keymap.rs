@@ -30,6 +30,8 @@ pub enum Mode {
     Command { prompt: char, input: String },
     /// Waiting for next character (e.g., for `f`, `t`, `r` commands).
     Pending(PendingCommand),
+    /// Waiting for character input to complete an action (new system).
+    PendingAction(crate::ext::PendingKind),
 }
 
 /// Commands that wait for a character argument.
