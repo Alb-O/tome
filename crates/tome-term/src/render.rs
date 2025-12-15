@@ -282,9 +282,6 @@ impl Editor {
             });
 
             pos = break_pos;
-            while pos < chars.len() && chars[pos] == ' ' {
-                pos += 1;
-            }
         }
 
         segments
