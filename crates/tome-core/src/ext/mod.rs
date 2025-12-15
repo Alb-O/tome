@@ -29,7 +29,6 @@
 //! };
 //! ```
 
-mod builtin_hooks;
 mod commands;
 mod filetypes;
 mod hooks;

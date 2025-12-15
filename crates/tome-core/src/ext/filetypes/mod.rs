@@ -2,7 +2,7 @@
 
 use linkme::distributed_slice;
 
-use super::{FileTypeDef, FILE_TYPES};
+use crate::ext::{FileTypeDef, FILE_TYPES};
 
 #[distributed_slice(FILE_TYPES)]
 static FT_RUST: FileTypeDef = FileTypeDef {
@@ -124,7 +124,7 @@ static FT_TOML: FileTypeDef = FileTypeDef {
 #[distributed_slice(FILE_TYPES)]
 static FT_MARKDOWN: FileTypeDef = FileTypeDef {
     name: "markdown",
-    extensions: &["md", "markdown", "mkd"],
+    extensions: &["md", "markdown"],
     filenames: &["README", "CHANGELOG"],
     first_line_patterns: &[],
     description: "Markdown file",

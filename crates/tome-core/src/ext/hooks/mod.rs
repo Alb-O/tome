@@ -7,7 +7,7 @@
 //! # Example
 //!
 //! ```ignore
-//! use tome_core::ext::{HookDef, HookEvent, HookContext, HOOKS};
+//! use tome_core::ext::hooks::{HookDef, HookEvent, HookContext, HOOKS};
 //! use linkme::distributed_slice;
 //!
 //! #[distributed_slice(HOOKS)]
@@ -15,6 +15,7 @@
 //!     name: "format_on_save",
 //!     event: HookEvent::BufferWrite,
 //!     description: "Format buffer before saving",
+//!     priority: 100,
 //!     handler: |ctx| {
 //!         if let HookContext::BufferWrite { path, .. } = ctx {
 //!             // format the file
@@ -22,6 +23,9 @@
 //!     },
 //! };
 //! ```
+
+mod log_buffer_open;
+mod log_mode_change;
 
 use linkme::distributed_slice;
 use ropey::RopeSlice;
