@@ -39,6 +39,48 @@ pub struct Editor {
 }
 
 impl Editor {
+    fn execute_command_line(&mut self, input: &str) -> bool {
+        use ext::{find_command, CommandContext, CommandOutcome};
+
+        let trimmed = input.trim();
+        if trimmed.is_empty() {
+            return false;
+        }
+
+        let mut parts = trimmed.split_whitespace();
+        let name = match parts.next() {
+            Some(n) => n,
+            None => return false,
+        };
+
+        let arg_strings: Vec<String> = parts.map(|s| s.to_string()).collect();
+        let args: Vec<&str> = arg_strings.iter().map(|s| s.as_str()).collect();
+
+        let cmd = match find_command(name) {
+            Some(cmd) => cmd,
+            None => {
+                self.message = Some(format!("Unknown command: {}", name));
+                return false;
+            }
+        };
+
+        let mut ctx = CommandContext {
+            editor: self,
+            args: &args,
+            count: 1,
+            register: None,
+        };
+
+        match (cmd.handler)(&mut ctx) {
+            Ok(CommandOutcome::Ok) => false,
+            Ok(CommandOutcome::Quit) => true,
+            Ok(CommandOutcome::ForceQuit) => true,
+            Err(e) => {
+                ctx.editor.error(&e.to_string());
+                false
+            }
+        }
+    }
     pub fn new(path: PathBuf) -> io::Result<Self> {
         let content = if path.exists() {
             fs::read_to_string(&path)?
@@ -396,8 +438,7 @@ impl Editor {
                 false
             }
             KeyResult::ExecuteCommand(cmd) => {
-                self.message = Some(format!("Command not implemented: {}", cmd));
-                false
+                self.execute_command_line(&cmd)
             }
             KeyResult::ExecuteSearch { pattern, reverse } => {
                 self.input.set_last_search(pattern.clone(), reverse);
