@@ -158,9 +158,10 @@ pub enum Command {
     JoinLines,
     JoinLinesSelect,
 
-    // Object selection - enters pending mode when object_type is None
+    // Object selection - trigger is the character that identifies the object (w, b, (, etc.)
+    // When trigger is None, enters pending mode to wait for the trigger char
     SelectObject {
-        object_type: Option<ObjectType>,
+        trigger: Option<char>,
         selection: ObjectSelection,
     },
 
@@ -365,14 +366,14 @@ pub static NORMAL_KEYMAP: &[KeyMapping] = &[
     KeyMapping::new(key!(alt 'j'), Command::JoinLines, "join lines"),
     KeyMapping::new(key!(alt 'J'), Command::JoinLinesSelect, "join lines (select spaces)"),
     // === Object selection ===
-    KeyMapping::new(key!(alt 'i'), Command::SelectObject { object_type: None, selection: ObjectSelection::Inner }, "select inner object"),
-    KeyMapping::new(key!(alt 'a'), Command::SelectObject { object_type: None, selection: ObjectSelection::Around }, "select around object"),
-    KeyMapping::new(key!('['), Command::SelectObject { object_type: None, selection: ObjectSelection::ToStart }, "select to object start"),
-    KeyMapping::new(key!(']'), Command::SelectObject { object_type: None, selection: ObjectSelection::ToEnd }, "select to object end"),
-    KeyMapping::new(key!('{'), Command::SelectObject { object_type: None, selection: ObjectSelection::ToStart }, "extend to object start"),
-    KeyMapping::new(key!('}'), Command::SelectObject { object_type: None, selection: ObjectSelection::ToEnd }, "extend to object end"),
-    KeyMapping::new(key!(alt '['), Command::SelectObject { object_type: None, selection: ObjectSelection::ToStart }, "select to inner object start"),
-    KeyMapping::new(key!(alt ']'), Command::SelectObject { object_type: None, selection: ObjectSelection::ToEnd }, "select to inner object end"),
+    KeyMapping::new(key!(alt 'i'), Command::SelectObject { trigger: None, selection: ObjectSelection::Inner }, "select inner object"),
+    KeyMapping::new(key!(alt 'a'), Command::SelectObject { trigger: None, selection: ObjectSelection::Around }, "select around object"),
+    KeyMapping::new(key!('['), Command::SelectObject { trigger: None, selection: ObjectSelection::ToStart }, "select to object start"),
+    KeyMapping::new(key!(']'), Command::SelectObject { trigger: None, selection: ObjectSelection::ToEnd }, "select to object end"),
+    KeyMapping::new(key!('{'), Command::SelectObject { trigger: None, selection: ObjectSelection::ToStart }, "extend to object start"),
+    KeyMapping::new(key!('}'), Command::SelectObject { trigger: None, selection: ObjectSelection::ToEnd }, "extend to object end"),
+    KeyMapping::new(key!(alt '['), Command::SelectObject { trigger: None, selection: ObjectSelection::ToStart }, "select to inner object start"),
+    KeyMapping::new(key!(alt ']'), Command::SelectObject { trigger: None, selection: ObjectSelection::ToEnd }, "select to inner object end"),
     // === Scrolling ===
     KeyMapping::new(key!(ctrl 'u'), Command::ScrollHalfPageUp, "scroll half page up"),
     KeyMapping::new(key!(ctrl 'd'), Command::ScrollHalfPageDown, "scroll half page down"),
@@ -449,64 +450,7 @@ pub static VIEW_KEYMAP: &[KeyMapping] = &[
     KeyMapping::new(key!(special Escape), Command::Escape, "cancel"),
 ];
 
-/// Object types for object selection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ObjectType {
-    Word,
-    WORD,
-    Sentence,
-    Paragraph,
-    Parentheses,
-    Braces,
-    Brackets,
-    AngleBrackets,
-    DoubleQuotes,
-    SingleQuotes,
-    Backticks,
-    IndentBlock,
-    Number,
-    Argument,
-    Whitespace,
-    /// Custom delimiter character.
-    Custom(char),
-}
 
-impl ObjectType {
-    pub fn from_char(c: char) -> Option<Self> {
-        match c {
-            'w' => Some(Self::Word),
-            'b' | '(' | ')' => Some(Self::Parentheses),
-            'B' | '{' | '}' => Some(Self::Braces),
-            'r' | '[' | ']' => Some(Self::Brackets),
-            'a' | '<' | '>' => Some(Self::AngleBrackets),
-            'Q' | '"' => Some(Self::DoubleQuotes),
-            'q' | '\'' => Some(Self::SingleQuotes),
-            'g' | '`' => Some(Self::Backticks),
-            's' => Some(Self::Sentence),
-            'p' => Some(Self::Paragraph),
-            'i' => Some(Self::IndentBlock),
-            'n' => Some(Self::Number),
-            'u' => Some(Self::Argument),
-            ' ' => Some(Self::Whitespace),
-            c if c.is_ascii_punctuation() => Some(Self::Custom(c)),
-            _ => None,
-        }
-    }
-
-    pub fn delimiters(&self) -> Option<(char, char)> {
-        match self {
-            Self::Parentheses => Some(('(', ')')),
-            Self::Braces => Some(('{', '}')),
-            Self::Brackets => Some(('[', ']')),
-            Self::AngleBrackets => Some(('<', '>')),
-            Self::DoubleQuotes => Some(('"', '"')),
-            Self::SingleQuotes => Some(('\'', '\'')),
-            Self::Backticks => Some(('`', '`')),
-            Self::Custom(c) => Some((*c, *c)),
-            _ => None,
-        }
-    }
-}
 
 /// Look up a key in a keymap.
 pub fn lookup(keymap: &[KeyMapping], key: Key) -> Option<&KeyMapping> {
@@ -547,13 +491,6 @@ mod tests {
     fn test_lookup_unmapped() {
         assert!(lookup_normal(Key::char('Z')).is_some()); // Z is mapped
         assert!(lookup_normal(Key::ctrl('z')).is_none()); // Ctrl-z is not
-    }
-
-    #[test]
-    fn test_object_type_from_char() {
-        assert_eq!(ObjectType::from_char('w'), Some(ObjectType::Word));
-        assert_eq!(ObjectType::from_char('('), Some(ObjectType::Parentheses));
-        assert_eq!(ObjectType::from_char('"'), Some(ObjectType::DoubleQuotes));
     }
 
     #[test]

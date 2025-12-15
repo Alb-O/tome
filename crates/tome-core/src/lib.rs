@@ -14,7 +14,7 @@ pub use ext::{
 };
 pub use input::{InputHandler, KeyResult};
 pub use key::{Key, KeyCode, Modifiers, SpecialKey};
-pub use keymap::{Command, CommandParams, Mode, ObjectType, SelectMode};
+pub use keymap::{Command, CommandParams, Mode, SelectMode};
 pub use movement::WordType;
 pub use range::Range;
 pub use ropey::{Rope, RopeSlice};

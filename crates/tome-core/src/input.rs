@@ -6,7 +6,7 @@
 
 use crate::key::{Key, KeyCode, SpecialKey};
 use crate::keymap::{
-    lookup, Command, CommandParams, Mode, ObjectSelection, ObjectType, PendingCommand, GOTO_KEYMAP,
+    lookup, Command, CommandParams, Mode, ObjectSelection, PendingCommand, GOTO_KEYMAP,
     NORMAL_KEYMAP, VIEW_KEYMAP,
 };
 
@@ -44,7 +44,7 @@ pub struct InputHandler {
     /// Last find command for repeat.
     last_find: Option<(char, bool, bool)>, // (char, inclusive, reverse)
     /// Last object selection for repeat.
-    last_object: Option<(ObjectSelection, ObjectType)>,
+    last_object: Option<(ObjectSelection, char)>,
 }
 
 impl Default for InputHandler {
@@ -281,13 +281,13 @@ impl InputHandler {
                 KeyResult::Pending("replace".into())
             }
 
-            Command::SelectObject { object_type, selection } => {
-                if let Some(obj) = object_type {
-                    self.last_object = Some((selection, obj));
+            Command::SelectObject { trigger, selection } => {
+                if let Some(ch) = trigger {
+                    self.last_object = Some((selection, ch));
                     let params = self.make_params();
                     self.reset_params();
                     return KeyResult::Command(
-                        Command::SelectObject { object_type: Some(obj), selection },
+                        Command::SelectObject { trigger: Some(ch), selection },
                         params,
                     );
                 }
@@ -593,19 +593,18 @@ impl InputHandler {
 
             PendingCommand::Object(selection) => {
                 if let Some(c) = key.codepoint() {
-                    if let Some(obj_type) = ObjectType::from_char(c) {
-                        self.last_object = Some((selection, obj_type));
-                        let params = self.make_params();
-                        self.mode = Mode::Normal;
-                        self.reset_params();
-                        return KeyResult::Command(
-                            Command::SelectObject {
-                                object_type: Some(obj_type),
-                                selection,
-                            },
-                            params,
-                        );
-                    }
+                    // Any char can be a trigger - the ext registry will validate
+                    self.last_object = Some((selection, c));
+                    let params = self.make_params();
+                    self.mode = Mode::Normal;
+                    self.reset_params();
+                    return KeyResult::Command(
+                        Command::SelectObject {
+                            trigger: Some(c),
+                            selection,
+                        },
+                        params,
+                    );
                 }
                 self.mode = Mode::Normal;
                 self.reset_params();

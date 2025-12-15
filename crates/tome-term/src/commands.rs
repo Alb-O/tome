@@ -1,3 +1,4 @@
+use tome_core::ext;
 use tome_core::range::Direction as MoveDir;
 use tome_core::{Command, Selection, Transaction, WordType, movement};
 use tome_core::keymap::ObjectSelection;
@@ -34,25 +35,54 @@ where
     }
 }
 
-pub fn execute_command_line(editor: &mut Editor, cmd: &str) -> bool {
-    let cmd = cmd.trim();
-    match cmd {
-        "q" | "quit" => return true,
-        "q!" | "quit!" => return true,
-        "w" | "write" => {
+pub fn execute_command_line(editor: &mut Editor, input: &str) -> bool {
+    let input = input.trim();
+    let mut parts = input.split_whitespace();
+    let cmd_name = match parts.next() {
+        Some(name) => name,
+        None => return false,
+    };
+    let _args: Vec<&str> = parts.collect();
+
+    let cmd = match ext::find_command(cmd_name) {
+        Some(cmd) => cmd,
+        None => {
+            editor.message = Some(format!("Unknown command: {}", cmd_name));
+            return false;
+        }
+    };
+
+    match cmd.name {
+        "help" => {
+            let help_text: Vec<String> = ext::COMMANDS
+                .iter()
+                .map(|c| {
+                    let aliases = if c.aliases.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" ({})", c.aliases.join(", "))
+                    };
+                    format!(":{}{} - {}", c.name, aliases, c.description)
+                })
+                .collect();
+            editor.message = Some(help_text.join(" | "));
+        }
+        "quit" => return true,
+        "quit!" => return true,
+        "write" => {
             match editor.save() {
-                Ok(()) => {}
+                Ok(()) => editor.message = Some("Written".into()),
                 Err(e) => editor.message = Some(format!("Error saving: {}", e)),
             }
         }
-        "wq" | "x" => {
+        "wq" => {
             match editor.save() {
                 Ok(()) => return true,
                 Err(e) => editor.message = Some(format!("Error saving: {}", e)),
             }
         }
         _ => {
-            editor.message = Some(format!("Unknown command: {}", cmd));
+            editor.message = Some(format!("{} not implemented", cmd.name));
         }
     }
     false
@@ -351,13 +381,13 @@ pub fn execute_command(editor: &mut Editor, cmd: Command, count: u32, extend: bo
             editor.redo();
         }
 
-        Command::SelectObject { object_type, selection } => {
-            if let Some(obj) = object_type {
+        Command::SelectObject { trigger, selection } => {
+            if let Some(ch) = trigger {
                 match selection {
-                    ObjectSelection::Inner => editor.select_object(obj, true),
-                    ObjectSelection::Around => editor.select_object(obj, false),
-                    ObjectSelection::ToStart => editor.select_to_object_boundary(obj, true, extend),
-                    ObjectSelection::ToEnd => editor.select_to_object_boundary(obj, false, extend),
+                    ObjectSelection::Inner => { editor.select_object_by_trigger(ch, true); }
+                    ObjectSelection::Around => { editor.select_object_by_trigger(ch, false); }
+                    ObjectSelection::ToStart => { editor.select_to_object_boundary(ch, true, extend); }
+                    ObjectSelection::ToEnd => { editor.select_to_object_boundary(ch, false, extend); }
                 }
             }
         }

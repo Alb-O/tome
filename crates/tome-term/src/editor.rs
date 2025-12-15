@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 use tome_core::range::Direction as MoveDir;
 use tome_core::{
-    InputHandler, Key, KeyResult, Mode, ObjectType, Rope, Selection, Transaction,
-    WordType, ext, movement,
+    InputHandler, Key, KeyResult, Mode, Rope, Selection, Transaction,
+    ext, movement,
 };
 
 use crate::commands;
@@ -181,86 +181,35 @@ impl Editor {
         self.insert_text(&self.registers.yank.clone());
     }
 
-    pub fn select_object(&mut self, obj: ObjectType, inner: bool) {
-        let slice = self.doc.slice(..);
-        self.selection.transform_mut(|r| {
-            match obj {
-                ObjectType::Word => {
-                    *r = movement::select_word_object(slice, *r, WordType::Word, inner);
-                }
-                ObjectType::WORD => {
-                    *r = movement::select_word_object(slice, *r, WordType::WORD, inner);
-                }
-                ObjectType::Parentheses
-                | ObjectType::Braces
-                | ObjectType::Brackets
-                | ObjectType::AngleBrackets
-                | ObjectType::DoubleQuotes
-                | ObjectType::SingleQuotes
-                | ObjectType::Backticks
-                | ObjectType::Custom(_) => {
-                    if let Some((open, close)) = obj.delimiters() {
-                        if let Some(new_range) =
-                            movement::select_surround_object(slice, *r, open, close, inner)
-                        {
-                            *r = new_range;
-                        }
-                    }
-                }
-                _ => {}
-            }
-        });
-    }
-
-    pub fn select_to_object_boundary(&mut self, obj: ObjectType, to_start: bool, extend: bool) {
-        let slice = self.doc.slice(..);
-        self.selection.transform_mut(|r| {
-            let obj_range = match obj {
-                ObjectType::Word => {
-                    Some(movement::select_word_object(slice, *r, WordType::Word, false))
-                }
-                ObjectType::WORD => {
-                    Some(movement::select_word_object(slice, *r, WordType::WORD, false))
-                }
-                ObjectType::Parentheses
-                | ObjectType::Braces
-                | ObjectType::Brackets
-                | ObjectType::AngleBrackets
-                | ObjectType::DoubleQuotes
-                | ObjectType::SingleQuotes
-                | ObjectType::Backticks
-                | ObjectType::Custom(_) => {
-                    if let Some((open, close)) = obj.delimiters() {
-                        movement::select_surround_object(slice, *r, open, close, false)
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
-            };
-
-            if let Some(obj_range) = obj_range {
-                let new_head = if to_start { obj_range.from() } else { obj_range.to() };
-                if extend {
-                    *r = tome_core::Range::new(r.anchor, new_head);
-                } else {
-                    *r = tome_core::Range::new(r.head, new_head);
-                }
-            }
-        });
-    }
-
     /// Select a text object using the extension registry.
-    ///
-    /// This method looks up the text object by its trigger character and uses
-    /// the registered handlers to perform the selection.
-    pub fn select_object_by_char(&mut self, trigger: char, inner: bool) -> bool {
+    pub fn select_object_by_trigger(&mut self, trigger: char, inner: bool) -> bool {
         if let Some(obj_def) = ext::find_text_object(trigger) {
             let slice = self.doc.slice(..);
             self.selection.transform_mut(|r| {
                 let handler = if inner { obj_def.inner } else { obj_def.around };
                 if let Some(new_range) = handler(slice, r.head) {
                     *r = new_range;
+                }
+            });
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Select to object boundary using the extension registry.
+    pub fn select_to_object_boundary(&mut self, trigger: char, to_start: bool, extend: bool) -> bool {
+        if let Some(obj_def) = ext::find_text_object(trigger) {
+            let slice = self.doc.slice(..);
+            self.selection.transform_mut(|r| {
+                // Use 'around' to get the full object bounds
+                if let Some(obj_range) = (obj_def.around)(slice, r.head) {
+                    let new_head = if to_start { obj_range.from() } else { obj_range.to() };
+                    if extend {
+                        *r = tome_core::Range::new(r.anchor, new_head);
+                    } else {
+                        *r = tome_core::Range::new(r.head, new_head);
+                    }
                 }
             });
             true

@@ -28,7 +28,9 @@
 //! };
 //! ```
 
+mod commands;
 mod filetypes;
+mod motions;
 mod objects;
 
 use linkme::distributed_slice;
@@ -274,6 +276,8 @@ mod tests {
         // Verify builtin registrations are present
         assert!(TEXT_OBJECTS.len() >= 9); // word, WORD, parens, braces, brackets, angle, quotes x3
         assert!(FILE_TYPES.len() >= 15); // rust, python, js, ts, c, cpp, go, etc.
+        assert!(MOTIONS.len() >= 10); // basic movement, word, line, document
+        assert!(COMMANDS.len() >= 5); // quit, write, edit, buffer commands
     }
 
     #[test]
@@ -309,5 +313,28 @@ mod tests {
 
         let err = CommandError::MissingArgument("filename");
         assert_eq!(format!("{}", err), "missing argument: filename");
+    }
+
+    #[test]
+    fn test_find_command() {
+        // Test by primary name
+        let quit = find_command("quit").expect("quit command should exist");
+        assert_eq!(quit.name, "quit");
+
+        // Test by alias
+        let quit_alias = find_command("q").expect("q alias should find quit");
+        assert_eq!(quit_alias.name, "quit");
+
+        let write = find_command("w").expect("w alias should find write");
+        assert_eq!(write.name, "write");
+    }
+
+    #[test]
+    fn test_find_motion() {
+        let left = find_motion("move_left").expect("move_left motion should exist");
+        assert_eq!(left.name, "move_left");
+
+        let word = find_motion("next_word_start").expect("next_word_start motion should exist");
+        assert_eq!(word.name, "next_word_start");
     }
 }
