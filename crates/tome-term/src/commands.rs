@@ -165,6 +165,17 @@ pub fn execute_command(editor: &mut Editor, cmd: Command, count: u32, extend: bo
                 editor.modified = true;
             }
         }
+        Command::DeleteBack => {
+            let head = editor.selection.primary().head;
+            if head > 0 {
+                editor.save_undo_state();
+                editor.selection = Selection::single(head - 1, head);
+                let tx = Transaction::delete(editor.doc.slice(..), &editor.selection);
+                editor.selection = tx.map_selection(&editor.selection);
+                tx.apply(&mut editor.doc);
+                editor.modified = true;
+            }
+        }
         Command::Change { yank } => {
             if yank {
                 editor.yank_selection();

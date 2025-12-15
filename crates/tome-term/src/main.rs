@@ -242,7 +242,7 @@ mod tests {
     #[test]
     fn test_soft_wrap_long_line() {
         let long_line = "The quick brown fox jumps over the lazy dog and keeps on running";
-        let mut editor = test_editor(long_line);
+        let editor = test_editor(long_line);
         
         let mut terminal = Terminal::new(TestBackend::new(40, 10)).unwrap();
         terminal.draw(|frame| editor.render(frame)).unwrap();
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn test_soft_wrap_word_boundary() {
         let text = "hello world this is a test of word wrapping behavior";
-        let mut editor = test_editor(text);
+        let editor = test_editor(text);
         
         let mut terminal = Terminal::new(TestBackend::new(30, 10)).unwrap();
         terminal.draw(|frame| editor.render(frame)).unwrap();
@@ -288,5 +288,22 @@ mod tests {
         assert_eq!(second_gutter.fg, Color::Rgb(60, 60, 60), "wrapped line gutter should be dim");
         
         assert_snapshot!(terminal.backend());
+    }
+
+    #[test]
+    fn test_backspace_deletes_backwards() {
+        let mut editor = test_editor("hello");
+        
+        editor.handle_key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        assert!(matches!(editor.mode(), Mode::Insert));
+        assert_eq!(editor.selection.primary().head, 1, "cursor at 1 after 'a'");
+        
+        editor.handle_key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        assert_eq!(editor.doc.to_string(), "ello", "first char deleted");
+        assert_eq!(editor.selection.primary().head, 0, "cursor moved back to 0");
+        
+        editor.handle_key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        assert_eq!(editor.doc.to_string(), "ello", "no change when at start");
+        assert_eq!(editor.selection.primary().head, 0, "cursor stays at 0");
     }
 }

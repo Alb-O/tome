@@ -373,7 +373,7 @@ impl InputHandler {
             KeyCode::Special(SpecialKey::Tab) => KeyResult::InsertChar('\t'),
 
             KeyCode::Special(SpecialKey::Backspace) => {
-                KeyResult::Command(Command::Delete { yank: false }, CommandParams::default())
+                KeyResult::Command(Command::DeleteBack, CommandParams::default())
             }
 
             KeyCode::Special(SpecialKey::Delete) => {

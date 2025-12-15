@@ -105,6 +105,7 @@ pub enum Command {
 
     // Changes
     Delete { yank: bool },
+    DeleteBack,
     Change { yank: bool },
     Yank,
     Paste { before: bool },
