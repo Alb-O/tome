@@ -29,13 +29,22 @@
 //! };
 //! ```
 
+mod actions;
 mod commands;
 mod filetypes;
 mod hooks;
+mod keybindings;
 mod motions;
 mod objects;
 
+pub use actions::{
+    ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, PendingAction,
+    ACTIONS, execute_action, find_action,
+};
 pub use hooks::{emit as emit_hook, find_hooks, all_hooks, HookContext, HookDef, HookEvent, HOOKS};
+pub use keybindings::{
+    BindingMode, KeyBindingDef, KEYBINDINGS, find_binding, bindings_for_mode, bindings_for_action,
+};
 
 use linkme::distributed_slice;
 use ropey::RopeSlice;

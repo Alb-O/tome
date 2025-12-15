@@ -373,6 +373,9 @@ impl Editor {
         let result = self.input.handle_key(key);
 
         match result {
+            KeyResult::Action { name, count, extend, register } => {
+                self.execute_action(name, count, extend, register)
+            }
             KeyResult::Command(cmd, params) => {
                 commands::execute_command(self, cmd, params.count, params.extend)
             }
@@ -512,6 +515,67 @@ impl Editor {
             }
             ScrollDirection::Left | ScrollDirection::Right => {
                 // Horizontal scroll not implemented yet
+            }
+        }
+    }
+
+    fn execute_action(
+        &mut self,
+        name: &str,
+        count: usize,
+        extend: bool,
+        _register: Option<char>,
+    ) -> bool {
+        use ext::{ActionContext, ActionArgs, ActionResult, find_action};
+
+        let action = match find_action(name) {
+            Some(a) => a,
+            None => {
+                self.message = Some(format!("Unknown action: {}", name));
+                return false;
+            }
+        };
+
+        let ctx = ActionContext {
+            text: self.doc.slice(..),
+            selection: &self.selection,
+            count,
+            extend,
+            register: _register,
+            args: ActionArgs::default(),
+        };
+
+        match (action.handler)(&ctx) {
+            ActionResult::Ok => false,
+            ActionResult::Motion(new_selection) => {
+                self.selection = new_selection;
+                false
+            }
+            ActionResult::ModeChange(mode) => {
+                use ext::ActionMode;
+                match mode {
+                    ActionMode::Normal => self.input.set_mode(Mode::Normal),
+                    ActionMode::Insert => self.input.set_mode(Mode::Insert),
+                    ActionMode::Goto => self.input.set_mode(Mode::Goto),
+                    ActionMode::View => self.input.set_mode(Mode::View),
+                    ActionMode::Command => {
+                        self.input.set_mode(Mode::Command {
+                            prompt: ':',
+                            input: String::new(),
+                        });
+                    }
+                }
+                false
+            }
+            ActionResult::Quit => true,
+            ActionResult::ForceQuit => true,
+            ActionResult::Error(msg) => {
+                self.message = Some(msg);
+                false
+            }
+            ActionResult::Pending(pending) => {
+                self.message = Some(pending.prompt);
+                false
             }
         }
     }

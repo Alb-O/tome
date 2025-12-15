@@ -12,6 +12,7 @@ crossterm = ["dep:crossterm"]
 [dependencies]
 crossterm = { workspace = true, optional = true }
 linkme.workspace = true
+paste.workspace = true
 ropey.workspace = true
 smallvec.workspace = true
 unicode-segmentation.workspace = true

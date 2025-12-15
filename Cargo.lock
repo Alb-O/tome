@@ -966,6 +966,7 @@ dependencies = [
  "criterion",
  "crossterm",
  "linkme",
+ "paste",
  "ropey",
  "smallvec",
  "unicode-segmentation",

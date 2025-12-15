@@ -4,6 +4,7 @@
 //! manages the mode stack (Normal, Insert, Goto, View, etc.),
 //! and handles count prefixes like Kakoune.
 
+use crate::ext::{find_binding, BindingMode};
 use crate::key::{Key, KeyCode, MouseButton, MouseEvent, ScrollDirection, SpecialKey};
 use crate::keymap::{
     lookup, Command, CommandParams, Mode, ObjectSelection, PendingCommand, GOTO_KEYMAP,
@@ -13,8 +14,15 @@ use crate::keymap::{
 /// Result of processing a key.
 #[derive(Debug, Clone)]
 pub enum KeyResult {
-    /// A command to execute.
+    /// A command to execute (legacy enum-based system).
     Command(Command, CommandParams),
+    /// An action to execute (new string-based system).
+    Action {
+        name: &'static str,
+        count: usize,
+        extend: bool,
+        register: Option<char>,
+    },
     /// Mode changed (to show in status).
     ModeChange(Mode),
     /// Waiting for more input.
@@ -208,6 +216,21 @@ impl InputHandler {
             self.extend = true;
         }
 
+        // Try new keybinding registry first
+        if let Some(binding) = find_binding(BindingMode::Normal, key) {
+            let count = if self.count > 0 { self.count as usize } else { 1 };
+            let extend = self.extend;
+            let register = self.register;
+            self.reset_params();
+            return KeyResult::Action {
+                name: binding.action,
+                count,
+                extend,
+                register,
+            };
+        }
+
+        // Fall back to legacy keymap
         if let Some(mapping) = lookup(NORMAL_KEYMAP, key) {
             self.process_command(mapping.command)
         } else {
@@ -695,7 +718,7 @@ mod tests {
         let result = handler.handle_key(Key::char('h'));
         assert!(matches!(
             result,
-            KeyResult::Command(Command::MoveLeft, _)
+            KeyResult::Action { name: "move_left", .. }
         ));
     }
 
@@ -706,10 +729,11 @@ mod tests {
         handler.handle_key(Key::char('3'));
         let result = handler.handle_key(Key::char('w'));
 
-        if let KeyResult::Command(Command::MoveNextWordStart, params) = result {
-            assert_eq!(params.count, 3);
+        if let KeyResult::Action { name, count, .. } = result {
+            assert_eq!(name, "next_word_start");
+            assert_eq!(count, 3);
         } else {
-            panic!("Expected MoveNextWordStart command");
+            panic!("Expected next_word_start action, got {:?}", result);
         }
     }
 
@@ -740,14 +764,7 @@ mod tests {
         let mut handler = InputHandler::new();
 
         let result = handler.handle_key(Key::char('g'));
-        assert!(matches!(result, KeyResult::ModeChange(Mode::Goto)));
-
-        let result = handler.handle_key(Key::char('g'));
-        assert!(matches!(
-            result,
-            KeyResult::Command(Command::MoveDocumentStart, _)
-        ));
-        assert_eq!(handler.mode, Mode::Normal);
+        assert!(matches!(result, KeyResult::Action { name: "goto_mode", .. }));
     }
 
     #[test]
