@@ -13,6 +13,7 @@ static ACTION_SCROLL_UP: ActionDef = ActionDef {
     handler: |ctx| ActionResult::Edit(EditAction::Scroll {
         direction: ScrollDir::Up,
         amount: ScrollAmount::Line(ctx.count),
+        extend: ctx.extend,
     }),
 };
 
@@ -23,6 +24,7 @@ static ACTION_SCROLL_DOWN: ActionDef = ActionDef {
     handler: |ctx| ActionResult::Edit(EditAction::Scroll {
         direction: ScrollDir::Down,
         amount: ScrollAmount::Line(ctx.count),
+        extend: ctx.extend,
     }),
 };
 
@@ -30,9 +32,10 @@ static ACTION_SCROLL_DOWN: ActionDef = ActionDef {
 static ACTION_SCROLL_HALF_PAGE_UP: ActionDef = ActionDef {
     name: "scroll_half_page_up",
     description: "Scroll half page up",
-    handler: |_ctx| ActionResult::Edit(EditAction::Scroll {
+    handler: |ctx| ActionResult::Edit(EditAction::Scroll {
         direction: ScrollDir::Up,
         amount: ScrollAmount::HalfPage,
+        extend: ctx.extend,
     }),
 };
 
@@ -40,9 +43,10 @@ static ACTION_SCROLL_HALF_PAGE_UP: ActionDef = ActionDef {
 static ACTION_SCROLL_HALF_PAGE_DOWN: ActionDef = ActionDef {
     name: "scroll_half_page_down",
     description: "Scroll half page down",
-    handler: |_ctx| ActionResult::Edit(EditAction::Scroll {
+    handler: |ctx| ActionResult::Edit(EditAction::Scroll {
         direction: ScrollDir::Down,
         amount: ScrollAmount::HalfPage,
+        extend: ctx.extend,
     }),
 };
 
@@ -50,9 +54,10 @@ static ACTION_SCROLL_HALF_PAGE_DOWN: ActionDef = ActionDef {
 static ACTION_SCROLL_PAGE_UP: ActionDef = ActionDef {
     name: "scroll_page_up",
     description: "Scroll page up",
-    handler: |_ctx| ActionResult::Edit(EditAction::Scroll {
+    handler: |ctx| ActionResult::Edit(EditAction::Scroll {
         direction: ScrollDir::Up,
         amount: ScrollAmount::FullPage,
+        extend: ctx.extend,
     }),
 };
 
@@ -60,9 +65,10 @@ static ACTION_SCROLL_PAGE_UP: ActionDef = ActionDef {
 static ACTION_SCROLL_PAGE_DOWN: ActionDef = ActionDef {
     name: "scroll_page_down",
     description: "Scroll page down",
-    handler: |_ctx| ActionResult::Edit(EditAction::Scroll {
+    handler: |ctx| ActionResult::Edit(EditAction::Scroll {
         direction: ScrollDir::Down,
         amount: ScrollAmount::FullPage,
+        extend: ctx.extend,
     }),
 };
 

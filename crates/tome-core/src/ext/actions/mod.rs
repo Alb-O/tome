@@ -132,8 +132,8 @@ pub enum EditAction {
     OpenAbove,
     /// Move cursor visually (respects soft wrap).
     MoveVisual { direction: VisualDirection, count: usize, extend: bool },
-    /// Scroll view (move viewport and optionally cursor).
-    Scroll { direction: ScrollDir, amount: ScrollAmount },
+    /// Scroll view and move cursor (PageUp/PageDown behavior).
+    Scroll { direction: ScrollDir, amount: ScrollAmount, extend: bool },
     /// Add empty line below (without entering insert mode).
     AddLineBelow,
     /// Add empty line above (without entering insert mode).

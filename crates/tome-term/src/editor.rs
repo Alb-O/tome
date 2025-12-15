@@ -630,7 +630,9 @@ impl Editor {
             args: ActionArgs::default(),
         };
 
-        match (action.handler)(&ctx) {
+        let result = (action.handler)(&ctx);
+
+        match result {
             ActionResult::Ok => false,
             ActionResult::Motion(new_selection) => {
                 self.selection = new_selection;
@@ -1073,7 +1075,7 @@ impl Editor {
                 };
                 self.move_visual_vertical(dir, count, extend);
             }
-            EditAction::Scroll { direction, amount } => {
+            EditAction::Scroll { direction, amount, extend: scroll_extend } => {
                 use ext::{ScrollAmount, ScrollDir};
                 let count = match amount {
                     ScrollAmount::Line(n) => n,
@@ -1084,7 +1086,7 @@ impl Editor {
                     ScrollDir::Up => MoveDir::Backward,
                     ScrollDir::Down => MoveDir::Forward,
                 };
-                self.move_visual_vertical(dir, count, false);
+                self.move_visual_vertical(dir, count, scroll_extend);
             }
             EditAction::AddLineBelow => {
                 let slice = self.doc.slice(..);
