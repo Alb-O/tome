@@ -108,6 +108,15 @@ impl Editor {
         head.saturating_sub(line_start)
     }
 
+    /// Minimum gutter width padding (extra digits reserved beyond current line count).
+    const GUTTER_MIN_WIDTH: u16 = 4;
+
+    /// Compute the gutter width based on total line count.
+    pub fn gutter_width(&self) -> u16 {
+        let total_lines = self.doc.len_lines();
+        (total_lines.max(1).ilog10() as u16 + 2).max(Self::GUTTER_MIN_WIDTH)
+    }
+
     pub fn move_visual_vertical(&mut self, direction: MoveDir, count: usize, extend: bool) {
         for _ in 0..count {
             let head = self.selection.primary().head;
@@ -510,7 +519,7 @@ impl Editor {
 
     fn screen_to_doc_position(&self, screen_row: u16, screen_col: u16) -> Option<usize> {
         let total_lines = self.doc.len_lines();
-        let gutter_width = total_lines.max(1).ilog10() as u16 + 2;
+        let gutter_width = self.gutter_width();
 
         if screen_col < gutter_width {
             return None;

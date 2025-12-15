@@ -32,7 +32,7 @@ impl Editor {
 
     fn ensure_cursor_visible(&mut self, area: Rect) {
         let total_lines = self.doc.len_lines();
-        let gutter_width = total_lines.max(1).ilog10() as u16 + 2;
+        let gutter_width = self.gutter_width();
         let text_width = area.width.saturating_sub(gutter_width) as usize;
         let viewport_height = area.height as usize;
 
@@ -122,7 +122,7 @@ impl Editor {
 
     pub fn render_document(&self, area: Rect) -> impl Widget + '_ {
         let total_lines = self.doc.len_lines();
-        let gutter_width = total_lines.max(1).ilog10() as u16 + 2;
+        let gutter_width = self.gutter_width();
         let text_width = area.width.saturating_sub(gutter_width) as usize;
 
         let primary = self.selection.primary();
