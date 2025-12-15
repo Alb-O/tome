@@ -233,7 +233,7 @@ impl InputHandler {
         }
 
         // Treat Shift as extend; drop it for key matching (Kakoune-style)
-        let key = key.normalize().without_shift();
+        let key = key.drop_shift();
 
         if let Some(binding) = find_binding(BindingMode::Normal, key) {
             let count = if self.count > 0 { self.count as usize } else { 1 };
@@ -257,7 +257,7 @@ impl InputHandler {
             self.extend = true;
         }
 
-        let key = key.normalize().without_shift();
+        let key = key.drop_shift();
 
         match key.code {
             KeyCode::Special(SpecialKey::Escape) => {
@@ -311,7 +311,7 @@ impl InputHandler {
         let extend = self.extend;
         let register = self.register;
 
-        let key = key.normalize().without_shift();
+        let key = key.drop_shift();
 
         // Try new keybinding registry first
         if let Some(binding) = find_binding(BindingMode::Goto, key) {
@@ -342,7 +342,7 @@ impl InputHandler {
         let extend = self.extend;
         let register = self.register;
 
-        let key = key.normalize().without_shift();
+        let key = key.drop_shift();
 
         // Try new keybinding registry first
         if let Some(binding) = find_binding(BindingMode::View, key) {
