@@ -9,7 +9,6 @@ use tome_core::{
 };
 use tome_core::ext::{HookContext, emit_hook};
 
-use crate::commands;
 use crate::render::WrapSegment;
 
 /// A history entry for undo/redo.
@@ -379,9 +378,6 @@ impl Editor {
             KeyResult::ActionWithChar { name, count, extend, register, char_arg } => {
                 self.execute_action_with_char(name, count, extend, register, char_arg)
             }
-            KeyResult::Command(cmd, params) => {
-                commands::execute_command(self, cmd, params.count, params.extend)
-            }
             KeyResult::ModeChange(new_mode) => {
                 let is_normal = matches!(new_mode, Mode::Normal);
                 if new_mode != old_mode {
@@ -399,11 +395,10 @@ impl Editor {
                 self.insert_text(&c.to_string());
                 false
             }
-            KeyResult::Pending(msg) => {
-                self.message = Some(msg);
+            KeyResult::ExecuteCommand(cmd) => {
+                self.message = Some(format!("Command not implemented: {}", cmd));
                 false
             }
-            KeyResult::ExecuteCommand(cmd) => commands::execute_command_line(self, &cmd),
             KeyResult::ExecuteSearch { pattern, reverse } => {
                 self.input.set_last_search(pattern.clone(), reverse);
                 let pos = self.selection.primary().head;

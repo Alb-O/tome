@@ -333,10 +333,6 @@ impl Editor {
                 .bg(Color::Yellow)
                 .fg(Color::Black)
                 .add_modifier(Modifier::BOLD),
-            Mode::Pending(_) => Style::default()
-                .bg(Color::Yellow)
-                .fg(Color::Black)
-                .add_modifier(Modifier::BOLD),
             Mode::PendingAction(_) => Style::default()
                 .bg(Color::Yellow)
                 .fg(Color::Black)

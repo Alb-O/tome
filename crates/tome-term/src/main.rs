@@ -1,5 +1,4 @@
 mod cli;
-mod commands;
 mod editor;
 mod render;
 mod styles;
