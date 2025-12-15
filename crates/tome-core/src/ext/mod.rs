@@ -312,7 +312,7 @@ pub static FILE_TYPES: [FileTypeDef];
 /// Look up a command by name or alias.
 pub fn find_command(name: &str) -> Option<&'static CommandDef> {
     COMMANDS.iter().find(|cmd| {
-        cmd.name == name || cmd.aliases.iter().any(|&alias| alias == name)
+        cmd.name == name || cmd.aliases.contains(&name)
     })
 }
 
@@ -338,11 +338,10 @@ pub fn detect_file_type(filename: &str) -> Option<&'static FileTypeDef> {
     }
     
     // Then check extension
-    if let Some(ext) = basename.rsplit('.').next() {
-        if let Some(ft) = FILE_TYPES.iter().find(|ft| ft.extensions.contains(&ext)) {
+    if let Some(ext) = basename.rsplit('.').next()
+        && let Some(ft) = FILE_TYPES.iter().find(|ft| ft.extensions.contains(&ext)) {
             return Some(ft);
         }
-    }
     
     None
 }

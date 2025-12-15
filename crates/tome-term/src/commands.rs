@@ -21,7 +21,7 @@ where
             .doc
             .slice(from..to)
             .chars()
-            .flat_map(|c| char_mapper(c))
+            .flat_map(char_mapper)
             .collect();
         let new_len = text.chars().count();
         let tx = Transaction::delete(editor.doc.slice(..), &editor.selection);

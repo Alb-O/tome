@@ -133,9 +133,7 @@ pub fn move_to_prev_word_start(
 
     for _ in 0..count {
         // Move at least one position back
-        if pos > 0 {
-            pos -= 1;
-        }
+        pos = pos.saturating_sub(1);
 
         // Skip whitespace going backward
         while pos > 0 && text.char(pos).is_whitespace() {

@@ -200,12 +200,11 @@ impl InputHandler {
     }
 
     fn handle_normal_key(&mut self, key: Key) -> KeyResult {
-        if let Some(digit) = key.as_digit() {
-            if digit != 0 || self.count > 0 {
+        if let Some(digit) = key.as_digit()
+            && (digit != 0 || self.count > 0) {
                 self.count = self.count.saturating_mul(10).saturating_add(digit);
                 return KeyResult::Consumed;
             }
-        }
 
         if key.is_char('"') && self.register.is_none() {
             self.mode = Mode::Pending(PendingCommand::Register);
@@ -677,7 +676,7 @@ impl InputHandler {
             }
 
             PendingCommand::Replace => {
-                if let Some(_) = key.codepoint() {
+                if key.codepoint().is_some() {
                     let params = self.make_params();
                     self.mode = Mode::Normal;
                     self.reset_params();

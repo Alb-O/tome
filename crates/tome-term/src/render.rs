@@ -79,11 +79,10 @@ impl Editor {
             let num_segments = segments.len().max(1);
 
             for seg_idx in start_segment..num_segments {
-                if line_idx == cursor_line && seg_idx == cursor_segment {
-                    if visual_row < viewport_height {
+                if line_idx == cursor_line && seg_idx == cursor_segment
+                    && visual_row < viewport_height {
                         return;
                     }
-                }
                 visual_row += 1;
                 if visual_row >= viewport_height {
                     break;
@@ -218,8 +217,8 @@ impl Editor {
                 output_lines.push(Line::from(spans));
             }
 
-            if wrapped_segments.is_empty() && start_segment == 0 {
-                if output_lines.len() < viewport_height {
+            if wrapped_segments.is_empty() && start_segment == 0
+                && output_lines.len() < viewport_height {
                     let line_num_str = format!("{:>width$} ", current_line_idx + 1, width = gutter_width as usize - 1);
                     let gutter_style = Style::default().fg(Color::DarkGray);
                     let mut spans = vec![Span::styled(line_num_str, gutter_style)];
@@ -242,7 +241,6 @@ impl Editor {
 
                     output_lines.push(Line::from(spans));
                 }
-            }
 
             start_segment = 0;
             current_line_idx += 1;

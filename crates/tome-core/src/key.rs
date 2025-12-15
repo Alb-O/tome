@@ -174,11 +174,10 @@ impl Key {
 
     /// Check if this is a digit key (for count prefixes).
     pub fn as_digit(&self) -> Option<u32> {
-        if self.modifiers.is_empty() {
-            if let KeyCode::Char(c) = self.code {
+        if self.modifiers.is_empty()
+            && let KeyCode::Char(c) = self.code {
                 return c.to_digit(10);
             }
-        }
         None
     }
 
@@ -198,8 +197,8 @@ impl Key {
     /// Convert a shifted letter to uppercase for matching.
     /// e.g., Shift+h -> H, Shift+U -> U (drop shift for uppercase letters)
     pub fn normalize(self) -> Self {
-        if self.modifiers.shift {
-            if let KeyCode::Char(c) = self.code {
+        if self.modifiers.shift
+            && let KeyCode::Char(c) = self.code {
                 if c.is_ascii_lowercase() {
                     return Self {
                         code: KeyCode::Char(c.to_ascii_uppercase()),
@@ -219,7 +218,6 @@ impl Key {
                     };
                 }
             }
-        }
         self
     }
 }
