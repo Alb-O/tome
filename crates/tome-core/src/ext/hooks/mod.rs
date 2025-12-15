@@ -205,9 +205,64 @@ impl std::fmt::Debug for HookDef {
     }
 }
 
+/// Result of a mutable hook execution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HookResult {
+    /// Continue with the operation.
+    Continue,
+    /// Cancel the operation (for pre-hooks).
+    Cancel,
+}
+
+/// A mutable hook that can modify editor state.
+///
+/// Unlike `HookDef`, mutable hooks receive a mutable reference to the
+/// document and can modify it. They can also cancel operations by
+/// returning `HookResult::Cancel`.
+#[derive(Clone, Copy)]
+pub struct MutableHookDef {
+    /// Hook name for debugging/logging.
+    pub name: &'static str,
+    /// The event this hook responds to.
+    pub event: HookEvent,
+    /// Short description.
+    pub description: &'static str,
+    /// Priority (lower runs first, default 100).
+    pub priority: i32,
+    /// The hook handler function.
+    pub handler: fn(&mut MutableHookContext) -> HookResult,
+}
+
+impl std::fmt::Debug for MutableHookDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MutableHookDef")
+            .field("name", &self.name)
+            .field("event", &self.event)
+            .field("priority", &self.priority)
+            .field("description", &self.description)
+            .finish()
+    }
+}
+
+/// Mutable context passed to mutable hook handlers.
+pub struct MutableHookContext<'a> {
+    /// The event being processed.
+    pub event: HookEvent,
+    /// Mutable document content (if applicable).
+    pub text: Option<&'a mut ropey::Rope>,
+    /// File path (if applicable).
+    pub path: Option<&'a Path>,
+    /// File type (if applicable).
+    pub file_type: Option<&'a str>,
+}
+
 /// Registry of all hook definitions.
 #[distributed_slice]
 pub static HOOKS: [HookDef];
+
+/// Registry of mutable hook definitions.
+#[distributed_slice]
+pub static MUTABLE_HOOKS: [MutableHookDef];
 
 /// Emit an event to all registered hooks.
 ///
@@ -222,6 +277,24 @@ pub fn emit(ctx: &HookContext) {
     for hook in matching {
         (hook.handler)(ctx);
     }
+}
+
+/// Emit a mutable event to all registered mutable hooks.
+///
+/// Hooks are called in priority order (lower priority first).
+/// If any hook returns `HookResult::Cancel`, emission stops and returns `Cancel`.
+pub fn emit_mutable(ctx: &mut MutableHookContext) -> HookResult {
+    let event = ctx.event;
+
+    let mut matching: Vec<_> = MUTABLE_HOOKS.iter().filter(|h| h.event == event).collect();
+    matching.sort_by_key(|h| h.priority);
+
+    for hook in matching {
+        if (hook.handler)(ctx) == HookResult::Cancel {
+            return HookResult::Cancel;
+        }
+    }
+    HookResult::Continue
 }
 
 /// Find all hooks registered for a specific event.
@@ -251,5 +324,22 @@ mod tests {
             new_mode: Mode::Insert,
         };
         assert_eq!(ctx.event(), HookEvent::ModeChange);
+    }
+
+    #[test]
+    fn test_hook_result() {
+        assert_eq!(HookResult::Continue, HookResult::Continue);
+        assert_ne!(HookResult::Continue, HookResult::Cancel);
+    }
+
+    #[test]
+    fn test_mutable_hook_context() {
+        let ctx = MutableHookContext {
+            event: HookEvent::BufferWritePre,
+            text: None,
+            path: None,
+            file_type: None,
+        };
+        assert_eq!(ctx.event, HookEvent::BufferWritePre);
     }
 }

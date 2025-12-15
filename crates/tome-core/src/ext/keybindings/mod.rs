@@ -3,7 +3,9 @@
 //! Keybindings map keys to actions in different modes. This replaces
 //! the hardcoded keymap arrays with an extensible registry.
 
+mod goto;
 mod normal;
+mod view;
 
 use linkme::distributed_slice;
 
@@ -117,8 +119,40 @@ mod tests {
     }
 
     #[test]
+    fn test_goto_mode_bindings_registered() {
+        let g = find_binding(BindingMode::Goto, Key::char('g'));
+        assert!(g.is_some());
+        assert_eq!(g.unwrap().action, "document_start");
+
+        let e = find_binding(BindingMode::Goto, Key::char('e'));
+        assert!(e.is_some());
+        assert_eq!(e.unwrap().action, "document_end");
+
+        let h = find_binding(BindingMode::Goto, Key::char('h'));
+        assert!(h.is_some());
+        assert_eq!(h.unwrap().action, "move_line_start");
+    }
+
+    #[test]
+    fn test_view_mode_bindings_registered() {
+        let c = find_binding(BindingMode::View, Key::char('c'));
+        assert!(c.is_some());
+        assert_eq!(c.unwrap().action, "center_cursor");
+
+        let j = find_binding(BindingMode::View, Key::char('j'));
+        assert!(j.is_some());
+        assert_eq!(j.unwrap().action, "scroll_down");
+    }
+
+    #[test]
     fn test_bindings_for_mode() {
         let normal_bindings: Vec<_> = bindings_for_mode(BindingMode::Normal).collect();
         assert!(normal_bindings.len() >= 10);
+
+        let goto_bindings: Vec<_> = bindings_for_mode(BindingMode::Goto).collect();
+        assert!(goto_bindings.len() >= 5);
+
+        let view_bindings: Vec<_> = bindings_for_mode(BindingMode::View).collect();
+        assert!(view_bindings.len() >= 4);
     }
 }

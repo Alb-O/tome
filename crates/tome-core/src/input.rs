@@ -494,8 +494,24 @@ impl InputHandler {
             return KeyResult::ModeChange(Mode::Normal);
         }
 
-        let params = self.make_params();
+        let count = if self.count > 0 { self.count as usize } else { 1 };
+        let extend = self.extend;
+        let register = self.register;
 
+        // Try new keybinding registry first
+        if let Some(binding) = find_binding(BindingMode::Goto, key) {
+            self.mode = Mode::Normal;
+            self.reset_params();
+            return KeyResult::Action {
+                name: binding.action,
+                count,
+                extend,
+                register,
+            };
+        }
+
+        // Fall back to legacy keymap
+        let params = self.make_params();
         if let Some(mapping) = lookup(GOTO_KEYMAP, key) {
             self.mode = Mode::Normal;
             self.reset_params();
@@ -514,8 +530,24 @@ impl InputHandler {
             return KeyResult::ModeChange(Mode::Normal);
         }
 
-        let params = self.make_params();
+        let count = if self.count > 0 { self.count as usize } else { 1 };
+        let extend = self.extend;
+        let register = self.register;
 
+        // Try new keybinding registry first
+        if let Some(binding) = find_binding(BindingMode::View, key) {
+            self.mode = Mode::Normal;
+            self.reset_params();
+            return KeyResult::Action {
+                name: binding.action,
+                count,
+                extend,
+                register,
+            };
+        }
+
+        // Fall back to legacy keymap
+        let params = self.make_params();
         if let Some(mapping) = lookup(VIEW_KEYMAP, key) {
             self.mode = Mode::Normal;
             self.reset_params();

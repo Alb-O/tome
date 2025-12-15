@@ -36,14 +36,22 @@ mod hooks;
 mod keybindings;
 mod motions;
 mod objects;
+mod options;
 
 pub use actions::{
     ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, PendingAction,
     ACTIONS, execute_action, find_action,
 };
-pub use hooks::{emit as emit_hook, find_hooks, all_hooks, HookContext, HookDef, HookEvent, HOOKS};
+pub use hooks::{
+    emit as emit_hook, emit_mutable as emit_mutable_hook, find_hooks, all_hooks,
+    HookContext, HookDef, HookEvent, HookResult, MutableHookContext, MutableHookDef,
+    HOOKS, MUTABLE_HOOKS,
+};
 pub use keybindings::{
     BindingMode, KeyBindingDef, KEYBINDINGS, find_binding, bindings_for_mode, bindings_for_action,
+};
+pub use options::{
+    OptionDef, OptionScope, OptionType, OptionValue, OPTIONS, find_option, all_options,
 };
 
 use linkme::distributed_slice;

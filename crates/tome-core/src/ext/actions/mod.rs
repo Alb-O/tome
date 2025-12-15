@@ -6,6 +6,7 @@
 
 mod modes;
 mod motions;
+mod scroll;
 
 use linkme::distributed_slice;
 use ropey::RopeSlice;
