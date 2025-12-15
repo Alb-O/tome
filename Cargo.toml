@@ -9,6 +9,7 @@ license = "MIT"
 repository = "https://github.com/albertlarsan68/tome"
 
 [workspace.dependencies]
+criterion = "0.5"
 crossterm = "0.28"
 insta = "1.42"
 ratatui = "0.29"
