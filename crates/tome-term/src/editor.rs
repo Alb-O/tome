@@ -426,6 +426,22 @@ impl Editor {
                 }
                 false
             }
+            KeyResult::SelectRegex { pattern } => {
+                self.select_regex(&pattern);
+                false
+            }
+            KeyResult::SplitRegex { pattern } => {
+                self.split_regex(&pattern);
+                false
+            }
+            KeyResult::KeepMatching { pattern } => {
+                self.keep_matching(&pattern, false);
+                false
+            }
+            KeyResult::KeepNotMatching { pattern } => {
+                self.keep_matching(&pattern, true);
+                false
+            }
             KeyResult::Consumed => false,
             KeyResult::Unhandled => false,
             KeyResult::Quit => true,
@@ -599,6 +615,9 @@ impl Editor {
             ActionResult::UseSelectionAsSearch => {
                 self.use_selection_as_search()
             }
+            ActionResult::SplitLines => {
+                self.split_lines()
+            }
         }
     }
 
@@ -668,6 +687,9 @@ impl Editor {
             }
             ActionResult::UseSelectionAsSearch => {
                 self.use_selection_as_search()
+            }
+            ActionResult::SplitLines => {
+                self.split_lines()
             }
         }
     }
@@ -926,6 +948,30 @@ impl Editor {
                     input: String::new(),
                 });
             }
+            ActionMode::SelectRegex => {
+                self.input.set_mode(Mode::Command {
+                    prompt: 's',
+                    input: String::new(),
+                });
+            }
+            ActionMode::SplitRegex => {
+                self.input.set_mode(Mode::Command {
+                    prompt: 'S',
+                    input: String::new(),
+                });
+            }
+            ActionMode::KeepMatching => {
+                self.input.set_mode(Mode::Command {
+                    prompt: 'k',
+                    input: String::new(),
+                });
+            }
+            ActionMode::KeepNotMatching => {
+                self.input.set_mode(Mode::Command {
+                    prompt: 'K',
+                    input: String::new(),
+                });
+            }
         }
         false
     }
@@ -1007,6 +1053,141 @@ impl Editor {
             }
         } else {
             self.message = Some("No selection".to_string());
+        }
+        false
+    }
+
+    fn select_regex(&mut self, pattern: &str) -> bool {
+        let primary = self.selection.primary();
+        let from = primary.from();
+        let to = primary.to();
+        if from >= to {
+            self.message = Some("No selection to search in".to_string());
+            return false;
+        }
+
+        match movement::find_all_matches(self.doc.slice(from..to), pattern) {
+            Ok(matches) if !matches.is_empty() => {
+                let new_ranges: Vec<tome_core::Range> = matches
+                    .into_iter()
+                    .map(|r| tome_core::Range::new(from + r.from(), from + r.to()))
+                    .collect();
+                self.selection = Selection::from_vec(new_ranges, 0);
+                self.message = Some(format!("{} matches", self.selection.len()));
+            }
+            Ok(_) => {
+                self.message = Some("No matches found".to_string());
+            }
+            Err(e) => {
+                self.message = Some(format!("Regex error: {}", e));
+            }
+        }
+        false
+    }
+
+    fn split_regex(&mut self, pattern: &str) -> bool {
+        let primary = self.selection.primary();
+        let from = primary.from();
+        let to = primary.to();
+        if from >= to {
+            self.message = Some("No selection to split".to_string());
+            return false;
+        }
+
+        match movement::find_all_matches(self.doc.slice(from..to), pattern) {
+            Ok(matches) if !matches.is_empty() => {
+                let mut new_ranges: Vec<tome_core::Range> = Vec::new();
+                let mut last_end = from;
+                for m in matches {
+                    let match_start = from + m.from();
+                    if match_start > last_end {
+                        new_ranges.push(tome_core::Range::new(last_end, match_start));
+                    }
+                    last_end = from + m.to();
+                }
+                if last_end < to {
+                    new_ranges.push(tome_core::Range::new(last_end, to));
+                }
+                if !new_ranges.is_empty() {
+                    self.selection = Selection::from_vec(new_ranges, 0);
+                    self.message = Some(format!("{} splits", self.selection.len()));
+                } else {
+                    self.message = Some("Split produced no ranges".to_string());
+                }
+            }
+            Ok(_) => {
+                self.message = Some("No matches found to split on".to_string());
+            }
+            Err(e) => {
+                self.message = Some(format!("Regex error: {}", e));
+            }
+        }
+        false
+    }
+
+    fn split_lines(&mut self) -> bool {
+        let primary = self.selection.primary();
+        let from = primary.from();
+        let to = primary.to();
+        if from >= to {
+            self.message = Some("No selection to split".to_string());
+            return false;
+        }
+
+        let start_line = self.doc.char_to_line(from);
+        let end_line = self.doc.char_to_line(to.saturating_sub(1));
+
+        let mut new_ranges: Vec<tome_core::Range> = Vec::new();
+        for line in start_line..=end_line {
+            let line_start = self.doc.line_to_char(line).max(from);
+            let line_end = if line + 1 < self.doc.len_lines() {
+                self.doc.line_to_char(line + 1).min(to)
+            } else {
+                self.doc.len_chars().min(to)
+            };
+            if line_start < line_end {
+                new_ranges.push(tome_core::Range::new(line_start, line_end));
+            }
+        }
+
+        if !new_ranges.is_empty() {
+            self.selection = Selection::from_vec(new_ranges, 0);
+            self.message = Some(format!("{} lines", self.selection.len()));
+        }
+        false
+    }
+
+    fn keep_matching(&mut self, pattern: &str, invert: bool) -> bool {
+        let mut kept_ranges: Vec<tome_core::Range> = Vec::new();
+        let mut had_error = false;
+        for range in self.selection.ranges() {
+            let from = range.from();
+            let to = range.to();
+            let text: String = self.doc.slice(from..to).chars().collect();
+            match movement::matches_pattern(&text, pattern) {
+                Ok(matches) => {
+                    if matches != invert {
+                        kept_ranges.push(*range);
+                    }
+                }
+                Err(e) => {
+                    self.message = Some(format!("Regex error: {}", e));
+                    had_error = true;
+                    break;
+                }
+            }
+        }
+
+        if had_error {
+            return false;
+        }
+
+        if kept_ranges.is_empty() {
+            self.message = Some("No selections remain".to_string());
+        } else {
+            let count = kept_ranges.len();
+            self.selection = Selection::from_vec(kept_ranges, 0);
+            self.message = Some(format!("{} selections kept", count));
         }
         false
     }

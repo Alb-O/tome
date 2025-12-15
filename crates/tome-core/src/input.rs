@@ -45,6 +45,14 @@ pub enum KeyResult {
     ExecuteCommand(String),
     /// Execute a search (from `/` or `?` prompt).
     ExecuteSearch { pattern: String, reverse: bool },
+    /// Select regex matches within selection (from `s` prompt).
+    SelectRegex { pattern: String },
+    /// Split selection on regex (from `S` prompt).
+    SplitRegex { pattern: String },
+    /// Keep selections matching regex (from `alt-k` prompt).
+    KeepMatching { pattern: String },
+    /// Keep selections not matching regex (from `alt-K` prompt).
+    KeepNotMatching { pattern: String },
     /// Request to quit.
     Quit,
     /// Mouse click at screen coordinates.
@@ -112,8 +120,9 @@ impl InputHandler {
             Mode::View => "VIEW",
             Mode::Command { prompt, .. } => match prompt {
                 ':' => "COMMAND",
-                '/' => "SEARCH",
-                '?' => "SEARCH",
+                '/' | '?' => "SEARCH",
+                's' | 'S' => "SELECT",
+                'k' | 'K' => "FILTER",
                 _ => "PROMPT",
             },
             Mode::Pending(p) => match p {
@@ -614,6 +623,10 @@ impl InputHandler {
                         pattern: input,
                         reverse: true,
                     },
+                    's' => KeyResult::SelectRegex { pattern: input },
+                    'S' => KeyResult::SplitRegex { pattern: input },
+                    'k' => KeyResult::KeepMatching { pattern: input },
+                    'K' => KeyResult::KeepNotMatching { pattern: input },
                     _ => KeyResult::Consumed,
                 }
             }

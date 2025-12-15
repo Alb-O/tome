@@ -21,6 +21,10 @@ impl Selection {
         sel
     }
 
+    pub fn from_vec(ranges: Vec<Range>, primary_index: usize) -> Self {
+        Self::new(ranges.into_iter().collect(), primary_index)
+    }
+
     pub fn single(anchor: usize, head: usize) -> Self {
         Self {
             ranges: smallvec![Range::new(anchor, head)],

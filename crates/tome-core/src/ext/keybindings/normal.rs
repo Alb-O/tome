@@ -133,3 +133,10 @@ bind!(KB_N_UPPER, Key::char('N'), "search_next_add");
 bind!(KB_N_ALT, Key::alt('n'), "search_prev");
 bind!(KB_N_ALT_UPPER, Key::alt('N'), "search_prev_add");
 bind!(KB_STAR, Key::char('*'), "use_selection_as_search");
+
+// Regex selection
+bind!(KB_S, Key::char('s'), "select_regex");
+bind!(KB_S_UPPER, Key::char('S'), "split_regex");
+bind!(KB_S_ALT, Key::alt('s'), "split_lines");
+bind!(KB_K_ALT, Key::alt('k'), "keep_matching");
+bind!(KB_K_ALT_UPPER, Key::alt('K'), "keep_not_matching");

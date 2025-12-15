@@ -7,6 +7,12 @@ use crate::Range;
 
 pub use regex::escape as escape_pattern;
 
+/// Check if text matches a regex pattern.
+pub fn matches_pattern(text: &str, pattern: &str) -> Result<bool, regex::Error> {
+    let re = Regex::new(pattern)?;
+    Ok(re.is_match(text))
+}
+
 /// Find all matches of a pattern in text.
 pub fn find_all_matches(text: RopeSlice, pattern: &str) -> Result<Vec<Range>, regex::Error> {
     let re = Regex::new(pattern)?;

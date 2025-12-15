@@ -9,6 +9,7 @@ mod find;
 mod insert;
 mod modes;
 mod motions;
+mod regex_select;
 mod scroll;
 mod search;
 mod selection_ops;
@@ -50,6 +51,8 @@ pub enum ActionResult {
     SearchPrev { add_selection: bool },
     /// Use selection as search pattern and go to next match.
     UseSelectionAsSearch,
+    /// Split selection into lines.
+    SplitLines,
 }
 
 /// An edit operation to apply to the document.
@@ -127,6 +130,14 @@ pub enum ActionMode {
     Command,
     SearchForward,
     SearchBackward,
+    /// Select regex matches within selection (s)
+    SelectRegex,
+    /// Split selection on regex (S)
+    SplitRegex,
+    /// Keep selections matching regex (alt-k)
+    KeepMatching,
+    /// Keep selections not matching regex (alt-K)
+    KeepNotMatching,
 }
 
 /// An action that needs additional input to complete.
