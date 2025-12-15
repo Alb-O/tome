@@ -557,49 +557,59 @@ impl Editor {
         match direction {
             ScrollDirection::Up => {
                 for _ in 0..count {
-                    if self.scroll_segment > 0 {
-                        self.scroll_segment -= 1;
-                    } else if self.scroll_line > 0 {
-                        self.scroll_line -= 1;
-                        let line_start = self.doc.line_to_char(self.scroll_line);
-                        let line_end = if self.scroll_line + 1 < self.doc.len_lines() {
-                            self.doc.line_to_char(self.scroll_line + 1)
-                        } else {
-                            self.doc.len_chars()
-                        };
-                        let line_text: String = self.doc.slice(line_start..line_end).into();
-                        let line_text = line_text.trim_end_matches('\n');
-                        let segments = self.wrap_line(line_text, self.text_width);
-                        self.scroll_segment = segments.len().saturating_sub(1);
-                    }
+                    self.scroll_viewport_up();
                 }
+                self.move_visual_vertical(MoveDir::Backward, count, false);
             }
             ScrollDirection::Down => {
                 for _ in 0..count {
-                    let total_lines = self.doc.len_lines();
-                    if self.scroll_line < total_lines {
-                        let line_start = self.doc.line_to_char(self.scroll_line);
-                        let line_end = if self.scroll_line + 1 < total_lines {
-                            self.doc.line_to_char(self.scroll_line + 1)
-                        } else {
-                            self.doc.len_chars()
-                        };
-                        let line_text: String = self.doc.slice(line_start..line_end).into();
-                        let line_text = line_text.trim_end_matches('\n');
-                        let segments = self.wrap_line(line_text, self.text_width);
-                        let num_segments = segments.len().max(1);
-
-                        if self.scroll_segment + 1 < num_segments {
-                            self.scroll_segment += 1;
-                        } else if self.scroll_line + 1 < total_lines {
-                            self.scroll_line += 1;
-                            self.scroll_segment = 0;
-                        }
-                    }
+                    self.scroll_viewport_down();
                 }
+                self.move_visual_vertical(MoveDir::Forward, count, false);
             }
             ScrollDirection::Left | ScrollDirection::Right => {
                 // Horizontal scroll not implemented yet
+            }
+        }
+    }
+
+    fn scroll_viewport_up(&mut self) {
+        if self.scroll_segment > 0 {
+            self.scroll_segment -= 1;
+        } else if self.scroll_line > 0 {
+            self.scroll_line -= 1;
+            let line_start = self.doc.line_to_char(self.scroll_line);
+            let line_end = if self.scroll_line + 1 < self.doc.len_lines() {
+                self.doc.line_to_char(self.scroll_line + 1)
+            } else {
+                self.doc.len_chars()
+            };
+            let line_text: String = self.doc.slice(line_start..line_end).into();
+            let line_text = line_text.trim_end_matches('\n');
+            let segments = self.wrap_line(line_text, self.text_width);
+            self.scroll_segment = segments.len().saturating_sub(1);
+        }
+    }
+
+    fn scroll_viewport_down(&mut self) {
+        let total_lines = self.doc.len_lines();
+        if self.scroll_line < total_lines {
+            let line_start = self.doc.line_to_char(self.scroll_line);
+            let line_end = if self.scroll_line + 1 < total_lines {
+                self.doc.line_to_char(self.scroll_line + 1)
+            } else {
+                self.doc.len_chars()
+            };
+            let line_text: String = self.doc.slice(line_start..line_end).into();
+            let line_text = line_text.trim_end_matches('\n');
+            let segments = self.wrap_line(line_text, self.text_width);
+            let num_segments = segments.len().max(1);
+
+            if self.scroll_segment + 1 < num_segments {
+                self.scroll_segment += 1;
+            } else if self.scroll_line + 1 < total_lines {
+                self.scroll_line += 1;
+                self.scroll_segment = 0;
             }
         }
     }
