@@ -1,0 +1,313 @@
+//! Extension infrastructure using compile-time distributed slices.
+//!
+//! This module provides zero-cost registration using `linkme`.
+//! Extensions are collected at link-time into static slices, requiring no
+//! runtime initialization.
+//!
+//! # Extension Types
+//!
+//! - [`CommandDef`]: Named commands that can be executed (`:write`, `:quit`)
+//! - [`MotionDef`]: Movement operations that modify selections
+//! - [`TextObjectDef`]: Text object selectors (word, paragraph, quotes)
+//! - [`FileTypeDef`]: File type detection and configuration
+//!
+//! # Registration
+//!
+//! Use `#[distributed_slice(SLICE_NAME)]` to register extensions:
+//!
+//! ```ignore
+//! use tome_core::ext::{CommandDef, COMMANDS};
+//! use linkme::distributed_slice;
+//!
+//! #[distributed_slice(COMMANDS)]
+//! static CMD_SAVE: CommandDef = CommandDef {
+//!     name: "write",
+//!     aliases: &["w"],
+//!     description: "Save buffer to file",
+//!     handler: |ctx| { /* ... */ Ok(()) },
+//! };
+//! ```
+
+mod filetypes;
+mod objects;
+
+use linkme::distributed_slice;
+use ropey::RopeSlice;
+
+use crate::range::Range;
+use crate::selection::Selection;
+
+/// Result type for command execution.
+pub type CommandResult = Result<(), CommandError>;
+
+/// Error returned by command handlers.
+#[derive(Debug, Clone)]
+pub enum CommandError {
+    /// Command failed with a message.
+    Failed(String),
+    /// Command requires an argument.
+    MissingArgument(&'static str),
+    /// Invalid argument provided.
+    InvalidArgument(String),
+    /// File I/O error.
+    Io(String),
+    /// Command not found.
+    NotFound(String),
+}
+
+impl std::fmt::Display for CommandError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CommandError::Failed(msg) => write!(f, "{}", msg),
+            CommandError::MissingArgument(name) => write!(f, "missing argument: {}", name),
+            CommandError::InvalidArgument(msg) => write!(f, "invalid argument: {}", msg),
+            CommandError::Io(msg) => write!(f, "I/O error: {}", msg),
+            CommandError::NotFound(name) => write!(f, "command not found: {}", name),
+        }
+    }
+}
+
+impl std::error::Error for CommandError {}
+
+/// Context passed to command handlers.
+///
+/// This provides access to editor state without exposing internal details.
+/// Commands receive this context and can query/modify editor state through it.
+pub struct CommandContext<'a> {
+    /// The document text.
+    pub text: RopeSlice<'a>,
+    /// Current selection state.
+    pub selection: &'a mut Selection,
+    /// Command arguments (for `:command arg1 arg2`).
+    pub args: &'a [&'a str],
+    /// Numeric count prefix (1 if not specified).
+    pub count: usize,
+    /// Register to use (if any).
+    pub register: Option<char>,
+}
+
+/// A named command that can be executed via command mode (`:name`).
+///
+/// Commands are the primary way to add functionality to Tome.
+/// They can be invoked from the command line or bound to keys.
+#[derive(Clone, Copy)]
+pub struct CommandDef {
+    /// Primary command name (e.g., "write").
+    pub name: &'static str,
+    /// Alternative names (e.g., &["w"] for write).
+    pub aliases: &'static [&'static str],
+    /// Short description for help.
+    pub description: &'static str,
+    /// Command handler function.
+    pub handler: fn(&mut CommandContext) -> CommandResult,
+}
+
+impl std::fmt::Debug for CommandDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommandDef")
+            .field("name", &self.name)
+            .field("aliases", &self.aliases)
+            .field("description", &self.description)
+            .finish()
+    }
+}
+
+/// Registry of all command definitions.
+#[distributed_slice]
+pub static COMMANDS: [CommandDef];
+
+/// A motion that modifies the selection.
+///
+/// Motions are the building blocks of movement in Tome. Each motion
+/// takes the current document and selection, and returns a new selection.
+#[derive(Clone, Copy)]
+pub struct MotionDef {
+    /// Motion name for documentation/debugging.
+    pub name: &'static str,
+    /// Short description.
+    pub description: &'static str,
+    /// The motion function.
+    ///
+    /// Parameters:
+    /// - `text`: Document slice
+    /// - `range`: Current range to move from
+    /// - `count`: Repeat count (1 if not specified)
+    /// - `extend`: If true, extend selection instead of moving
+    ///
+    /// Returns the new range after applying the motion.
+    pub handler: fn(text: RopeSlice, range: Range, count: usize, extend: bool) -> Range,
+}
+
+impl std::fmt::Debug for MotionDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MotionDef")
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .finish()
+    }
+}
+
+/// Registry of all motion definitions.
+#[distributed_slice]
+pub static MOTIONS: [MotionDef];
+
+/// A text object that can be selected.
+///
+/// Text objects define regions of text (word, sentence, quoted string, etc.)
+/// that can be selected with `inner` or `around` variants.
+#[derive(Clone, Copy)]
+pub struct TextObjectDef {
+    /// Object name for documentation.
+    pub name: &'static str,
+    /// Character that triggers this object (e.g., 'w' for word).
+    pub trigger: char,
+    /// Alternative trigger characters (e.g., '(' and ')' both select parentheses).
+    pub alt_triggers: &'static [char],
+    /// Short description.
+    pub description: &'static str,
+    /// Select the inner content (without delimiters).
+    ///
+    /// Parameters:
+    /// - `text`: Document slice
+    /// - `pos`: Cursor position
+    ///
+    /// Returns the range of the inner content, or None if not applicable.
+    pub inner: fn(text: RopeSlice, pos: usize) -> Option<Range>,
+    /// Select around the object (including delimiters).
+    pub around: fn(text: RopeSlice, pos: usize) -> Option<Range>,
+}
+
+impl std::fmt::Debug for TextObjectDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TextObjectDef")
+            .field("name", &self.name)
+            .field("trigger", &self.trigger)
+            .field("alt_triggers", &self.alt_triggers)
+            .field("description", &self.description)
+            .finish()
+    }
+}
+
+/// Registry of all text object definitions.
+#[distributed_slice]
+pub static TEXT_OBJECTS: [TextObjectDef];
+
+/// File type definition for language-specific configuration.
+#[derive(Clone, Copy)]
+pub struct FileTypeDef {
+    /// File type name (e.g., "rust", "python").
+    pub name: &'static str,
+    /// File extensions that match this type.
+    pub extensions: &'static [&'static str],
+    /// File name patterns (e.g., "Makefile", ".gitignore").
+    pub filenames: &'static [&'static str],
+    /// First-line patterns for shebang detection.
+    pub first_line_patterns: &'static [&'static str],
+    /// Short description.
+    pub description: &'static str,
+}
+
+impl std::fmt::Debug for FileTypeDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FileTypeDef")
+            .field("name", &self.name)
+            .field("extensions", &self.extensions)
+            .finish()
+    }
+}
+
+/// Registry of all file type definitions.
+#[distributed_slice]
+pub static FILE_TYPES: [FileTypeDef];
+
+/// Look up a command by name or alias.
+pub fn find_command(name: &str) -> Option<&'static CommandDef> {
+    COMMANDS.iter().find(|cmd| {
+        cmd.name == name || cmd.aliases.iter().any(|&alias| alias == name)
+    })
+}
+
+/// Look up a motion by name.
+pub fn find_motion(name: &str) -> Option<&'static MotionDef> {
+    MOTIONS.iter().find(|m| m.name == name)
+}
+
+/// Look up a text object by trigger character.
+pub fn find_text_object(trigger: char) -> Option<&'static TextObjectDef> {
+    TEXT_OBJECTS.iter().find(|obj| {
+        obj.trigger == trigger || obj.alt_triggers.contains(&trigger)
+    })
+}
+
+/// Detect file type from filename.
+pub fn detect_file_type(filename: &str) -> Option<&'static FileTypeDef> {
+    let basename = filename.rsplit('/').next().unwrap_or(filename);
+    
+    // Check exact filename match first
+    if let Some(ft) = FILE_TYPES.iter().find(|ft| ft.filenames.contains(&basename)) {
+        return Some(ft);
+    }
+    
+    // Then check extension
+    if let Some(ext) = basename.rsplit('.').next() {
+        if let Some(ft) = FILE_TYPES.iter().find(|ft| ft.extensions.contains(&ext)) {
+            return Some(ft);
+        }
+    }
+    
+    None
+}
+
+/// Detect file type from first line (shebang).
+pub fn detect_file_type_from_content(first_line: &str) -> Option<&'static FileTypeDef> {
+    FILE_TYPES.iter().find(|ft| {
+        ft.first_line_patterns.iter().any(|pattern| first_line.contains(pattern))
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_distributed_slices_accessible() {
+        // Verify builtin registrations are present
+        assert!(TEXT_OBJECTS.len() >= 9); // word, WORD, parens, braces, brackets, angle, quotes x3
+        assert!(FILE_TYPES.len() >= 15); // rust, python, js, ts, c, cpp, go, etc.
+    }
+
+    #[test]
+    fn test_find_text_object() {
+        // Test primary trigger
+        let word = find_text_object('w').expect("word object should exist");
+        assert_eq!(word.name, "word");
+
+        // Test alt trigger
+        let parens = find_text_object('(').expect("parens object should exist via alt trigger");
+        assert_eq!(parens.name, "parentheses");
+
+        let parens2 = find_text_object('b').expect("parens object should exist via primary trigger");
+        assert_eq!(parens2.name, "parentheses");
+    }
+
+    #[test]
+    fn test_detect_file_type() {
+        let rust = detect_file_type("main.rs").expect("should detect rust");
+        assert_eq!(rust.name, "rust");
+
+        let python = detect_file_type("/path/to/script.py").expect("should detect python");
+        assert_eq!(python.name, "python");
+
+        let makefile = detect_file_type("Makefile").expect("should detect makefile");
+        assert_eq!(makefile.name, "makefile");
+    }
+
+    #[test]
+    fn test_command_error_display() {
+        let err = CommandError::Failed("test error".into());
+        assert_eq!(format!("{}", err), "test error");
+
+        let err = CommandError::MissingArgument("filename");
+        assert_eq!(format!("{}", err), "missing argument: filename");
+    }
+}

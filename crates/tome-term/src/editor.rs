@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use tome_core::range::Direction as MoveDir;
 use tome_core::{
     InputHandler, Key, KeyResult, Mode, ObjectType, Rope, Selection, Transaction,
-    WordType, movement,
+    WordType, ext, movement,
 };
 
 use crate::commands;
@@ -248,6 +248,25 @@ impl Editor {
                 }
             }
         });
+    }
+
+    /// Select a text object using the extension registry.
+    ///
+    /// This method looks up the text object by its trigger character and uses
+    /// the registered handlers to perform the selection.
+    pub fn select_object_by_char(&mut self, trigger: char, inner: bool) -> bool {
+        if let Some(obj_def) = ext::find_text_object(trigger) {
+            let slice = self.doc.slice(..);
+            self.selection.transform_mut(|r| {
+                let handler = if inner { obj_def.inner } else { obj_def.around };
+                if let Some(new_range) = handler(slice, r.head) {
+                    *r = new_range;
+                }
+            });
+            true
+        } else {
+            false
+        }
     }
 
     pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> bool {

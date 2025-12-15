@@ -1,3 +1,4 @@
+pub mod ext;
 pub mod graphemes;
 pub mod input;
 pub mod key;
@@ -7,6 +8,10 @@ pub mod range;
 pub mod selection;
 pub mod transaction;
 
+pub use ext::{
+    CommandContext, CommandDef, CommandError, CommandResult, FileTypeDef, MotionDef,
+    TextObjectDef, COMMANDS, FILE_TYPES, MOTIONS, TEXT_OBJECTS,
+};
 pub use input::{InputHandler, KeyResult};
 pub use key::{Key, KeyCode, Modifiers, SpecialKey};
 pub use keymap::{Command, CommandParams, Mode, ObjectType, SelectMode};
