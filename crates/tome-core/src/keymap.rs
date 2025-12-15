@@ -40,61 +40,21 @@ pub enum PendingCommand {
     Replace,
     /// Waiting for register name.
     Register,
-    /// Waiting for object type (inner/around).
-    Object(ObjectFlags),
+    /// Waiting for object type.
+    Object(ObjectSelection),
 }
 
-/// Flags for object selection.
+/// How to select a text object.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ObjectFlags {
-    pub to_begin: bool,
-    pub to_end: bool,
-    pub inner: bool,
-    pub extend: bool,
-}
-
-impl ObjectFlags {
-    pub const INNER: Self = Self {
-        to_begin: true,
-        to_end: true,
-        inner: true,
-        extend: false,
-    };
-
-    pub const AROUND: Self = Self {
-        to_begin: true,
-        to_end: true,
-        inner: false,
-        extend: false,
-    };
-
-    pub const TO_BEGIN: Self = Self {
-        to_begin: true,
-        to_end: false,
-        inner: false,
-        extend: false,
-    };
-
-    pub const TO_END: Self = Self {
-        to_begin: false,
-        to_end: true,
-        inner: false,
-        extend: false,
-    };
-
-    pub fn with_extend(self) -> Self {
-        Self {
-            extend: true,
-            ..self
-        }
-    }
-
-    pub fn with_inner(self) -> Self {
-        Self {
-            inner: true,
-            ..self
-        }
-    }
+pub enum ObjectSelection {
+    /// Select content inside delimiters (alt-i).
+    Inner,
+    /// Select content including delimiters (alt-a).
+    Around,
+    /// Select from cursor to object start ([).
+    ToStart,
+    /// Select from cursor to object end (]).
+    ToEnd,
 }
 
 /// A command that the editor can execute.
@@ -197,13 +157,11 @@ pub enum Command {
     JoinLines,
     JoinLinesSelect,
 
-    // Object selection - these enter pending mode when object_type is None
-    SelectInnerObject { object_type: Option<ObjectType> },
-    SelectAroundObject { object_type: Option<ObjectType> },
-    SelectToObjectStart { object_type: Option<ObjectType> },
-    SelectToObjectEnd { object_type: Option<ObjectType> },
-    ExtendToObjectStart { object_type: Option<ObjectType> },
-    ExtendToObjectEnd { object_type: Option<ObjectType> },
+    // Object selection - enters pending mode when object_type is None
+    SelectObject {
+        object_type: Option<ObjectType>,
+        selection: ObjectSelection,
+    },
 
     // Scrolling
     ScrollUp,
@@ -406,14 +364,14 @@ pub static NORMAL_KEYMAP: &[KeyMapping] = &[
     KeyMapping::new(key!(alt 'j'), Command::JoinLines, "join lines"),
     KeyMapping::new(key!(alt 'J'), Command::JoinLinesSelect, "join lines (select spaces)"),
     // === Object selection ===
-    KeyMapping::new(key!(alt 'i'), Command::SelectInnerObject { object_type: None }, "select inner object"),
-    KeyMapping::new(key!(alt 'a'), Command::SelectAroundObject { object_type: None }, "select around object"),
-    KeyMapping::new(key!('['), Command::SelectToObjectStart { object_type: None }, "select to object start"),
-    KeyMapping::new(key!(']'), Command::SelectToObjectEnd { object_type: None }, "select to object end"),
-    KeyMapping::new(key!('{'), Command::ExtendToObjectStart { object_type: None }, "extend to object start"),
-    KeyMapping::new(key!('}'), Command::ExtendToObjectEnd { object_type: None }, "extend to object end"),
-    KeyMapping::new(key!(alt '['), Command::SelectToObjectStart { object_type: None }, "select to inner object start"),
-    KeyMapping::new(key!(alt ']'), Command::SelectToObjectEnd { object_type: None }, "select to inner object end"),
+    KeyMapping::new(key!(alt 'i'), Command::SelectObject { object_type: None, selection: ObjectSelection::Inner }, "select inner object"),
+    KeyMapping::new(key!(alt 'a'), Command::SelectObject { object_type: None, selection: ObjectSelection::Around }, "select around object"),
+    KeyMapping::new(key!('['), Command::SelectObject { object_type: None, selection: ObjectSelection::ToStart }, "select to object start"),
+    KeyMapping::new(key!(']'), Command::SelectObject { object_type: None, selection: ObjectSelection::ToEnd }, "select to object end"),
+    KeyMapping::new(key!('{'), Command::SelectObject { object_type: None, selection: ObjectSelection::ToStart }, "extend to object start"),
+    KeyMapping::new(key!('}'), Command::SelectObject { object_type: None, selection: ObjectSelection::ToEnd }, "extend to object end"),
+    KeyMapping::new(key!(alt '['), Command::SelectObject { object_type: None, selection: ObjectSelection::ToStart }, "select to inner object start"),
+    KeyMapping::new(key!(alt ']'), Command::SelectObject { object_type: None, selection: ObjectSelection::ToEnd }, "select to inner object end"),
     // === Scrolling ===
     KeyMapping::new(key!(ctrl 'u'), Command::ScrollHalfPageUp, "scroll half page up"),
     KeyMapping::new(key!(ctrl 'd'), Command::ScrollHalfPageDown, "scroll half page down"),

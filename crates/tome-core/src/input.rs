@@ -6,7 +6,7 @@
 
 use crate::key::{Key, KeyCode, SpecialKey};
 use crate::keymap::{
-    lookup, Command, CommandParams, Mode, ObjectFlags, ObjectType, PendingCommand, GOTO_KEYMAP,
+    lookup, Command, CommandParams, Mode, ObjectSelection, ObjectType, PendingCommand, GOTO_KEYMAP,
     NORMAL_KEYMAP, VIEW_KEYMAP,
 };
 
@@ -44,7 +44,7 @@ pub struct InputHandler {
     /// Last find command for repeat.
     last_find: Option<(char, bool, bool)>, // (char, inclusive, reverse)
     /// Last object selection for repeat.
-    last_object: Option<(ObjectFlags, ObjectType)>,
+    last_object: Option<(ObjectSelection, ObjectType)>,
 }
 
 impl Default for InputHandler {
@@ -281,90 +281,24 @@ impl InputHandler {
                 KeyResult::Pending("replace".into())
             }
 
-            Command::SelectInnerObject { object_type } => {
+            Command::SelectObject { object_type, selection } => {
                 if let Some(obj) = object_type {
-                    self.last_object = Some((ObjectFlags::INNER, obj));
+                    self.last_object = Some((selection, obj));
                     let params = self.make_params();
                     self.reset_params();
                     return KeyResult::Command(
-                        Command::SelectInnerObject { object_type: Some(obj) },
+                        Command::SelectObject { object_type: Some(obj), selection },
                         params,
                     );
                 }
-                self.mode = Mode::Pending(PendingCommand::Object(ObjectFlags::INNER));
-                KeyResult::Pending("inner".into())
-            }
-
-            Command::SelectAroundObject { object_type } => {
-                if let Some(obj) = object_type {
-                    self.last_object = Some((ObjectFlags::AROUND, obj));
-                    let params = self.make_params();
-                    self.reset_params();
-                    return KeyResult::Command(
-                        Command::SelectAroundObject { object_type: Some(obj) },
-                        params,
-                    );
-                }
-                self.mode = Mode::Pending(PendingCommand::Object(ObjectFlags::AROUND));
-                KeyResult::Pending("around".into())
-            }
-
-            Command::SelectToObjectStart { object_type } => {
-                if let Some(obj) = object_type {
-                    self.last_object = Some((ObjectFlags::TO_BEGIN, obj));
-                    let params = self.make_params();
-                    self.reset_params();
-                    return KeyResult::Command(
-                        Command::SelectToObjectStart { object_type: Some(obj) },
-                        params,
-                    );
-                }
-                self.mode = Mode::Pending(PendingCommand::Object(ObjectFlags::TO_BEGIN));
-                KeyResult::Pending("[obj".into())
-            }
-
-            Command::SelectToObjectEnd { object_type } => {
-                if let Some(obj) = object_type {
-                    self.last_object = Some((ObjectFlags::TO_END, obj));
-                    let params = self.make_params();
-                    self.reset_params();
-                    return KeyResult::Command(
-                        Command::SelectToObjectEnd { object_type: Some(obj) },
-                        params,
-                    );
-                }
-                self.mode = Mode::Pending(PendingCommand::Object(ObjectFlags::TO_END));
-                KeyResult::Pending("]obj".into())
-            }
-
-            Command::ExtendToObjectStart { object_type } => {
-                if let Some(obj) = object_type {
-                    self.last_object = Some((ObjectFlags::TO_BEGIN.with_extend(), obj));
-                    let params = self.make_params();
-                    self.reset_params();
-                    return KeyResult::Command(
-                        Command::ExtendToObjectStart { object_type: Some(obj) },
-                        params,
-                    );
-                }
-                self.mode =
-                    Mode::Pending(PendingCommand::Object(ObjectFlags::TO_BEGIN.with_extend()));
-                KeyResult::Pending("{obj".into())
-            }
-
-            Command::ExtendToObjectEnd { object_type } => {
-                if let Some(obj) = object_type {
-                    self.last_object = Some((ObjectFlags::TO_END.with_extend(), obj));
-                    let params = self.make_params();
-                    self.reset_params();
-                    return KeyResult::Command(
-                        Command::ExtendToObjectEnd { object_type: Some(obj) },
-                        params,
-                    );
-                }
-                self.mode =
-                    Mode::Pending(PendingCommand::Object(ObjectFlags::TO_END.with_extend()));
-                KeyResult::Pending("}obj".into())
+                let prompt = match selection {
+                    ObjectSelection::Inner => "inner",
+                    ObjectSelection::Around => "around",
+                    ObjectSelection::ToStart => "[obj",
+                    ObjectSelection::ToEnd => "]obj",
+                };
+                self.mode = Mode::Pending(PendingCommand::Object(selection));
+                KeyResult::Pending(prompt.into())
             }
 
             Command::RepeatLastFind => {
@@ -657,34 +591,20 @@ impl InputHandler {
                 KeyResult::Unhandled
             }
 
-            PendingCommand::Object(flags) => {
+            PendingCommand::Object(selection) => {
                 if let Some(c) = key.codepoint() {
                     if let Some(obj_type) = ObjectType::from_char(c) {
-                        self.last_object = Some((flags, obj_type));
+                        self.last_object = Some((selection, obj_type));
                         let params = self.make_params();
                         self.mode = Mode::Normal;
                         self.reset_params();
-                        let cmd = if flags.inner {
-                            Command::SelectInnerObject { object_type: Some(obj_type) }
-                        } else if flags.to_begin && flags.to_end {
-                            // AROUND: both directions, not inner
-                            Command::SelectAroundObject { object_type: Some(obj_type) }
-                        } else if flags.to_begin {
-                            if flags.extend {
-                                Command::ExtendToObjectStart { object_type: Some(obj_type) }
-                            } else {
-                                Command::SelectToObjectStart { object_type: Some(obj_type) }
-                            }
-                        } else if flags.to_end {
-                            if flags.extend {
-                                Command::ExtendToObjectEnd { object_type: Some(obj_type) }
-                            } else {
-                                Command::SelectToObjectEnd { object_type: Some(obj_type) }
-                            }
-                        } else {
-                            Command::SelectInnerObject { object_type: Some(obj_type) }
-                        };
-                        return KeyResult::Command(cmd, params);
+                        return KeyResult::Command(
+                            Command::SelectObject {
+                                object_type: Some(obj_type),
+                                selection,
+                            },
+                            params,
+                        );
                     }
                 }
                 self.mode = Mode::Normal;

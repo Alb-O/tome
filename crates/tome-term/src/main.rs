@@ -18,6 +18,7 @@ use tome_core::range::Direction as MoveDir;
 use tome_core::{
     Command, InputHandler, Key, KeyResult, Mode, ObjectType, Rope, Selection, Transaction, WordType, movement,
 };
+use tome_core::keymap::ObjectSelection;
 
 /// A history entry for undo/redo.
 #[derive(Clone)]
@@ -201,7 +202,7 @@ impl Editor {
         self.insert_text(&self.registers.yank.clone());
     }
 
-    fn select_object(&mut self, obj: ObjectType, inner: bool, _extend: bool) {
+    fn select_object(&mut self, obj: ObjectType, inner: bool) {
         let slice = self.doc.slice(..);
         self.selection.transform_mut(|r| {
             match obj {
@@ -610,34 +611,14 @@ impl Editor {
                 self.redo();
             }
 
-            Command::SelectInnerObject { object_type } => {
+            Command::SelectObject { object_type, selection } => {
                 if let Some(obj) = object_type {
-                    self.select_object(obj, true, false);
-                }
-            }
-            Command::SelectAroundObject { object_type } => {
-                if let Some(obj) = object_type {
-                    self.select_object(obj, false, false);
-                }
-            }
-            Command::SelectToObjectStart { object_type } => {
-                if let Some(obj) = object_type {
-                    self.select_to_object_boundary(obj, true, extend);
-                }
-            }
-            Command::SelectToObjectEnd { object_type } => {
-                if let Some(obj) = object_type {
-                    self.select_to_object_boundary(obj, false, extend);
-                }
-            }
-            Command::ExtendToObjectStart { object_type } => {
-                if let Some(obj) = object_type {
-                    self.select_to_object_boundary(obj, true, true);
-                }
-            }
-            Command::ExtendToObjectEnd { object_type } => {
-                if let Some(obj) = object_type {
-                    self.select_to_object_boundary(obj, false, true);
+                    match selection {
+                        ObjectSelection::Inner => self.select_object(obj, true),
+                        ObjectSelection::Around => self.select_object(obj, false),
+                        ObjectSelection::ToStart => self.select_to_object_boundary(obj, true, extend),
+                        ObjectSelection::ToEnd => self.select_to_object_boundary(obj, false, extend),
+                    }
                 }
             }
 
