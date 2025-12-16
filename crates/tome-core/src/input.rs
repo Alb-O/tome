@@ -604,12 +604,12 @@ impl InputHandler {
             // These are produced by Shift, but we treat them as distinct keys without implicit extend.
             // Just drop the shift modifier so they match the bindings (which are usually Key::char(':')).
             KeyCode::Char(_) => {
-                return key.drop_shift();
+                key.drop_shift()
             }
             // Special keys (Arrows, PageUp, etc) with Shift -> Extend
             KeyCode::Special(_) => {
                 self.extend = true;
-                return key.drop_shift();
+                key.drop_shift()
             }
         }
     }

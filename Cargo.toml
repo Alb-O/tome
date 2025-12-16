@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
-members = ["crates/demo-plugin","crates/tome-core", "crates/tome-term"]
+members = ["crates/demo-plugin","crates/tome-core", "crates/tome-macro", "crates/tome-term"]
+
 
 [workspace.package]
 version = "0.1.0"

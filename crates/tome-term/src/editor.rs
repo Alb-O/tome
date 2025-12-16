@@ -87,7 +87,14 @@ pub struct Editor {
 }
 
 impl Editor {
+    fn get_plugin_config(&self) -> std::collections::HashMap<String, String> {
+        let mut map = std::collections::HashMap::new();
+        map.insert("text_width".to_string(), self.text_width.to_string());
+        map
+    }
+
     fn execute_command_line(&mut self, input: &str) -> bool {
+
         use ext::{find_command, CommandContext, CommandOutcome};
 
         let trimmed = input.trim();
@@ -108,13 +115,22 @@ impl Editor {
         {
             if self.plugin_registry.find_command_plugin(name).is_some() {
                  let text = self.doc.slice(..).to_string();
+                 let config = self.get_plugin_config();
+                 
+                 let context = tome_core::ext::plugins::PluginContext {
+                     text: &text,
+                     selection: &self.selection,
+                     cursor: self.cursor,
+                     config,
+                 };
+
                  if let Some(result) = self.plugin_registry.execute_command(
                     name,
                     arg_strings.clone(),
-                    &text,
-                    &self.selection,
-                    self.cursor
+                    context
                  ) {
+
+
                      match result {
                         Ok(output) => {
                             self.apply_plugin_output(output);
@@ -177,13 +193,33 @@ impl Editor {
         let doc = Rope::from(content.as_str());
 
         #[cfg(feature = "plugins")]
-        let (plugin_loader, mut plugin_registry) = {
-            // TODO: make plugin path configurable
-            let plugin_dir = PathBuf::from("plugins");
-            if !plugin_dir.exists() {
+        let (plugin_loader, plugin_registry) = {
+            let mut plugin_dir = PathBuf::from("plugins");
+            let mut found = false;
+
+            if let Some(proj_dirs) = directories::ProjectDirs::from("", "", "tome") {
+
+                let config_plugins = proj_dirs.config_dir().join("plugins");
+                let data_plugins = proj_dirs.data_local_dir().join("plugins");
+                
+                if config_plugins.exists() {
+                    plugin_dir = config_plugins;
+                    found = true;
+                } else if data_plugins.exists() {
+                    plugin_dir = data_plugins;
+                    found = true;
+                } else {
+                    // Default to config dir for creation if nothing exists
+                    plugin_dir = config_plugins;
+                }
+            }
+
+            if !found && !plugin_dir.exists() {
                  let _ = std::fs::create_dir_all(&plugin_dir);
             }
+            
             let loader = tome_core::ext::plugins::PluginLoader::new(plugin_dir);
+
             let mut registry = tome_core::ext::plugins::PluginRegistry::new();
             
             for path in loader.discover() {
@@ -241,6 +277,7 @@ impl Editor {
         self.input.mode()
     }
 
+    #[cfg(test)]
     pub(crate) fn in_scratch_context(&self) -> bool {
         self.in_scratch_context
     }
@@ -938,22 +975,31 @@ impl Editor {
 
         #[cfg(feature = "plugins")]
         {
-            // Try plugins first
-            // Note: We have to copy text here because we can't borrow self.doc while borrowing self.plugin_registry mutably
-            // Optimization: Only copy if we find a plugin? No, execute_action needs the registry.
-            // But find_action_plugin doesn't require mutable borrow.
-            // Let's check existence first.
             if self.plugin_registry.find_action_plugin(name).is_some() {
                  let text = self.doc.slice(..).to_string();
+                 let config = self.get_plugin_config();
+
+                 
+                 let params = tome_core::ext::plugins::PluginActionParams {
+                     name,
+                     count,
+                     extend,
+                     char_arg: None,
+                 };
+                 
+                 let context = tome_core::ext::plugins::PluginContext {
+                     text: &text,
+                     selection: &self.selection,
+                     cursor: self.cursor,
+                     config,
+                 };
+
                  if let Some(result) = self.plugin_registry.execute_action(
-                    name,
-                    count,
-                    extend,
-                    None,
-                    &text,
-                    &self.selection,
-                    self.cursor
+                    params,
+                    context
                 ) {
+
+
                     match result {
                         Ok(output) => {
                             self.apply_plugin_output(output);
@@ -1004,15 +1050,28 @@ impl Editor {
         {
             if self.plugin_registry.find_action_plugin(name).is_some() {
                  let text = self.doc.slice(..).to_string();
+                 let config = self.get_plugin_config();
+                 
+                 let params = tome_core::ext::plugins::PluginActionParams {
+                     name,
+                     count,
+                     extend,
+                     char_arg: Some(char_arg),
+                 };
+                 
+                 let context = tome_core::ext::plugins::PluginContext {
+                     text: &text,
+                     selection: &self.selection,
+                     cursor: self.cursor,
+                     config,
+                 };
+
                  if let Some(result) = self.plugin_registry.execute_action(
-                    name,
-                    count,
-                    extend,
-                    Some(char_arg),
-                    &text,
-                    &self.selection,
-                    self.cursor
+                    params,
+                    context
                 ) {
+
+
                     match result {
                         Ok(output) => {
                             self.apply_plugin_output(output);
@@ -1070,7 +1129,37 @@ impl Editor {
             self.message = Some(msg);
         }
 
+        if let Some(path) = output.open_file {
+            let path_buf = PathBuf::from(path);
+            if let Ok(content) = fs::read_to_string(&path_buf) {
+                // TODO: proper buffer switching. For now, replace content.
+                // This mimics "edit" command but primitive
+                self.doc = Rope::from(content.as_str());
+                self.path = Some(path_buf);
+                self.cursor = 0;
+                self.selection = Selection::point(0);
+                self.modified = false;
+                self.undo_stack.clear();
+                self.redo_stack.clear();
+                
+                let file_type = self.path
+                    .as_ref()
+                    .and_then(|p| ext::detect_file_type(p.to_str().unwrap_or("")))
+                    .map(|ft| ft.name.to_string());
+                self.file_type = file_type;
+                
+                emit_hook(&HookContext::BufferOpen {
+                    path: self.path.as_ref().unwrap(),
+                    text: self.doc.slice(..),
+                    file_type: self.file_type.as_deref(),
+                });
+            } else {
+                self.message = Some(format!("Failed to open file: {}", path_buf.display()));
+            }
+        }
+
         // Apply state changes
+
         if let Some(pos) = output.set_cursor {
             self.cursor = pos.min(self.doc.len_chars());
         }

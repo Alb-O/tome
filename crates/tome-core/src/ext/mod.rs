@@ -29,39 +29,56 @@
 //! };
 //! ```
 
+#[cfg(feature = "host")]
 mod actions;
+#[cfg(feature = "host")]
 mod commands;
+#[cfg(feature = "host")]
 pub mod editor_ctx;
+#[cfg(feature = "host")]
 mod filetypes;
+#[cfg(feature = "host")]
 mod hooks;
+#[cfg(feature = "host")]
 mod keybindings;
+#[cfg(feature = "host")]
 pub mod macros;
+#[cfg(feature = "host")]
 mod motions;
+#[cfg(feature = "host")]
 mod objects;
+#[cfg(feature = "host")]
 mod options;
 pub mod plugins;
+#[cfg(feature = "host")]
 pub mod statusline;
 
+#[cfg(feature = "host")]
 pub use actions::{
     ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, EditAction,
     ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount, ScrollDir, VisualDirection,
     ACTIONS, execute_action, find_action,
 };
+#[cfg(feature = "host")]
 pub use hooks::{
     emit as emit_hook, emit_mutable as emit_mutable_hook, find_hooks, all_hooks,
     HookContext, HookDef, HookEvent, HookResult, MutableHookContext, MutableHookDef,
     HOOKS, MUTABLE_HOOKS,
 };
+#[cfg(feature = "host")]
 pub use keybindings::{
     BindingMode, KeyBindingDef, KEYBINDINGS, find_binding, bindings_for_mode, bindings_for_action,
 };
+#[cfg(feature = "host")]
 pub use options::{
     OptionDef, OptionScope, OptionType, OptionValue, OPTIONS, find_option, all_options,
 };
+#[cfg(feature = "host")]
 pub use statusline::{
     RenderedSegment, SegmentPosition, SegmentStyle, StatuslineContext, StatuslineSegmentDef,
     STATUSLINE_SEGMENTS, all_segments, find_segment, render_position, segments_for_position,
 };
+#[cfg(feature = "host")]
 pub use editor_ctx::{
     CursorAccess, EditAccess, EditorCapabilities, EditorContext, HandleOutcome, JumpAccess,
     MacroAccess, MessageAccess, ModeAccess, ResultHandler, SearchAccess, ScratchAccess,
@@ -69,16 +86,22 @@ pub use editor_ctx::{
     RESULT_HANDLERS, dispatch_result,
 };
 
+#[cfg(feature = "host")]
 use linkme::distributed_slice;
+#[cfg(feature = "host")]
 use ropey::RopeSlice;
 
+#[cfg(feature = "host")]
 use crate::range::Range;
+#[cfg(feature = "host")]
 use crate::selection::Selection;
 
 /// Result type for command execution.
+#[cfg(feature = "host")]
 pub type CommandResult = Result<(), CommandError>;
 
 /// Error returned by command handlers.
+#[cfg(feature = "host")]
 #[derive(Debug, Clone)]
 pub enum CommandError {
     /// Command failed with a message.
@@ -93,6 +116,7 @@ pub enum CommandError {
     NotFound(String),
 }
 
+#[cfg(feature = "host")]
 impl std::fmt::Display for CommandError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -105,9 +129,11 @@ impl std::fmt::Display for CommandError {
     }
 }
 
+#[cfg(feature = "host")]
 impl std::error::Error for CommandError {}
 
 /// Result type for commands that may signal special behavior.
+#[cfg(feature = "host")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandOutcome {
     /// Command completed normally.
@@ -122,6 +148,7 @@ pub enum CommandOutcome {
 ///
 /// This trait abstracts editor functionality so commands can be defined
 /// in `tome-core` without depending on the terminal layer.
+#[cfg(feature = "host")]
 pub trait EditorOps {
     /// Get the file path being edited, if any.
     fn path(&self) -> Option<&std::path::Path>;
@@ -162,6 +189,7 @@ pub trait EditorOps {
 /// This provides access to editor state through the `EditorOps` trait,
 /// allowing commands to perform real operations without depending on
 /// the terminal layer.
+#[cfg(feature = "host")]
 pub struct CommandContext<'a> {
     /// Editor operations.
     pub editor: &'a mut dyn EditorOps,
@@ -173,6 +201,7 @@ pub struct CommandContext<'a> {
     pub register: Option<char>,
 }
 
+#[cfg(feature = "host")]
 impl<'a> CommandContext<'a> {
     /// Convenience: get document text.
     pub fn text(&self) -> RopeSlice<'_> {
@@ -194,6 +223,7 @@ impl<'a> CommandContext<'a> {
 ///
 /// Commands are the primary way to add functionality to Tome.
 /// They can be invoked from the command line or bound to keys.
+#[cfg(feature = "host")]
 #[derive(Clone, Copy)]
 pub struct CommandDef {
     /// Primary command name (e.g., "write").
@@ -206,6 +236,7 @@ pub struct CommandDef {
     pub handler: fn(&mut CommandContext) -> Result<CommandOutcome, CommandError>,
 }
 
+#[cfg(feature = "host")]
 impl std::fmt::Debug for CommandDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommandDef")
@@ -217,6 +248,7 @@ impl std::fmt::Debug for CommandDef {
 }
 
 /// Registry of all command definitions.
+#[cfg(feature = "host")]
 #[distributed_slice]
 pub static COMMANDS: [CommandDef];
 
@@ -224,6 +256,7 @@ pub static COMMANDS: [CommandDef];
 ///
 /// Motions are the building blocks of movement in Tome. Each motion
 /// takes the current document and selection, and returns a new selection.
+#[cfg(feature = "host")]
 #[derive(Clone, Copy)]
 pub struct MotionDef {
     /// Motion name for documentation/debugging.
@@ -242,6 +275,7 @@ pub struct MotionDef {
     pub handler: fn(text: RopeSlice, range: Range, count: usize, extend: bool) -> Range,
 }
 
+#[cfg(feature = "host")]
 impl std::fmt::Debug for MotionDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MotionDef")
@@ -252,6 +286,7 @@ impl std::fmt::Debug for MotionDef {
 }
 
 /// Registry of all motion definitions.
+#[cfg(feature = "host")]
 #[distributed_slice]
 pub static MOTIONS: [MotionDef];
 
@@ -259,6 +294,7 @@ pub static MOTIONS: [MotionDef];
 ///
 /// Text objects define regions of text (word, sentence, quoted string, etc.)
 /// that can be selected with `inner` or `around` variants.
+#[cfg(feature = "host")]
 #[derive(Clone, Copy)]
 pub struct TextObjectDef {
     /// Object name for documentation.
@@ -281,6 +317,7 @@ pub struct TextObjectDef {
     pub around: fn(text: RopeSlice, pos: usize) -> Option<Range>,
 }
 
+#[cfg(feature = "host")]
 impl std::fmt::Debug for TextObjectDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TextObjectDef")
@@ -293,10 +330,12 @@ impl std::fmt::Debug for TextObjectDef {
 }
 
 /// Registry of all text object definitions.
+#[cfg(feature = "host")]
 #[distributed_slice]
 pub static TEXT_OBJECTS: [TextObjectDef];
 
 /// File type definition for language-specific configuration.
+#[cfg(feature = "host")]
 #[derive(Clone, Copy)]
 pub struct FileTypeDef {
     /// File type name (e.g., "rust", "python").
@@ -311,6 +350,7 @@ pub struct FileTypeDef {
     pub description: &'static str,
 }
 
+#[cfg(feature = "host")]
 impl std::fmt::Debug for FileTypeDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FileTypeDef")
@@ -321,10 +361,12 @@ impl std::fmt::Debug for FileTypeDef {
 }
 
 /// Registry of all file type definitions.
+#[cfg(feature = "host")]
 #[distributed_slice]
 pub static FILE_TYPES: [FileTypeDef];
 
 /// Look up a command by name or alias.
+#[cfg(feature = "host")]
 pub fn find_command(name: &str) -> Option<&'static CommandDef> {
     COMMANDS.iter().find(|cmd| {
         cmd.name == name || cmd.aliases.contains(&name)
@@ -332,11 +374,13 @@ pub fn find_command(name: &str) -> Option<&'static CommandDef> {
 }
 
 /// Look up a motion by name.
+#[cfg(feature = "host")]
 pub fn find_motion(name: &str) -> Option<&'static MotionDef> {
     MOTIONS.iter().find(|m| m.name == name)
 }
 
 /// Look up a text object by trigger character.
+#[cfg(feature = "host")]
 pub fn find_text_object(trigger: char) -> Option<&'static TextObjectDef> {
     TEXT_OBJECTS.iter().find(|obj| {
         obj.trigger == trigger || obj.alt_triggers.contains(&trigger)
@@ -344,6 +388,7 @@ pub fn find_text_object(trigger: char) -> Option<&'static TextObjectDef> {
 }
 
 /// Detect file type from filename.
+#[cfg(feature = "host")]
 pub fn detect_file_type(filename: &str) -> Option<&'static FileTypeDef> {
     let basename = filename.rsplit('/').next().unwrap_or(filename);
     
@@ -362,13 +407,14 @@ pub fn detect_file_type(filename: &str) -> Option<&'static FileTypeDef> {
 }
 
 /// Detect file type from first line (shebang).
+#[cfg(feature = "host")]
 pub fn detect_file_type_from_content(first_line: &str) -> Option<&'static FileTypeDef> {
     FILE_TYPES.iter().find(|ft| {
         ft.first_line_patterns.iter().any(|pattern| first_line.contains(pattern))
     })
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "host"))]
 mod tests {
     use super::*;
 

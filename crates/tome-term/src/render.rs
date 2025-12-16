@@ -44,11 +44,10 @@ impl Editor {
         let main_result = self.render_document_with_cursor(chunks[0], use_block_cursor && !self.scratch_focused);
         frame.render_widget(main_result.widget, chunks[0]);
 
-        if !self.scratch_focused {
-            if let Some((row, col)) = main_result.cursor_position {
+        if !self.scratch_focused
+            && let Some((row, col)) = main_result.cursor_position {
                 frame.set_cursor_position(Position::new(col, row));
             }
-        }
 
         // Render status line
         // We render status line based on which buffer is focused
@@ -106,11 +105,10 @@ impl Editor {
             let scratch_result = self.render_document_with_cursor(inner_area, scratch_use_block);
             frame.render_widget(scratch_result.widget, inner_area);
             
-            if self.scratch_focused {
-                if let Some((row, col)) = scratch_result.cursor_position {
+            if self.scratch_focused
+                && let Some((row, col)) = scratch_result.cursor_position {
                     frame.set_cursor_position(Position::new(col, row));
                 }
-            }
             self.leave_scratch_context();
         }
     }

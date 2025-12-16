@@ -48,20 +48,25 @@
 //! | `on_hook` | Called when a registered hook fires |
 //! | `on_command` | Called when a registered command is executed |
 
-#[cfg(feature = "plugins")]
-mod host;
-#[cfg(feature = "plugins")]
-mod loader;
-#[cfg(feature = "plugins")]
-mod registry;
+pub mod api;
+pub mod types;
 
-#[cfg(feature = "plugins")]
-pub use host::{PluginHostContext, SharedHostContext};
-#[cfg(feature = "plugins")]
+#[cfg(feature = "host")]
+pub mod loader;
+#[cfg(feature = "host")]
+pub mod registry;
+
+#[cfg(feature = "host")]
 pub use loader::{PluginLoader, PluginManifest, PluginLoadError};
-#[cfg(feature = "plugins")]
-pub use registry::{PluginRegistry, LoadedPlugin, PluginRegistration};
+#[cfg(feature = "host")]
+pub use registry::{
+    PluginRegistry, LoadedPlugin, PluginRegistration, 
+    PluginHostContext, SharedHostContext, PendingOp,
+    PluginContext, PluginActionParams,
+};
 
-// Re-export JSON schemas for plugin communication
-#[cfg(feature = "plugins")]
-pub use host::{ActionInput, ActionOutput, CommandInput, EditorState, HookInput};
+
+pub use types::{
+    ActionInput, ActionOutput, CommandInput, EditorState, HookInput
+};
+

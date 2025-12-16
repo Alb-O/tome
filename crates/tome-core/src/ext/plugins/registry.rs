@@ -4,14 +4,112 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use extism::convert::Json;
+use extism::UserData;
 
-use super::host::{
-    ActionInput, ActionOutput, CommandInput, EditorState, HookInput, 
-    PendingOp, SharedHostContext,
-};
+pub use crate::ext::plugins::types::{ActionInput, ActionOutput, CommandInput, EditorState, HookInput};
+
+
 use crate::selection::Selection;
 
+use linkme::distributed_slice;
+
+/// Function type for creating host functions.
+
+pub type HostFunctionFactory = fn(SharedHostContext) -> Vec<extism::Function>;
+
+/// Registry for host function factories (compile-time collection).
+#[distributed_slice]
+pub static HOST_FUNCTION_FACTORIES: [HostFunctionFactory];
+
+
+/// Context passed to host functions, providing access to editor state.
+pub struct PluginHostContext {
+    /// Document text (copy for safety - plugins can't corrupt the real buffer).
+    pub text: String,
+    /// Current selection (primary range only for simplicity).
+    pub selection_anchor: usize,
+    pub selection_head: usize,
+    /// Cursor position.
+    pub cursor: usize,
+    /// Pending operations to apply after plugin call.
+    pub pending_ops: Vec<PendingOp>,
+    /// Messages to display.
+    pub messages: Vec<String>,
+    /// Configuration values (key -> json string).
+    pub config: HashMap<String, String>,
+}
+
+/// Operations queued by plugins to be applied after the call completes.
+
+#[derive(Debug, Clone)]
+pub enum PendingOp {
+    SetCursor(usize),
+    SetSelection { anchor: usize, head: usize },
+    Insert(String),
+    Delete,
+    Message(String),
+    OpenFile(String),
+}
+
+
+impl PluginHostContext {
+    pub fn new(text: String, selection: &Selection, cursor: usize) -> Self {
+        let primary = selection.primary();
+        Self {
+            text,
+            selection_anchor: primary.anchor,
+            selection_head: primary.head,
+            cursor,
+            pending_ops: Vec::new(),
+            messages: Vec::new(),
+            config: HashMap::new(),
+        }
+    }
+
+    pub fn update(&mut self, text: String, selection: &Selection, cursor: usize, config: HashMap<String, String>) {
+        let primary = selection.primary();
+        self.text = text;
+        self.selection_anchor = primary.anchor;
+        self.selection_head = primary.head;
+        self.cursor = cursor;
+        self.pending_ops.clear();
+        self.messages.clear();
+        self.config = config;
+    }
+
+
+
+    pub fn take_pending_ops(&mut self) -> Vec<PendingOp> {
+        std::mem::take(&mut self.pending_ops)
+    }
+
+    pub fn take_messages(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.messages)
+    }
+}
+
+/// Wrapper type for sharing host context with extism.
+/// UserData<T> internally wraps T in Arc<Mutex<T>>.
+pub type SharedHostContext = UserData<PluginHostContext>;
+
+/// Parameters for calling a plugin action.
+pub struct PluginActionParams<'a> {
+    pub name: &'a str,
+    pub count: usize,
+    pub extend: bool,
+    pub char_arg: Option<char>,
+}
+
+/// Context for plugin execution.
+pub struct PluginContext<'a> {
+    pub text: &'a str,
+    pub selection: &'a Selection,
+    pub cursor: usize,
+    pub config: HashMap<String, String>,
+}
+
 /// A loaded plugin with its metadata and the actual extism Plugin instance.
+
 pub struct LoadedPlugin {
     /// Unique plugin ID.
     pub id: String,
@@ -62,37 +160,28 @@ impl LoadedPlugin {
     /// Call an action on this plugin.
     pub fn call_action(
         &mut self,
-        action_name: &str,
-        count: usize,
-        extend: bool,
-        char_arg: Option<char>,
-        text: &str,
-        selection: &Selection,
-        cursor: usize,
+        params: PluginActionParams,
+        context: PluginContext,
     ) -> Result<ActionOutput, PluginCallError> {
-        let primary = selection.primary();
+        let primary = context.selection.primary();
         
         // Update host context with current editor state
         {
             let inner = self.host_ctx.get().map_err(|e| PluginCallError::LockError(e.to_string()))?;
             let mut ctx = inner.lock().map_err(|e| PluginCallError::LockError(e.to_string()))?;
-            ctx.text = text.to_string();
-            ctx.selection_anchor = primary.anchor;
-            ctx.selection_head = primary.head;
-            ctx.cursor = cursor;
-            ctx.pending_ops.clear();
-            ctx.messages.clear();
+            ctx.update(context.text.to_string(), context.selection, context.cursor, context.config);
         }
+
 
         // Build input
         let input = ActionInput {
-            action_name: action_name.to_string(),
-            count,
-            extend,
-            char_arg,
+            action_name: params.name.to_string(),
+            count: params.count,
+            extend: params.extend,
+            char_arg: params.char_arg,
             editor: EditorState {
-                text: text.to_string(),
-                cursor,
+                text: context.text.to_string(),
+                cursor: context.cursor,
                 selection_anchor: primary.anchor,
                 selection_head: primary.head,
             },
@@ -115,8 +204,10 @@ impl LoadedPlugin {
                 PendingOp::Insert(text) => final_output.insert_text = Some(text.clone()),
                 PendingOp::Delete => final_output.delete = true,
                 PendingOp::Message(msg) => final_output.message = Some(msg.clone()),
+                PendingOp::OpenFile(path) => final_output.open_file = Some(path.clone()),
             }
         }
+
 
         Ok(final_output)
     }
@@ -126,30 +217,24 @@ impl LoadedPlugin {
         &mut self,
         command_name: &str,
         args: Vec<String>,
-        text: &str,
-        selection: &Selection,
-        cursor: usize,
+        context: PluginContext,
     ) -> Result<ActionOutput, PluginCallError> {
-        let primary = selection.primary();
+        let primary = context.selection.primary();
         
         // Update host context
         {
             let inner = self.host_ctx.get().map_err(|e| PluginCallError::LockError(e.to_string()))?;
             let mut ctx = inner.lock().map_err(|e| PluginCallError::LockError(e.to_string()))?;
-            ctx.text = text.to_string();
-            ctx.selection_anchor = primary.anchor;
-            ctx.selection_head = primary.head;
-            ctx.cursor = cursor;
-            ctx.pending_ops.clear();
-            ctx.messages.clear();
+            ctx.update(context.text.to_string(), context.selection, context.cursor, context.config);
         }
+
 
         let input = CommandInput {
             command_name: command_name.to_string(),
             args,
             editor: EditorState {
-                text: text.to_string(),
-                cursor,
+                text: context.text.to_string(),
+                cursor: context.cursor,
                 selection_anchor: primary.anchor,
                 selection_head: primary.head,
             },
@@ -166,30 +251,24 @@ impl LoadedPlugin {
     pub fn call_hook(
         &mut self,
         hook_name: &str,
-        text: &str,
-        selection: &Selection,
-        cursor: usize,
         extra: serde_json::Value,
+        context: PluginContext,
     ) -> Result<(), PluginCallError> {
-        let primary = selection.primary();
+        let primary = context.selection.primary();
         
         // Update host context
         {
             let inner = self.host_ctx.get().map_err(|e| PluginCallError::LockError(e.to_string()))?;
             let mut ctx = inner.lock().map_err(|e| PluginCallError::LockError(e.to_string()))?;
-            ctx.text = text.to_string();
-            ctx.selection_anchor = primary.anchor;
-            ctx.selection_head = primary.head;
-            ctx.cursor = cursor;
-            ctx.pending_ops.clear();
-            ctx.messages.clear();
+            ctx.update(context.text.to_string(), context.selection, context.cursor, context.config);
         }
+
 
         let input = HookInput {
             hook_name: hook_name.to_string(),
             editor: EditorState {
-                text: text.to_string(),
-                cursor,
+                text: context.text.to_string(),
+                cursor: context.cursor,
                 selection_anchor: primary.anchor,
                 selection_head: primary.head,
             },
@@ -367,17 +446,12 @@ impl PluginRegistry {
     /// Returns None if no plugin handles this action.
     pub fn execute_action(
         &mut self,
-        action_name: &str,
-        count: usize,
-        extend: bool,
-        char_arg: Option<char>,
-        text: &str,
-        selection: &Selection,
-        cursor: usize,
+        params: PluginActionParams,
+        context: PluginContext,
     ) -> Option<Result<ActionOutput, PluginCallError>> {
-        let plugin_id = self.action_to_plugin.get(action_name)?.clone();
+        let plugin_id = self.action_to_plugin.get(params.name)?.clone();
         let plugin = self.plugins.get_mut(&plugin_id)?;
-        Some(plugin.call_action(action_name, count, extend, char_arg, text, selection, cursor))
+        Some(plugin.call_action(params, context))
     }
 
     /// Execute a command if a plugin provides it.
@@ -386,23 +460,19 @@ impl PluginRegistry {
         &mut self,
         command_name: &str,
         args: Vec<String>,
-        text: &str,
-        selection: &Selection,
-        cursor: usize,
+        context: PluginContext,
     ) -> Option<Result<ActionOutput, PluginCallError>> {
         let plugin_id = self.command_to_plugin.get(command_name)?.clone();
         let plugin = self.plugins.get_mut(&plugin_id)?;
-        Some(plugin.call_command(command_name, args, text, selection, cursor))
+        Some(plugin.call_command(command_name, args, context))
     }
 
     /// Fire a hook to all subscribed plugins.
     pub fn fire_hook(
         &mut self,
         hook_name: &str,
-        text: &str,
-        selection: &Selection,
-        cursor: usize,
         extra: serde_json::Value,
+        context: PluginContext,
     ) -> Vec<Result<(), PluginCallError>> {
         let subscriber_ids: Vec<String> = self.hook_subscribers
             .get(hook_name)
@@ -412,10 +482,32 @@ impl PluginRegistry {
         let mut results = Vec::new();
         for id in subscriber_ids {
             if let Some(plugin) = self.plugins.get_mut(&id) {
-                results.push(plugin.call_hook(hook_name, text, selection, cursor, extra.clone()));
+                // Clone the context for each plugin call.
+                // We must clone because the context contains `HashMap` configuration which
+                // needs to be passed to each plugin instance's `PluginHostContext`.
+                let ctx_clone = PluginContext {
+                    text: context.text,
+                    selection: context.selection,
+                    cursor: context.cursor,
+                    config: context.config.clone(),
+                };
+                
+                results.push(plugin.call_hook(hook_name, extra.clone(), ctx_clone));
             }
         }
         results
+    }
+
+}
+
+impl<'a> Clone for PluginContext<'a> {
+    fn clone(&self) -> Self {
+        Self {
+            text: self.text,
+            selection: self.selection,
+            cursor: self.cursor,
+            config: self.config.clone(),
+        }
     }
 }
 

@@ -15,6 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap.workspace = true
+directories = "6.0.0"
 ratatui.workspace = true
 termina.workspace = true
 tome-core = { workspace = true }

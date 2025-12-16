@@ -1,5 +1,9 @@
 use extism_pdk::*;
 use serde::{Deserialize, Serialize};
+use tome_core::ext::plugins::{
+    api::{buffer, system, search, file, config}, // Import the API modules
+    ActionInput, ActionOutput, CommandInput, HookInput,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct PluginRegistration {
@@ -36,54 +40,6 @@ pub struct PluginKeybinding {
     pub action: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ActionInput {
-    pub action_name: String,
-    pub count: usize,
-    pub extend: bool,
-    pub char_arg: Option<char>,
-    pub editor: EditorState,
-}
-
-#[derive(Serialize, Deserialize, Default)]
-pub struct ActionOutput {
-    #[serde(default)]
-    pub set_cursor: Option<usize>,
-    #[serde(default)]
-    pub set_selection: Option<(usize, usize)>,
-    #[serde(default)]
-    pub insert_text: Option<String>,
-    #[serde(default)]
-    pub delete: bool,
-    #[serde(default)]
-    pub message: Option<String>,
-    #[serde(default)]
-    pub error: Option<String>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct EditorState {
-    pub text: String,
-    pub cursor: usize,
-    pub selection_anchor: usize,
-    pub selection_head: usize,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct CommandInput {
-    pub command_name: String,
-    pub args: Vec<String>,
-    pub editor: EditorState,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct HookInput {
-    pub hook_name: String,
-    pub editor: EditorState,
-    #[serde(default)]
-    pub extra: serde_json::Value,
-}
-
 #[plugin_fn]
 pub fn plugin_init() -> FnResult<Json<PluginRegistration>> {
     Ok(Json(PluginRegistration {
@@ -104,7 +60,22 @@ pub fn plugin_init() -> FnResult<Json<PluginRegistration>> {
                 name: "hello".to_string(),
                 aliases: vec![],
                 description: "Say hello via command".to_string(),
-            }
+            },
+            CommandRegistration {
+                name: "search_test".to_string(),
+                aliases: vec![],
+                description: "Test search api".to_string(),
+            },
+            CommandRegistration {
+                name: "config_test".to_string(),
+                aliases: vec![],
+                description: "Test config api".to_string(),
+            },
+            CommandRegistration {
+                name: "file_test".to_string(),
+                aliases: vec![],
+                description: "Test file open api".to_string(),
+            },
         ],
         hooks: vec![],
         keybindings: vec![],
@@ -115,6 +86,9 @@ pub fn plugin_init() -> FnResult<Json<PluginRegistration>> {
 pub fn on_action(Json(input): Json<ActionInput>) -> FnResult<Json<ActionOutput>> {
     match input.action_name.as_str() {
         "demo_insert_hello" => {
+            // Demonstrate calling host function directly
+            system::host::editor_message("Executing demo_insert_hello from plugin...".to_string());
+            
             Ok(Json(ActionOutput {
                 insert_text: Some("Hello from Plugin!".to_string()),
                 message: Some("Executed demo action".to_string()),
@@ -122,7 +96,9 @@ pub fn on_action(Json(input): Json<ActionInput>) -> FnResult<Json<ActionOutput>>
             }))
         }
         "demo_upper_selection" => {
-            let text = &input.editor.text;
+            // Use host function to get text instead of input (just to test it)
+            let text = buffer::host::editor_get_text();
+            
             let anchor = input.editor.selection_anchor;
             let head = input.editor.selection_head;
             
@@ -155,6 +131,50 @@ pub fn on_command(Json(input): Json<CommandInput>) -> FnResult<Json<ActionOutput
              Ok(Json(ActionOutput {
                 insert_text: Some("Hello from Command!".to_string()),
                 message: Some("Ran hello command".to_string()),
+                ..Default::default()
+            }))
+        }
+        "search_test" => {
+            let pattern = if input.args.is_empty() { "test".to_string() } else { input.args[0].clone() };
+            if let Some((anchor, head)) = search::host::editor_search(pattern.clone(), false) {
+                Ok(Json(ActionOutput {
+                    set_selection: Some((anchor, head)),
+                    set_cursor: Some(head),
+                    message: Some(format!("Found '{}' at {}-{}", pattern, anchor, head)),
+                    ..Default::default()
+                }))
+            } else {
+                Ok(Json(ActionOutput {
+                    message: Some(format!("'{}' not found", pattern)),
+                    ..Default::default()
+                }))
+            }
+        }
+        "config_test" => {
+            let key = if input.args.is_empty() { "text_width".to_string() } else { input.args[0].clone() };
+            if let Some(val) = config::host::editor_get_config(key.clone()) {
+                 Ok(Json(ActionOutput {
+                    message: Some(format!("Config '{}': {}", key, val)),
+                    ..Default::default()
+                }))
+            } else {
+                 Ok(Json(ActionOutput {
+                    message: Some(format!("Config '{}' not set", key)),
+                    ..Default::default()
+                }))
+            }
+        }
+        "file_test" => {
+            if input.args.is_empty() {
+                 return Ok(Json(ActionOutput {
+                    message: Some("Usage: file_test <path>".to_string()),
+                    ..Default::default()
+                }));
+            }
+            let path = input.args[0].clone();
+            file::host::editor_open_file(path.clone());
+            Ok(Json(ActionOutput {
+                message: Some(format!("Requesting open: {}", path)),
                 ..Default::default()
             }))
         }

@@ -5,8 +5,7 @@ use std::path::{Path, PathBuf};
 use extism::{Manifest, PluginBuilder, UserData, Wasm};
 use extism::convert::Json;
 
-use super::host::{create_host_functions, PluginHostContext};
-use super::registry::{LoadedPlugin, PluginRegistration};
+use super::registry::{PluginHostContext, LoadedPlugin, PluginRegistration, HOST_FUNCTION_FACTORIES};
 use crate::selection::Selection;
 
 /// Plugin manifest for loading from a directory.
@@ -76,7 +75,6 @@ impl PluginLoader {
     /// Load a plugin from a .wasm file or manifest.
     pub fn load(&self, path: &Path) -> Result<LoadedPlugin, PluginLoadError> {
         let (wasm_path, manifest) = if path.extension().is_some_and(|e| e == "json") {
-            // Load manifest
             let content = std::fs::read_to_string(path)
                 .map_err(|e| PluginLoadError::Io(e.to_string()))?;
             let manifest: PluginManifest = serde_json::from_str(&content)
@@ -103,14 +101,12 @@ impl PluginLoader {
                     .to_string()
             });
 
-        // Create the shared host context (UserData wraps in Arc<Mutex<>> internally)
         let host_ctx = UserData::new(PluginHostContext::new(
             String::new(),
             &Selection::point(0),
             0,
         ));
 
-        // Build extism manifest
         let wasi_enabled = manifest.as_ref().map(|m| m.wasi).unwrap_or(false);
         let mut extism_manifest = Manifest::new([Wasm::file(&wasm_path)]);
         
@@ -123,10 +119,11 @@ impl PluginLoader {
             }
         }
 
-        // Create host functions
-        let host_functions = create_host_functions(host_ctx.clone());
+        let mut host_functions = Vec::new();
+        for factory in HOST_FUNCTION_FACTORIES {
+            host_functions.extend(factory(host_ctx.clone()));
+        }
 
-        // Build the plugin
         let mut plugin = PluginBuilder::new(extism_manifest)
             .with_wasi(wasi_enabled)
             .with_functions(host_functions)
@@ -149,6 +146,7 @@ impl PluginLoader {
         ))
     }
 
+
     /// Load a plugin directly from wasm bytes (for testing or embedded plugins).
     pub fn load_from_bytes(
         &self,
@@ -161,11 +159,15 @@ impl PluginLoader {
             &Selection::point(0),
             0,
         ));
-
         let manifest = Manifest::new([Wasm::data(wasm_bytes)]);
-        let host_functions = create_host_functions(host_ctx.clone());
+        
+        let mut host_functions = Vec::new();
+        for factory in HOST_FUNCTION_FACTORIES {
+            host_functions.extend(factory(host_ctx.clone()));
+        }
 
         let mut plugin = PluginBuilder::new(manifest)
+
             .with_wasi(wasi)
             .with_functions(host_functions)
             .build()
