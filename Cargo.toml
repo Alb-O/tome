@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/demo-plugin","crates/tome-core", "crates/tome-macro", "crates/tome-term"]
+members = ["crates/demo-plugin","crates/demo-cabi-plugin","crates/tome-core", "crates/tome-macro", "crates/tome-term"]
 
 
 [workspace.package]
@@ -14,6 +14,7 @@ clap = { version = "4", features = ["derive"] }
 criterion = "0.5"
 extism = "1"
 insta = "1.42"
+libloading = "0.8"
 linkme = "0.3"
 paste = "1"
 ratatui = "0.29"

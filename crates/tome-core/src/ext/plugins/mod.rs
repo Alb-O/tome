@@ -52,10 +52,14 @@ pub mod api;
 pub mod types;
 
 #[cfg(feature = "host")]
+pub mod cabi;
+#[cfg(feature = "host")]
 pub mod loader;
 #[cfg(feature = "host")]
 pub mod registry;
 
+#[cfg(feature = "host")]
+pub use cabi::{load_c_abi_plugin, CAbiLoadError, CAbiPlugin, TomeGuestV1, TomeHostV1, TomeStatus, TOME_C_ABI_VERSION};
 #[cfg(feature = "host")]
 pub use loader::{PluginLoader, PluginManifest, PluginLoadError};
 #[cfg(feature = "host")]
@@ -64,6 +68,7 @@ pub use registry::{
     PluginHostContext, SharedHostContext, PendingOp,
     PluginContext, PluginActionParams,
 };
+
 
 
 pub use types::{

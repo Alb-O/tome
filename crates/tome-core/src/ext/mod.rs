@@ -85,6 +85,11 @@ pub use editor_ctx::{
     SelectionAccess, SelectionOpsAccess, TextAccess, TransformAccess, UndoAccess,
     dispatch_result,
 };
+#[cfg(feature = "host")]
+pub use plugins::{
+    load_c_abi_plugin, CAbiLoadError, CAbiPlugin, TomeGuestV1, TomeHostV1, TomeStatus,
+    TOME_C_ABI_VERSION,
+};
 
 #[cfg(feature = "host")]
 use linkme::distributed_slice;

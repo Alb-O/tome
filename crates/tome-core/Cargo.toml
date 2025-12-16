@@ -7,7 +7,7 @@ license.workspace = true
 
 [features]
 default = ["host"]
-host = ["dep:linkme", "dep:ropey", "dep:regex", "dep:termina", "dep:unicode-segmentation", "dep:unicode-width", "dep:smallvec", "dep:paste", "dep:extism"]
+host = ["dep:linkme", "dep:ropey", "dep:regex", "dep:termina", "dep:unicode-segmentation", "dep:unicode-width", "dep:smallvec", "dep:paste", "dep:extism", "dep:libloading"]
 guest = ["dep:extism-pdk"]
 plugins = ["dep:extism"]
 
@@ -15,6 +15,7 @@ plugins = ["dep:extism"]
 [dependencies]
 extism = { workspace = true, optional = true }
 extism-pdk = { version = "1.0", optional = true }
+libloading = { workspace = true, optional = true }
 linkme = { workspace = true, optional = true }
 paste = { workspace = true, optional = true }
 regex = { workspace = true, optional = true }
