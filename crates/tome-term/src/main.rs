@@ -16,11 +16,8 @@ use cli::Cli;
 use backend::TerminaBackend;
 pub use editor::Editor;
 
-fn run_editor(mut editor: Editor) -> io::Result<()> {
-    let mut terminal = PlatformTerminal::new()?;
+fn enable_terminal_features(terminal: &mut PlatformTerminal) -> io::Result<()> {
     terminal.enter_raw_mode()?;
-    
-    // Enable Alternate Screen and Kitty Keyboard Protocol
     write!(
         terminal,
         "{}{}",
@@ -31,8 +28,6 @@ fn run_editor(mut editor: Editor) -> io::Result<()> {
             KittyKeyboardFlags::DISAMBIGUATE_ESCAPE_CODES | KittyKeyboardFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
         ))
     )?;
-    
-    // Enable mouse tracking?
     write!(
         terminal,
         "{}{}{}",
@@ -40,6 +35,43 @@ fn run_editor(mut editor: Editor) -> io::Result<()> {
         Csi::Mode(Mode::SetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::SGRMouse))),
         Csi::Mode(Mode::SetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::AnyEventMouse))),
     )?;
+    terminal.flush()
+}
+
+fn disable_terminal_features(terminal: &mut PlatformTerminal) -> io::Result<()> {
+    write!(
+        terminal,
+        "{}{}{}{}{}",
+        Csi::Keyboard(Keyboard::PopFlags(1)),
+        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::MouseTracking))),
+        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::SGRMouse))),
+        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::AnyEventMouse))),
+        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::ClearAndEnableAlternateScreen)))
+    )?;
+    terminal.enter_cooked_mode()?;
+    terminal.flush()
+}
+
+fn install_panic_hook(terminal: &mut PlatformTerminal) {
+    terminal.set_panic_hook(|handle| {
+        let _ = write!(
+            handle,
+            "{}{}{}{}{}",
+            Csi::Keyboard(Keyboard::PopFlags(1)),
+            Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::MouseTracking))),
+            Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::SGRMouse))),
+            Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::AnyEventMouse))),
+            Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::ClearAndEnableAlternateScreen)))
+        );
+        let _ = handle.flush();
+    });
+}
+
+fn run_editor(mut editor: Editor) -> io::Result<()> {
+    let mut terminal = PlatformTerminal::new()?;
+    install_panic_hook(&mut terminal);
+    enable_terminal_features(&mut terminal)?;
+    let events = terminal.event_reader();
 
     let backend = TerminaBackend::new(terminal);
     let mut terminal = Terminal::new(backend)?;
@@ -48,8 +80,7 @@ fn run_editor(mut editor: Editor) -> io::Result<()> {
         loop {
             terminal.draw(|frame| editor.render(frame))?;
 
-            // Block for event
-            let event = terminal.backend_mut().terminal_mut().read(|e| !e.is_escape())?;
+            let event = events.read(|e| !e.is_escape())?;
 
             match event {
                 Event::Key(key)
@@ -73,22 +104,10 @@ fn run_editor(mut editor: Editor) -> io::Result<()> {
         Ok(())
     })();
 
-    // Cleanup
     let terminal_inner = terminal.backend_mut().terminal_mut();
-    write!(
-        terminal_inner,
-        "{}{}{}{}{}",
-        Csi::Keyboard(Keyboard::PopFlags(1)),
-        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::MouseTracking))),
-        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::SGRMouse))),
-        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::AnyEventMouse))),
-        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::ClearAndEnableAlternateScreen)))
-    )?;
-    
-    // Explicitly drop/flush to ensure cleanup is sent?
-    terminal_inner.flush()?;
+    let cleanup_result = disable_terminal_features(terminal_inner);
 
-    result
+    result.and(cleanup_result)
 }
 
 fn main() -> io::Result<()> {
