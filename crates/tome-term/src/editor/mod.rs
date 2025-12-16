@@ -42,6 +42,8 @@ pub struct Editor {
     in_scratch_context: bool,
     pub file_type: Option<String>,
     pub theme: &'static Theme,
+    pub window_width: Option<u16>,
+    pub window_height: Option<u16>,
 }
 
 impl Editor {
@@ -156,10 +158,18 @@ impl Editor {
             in_scratch_context: false,
             file_type: file_type.map(|s| s.to_string()),
             theme: &crate::themes::solarized::SOLARIZED_DARK,
+            window_width: None,
+            window_height: None,
         }
     }
 
     pub fn mode(&self) -> Mode {
+        if self.in_scratch_context {
+            return self.input.mode();
+        }
+        if self.scratch_focused {
+            return self.scratch.input.mode();
+        }
         self.input.mode()
     }
 
@@ -168,6 +178,12 @@ impl Editor {
     }
 
     pub fn mode_name(&self) -> &'static str {
+        if self.in_scratch_context {
+            return self.input.mode_name();
+        }
+        if self.scratch_focused {
+            return self.scratch.input.mode_name();
+        }
         self.input.mode_name()
     }
 
@@ -601,9 +617,36 @@ impl Editor {
     }
 
     pub fn handle_mouse(&mut self, mouse: termina::event::MouseEvent) -> bool {
-        if self.scratch_open && self.scratch_focused {
-            return self.with_scratch_context(|ed| ed.handle_mouse_active(mouse));
+        if self.scratch_open {
+            let height = self.window_height.unwrap_or(24);
+            let popup_height = 12;
+            let popup_y = height.saturating_sub(popup_height + 2); // +2 for status and message
+            let popup_end = height.saturating_sub(2);
+            
+            // Check if click is inside popup area
+            if mouse.row >= popup_y && mouse.row < popup_end {
+                // If inside, we handle it in scratchpad
+                
+                // First ensure it is focused if it wasn't (e.g. click to focus)
+                if !self.scratch_focused {
+                    self.scratch_focused = true;
+                }
+
+                // Adjust mouse coordinates to be relative to the popup
+                let mut adj_mouse = mouse;
+                adj_mouse.row = mouse.row.saturating_sub(popup_y);
+                
+                return self.with_scratch_context(|ed| ed.handle_mouse_active(adj_mouse));
+            } else {
+                // Click was outside
+                // If it's a click (Press), close the popup
+                if matches!(mouse.kind, termina::event::MouseEventKind::Down(_)) {
+                    self.do_close_scratch();
+                    // Fall through to process click in main editor
+                }
+            }
         }
+
         self.handle_mouse_active(mouse)
     }
 
@@ -621,6 +664,8 @@ impl Editor {
     }
 
     pub fn handle_window_resize(&mut self, width: u16, height: u16) {
+        self.window_width = Some(width);
+        self.window_height = Some(height);
         emit_hook(&HookContext::WindowResize { width, height });
     }
 

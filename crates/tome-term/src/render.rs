@@ -29,6 +29,9 @@ impl Editor {
         let use_block_cursor = !matches!(self.mode(), Mode::Insert);
 
         let area = frame.area();
+        // Cache last known terminal size for input handling (e.g., mouse hit-testing)
+        self.window_width = Some(area.width);
+        self.window_height = Some(area.height);
         
         // Set background color for the whole screen
         let bg_block = Block::default().style(Style::default().bg(self.theme.colors.ui.bg));
@@ -54,7 +57,11 @@ impl Editor {
                 frame.set_cursor_position(Position::new(col, row));
             }
 
-        // Render status line
+        // Render status line background (matches popup background)
+        let status_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
+        frame.render_widget(status_bg, chunks[1]);
+
+        // Render status line content
         // We render status line based on which buffer is focused
         if self.scratch_focused {
             self.enter_scratch_context();
@@ -65,20 +72,30 @@ impl Editor {
             frame.render_widget(self.render_status_line(), chunks[1]);
         }
         
-        // Render message line
+        // Render message line background (matches popup background)
+        let message_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
+        frame.render_widget(message_bg, chunks[2]);
+        
+        // Render message line content
         frame.render_widget(self.render_message_line(), chunks[2]);
 
         // Render Scratch Popup if open
         if self.scratch_open {
-            // Command palette layout: Bottom docked, full width, no borders
+            // Command palette layout: Bottom docked (above status bar), full width, no borders
             let popup_height = 12;
             let area = frame.area();
+            
+            // Layout: 
+            // - Main Doc
+            // - Popup (if open)
+            // - Status Line
+            // - Message Line
 
             let popup_area = Rect {
                 x: area.x,
-                y: area.height.saturating_sub(popup_height),
+                y: area.height.saturating_sub(popup_height + 2), // +2 for status and message lines
                 width: area.width,
-                height: popup_height.min(area.height),
+                height: popup_height.min(area.height.saturating_sub(2)),
             };
 
             frame.render_widget(Clear, popup_area);
