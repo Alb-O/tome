@@ -39,6 +39,7 @@ pub mod macros;
 mod motions;
 mod objects;
 mod options;
+pub mod plugins;
 pub mod statusline;
 
 pub use actions::{

@@ -3508,6 +3508,8 @@ dependencies = [
  "paste",
  "regex",
  "ropey",
+ "serde",
+ "serde_json",
  "smallvec",
  "termina",
  "unicode-segmentation",
