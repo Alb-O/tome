@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/demo-plugin","crates/demo-cabi-plugin","crates/tome-core", "crates/tome-macro", "crates/tome-term"]
+members = ["crates/demo-cabi-plugin","crates/tome-cabi-types","crates/tome-core", "crates/tome-macro", "crates/tome-term"]
 
 
 [workspace.package]
@@ -24,6 +24,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 smallvec = "1.15"
 termina = "0.1.1"
+tome-cabi-types = { path = "crates/tome-cabi-types" }
 tome-core = { path = "crates/tome-core" }
 unicode-segmentation = "1.2"
 unicode-width = "0.2"

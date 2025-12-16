@@ -1,55 +1,36 @@
 #![allow(non_camel_case_types)]
-//! Minimal example C-ABI Tome plugin. No dependencies besides the standard library.
+//! Minimal example C-ABI Tome plugin using the shared tome-cabi-types crate.
 
-use std::ffi::{c_char, CString};
+use std::ffi::CString;
 
-const TOME_C_ABI_VERSION: u32 = 1;
+use tome_cabi_types::{TomeGuestV1, TomeHostV1, TomeStatus, TOME_C_ABI_VERSION};
 
-type TomeStatus = i32;
-const TOME_STATUS_OK: TomeStatus = 0;
-const TOME_STATUS_FAILED: TomeStatus = 1;
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct TomeHostV1 {
-    pub abi_version: u32,
-    pub log: Option<extern "C" fn(*const c_char)>,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Default)]
-pub struct TomeGuestV1 {
-    pub abi_version: u32,
-    pub init: Option<extern "C" fn() -> TomeStatus>,
-}
-
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tome_plugin_entry(host: *const TomeHostV1, out_guest: *mut TomeGuestV1) -> TomeStatus {
     if out_guest.is_null() || host.is_null() {
-        return TOME_STATUS_FAILED;
+        return TomeStatus::Failed;
     }
 
-    let host_ref = &*host;
+    let host_ref = unsafe { &*host };
     if host_ref.abi_version != TOME_C_ABI_VERSION {
-        return TOME_STATUS_FAILED;
+        return TomeStatus::Incompatible;
     }
 
     unsafe {
         HOST_LOG = host_ref.log;
+        *out_guest = TomeGuestV1 { abi_version: TOME_C_ABI_VERSION, init: Some(plugin_init) };
     }
-
-    *out_guest = TomeGuestV1 { abi_version: TOME_C_ABI_VERSION, init: Some(plugin_init) };
-    TOME_STATUS_OK
+    TomeStatus::Ok
 }
 
 extern "C" fn plugin_init() -> TomeStatus {
-    // Demonstrate logging back into the host.
     if let Some(log) = unsafe { HOST_LOG } {
-        let msg = CString::new("hello from cabi demo plugin").unwrap();
-        log(msg.as_ptr());
+        if let std::result::Result::Ok(msg) = CString::new("hello from cabi demo plugin") {
+            log(msg.as_ptr());
+        }
     }
-    TOME_STATUS_OK
+    TomeStatus::Ok
 }
 
 // SAFETY: set when entry is called; only used in plugin_init.
-static mut HOST_LOG: Option<extern "C" fn(*const c_char)> = None;
+static mut HOST_LOG: Option<extern "C" fn(*const core::ffi::c_char)> = None;

@@ -24,6 +24,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 smallvec = { workspace = true, optional = true }
 termina = { workspace = true, optional = true }
+tome-cabi-types = { path = "../tome-cabi-types" }
 unicode-segmentation = { workspace = true, optional = true }
 unicode-width = { workspace = true, optional = true }
 tome-macro = { path = "../tome-macro" }

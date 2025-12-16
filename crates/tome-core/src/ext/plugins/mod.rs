@@ -59,9 +59,11 @@ pub mod loader;
 pub mod registry;
 
 #[cfg(feature = "host")]
-pub use cabi::{load_c_abi_plugin, CAbiLoadError, CAbiPlugin, TomeGuestV1, TomeHostV1, TomeStatus, TOME_C_ABI_VERSION};
+pub use cabi::{load_c_abi_plugin, CAbiLoadError, CAbiPlugin};
 #[cfg(feature = "host")]
 pub use loader::{PluginLoader, PluginManifest, PluginLoadError};
+#[cfg(feature = "host")]
+pub use tome_cabi_types::{TomeGuestV1, TomeHostV1, TomePluginEntry, TomeStatus, TOME_C_ABI_VERSION};
 #[cfg(feature = "host")]
 pub use registry::{
     PluginRegistry, LoadedPlugin, PluginRegistration, 

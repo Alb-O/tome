@@ -7,3 +7,4 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
+tome-cabi-types = { path = "../tome-cabi-types" }

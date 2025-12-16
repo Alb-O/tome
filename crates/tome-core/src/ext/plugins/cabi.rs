@@ -1,51 +1,8 @@
-//! Minimal C-ABI plugin surface for Tome.
-//!
-//! This is intentionally tiny: a single entry point returning a guest vtable
-//! and consuming a host vtable. The goal is “suckless” runtime plugins without
-//! WASM. ABI is `extern "C"` + POD types only.
-
 use std::ffi::{c_char, CStr};
 use std::path::Path;
 
 use libloading::Library;
-
-/// ABI version for compatibility checks.
-pub const TOME_C_ABI_VERSION: u32 = 1;
-
-/// Status codes returned across the ABI boundary.
-#[repr(i32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum TomeStatus {
-    Ok = 0,
-    Failed = 1,
-    Incompatible = 2,
-}
-
-/// Host function table passed to the plugin.
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct TomeHostV1 {
-    /// ABI version of the host.
-    pub abi_version: u32,
-    /// Optional logging hook from guest -> host.
-    pub log: Option<extern "C" fn(*const c_char)>,
-}
-
-/// Guest function table returned by the plugin.
-#[repr(C)]
-#[derive(Clone, Copy, Default)]
-pub struct TomeGuestV1 {
-    /// ABI version the guest expects.
-    pub abi_version: u32,
-    /// Optional initialization hook. Called once after load.
-    pub init: Option<extern "C" fn() -> TomeStatus>,
-}
-
-/// Signature of the plugin entry point.
-pub type TomePluginEntry = unsafe extern "C" fn(
-    host: *const TomeHostV1,
-    out_guest: *mut TomeGuestV1,
-) -> TomeStatus;
+use tome_cabi_types::{TomeGuestV1, TomeHostV1, TomePluginEntry, TomeStatus, TOME_C_ABI_VERSION};
 
 /// Errors while loading a C-ABI plugin.
 #[derive(Debug)]
@@ -128,5 +85,37 @@ extern "C" fn host_log(ptr: *const c_char) {
     }
     if let Ok(msg) = unsafe { CStr::from_ptr(ptr) }.to_str() {
         eprintln!("[tome plugin] {msg}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::load_c_abi_plugin;
+    use std::path::PathBuf;
+
+    #[test]
+    fn cabi_loads_demo_plugin() {
+        // Expect the demo cabi plugin to be built in release mode before running this test.
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let mut path = manifest_dir
+            .parent()
+            .and_then(|p| p.parent())
+            .expect("tome-core has workspace root")
+            .join("target")
+            .join("release");
+
+        let filename = if cfg!(target_os = "windows") {
+            "demo_cabi_plugin.dll"
+        } else if cfg!(target_os = "macos") {
+            "libdemo_cabi_plugin.dylib"
+        } else {
+            "libdemo_cabi_plugin.so"
+        };
+        path.push(filename);
+
+        assert!(path.exists(), "demo cabi plugin not found at {:?}; build with `cargo build -p demo-cabi-plugin --release`", path);
+
+        let plugin = load_c_abi_plugin(&path).expect("should load demo cabi plugin");
+        plugin.init().expect("demo cabi plugin init");
     }
 }

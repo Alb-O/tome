@@ -269,11 +269,30 @@ dependencies = [
 
 [[package]]
 name = "cbindgen"
+version = "0.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fce8dd7fcfcbf3a0a87d8f515194b49d6135acab73e18bd380d1d93bb1a15eb"
+dependencies = [
+ "clap",
+ "heck 0.4.1",
+ "indexmap",
+ "log",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "syn",
+ "tempfile",
+ "toml 0.8.23",
+]
+
+[[package]]
+name = "cbindgen"
 version = "0.29.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "befbfd072a8e81c02f8c507aefce431fe5e7d051f83d48a23ffc9b9fe5a11799"
 dependencies = [
- "heck",
+ "heck 0.5.0",
  "indexmap",
  "log",
  "proc-macro2",
@@ -358,7 +377,7 @@ version = "4.5.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a0b5487afeab2deb2ff4e03a807ad1a03ac532ff5a2cee5d86884440c7f7671"
 dependencies = [
- "heck",
+ "heck 0.5.0",
  "proc-macro2",
  "quote",
  "syn",
@@ -508,7 +527,7 @@ dependencies = [
  "cranelift-assembler-x64-meta",
  "cranelift-codegen-shared",
  "cranelift-srcgen",
- "heck",
+ "heck 0.5.0",
  "pulley-interpreter",
 ]
 
@@ -731,15 +750,8 @@ dependencies = [
 [[package]]
 name = "demo-cabi-plugin"
 version = "0.1.0"
-
-[[package]]
-name = "demo-plugin"
-version = "0.1.0"
 dependencies = [
- "extism-pdk",
- "serde",
- "serde_json",
- "tome-core",
+ "tome-cabi-types",
 ]
 
 [[package]]
@@ -861,7 +873,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31848a0c3cc19f6946767fc0b54bbf6b07ee0f2e53302ede5abda6a5ae02dbb6"
 dependencies = [
  "anyhow",
- "cbindgen",
+ "cbindgen 0.29.2",
  "extism-convert",
  "extism-manifest",
  "glob",
@@ -1117,6 +1129,12 @@ name = "hashbrown"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
+
+[[package]]
+name = "heck"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
 name = "heck"
@@ -2374,7 +2392,7 @@ version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
 dependencies = [
- "heck",
+ "heck 0.5.0",
  "proc-macro2",
  "quote",
  "rustversion",
@@ -2536,6 +2554,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tome-cabi-types"
+version = "0.1.0"
+dependencies = [
+ "cbindgen 0.27.0",
+]
+
+[[package]]
 name = "tome-core"
 version = "0.1.0"
 dependencies = [
@@ -2551,6 +2576,7 @@ dependencies = [
  "serde_json",
  "smallvec",
  "termina",
+ "tome-cabi-types",
  "tome-macro",
  "unicode-segmentation",
  "unicode-width 0.2.0",
@@ -3281,7 +3307,7 @@ checksum = "f98aaee67f9f92aa730a0e6e977474d056f7d9c15ba259494574e3c2d0b75e14"
 dependencies = [
  "anyhow",
  "bitflags",
- "heck",
+ "heck 0.5.0",
  "indexmap",
  "wit-parser",
 ]
@@ -3359,7 +3385,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "661421edf501b09b2ae7e2ffd234dd2947be67d4ca320c41da2325592543b181"
 dependencies = [
  "anyhow",
- "heck",
+ "heck 0.5.0",
  "proc-macro2",
  "quote",
  "syn",
