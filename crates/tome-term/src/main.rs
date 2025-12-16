@@ -95,6 +95,9 @@ fn run_editor(mut editor: Editor) -> io::Result<()> {
                         break;
                     }
                 }
+                Event::Paste(content) => {
+                    editor.handle_paste(content);
+                }
                 Event::WindowResized(_size) => {
                     // Ratatui handles resize on draw
                 }

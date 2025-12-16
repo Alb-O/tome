@@ -722,6 +722,19 @@ impl Editor {
         self.handle_mouse_active(mouse)
     }
 
+    pub fn handle_paste(&mut self, content: String) {
+        if self.scratch_open && self.scratch_focused {
+            self.with_scratch_context(|ed| ed.insert_text(&content));
+            return;
+        }
+
+        if matches!(self.mode(), Mode::Insert) {
+            self.insert_text(&content);
+        } else {
+            self.message = Some("Paste ignored outside insert mode".to_string());
+        }
+    }
+
     fn handle_mouse_active(&mut self, mouse: termina::event::MouseEvent) -> bool {
         self.message = None;
         let event: MouseEvent = mouse.into();
