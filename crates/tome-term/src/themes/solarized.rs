@@ -11,7 +11,6 @@ pub static SOLARIZED_DARK: Theme = Theme {
             bg: Color::Rgb(0, 43, 54),      // base03
             fg: Color::Rgb(131, 148, 150),  // base0
             gutter_fg: Color::Rgb(88, 110, 117), // base01
-            gutter_dim_fg: Color::Rgb(7, 54, 66), // base02
             cursor_bg: Color::Rgb(147, 161, 161), // base1
             cursor_fg: Color::Rgb(0, 43, 54), // base03
             selection_bg: Color::Rgb(7, 54, 66), // base02

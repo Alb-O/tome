@@ -1,7 +1,7 @@
 use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Clear, Paragraph, Widget};
+use ratatui::widgets::{Block, Clear, Paragraph, Widget};
 
 use tome_core::ext::{
     RenderedSegment, SegmentPosition, SegmentStyle, StatuslineContext, render_position,
@@ -9,6 +9,7 @@ use tome_core::ext::{
 use tome_core::Mode;
 
 use crate::editor::{Editor, MessageKind};
+use crate::theme::blend_colors;
 
 /// A segment of a wrapped line.
 pub struct WrapSegment {
@@ -69,40 +70,25 @@ impl Editor {
 
         // Render Scratch Popup if open
         if self.scratch_open {
-            // Command palette layout: centered horizontally, slightly above center vertically
-            let popup_width_percent = 60;
-            let popup_height = 12; 
-            
-            let popup_vertical = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Percentage(20), // Top spacer
-                    Constraint::Length(popup_height), // Popup
-                    Constraint::Min(1), // Bottom spacer
-                ])
-                .split(area);
-                
-            let popup_area = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([
-                    Constraint::Percentage((100 - popup_width_percent) / 2),
-                    Constraint::Percentage(popup_width_percent),
-                    Constraint::Percentage((100 - popup_width_percent) / 2),
-                ])
-                .split(popup_vertical[1])[1];
+            // Command palette layout: Bottom docked, full width, no borders
+            let popup_height = 12;
+            let area = frame.area();
+
+            let popup_area = Rect {
+                x: area.x,
+                y: area.height.saturating_sub(popup_height),
+                width: area.width,
+                height: popup_height.min(area.height),
+            };
 
             frame.render_widget(Clear, popup_area);
-            
+
             let block = Block::default()
-                .borders(Borders::ALL)
-                .title(" Command Palette ")
-                .title_style(Style::default().fg(self.theme.colors.popup.title).add_modifier(Modifier::BOLD))
-                .border_style(Style::default().fg(self.theme.colors.popup.border))
                 .style(Style::default().bg(self.theme.colors.popup.bg).fg(self.theme.colors.popup.fg));
-                
+
             let inner_area = block.inner(popup_area);
             frame.render_widget(block, popup_area);
-            
+
             self.enter_scratch_context();
             // Ensure cursor visible in small area
             self.ensure_cursor_visible(inner_area);
@@ -258,7 +244,13 @@ impl Editor {
                 let gutter_style = if is_first_segment {
                     Style::default().fg(self.theme.colors.ui.gutter_fg)
                 } else {
-                    Style::default().fg(self.theme.colors.ui.gutter_dim_fg)
+                    let bg_color = if self.in_scratch_context() {
+                         self.theme.colors.popup.bg
+                    } else {
+                         self.theme.colors.ui.bg
+                    };
+                    let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
+                    Style::default().fg(dim_color)
                 };
 
                 let mut spans = vec![Span::styled(line_num_str, gutter_style)];
@@ -292,7 +284,13 @@ impl Editor {
 
                 if !is_last_segment && seg_char_count < text_width {
                     let fill_count = text_width - seg_char_count;
-                    let fill_style = Style::default().fg(self.theme.colors.ui.gutter_dim_fg);
+                    let bg_color = if self.in_scratch_context() {
+                        self.theme.colors.popup.bg
+                    } else {
+                        self.theme.colors.ui.bg
+                    };
+                    let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
+                    let fill_style = Style::default().fg(dim_color);
                     spans.push(Span::styled("·".repeat(fill_count), fill_style));
                 }
 
@@ -362,7 +360,13 @@ impl Editor {
 
         while output_lines.len() < viewport_height {
             let line_num_str = format!("{:>width$} ", "~", width = gutter_width as usize - 1);
-            let gutter_style = Style::default().fg(self.theme.colors.ui.gutter_dim_fg);
+            let bg_color = if self.in_scratch_context() {
+                self.theme.colors.popup.bg
+            } else {
+                self.theme.colors.ui.bg
+            };
+            let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
+            let gutter_style = Style::default().fg(dim_color);
             output_lines.push(Line::from(vec![Span::styled(line_num_str, gutter_style)]));
         }
 

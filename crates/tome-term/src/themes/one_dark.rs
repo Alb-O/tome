@@ -11,7 +11,6 @@ pub static ONE_DARK: Theme = Theme {
             bg: Color::Rgb(40, 44, 52),      // #282C34
             fg: Color::Rgb(171, 178, 191),   // #ABB2BF
             gutter_fg: Color::Rgb(92, 99, 112), // #5C6370
-            gutter_dim_fg: Color::Rgb(75, 82, 99), // #4B5263
             cursor_bg: Color::Rgb(82, 139, 255), // #528BFF (Blue-ish)
             cursor_fg: Color::Rgb(40, 44, 52), // #282C34
             selection_bg: Color::Rgb(62, 68, 81), // #3E4451

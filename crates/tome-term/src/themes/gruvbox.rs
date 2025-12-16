@@ -11,7 +11,6 @@ pub static GRUVBOX: Theme = Theme {
             bg: Color::Rgb(40, 40, 40),      // #282828
             fg: Color::Rgb(235, 219, 178),   // #EBDBB2
             gutter_fg: Color::Rgb(146, 131, 116), // #928374
-            gutter_dim_fg: Color::Rgb(60, 56, 54), // #3C3836
             cursor_bg: Color::Rgb(235, 219, 178), // #EBDBB2
             cursor_fg: Color::Rgb(40, 40, 40), // #282828
             selection_bg: Color::Rgb(80, 73, 69), // #504945

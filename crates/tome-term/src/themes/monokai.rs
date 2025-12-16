@@ -11,7 +11,6 @@ pub static MONOKAI: Theme = Theme {
             bg: Color::Rgb(39, 40, 34),      // #272822
             fg: Color::Rgb(248, 248, 242),   // #F8F8F2
             gutter_fg: Color::Rgb(117, 113, 94), // #75715E
-            gutter_dim_fg: Color::Rgb(62, 61, 50), // #3E3D32
             cursor_bg: Color::Rgb(248, 248, 240), // #F8F8F0
             cursor_fg: Color::Rgb(39, 40, 34),    // #272822
             selection_bg: Color::Rgb(73, 72, 62), // #49483E

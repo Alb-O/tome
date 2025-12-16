@@ -6,7 +6,6 @@ pub struct UiColors {
     pub bg: Color,
     pub fg: Color,
     pub gutter_fg: Color,
-    pub gutter_dim_fg: Color,
     pub cursor_bg: Color,
     pub cursor_fg: Color,
     pub selection_bg: Color,
@@ -68,7 +67,6 @@ pub static DEFAULT_THEME: Theme = Theme {
             bg: Color::Reset,
             fg: Color::Reset,
             gutter_fg: Color::DarkGray,
-            gutter_dim_fg: Color::Rgb(60, 60, 60),
             cursor_bg: Color::White,
             cursor_fg: Color::Black,
             selection_bg: Color::Blue,
@@ -116,6 +114,24 @@ pub fn get_theme(name: &str) -> Option<&'static Theme> {
         normalize(t.name) == search || 
         t.aliases.iter().any(|a| normalize(a) == search)
     })
+}
+
+pub fn blend_colors(fg: Color, bg: Color, alpha: f32) -> Color {
+    let fg_rgb = match fg {
+        Color::Rgb(r, g, b) => (r, g, b),
+        _ => return fg, // Fallback for non-RGB colors
+    };
+
+    let bg_rgb = match bg {
+        Color::Rgb(r, g, b) => (r, g, b),
+        _ => return fg, // Fallback if background is unknown/non-RGB
+    };
+
+    let r = (fg_rgb.0 as f32 * alpha + bg_rgb.0 as f32 * (1.0 - alpha)) as u8;
+    let g = (fg_rgb.1 as f32 * alpha + bg_rgb.1 as f32 * (1.0 - alpha)) as u8;
+    let b = (fg_rgb.2 as f32 * alpha + bg_rgb.2 as f32 * (1.0 - alpha)) as u8;
+
+    Color::Rgb(r, g, b)
 }
 
 pub fn suggest_theme(name: &str) -> Option<&'static str> {

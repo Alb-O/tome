@@ -163,7 +163,6 @@ impl Editor {
         self.input.mode()
     }
 
-    #[cfg(test)]
     pub(crate) fn in_scratch_context(&self) -> bool {
         self.in_scratch_context
     }
