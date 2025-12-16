@@ -280,18 +280,24 @@ impl InputHandler {
             };
         }
 
-        // Fall back to normal mode bindings for navigation (arrows, etc.)
-        if let Some(binding) = find_binding(BindingMode::Normal, key) {
-            let count = if self.count > 0 { self.count as usize } else { 1 };
-            let extend = self.extend;
-            let register = self.register;
-            self.reset_params();
-            return KeyResult::Action {
-                name: binding.action,
-                count,
-                extend,
-                register,
-            };
+        // Fall back to normal mode bindings only for non-character keys (navigation)
+        let is_navigation_key = matches!(key.code, KeyCode::Special(_))
+            || key.modifiers.ctrl
+            || key.modifiers.alt;
+
+        if is_navigation_key {
+            if let Some(binding) = find_binding(BindingMode::Normal, key) {
+                let count = if self.count > 0 { self.count as usize } else { 1 };
+                let extend = self.extend;
+                let register = self.register;
+                self.reset_params();
+                return KeyResult::Action {
+                    name: binding.action,
+                    count,
+                    extend,
+                    register,
+                };
+            }
         }
 
         // Regular character insertion

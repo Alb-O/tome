@@ -1,4 +1,4 @@
-use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Paragraph, Widget};
@@ -13,9 +13,18 @@ pub struct WrapSegment {
     pub start_offset: usize,
 }
 
+/// Result of rendering a document, including cursor screen position.
+pub struct RenderResult {
+    pub widget: Paragraph<'static>,
+    pub cursor_position: Option<(u16, u16)>,
+}
+
 impl Editor {
     pub fn render(&mut self, frame: &mut ratatui::Frame) {
         self.refresh_scratch_completion_hint();
+        // In insert mode, we use the terminal cursor (bar), not a fake block cursor
+        let use_block_cursor = !matches!(self.mode(), Mode::Insert);
+
         if self.scratch_open {
             let constraints = [
                 Constraint::Min(1),
@@ -30,14 +39,29 @@ impl Editor {
 
             // Main document
             self.ensure_cursor_visible(chunks[0]);
-            frame.render_widget(self.render_document(chunks[0]), chunks[0]);
+            let main_result = self.render_document_with_cursor(chunks[0], use_block_cursor && !self.scratch_focused);
+            frame.render_widget(main_result.widget, chunks[0]);
 
             // Scratch buffer
             self.enter_scratch_context();
             self.ensure_cursor_visible(chunks[1]);
-            let scratch_view = self.render_document(chunks[1]);
-            frame.render_widget(scratch_view, chunks[1]);
+            let scratch_use_block = !matches!(self.mode(), Mode::Insert);
+            let scratch_result = self.render_document_with_cursor(chunks[1], scratch_use_block && self.scratch_focused);
+            frame.render_widget(scratch_result.widget, chunks[1]);
+
+            // Set terminal cursor position for the focused buffer
+            if self.scratch_focused {
+                if let Some((row, col)) = scratch_result.cursor_position {
+                    frame.set_cursor_position(Position::new(col, row));
+                }
+            }
             self.leave_scratch_context();
+
+            if !self.scratch_focused {
+                if let Some((row, col)) = main_result.cursor_position {
+                    frame.set_cursor_position(Position::new(col, row));
+                }
+            }
 
             // Status line reflects focused buffer
             if self.scratch_focused {
@@ -60,7 +84,13 @@ impl Editor {
                 .split(frame.area());
 
             self.ensure_cursor_visible(chunks[0]);
-            frame.render_widget(self.render_document(chunks[0]), chunks[0]);
+            let result = self.render_document_with_cursor(chunks[0], use_block_cursor);
+            frame.render_widget(result.widget, chunks[0]);
+
+            if let Some((row, col)) = result.cursor_position {
+                frame.set_cursor_position(Position::new(col, row));
+            }
+
             frame.render_widget(self.render_status_line(), chunks[1]);
             frame.render_widget(self.render_message_line(), chunks[2]);
         }
@@ -155,7 +185,9 @@ impl Editor {
         }
     }
 
-    pub fn render_document(&self, area: Rect) -> impl Widget + '_ {
+    /// Render the document with cursor tracking.
+    /// `use_block_cursor`: true = draw fake block cursor (normal mode), false = don't draw fake cursor (insert mode uses terminal cursor)
+    pub fn render_document_with_cursor(&self, area: Rect, use_block_cursor: bool) -> RenderResult {
         let total_lines = self.doc.len_lines();
         let gutter_width = self.gutter_width();
         let text_width = area.width.saturating_sub(gutter_width) as usize;
@@ -175,6 +207,8 @@ impl Editor {
         let mut current_line_idx = self.scroll_line;
         let mut start_segment = self.scroll_segment;
         let viewport_height = area.height as usize;
+
+        let mut cursor_screen_pos: Option<(u16, u16)> = None;
 
         while output_lines.len() < viewport_height && current_line_idx < total_lines {
             let line_start = self.doc.line_to_char(current_line_idx);
@@ -196,6 +230,7 @@ impl Editor {
                     break;
                 }
 
+                let visual_row = output_lines.len() as u16;
                 let is_first_segment = seg_idx == 0;
                 let is_last_segment = seg_idx == num_segments - 1;
 
@@ -219,7 +254,13 @@ impl Editor {
                     let in_selection = doc_pos >= sel_start && doc_pos < sel_end;
                     let is_cursor = doc_pos == cursor;
 
-                    let style = if is_cursor {
+                    if is_cursor {
+                        let screen_col = area.x + gutter_width + i as u16;
+                        let screen_row = area.y + visual_row;
+                        cursor_screen_pos = Some((screen_row, screen_col));
+                    }
+
+                    let style = if is_cursor && use_block_cursor {
                         Style::default()
                             .bg(Color::White)
                             .fg(Color::Black)
@@ -252,13 +293,20 @@ impl Editor {
                         cursor >= line_content_end && cursor < line_end
                     };
                     if cursor_at_eol && cursor >= line_content_end {
-                        spans.push(Span::styled(
-                            " ",
-                            Style::default()
-                                .bg(Color::White)
-                                .fg(Color::Black)
-                                .add_modifier(Modifier::BOLD),
-                        ));
+                        if cursor_screen_pos.is_none() {
+                            let screen_col = area.x + gutter_width + seg_char_count as u16;
+                            let screen_row = area.y + visual_row;
+                            cursor_screen_pos = Some((screen_row, screen_col));
+                        }
+                        if use_block_cursor {
+                            spans.push(Span::styled(
+                                " ",
+                                Style::default()
+                                    .bg(Color::White)
+                                    .fg(Color::Black)
+                                    .add_modifier(Modifier::BOLD),
+                            ));
+                        }
                     }
                 }
 
@@ -276,6 +324,7 @@ impl Editor {
 
             if wrapped_segments.is_empty() && start_segment == 0
                 && output_lines.len() < viewport_height {
+                    let visual_row = output_lines.len() as u16;
                     let line_num_str = format!("{:>width$} ", current_line_idx + 1, width = gutter_width as usize - 1);
                     let gutter_style = Style::default().fg(Color::DarkGray);
                     let mut spans = vec![Span::styled(line_num_str, gutter_style)];
@@ -287,13 +336,19 @@ impl Editor {
                         cursor >= line_start && cursor < line_end
                     };
                     if cursor_at_eol {
-                        spans.push(Span::styled(
-                            " ",
-                            Style::default()
-                                .bg(Color::White)
-                                .fg(Color::Black)
-                                .add_modifier(Modifier::BOLD),
-                        ));
+                        let screen_col = area.x + gutter_width;
+                        let screen_row = area.y + visual_row;
+                        cursor_screen_pos = Some((screen_row, screen_col));
+
+                        if use_block_cursor {
+                            spans.push(Span::styled(
+                                " ",
+                                Style::default()
+                                    .bg(Color::White)
+                                    .fg(Color::Black)
+                                    .add_modifier(Modifier::BOLD),
+                            ));
+                        }
 
                         if let Some(ghost) = ghost_remainder.as_ref().filter(|g| !g.is_empty()) {
                             spans.push(Span::styled(
@@ -316,7 +371,15 @@ impl Editor {
             output_lines.push(Line::from(vec![Span::styled(line_num_str, gutter_style)]));
         }
 
-        Paragraph::new(output_lines)
+        RenderResult {
+            widget: Paragraph::new(output_lines),
+            cursor_position: cursor_screen_pos,
+        }
+    }
+
+    /// Render the document (for backward compatibility with tests).
+    pub fn render_document(&self, area: Rect, use_block_cursor: bool) -> impl Widget + '_ {
+        self.render_document_with_cursor(area, use_block_cursor).widget
     }
 
     pub fn wrap_line(&self, line: &str, max_width: usize) -> Vec<WrapSegment> {

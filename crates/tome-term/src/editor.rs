@@ -444,8 +444,8 @@ impl Editor {
     }
 
     pub fn cursor_line(&self) -> usize {
-        self.doc
-            .char_to_line(self.cursor.min(self.doc.len_chars().saturating_sub(1).max(0)))
+        let max_pos = self.doc.len_chars();
+        self.doc.char_to_line(self.cursor.min(max_pos))
     }
 
     pub fn cursor_col(&self) -> usize {
