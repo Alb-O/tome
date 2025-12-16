@@ -80,19 +80,9 @@ pub struct Editor {
     pub scratch_focused: bool,
     in_scratch_context: bool,
     pub file_type: Option<String>,
-    #[cfg(feature = "plugins")]
-    pub plugin_registry: tome_core::ext::plugins::PluginRegistry,
-    #[cfg(feature = "plugins")]
-    pub plugin_loader: tome_core::ext::plugins::PluginLoader,
 }
 
 impl Editor {
-    fn get_plugin_config(&self) -> std::collections::HashMap<String, String> {
-        let mut map = std::collections::HashMap::new();
-        map.insert("text_width".to_string(), self.text_width.to_string());
-        map
-    }
-
     fn execute_command_line(&mut self, input: &str) -> bool {
 
         use ext::{find_command, CommandContext, CommandOutcome};
@@ -110,40 +100,6 @@ impl Editor {
 
         let arg_strings: Vec<String> = parts.map(|s| s.to_string()).collect();
         let args: Vec<&str> = arg_strings.iter().map(|s| s.as_str()).collect();
-
-        #[cfg(feature = "plugins")]
-        {
-            if self.plugin_registry.find_command_plugin(name).is_some() {
-                 let text = self.doc.slice(..).to_string();
-                 let config = self.get_plugin_config();
-                 
-                 let context = tome_core::ext::plugins::PluginContext {
-                     text: &text,
-                     selection: &self.selection,
-                     cursor: self.cursor,
-                     config,
-                 };
-
-                 if let Some(result) = self.plugin_registry.execute_command(
-                    name,
-                    arg_strings.clone(),
-                    context
-                 ) {
-
-
-                     match result {
-                        Ok(output) => {
-                            self.apply_plugin_output(output);
-                            return false; 
-                        }
-                        Err(e) => {
-                            self.message = Some(format!("Plugin error: {}", e));
-                            return false;
-                        }
-                     }
-                 }
-            }
-        }
 
         let cmd = match find_command(name) {
             Some(cmd) => cmd,
@@ -192,49 +148,6 @@ impl Editor {
 
         let doc = Rope::from(content.as_str());
 
-        #[cfg(feature = "plugins")]
-        let (plugin_loader, plugin_registry) = {
-            let mut plugin_dir = PathBuf::from("plugins");
-            let mut found = false;
-
-            if let Some(proj_dirs) = directories::ProjectDirs::from("", "", "tome") {
-
-                let config_plugins = proj_dirs.config_dir().join("plugins");
-                let data_plugins = proj_dirs.data_local_dir().join("plugins");
-                
-                if config_plugins.exists() {
-                    plugin_dir = config_plugins;
-                    found = true;
-                } else if data_plugins.exists() {
-                    plugin_dir = data_plugins;
-                    found = true;
-                } else {
-                    // Default to config dir for creation if nothing exists
-                    plugin_dir = config_plugins;
-                }
-            }
-
-            if !found && !plugin_dir.exists() {
-                 let _ = std::fs::create_dir_all(&plugin_dir);
-            }
-            
-            let loader = tome_core::ext::plugins::PluginLoader::new(plugin_dir);
-
-            let mut registry = tome_core::ext::plugins::PluginRegistry::new();
-            
-            for path in loader.discover() {
-                match loader.load(&path) {
-                    Ok(plugin) => {
-                        eprintln!("Loaded plugin: {} ({})", plugin.name, plugin.version);
-                        registry.register(plugin);
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to load plugin {:?}: {}", path, e);
-                    }
-                }
-            }
-            (loader, registry)
-        };
 
         let scratch_path = PathBuf::from("[scratch]");
         let hook_path = path.as_ref().unwrap_or(&scratch_path);
@@ -266,10 +179,6 @@ impl Editor {
             scratch_focused: false,
             in_scratch_context: false,
             file_type: file_type.map(|s| s.to_string()),
-            #[cfg(feature = "plugins")]
-            plugin_registry,
-            #[cfg(feature = "plugins")]
-            plugin_loader,
         }
     }
 
@@ -973,48 +882,8 @@ impl Editor {
     ) -> bool {
         use ext::{ActionContext, ActionArgs, find_action};
 
-        #[cfg(feature = "plugins")]
-        {
-            if self.plugin_registry.find_action_plugin(name).is_some() {
-                 let text = self.doc.slice(..).to_string();
-                 let config = self.get_plugin_config();
-
-                 
-                 let params = tome_core::ext::plugins::PluginActionParams {
-                     name,
-                     count,
-                     extend,
-                     char_arg: None,
-                 };
-                 
-                 let context = tome_core::ext::plugins::PluginContext {
-                     text: &text,
-                     selection: &self.selection,
-                     cursor: self.cursor,
-                     config,
-                 };
-
-                 if let Some(result) = self.plugin_registry.execute_action(
-                    params,
-                    context
-                ) {
-
-
-                    match result {
-                        Ok(output) => {
-                            self.apply_plugin_output(output);
-                            return false;
-                        }
-                        Err(e) => {
-                            self.message = Some(format!("Plugin error: {}", e));
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-
         let action = match find_action(name) {
+
             Some(a) => a,
             None => {
                 self.message = Some(format!("Unknown action: {}", name));
@@ -1046,46 +915,6 @@ impl Editor {
     ) -> bool {
         use ext::{ActionContext, ActionArgs, find_action};
 
-        #[cfg(feature = "plugins")]
-        {
-            if self.plugin_registry.find_action_plugin(name).is_some() {
-                 let text = self.doc.slice(..).to_string();
-                 let config = self.get_plugin_config();
-                 
-                 let params = tome_core::ext::plugins::PluginActionParams {
-                     name,
-                     count,
-                     extend,
-                     char_arg: Some(char_arg),
-                 };
-                 
-                 let context = tome_core::ext::plugins::PluginContext {
-                     text: &text,
-                     selection: &self.selection,
-                     cursor: self.cursor,
-                     config,
-                 };
-
-                 if let Some(result) = self.plugin_registry.execute_action(
-                    params,
-                    context
-                ) {
-
-
-                    match result {
-                        Ok(output) => {
-                            self.apply_plugin_output(output);
-                            return false;
-                        }
-                        Err(e) => {
-                            self.message = Some(format!("Plugin error: {}", e));
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-
         let action = match find_action(name) {
             Some(a) => a,
             None => {
@@ -1116,70 +945,9 @@ impl Editor {
         ext::dispatch_result(&result, &mut ctx, extend)
     }
 
-    #[cfg(feature = "plugins")]
-    fn apply_plugin_output(&mut self, output: tome_core::ext::plugins::ActionOutput) {
-        use tome_core::ext::EditAction;
-        
-        if let Some(err) = output.error {
-            self.message = Some(format!("Error: {}", err));
-            return;
-        }
-        
-        if let Some(msg) = output.message {
-            self.message = Some(msg);
-        }
-
-        if let Some(path) = output.open_file {
-            let path_buf = PathBuf::from(path);
-            if let Ok(content) = fs::read_to_string(&path_buf) {
-                // TODO: proper buffer switching. For now, replace content.
-                // This mimics "edit" command but primitive
-                self.doc = Rope::from(content.as_str());
-                self.path = Some(path_buf);
-                self.cursor = 0;
-                self.selection = Selection::point(0);
-                self.modified = false;
-                self.undo_stack.clear();
-                self.redo_stack.clear();
-                
-                let file_type = self.path
-                    .as_ref()
-                    .and_then(|p| ext::detect_file_type(p.to_str().unwrap_or("")))
-                    .map(|ft| ft.name.to_string());
-                self.file_type = file_type;
-                
-                emit_hook(&HookContext::BufferOpen {
-                    path: self.path.as_ref().unwrap(),
-                    text: self.doc.slice(..),
-                    file_type: self.file_type.as_deref(),
-                });
-            } else {
-                self.message = Some(format!("Failed to open file: {}", path_buf.display()));
-            }
-        }
-
-        // Apply state changes
-
-        if let Some(pos) = output.set_cursor {
-            self.cursor = pos.min(self.doc.len_chars());
-        }
-
-        if let Some((anchor, head)) = output.set_selection {
-             let len = self.doc.len_chars();
-             self.selection = Selection::single(anchor.min(len), head.min(len));
-        }
-        
-        // Apply edits
-        if output.delete {
-             self.do_execute_edit_action(EditAction::Delete { yank: false }, false);
-        }
-        
-        if let Some(text) = output.insert_text {
-             self.insert_text(&text);
-        }
-    }
 
     pub(crate) fn do_execute_edit_action(&mut self, action: ext::EditAction, _extend: bool) -> bool {
+
         use ext::EditAction;
         use tome_core::range::Direction as MoveDir;
 
