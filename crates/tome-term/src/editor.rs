@@ -556,7 +556,19 @@ impl Editor {
     }
 
     pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> bool {
+        use crossterm::event::KeyCode as CtKeyCode;
+        use crossterm::event::KeyModifiers as CtKeyModifiers;
+
         if self.scratch_open && self.scratch_focused {
+            // Many terminals send Ctrl+Enter as byte 0x0A (Line Feed = Ctrl+J).
+            // Crossterm parses this as Char('j') with CONTROL modifier.
+            // We accept all three variants: Enter, '\n', and 'j' with Ctrl.
+            let raw_ctrl_enter =
+                matches!(key.code, CtKeyCode::Enter | CtKeyCode::Char('\n') | CtKeyCode::Char('j'))
+                    && key.modifiers.contains(CtKeyModifiers::CONTROL);
+            if raw_ctrl_enter {
+                return self.with_scratch_context(|ed| ed.execute_scratch());
+            }
             return self.with_scratch_context(|ed| ed.handle_key_active(key));
         }
         self.handle_key_active(key)
@@ -577,7 +589,9 @@ impl Editor {
                 }
                 return false;
             }
-            if matches!(key.code, KeyCode::Special(SpecialKey::Enter)) && key.modifiers.ctrl {
+            let is_enter = matches!(key.code, KeyCode::Special(SpecialKey::Enter))
+                || matches!(key.code, KeyCode::Char('\n'));
+            if is_enter && (key.modifiers.ctrl || matches!(self.mode(), Mode::Normal)) {
                 return self.execute_scratch();
             }
         }

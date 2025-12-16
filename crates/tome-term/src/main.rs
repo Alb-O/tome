@@ -6,7 +6,10 @@ mod styles;
 use std::io;
 
 use clap::Parser;
-use crossterm::event::{DisableMouseCapture, EnableMouseCapture, Event};
+use crossterm::event::{
+    DisableMouseCapture, EnableMouseCapture, Event, KeyboardEnhancementFlags, KeyEventKind,
+    PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+};
 use crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
@@ -19,7 +22,12 @@ pub use editor::Editor;
 fn run_editor(mut editor: Editor) -> io::Result<()> {
     let mut stdout = io::stdout();
     enable_raw_mode()?;
-    crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    crossterm::execute!(
+        stdout,
+        EnterAlternateScreen,
+        EnableMouseCapture,
+        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES),
+    )?;
 
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
@@ -29,7 +37,9 @@ fn run_editor(mut editor: Editor) -> io::Result<()> {
             terminal.draw(|frame| editor.render(frame))?;
 
             match crossterm::event::read()? {
-                Event::Key(key) if key.kind == crossterm::event::KeyEventKind::Press => {
+                Event::Key(key)
+                    if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) =>
+                {
                     if editor.handle_key(key) {
                         break;
                     }
@@ -48,6 +58,7 @@ fn run_editor(mut editor: Editor) -> io::Result<()> {
     disable_raw_mode()?;
     crossterm::execute!(
         terminal.backend_mut(),
+        PopKeyboardEnhancementFlags,
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;
@@ -73,7 +84,7 @@ mod tests {
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use insta::assert_snapshot;
     use ratatui::{Terminal, backend::TestBackend};
-    use tome_core::Mode;
+    use tome_core::{Mode, Rope, Selection};
 
     fn test_editor(content: &str) -> Editor {
         Editor::from_content(content.to_string(), Some(PathBuf::from("test.txt")))
@@ -568,9 +579,51 @@ mod tests {
         let scratch_text = editor.with_scratch_context(|ed| ed.doc.to_string());
         assert_eq!(scratch_text, "foo");
 
-        // Ctrl+Enter executes the scratch buffer
+        // Ctrl+Enter executes the scratch buffer (insert mode)
         editor.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::CONTROL));
         assert_eq!(editor.message, Some("Unknown command: foo".to_string()));
+
+        // Now ensure plain Enter in NORMAL inside scratch also executes
+        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE));
+        editor.with_scratch_context(|ed| {
+            ed.doc = Rope::from("zzz");
+            ed.cursor = 3;
+            ed.selection = Selection::point(3);
+        });
+        editor.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        assert!(matches!(editor.mode(), Mode::Normal));
+        editor.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        assert_eq!(editor.message, Some("Unknown command: zzz".to_string()));
+    }
+
+    #[test]
+    fn test_scratch_ctrl_enter_executes_from_insert() {
+        let mut editor = test_editor("content");
+        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE));
+        editor.with_scratch_context(|ed| {
+            ed.doc = Rope::from("ctrl-enter-test");
+            ed.cursor = ed.doc.len_chars();
+            ed.selection = Selection::point(ed.cursor);
+        });
+        // Stay in insert mode and execute with Ctrl+Enter
+        editor.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::CONTROL));
+        assert_eq!(editor.message, Some("Unknown command: ctrl-enter-test".to_string()));
+    }
+
+    #[test]
+    fn test_scratch_ctrl_j_executes_from_insert() {
+        // Many terminals send Ctrl+Enter as Ctrl+J (byte 0x0A = Line Feed).
+        // Verify that Ctrl+J also triggers scratch execution.
+        let mut editor = test_editor("content");
+        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE));
+        editor.with_scratch_context(|ed| {
+            ed.doc = Rope::from("ctrl-j-test");
+            ed.cursor = ed.doc.len_chars();
+            ed.selection = Selection::point(ed.cursor);
+        });
+        // Stay in insert mode and execute with Ctrl+J (alias for Ctrl+Enter)
+        editor.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL));
+        assert_eq!(editor.message, Some("Unknown command: ctrl-j-test".to_string()));
     }
 
     #[test]
