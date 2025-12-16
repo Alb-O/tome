@@ -31,6 +31,7 @@
 
 mod actions;
 mod commands;
+pub mod editor_ctx;
 mod filetypes;
 mod hooks;
 mod keybindings;
@@ -59,6 +60,11 @@ pub use options::{
 pub use statusline::{
     RenderedSegment, SegmentPosition, SegmentStyle, StatuslineContext, StatuslineSegmentDef,
     STATUSLINE_SEGMENTS, all_segments, find_segment, render_position, segments_for_position,
+};
+pub use editor_ctx::{
+    CursorAccess, EditorCapabilities, EditorContext, HandleOutcome, JumpAccess, MacroAccess,
+    MessageAccess, ModeAccess, ResultHandler, SearchAccess, ScratchAccess, SelectionAccess,
+    SelectionOps, TextAccess, TransformAccess, UndoAccess, RESULT_HANDLERS, dispatch_result,
 };
 
 use linkme::distributed_slice;
