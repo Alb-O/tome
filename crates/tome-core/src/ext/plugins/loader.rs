@@ -2,7 +2,12 @@
 
 use std::path::{Path, PathBuf};
 
-use super::registry::LoadedPlugin;
+use extism::{Manifest, PluginBuilder, UserData, Wasm};
+use extism::convert::Json;
+
+use super::host::{create_host_functions, PluginHostContext};
+use super::registry::{LoadedPlugin, PluginRegistration};
+use crate::selection::Selection;
 
 /// Plugin manifest for loading from a directory.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -17,6 +22,9 @@ pub struct PluginManifest {
     /// Allowed hosts for HTTP requests.
     #[serde(default)]
     pub allowed_hosts: Vec<String>,
+    /// Timeout in milliseconds.
+    #[serde(default)]
+    pub timeout_ms: Option<u64>,
 }
 
 /// Loads plugins from WebAssembly files.
@@ -46,14 +54,15 @@ impl PluginLoader {
                     let manifest_path = path.join("manifest.json");
                     if manifest_path.exists() {
                         plugins.push(manifest_path);
-                    }
-                    // Or a single .wasm file
-                    if let Ok(sub_entries) = std::fs::read_dir(&path) {
-                        for sub_entry in sub_entries.flatten() {
-                            let sub_path = sub_entry.path();
-                            if sub_path.extension().is_some_and(|e| e == "wasm") {
-                                plugins.push(sub_path);
-                                break;
+                    } else {
+                        // Or a single .wasm file
+                        if let Ok(sub_entries) = std::fs::read_dir(&path) {
+                            for sub_entry in sub_entries.flatten() {
+                                let sub_path = sub_entry.path();
+                                if sub_path.extension().is_some_and(|e| e == "wasm") {
+                                    plugins.push(sub_path);
+                                    break;
+                                }
                             }
                         }
                     }
@@ -65,8 +74,6 @@ impl PluginLoader {
     }
 
     /// Load a plugin from a .wasm file or manifest.
-    ///
-    /// This is a stub that will be implemented when extism is added as a dependency.
     pub fn load(&self, path: &Path) -> Result<LoadedPlugin, PluginLoadError> {
         let (wasm_path, manifest) = if path.extension().is_some_and(|e| e == "json") {
             // Load manifest
@@ -84,10 +91,6 @@ impl PluginLoader {
             return Err(PluginLoadError::NotFound(wasm_path.display().to_string()));
         }
 
-        // Read wasm bytes (for validation, actual loading needs extism)
-        let _wasm_bytes = std::fs::read(&wasm_path)
-            .map_err(|e| PluginLoadError::Io(e.to_string()))?;
-
         // Generate plugin ID from filename if no manifest
         let id = manifest
             .as_ref()
@@ -100,23 +103,87 @@ impl PluginLoader {
                     .to_string()
             });
 
-        // TODO: When extism is integrated:
-        // 1. Create Plugin from wasm_bytes with host functions
-        // 2. Call plugin_init export to get registration
-        // 3. Parse registration JSON into PluginRegistration
-        // 4. Create LoadedPlugin with the extism::Plugin stored
+        // Create the shared host context (UserData wraps in Arc<Mutex<>> internally)
+        let host_ctx = UserData::new(PluginHostContext::new(
+            String::new(),
+            &Selection::point(0),
+            0,
+        ));
 
-        // For now, return a stub
-        Ok(LoadedPlugin {
-            id: id.clone(),
-            name: id,
-            version: "0.0.0".to_string(),
-            path: wasm_path,
-            actions: Vec::new(),
-            commands: Vec::new(),
-            hooks: Vec::new(),
-            keybindings: Vec::new(),
-        })
+        // Build extism manifest
+        let wasi_enabled = manifest.as_ref().map(|m| m.wasi).unwrap_or(false);
+        let mut extism_manifest = Manifest::new([Wasm::file(&wasm_path)]);
+        
+        if let Some(ref m) = manifest {
+            if !m.allowed_hosts.is_empty() {
+                extism_manifest = extism_manifest.with_allowed_hosts(m.allowed_hosts.iter().cloned());
+            }
+            if let Some(timeout) = m.timeout_ms {
+                extism_manifest = extism_manifest.with_timeout(std::time::Duration::from_millis(timeout));
+            }
+        }
+
+        // Create host functions
+        let host_functions = create_host_functions(host_ctx.clone());
+
+        // Build the plugin
+        let mut plugin = PluginBuilder::new(extism_manifest)
+            .with_wasi(wasi_enabled)
+            .with_functions(host_functions)
+            .build()
+            .map_err(|e| PluginLoadError::InvalidWasm(e.to_string()))?;
+
+        // Call plugin_init to get registration
+        let Json(registration): Json<PluginRegistration> = plugin
+            .call("plugin_init", &[] as &[u8])
+            .map_err(|e| PluginLoadError::InitFailed(e.to_string()))?;
+
+        Ok(LoadedPlugin::new(
+            id,
+            registration.name.clone(),
+            registration.version.clone(),
+            wasm_path,
+            registration,
+            plugin,
+            host_ctx,
+        ))
+    }
+
+    /// Load a plugin directly from wasm bytes (for testing or embedded plugins).
+    pub fn load_from_bytes(
+        &self,
+        id: String,
+        wasm_bytes: &[u8],
+        wasi: bool,
+    ) -> Result<LoadedPlugin, PluginLoadError> {
+        let host_ctx = UserData::new(PluginHostContext::new(
+            String::new(),
+            &Selection::point(0),
+            0,
+        ));
+
+        let manifest = Manifest::new([Wasm::data(wasm_bytes)]);
+        let host_functions = create_host_functions(host_ctx.clone());
+
+        let mut plugin = PluginBuilder::new(manifest)
+            .with_wasi(wasi)
+            .with_functions(host_functions)
+            .build()
+            .map_err(|e| PluginLoadError::InvalidWasm(e.to_string()))?;
+
+        let Json(registration): Json<PluginRegistration> = plugin
+            .call("plugin_init", &[] as &[u8])
+            .map_err(|e| PluginLoadError::InitFailed(e.to_string()))?;
+
+        Ok(LoadedPlugin::new(
+            id,
+            registration.name.clone(),
+            registration.version.clone(),
+            PathBuf::from("<memory>"),
+            registration,
+            plugin,
+            host_ctx,
+        ))
     }
 }
 

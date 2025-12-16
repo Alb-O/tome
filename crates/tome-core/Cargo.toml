@@ -7,8 +7,10 @@ license.workspace = true
 
 [features]
 default = []
+plugins = ["dep:extism"]
 
 [dependencies]
+extism = { workspace = true, optional = true }
 linkme.workspace = true
 paste.workspace = true
 regex.workspace = true

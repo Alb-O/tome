@@ -5,6 +5,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[features]
+default = ["plugins"]
+plugins = ["tome-core/plugins"]
+
 [[bin]]
 name = "tome"
 path = "src/main.rs"

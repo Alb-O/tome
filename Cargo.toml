@@ -11,6 +11,7 @@ repository = "https://github.com/albertlarsan68/tome"
 [workspace.dependencies]
 clap = { version = "4", features = ["derive"] }
 criterion = "0.5"
+extism = "1"
 insta = "1.42"
 linkme = "0.3"
 paste = "1"
