@@ -2,41 +2,56 @@ mod cli;
 mod editor;
 mod render;
 mod styles;
+mod backend;
 
-use std::io;
+use std::io::{self, Write};
 
 use clap::Parser;
-use crossterm::event::{
-    DisableMouseCapture, EnableMouseCapture, Event, KeyboardEnhancementFlags, KeyEventKind,
-    PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
-};
-use crossterm::terminal::{
-    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
-};
 use ratatui::Terminal;
-use ratatui::backend::CrosstermBackend;
+use termina::{PlatformTerminal, Terminal as _};
+use termina::event::{Event, KeyEventKind};
+use termina::escape::csi::{Csi, Keyboard, KittyKeyboardFlags, Mode, DecPrivateMode, DecPrivateModeCode};
 
 use cli::Cli;
+use backend::TerminaBackend;
 pub use editor::Editor;
 
 fn run_editor(mut editor: Editor) -> io::Result<()> {
-    let mut stdout = io::stdout();
-    enable_raw_mode()?;
-    crossterm::execute!(
-        stdout,
-        EnterAlternateScreen,
-        EnableMouseCapture,
-        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES),
+    let mut terminal = PlatformTerminal::new()?;
+    terminal.enter_raw_mode()?;
+    
+    // Enable Alternate Screen and Kitty Keyboard Protocol
+    write!(
+        terminal,
+        "{}{}",
+        Csi::Mode(Mode::SetDecPrivateMode(DecPrivateMode::Code(
+            DecPrivateModeCode::ClearAndEnableAlternateScreen
+        ))),
+        Csi::Keyboard(Keyboard::PushFlags(
+            KittyKeyboardFlags::DISAMBIGUATE_ESCAPE_CODES | KittyKeyboardFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
+        ))
+    )?;
+    
+    // Enable mouse tracking?
+    write!(
+        terminal,
+        "{}{}{}",
+        Csi::Mode(Mode::SetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::MouseTracking))),
+        Csi::Mode(Mode::SetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::SGRMouse))),
+        Csi::Mode(Mode::SetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::AnyEventMouse))),
     )?;
 
-    let backend = CrosstermBackend::new(stdout);
+    let backend = TerminaBackend::new(terminal);
     let mut terminal = Terminal::new(backend)?;
 
     let result = (|| {
         loop {
             terminal.draw(|frame| editor.render(frame))?;
 
-            match crossterm::event::read()? {
+            // Block for event
+            let event = terminal.backend_mut().terminal_mut().read(|e| !e.is_escape())?;
+
+            match event {
                 Event::Key(key)
                     if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) =>
                 {
@@ -49,19 +64,29 @@ fn run_editor(mut editor: Editor) -> io::Result<()> {
                         break;
                     }
                 }
+                Event::WindowResized(_size) => {
+                    // Ratatui handles resize on draw
+                }
                 _ => {}
             }
         }
         Ok(())
     })();
 
-    disable_raw_mode()?;
-    crossterm::execute!(
-        terminal.backend_mut(),
-        PopKeyboardEnhancementFlags,
-        LeaveAlternateScreen,
-        DisableMouseCapture
+    // Cleanup
+    let terminal_inner = terminal.backend_mut().terminal_mut();
+    write!(
+        terminal_inner,
+        "{}{}{}{}{}",
+        Csi::Keyboard(Keyboard::PopFlags(1)),
+        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::MouseTracking))),
+        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::SGRMouse))),
+        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::AnyEventMouse))),
+        Csi::Mode(Mode::ResetDecPrivateMode(DecPrivateMode::Code(DecPrivateModeCode::ClearAndEnableAlternateScreen)))
     )?;
+    
+    // Explicitly drop/flush to ensure cleanup is sent?
+    terminal_inner.flush()?;
 
     result
 }
@@ -81,7 +106,7 @@ fn main() -> io::Result<()> {
 mod tests {
     use super::*;
     use std::path::PathBuf;
-    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use termina::event::{KeyCode, KeyEvent, Modifiers};
     use insta::assert_snapshot;
     use ratatui::{Terminal, backend::TestBackend};
     use tome_core::{Mode, Rope, Selection};
@@ -128,9 +153,9 @@ mod tests {
     #[test]
     fn test_render_with_selection() {
         let mut editor = test_editor("Hello, World!");
-        editor.handle_key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::SHIFT));
-        editor.handle_key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::SHIFT));
-        editor.handle_key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('L'), Modifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('L'), Modifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('L'), Modifiers::SHIFT));
         let mut terminal = Terminal::new(TestBackend::new(80, 10)).unwrap();
         terminal.draw(|frame| editor.render(frame)).unwrap();
         assert_snapshot!(terminal.backend());
@@ -139,9 +164,9 @@ mod tests {
     #[test]
     fn test_render_cursor_movement() {
         let mut editor = test_editor("Hello\nWorld");
-        editor.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE));
-        editor.handle_key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE));
-        editor.handle_key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('j'), Modifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('l'), Modifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('l'), Modifiers::NONE));
         let mut terminal = Terminal::new(TestBackend::new(80, 10)).unwrap();
         terminal.draw(|frame| editor.render(frame)).unwrap();
         assert_snapshot!(terminal.backend());
@@ -150,16 +175,16 @@ mod tests {
     #[test]
     fn test_word_movement() {
         let mut editor = test_editor("hello world test");
-        editor.handle_key(KeyEvent::new(KeyCode::Char('w'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('w'), Modifiers::NONE));
         assert_eq!(editor.cursor, 6);
     }
 
     #[test]
     fn test_goto_mode() {
         let mut editor = test_editor("line1\nline2\nline3");
-        editor.handle_key(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('g'), Modifiers::NONE));
         assert!(matches!(editor.mode(), Mode::Goto));
-        editor.handle_key(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('g'), Modifiers::NONE));
         assert_eq!(editor.cursor, 0);
     }
 
@@ -168,20 +193,20 @@ mod tests {
         let mut editor = test_editor("hello");
         assert_eq!(editor.doc.to_string(), "hello");
 
-        editor.handle_key(KeyEvent::new(KeyCode::Char('%'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('%'), Modifiers::NONE));
         assert_eq!(editor.selection.primary().from(), 0);
         assert_eq!(editor.selection.primary().to(), 5);
 
-        editor.handle_key(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('d'), Modifiers::NONE));
         assert_eq!(editor.doc.to_string(), "", "after delete");
         assert_eq!(editor.undo_stack.len(), 1, "undo stack should have 1 entry");
 
-        editor.handle_key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('u'), Modifiers::NONE));
         assert_eq!(editor.doc.to_string(), "hello", "after undo");
         assert_eq!(editor.redo_stack.len(), 1, "redo stack should have 1 entry");
         assert_eq!(editor.undo_stack.len(), 0, "undo stack should be empty");
 
-        editor.handle_key(KeyEvent::new(KeyCode::Char('U'), KeyModifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('U'), Modifiers::SHIFT));
         assert_eq!(editor.redo_stack.len(), 0, "redo stack should be empty after redo");
         assert_eq!(editor.doc.to_string(), "", "after redo");
     }
@@ -192,10 +217,10 @@ mod tests {
         
         let mut editor = test_editor("");
         
-        editor.handle_key(KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('i'), Modifiers::NONE));
         assert!(matches!(editor.mode(), Mode::Insert));
         
-        editor.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Enter, Modifiers::NONE));
         
         assert_eq!(editor.doc.len_lines(), 2, "should have 2 lines after Enter");
         assert_eq!(editor.cursor, 1, "cursor should be at position 1");
@@ -237,19 +262,19 @@ mod tests {
         let mut editor = test_editor("hello world");
         assert_eq!(editor.cursor, 0, "start at position 0");
 
-        editor.handle_key(KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('i'), Modifiers::NONE));
         assert!(matches!(editor.mode(), Mode::Insert), "should be in insert mode");
 
-        editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Right, Modifiers::NONE));
         assert_eq!(editor.cursor, 1, "after Right arrow, cursor at 1");
 
-        editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Right, Modifiers::NONE));
         assert_eq!(editor.cursor, 2, "after Right arrow, cursor at 2");
 
-        editor.handle_key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Left, Modifiers::NONE));
         assert_eq!(editor.cursor, 1, "after Left arrow, cursor at 1");
 
-        editor.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Down, Modifiers::NONE));
         assert!(matches!(editor.mode(), Mode::Insert), "still in insert mode after arrows");
     }
 
@@ -308,15 +333,15 @@ mod tests {
     fn test_backspace_deletes_backwards() {
         let mut editor = test_editor("hello");
         
-        editor.handle_key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('a'), Modifiers::NONE));
         assert!(matches!(editor.mode(), Mode::Insert));
         assert_eq!(editor.cursor, 1, "cursor at 1 after 'a'");
         
-        editor.handle_key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Backspace, Modifiers::NONE));
         assert_eq!(editor.doc.to_string(), "ello", "first char deleted");
         assert_eq!(editor.cursor, 0, "cursor moved back to 0");
         
-        editor.handle_key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Backspace, Modifiers::NONE));
         assert_eq!(editor.doc.to_string(), "ello", "no change when at start");
         assert_eq!(editor.cursor, 0, "cursor stays at 0");
     }
@@ -332,7 +357,7 @@ mod tests {
         assert_eq!(editor.cursor_line(), 0, "cursor on line 0");
         
         for _ in 0..10 {
-            editor.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE));
+            editor.handle_key(KeyEvent::new(KeyCode::Char('j'), Modifiers::NONE));
         }
         
         assert_eq!(editor.cursor_line(), 10, "cursor on line 10");
@@ -358,7 +383,7 @@ mod tests {
         let mut terminal = Terminal::new(TestBackend::new(20, 6)).unwrap();
         
         for _ in 0..4 {
-            editor.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE));
+            editor.handle_key(KeyEvent::new(KeyCode::Char('j'), Modifiers::NONE));
         }
         
         assert_eq!(editor.cursor_line(), 4, "cursor on line 4 (last 'short')");
@@ -382,7 +407,7 @@ mod tests {
         
         assert_eq!(editor.cursor, 0, "starts at 0");
         
-        editor.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('j'), Modifiers::NONE));
         
         let head = editor.cursor;
         assert!(
@@ -392,7 +417,7 @@ mod tests {
         );
         assert_eq!(editor.cursor_line(), 0, "should still be on doc line 0");
         
-        editor.handle_key(KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('k'), Modifiers::NONE));
         
         assert_eq!(editor.cursor, 0, "should return to start");
     }
@@ -405,11 +430,11 @@ mod tests {
         
         assert_eq!(editor.cursor_line(), 0);
         
-        editor.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('j'), Modifiers::NONE));
         
         assert_eq!(editor.cursor_line(), 1, "should move to next doc line");
         
-        editor.handle_key(KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('k'), Modifiers::NONE));
         
         assert_eq!(editor.cursor_line(), 0, "should return to first doc line");
     }
@@ -450,7 +475,7 @@ mod tests {
         assert_eq!(editor.selection.primary().anchor, 0);
 
         // Shift+End should select from current position to end of line
-        editor.handle_key(KeyEvent::new(KeyCode::End, KeyModifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::End, Modifiers::SHIFT));
 
         let sel = editor.selection.primary();
         assert_eq!(sel.anchor, 0, "anchor should stay at start");
@@ -464,13 +489,13 @@ mod tests {
         let mut editor = test_editor("hello world");
         
         // Shift+End to select to end (extend from current position)
-        editor.handle_key(KeyEvent::new(KeyCode::End, KeyModifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::End, Modifiers::SHIFT));
         let sel_after_end = editor.selection.primary();
         assert_eq!(sel_after_end.anchor, 0, "anchor stays at start");
         assert_eq!(sel_after_end.head, 11, "head moves to end");
 
         // Shift+Home should extend back to start (anchor stays, head moves)
-        editor.handle_key(KeyEvent::new(KeyCode::Home, KeyModifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Home, Modifiers::SHIFT));
 
         let sel = editor.selection.primary();
         assert_eq!(sel.head, 0, "head should move to start");
@@ -482,14 +507,14 @@ mod tests {
         // Start at 0, Shift+End to select, then Home (no shift) moves cursor but keeps selection
         let mut editor = test_editor("hello world");
         
-        editor.handle_key(KeyEvent::new(KeyCode::End, KeyModifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::End, Modifiers::SHIFT));
         let sel = editor.selection.primary();
         assert_eq!(sel.anchor, 0);
         assert_eq!(sel.head, 11);
         assert_eq!(editor.cursor, 11, "cursor at end after Shift+End");
         
         // Home without shift - cursor moves to 0, but selection stays (anchor=0, head=11)
-        editor.handle_key(KeyEvent::new(KeyCode::Home, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Home, Modifiers::NONE));
         assert_eq!(editor.cursor, 0, "cursor moves to start");
         let sel = editor.selection.primary();
         assert_eq!(sel.anchor, 0, "selection anchor unchanged");
@@ -502,7 +527,7 @@ mod tests {
 
         // Build an initial selection from the start to the second word
         for _ in 0..4 {
-            editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT));
+            editor.handle_key(KeyEvent::new(KeyCode::Right, Modifiers::SHIFT));
         }
         assert_eq!(editor.selection.primary().anchor, 0);
         assert_eq!(editor.selection.primary().head, 4);
@@ -510,7 +535,7 @@ mod tests {
 
         // Move cursor forward without extending, detaching it from the selection head
         for _ in 0..6 {
-            editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
+            editor.handle_key(KeyEvent::new(KeyCode::Right, Modifiers::NONE));
         }
         assert_eq!(editor.cursor, 10);
         let sel = editor.selection.primary();
@@ -518,7 +543,7 @@ mod tests {
         assert_eq!(sel.head, 4);
 
         // Shift+W should extend from the detached cursor position, not snap back to the old head
-        editor.handle_key(KeyEvent::new(KeyCode::Char('W'), KeyModifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('W'), Modifiers::SHIFT));
 
         let sel = editor.selection.primary();
         assert_eq!(sel.anchor, 0);
@@ -532,9 +557,9 @@ mod tests {
         assert_eq!(editor.cursor, 0);
 
         // Shift+Right three times should extend selection
-        editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT));
-        editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT));
-        editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Right, Modifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Right, Modifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Right, Modifiers::SHIFT));
 
         let sel = editor.selection.primary();
         assert_eq!(sel.anchor, 0, "anchor should stay at start");
@@ -545,14 +570,14 @@ mod tests {
     fn test_end_without_shift_preserves_selection() {
         let mut editor = test_editor("hello world");
         // First select some text with Shift+Right
-        editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT));
-        editor.handle_key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Right, Modifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Right, Modifiers::SHIFT));
         let sel = editor.selection.primary();
         assert_eq!(sel.anchor, 0, "anchor at start");
         assert_eq!(sel.head, 2, "head at 2 after two Shift+Right");
 
         // End without shift should move cursor only, selection stays
-        editor.handle_key(KeyEvent::new(KeyCode::End, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::End, Modifiers::NONE));
 
         // Cursor moved to end
         assert_eq!(editor.cursor, 11, "cursor should be at end");
@@ -567,46 +592,46 @@ mod tests {
         let mut editor = test_editor("content");
 
         // Open scratch with ':'
-        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), Modifiers::NONE));
         assert!(editor.scratch_open, "scratch should open");
         assert!(editor.scratch_focused, "scratch should take focus");
 
         // Type an unknown command into the scratch buffer
         for ch in ['f', 'o', 'o'] {
-            editor.handle_key(KeyEvent::new(KeyCode::Char(ch), KeyModifiers::NONE));
+            editor.handle_key(KeyEvent::new(KeyCode::Char(ch), Modifiers::NONE));
         }
 
         let scratch_text = editor.with_scratch_context(|ed| ed.doc.to_string());
         assert_eq!(scratch_text, "foo");
 
         // Ctrl+Enter executes the scratch buffer (insert mode)
-        editor.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::CONTROL));
+        editor.handle_key(KeyEvent::new(KeyCode::Enter, Modifiers::CONTROL));
         assert_eq!(editor.message, Some("Unknown command: foo".to_string()));
 
         // Now ensure plain Enter in NORMAL inside scratch also executes
-        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), Modifiers::NONE));
         editor.with_scratch_context(|ed| {
             ed.doc = Rope::from("zzz");
             ed.cursor = 3;
             ed.selection = Selection::point(3);
         });
-        editor.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Escape, Modifiers::NONE));
         assert!(matches!(editor.mode(), Mode::Normal));
-        editor.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Enter, Modifiers::NONE));
         assert_eq!(editor.message, Some("Unknown command: zzz".to_string()));
     }
 
     #[test]
     fn test_scratch_ctrl_enter_executes_from_insert() {
         let mut editor = test_editor("content");
-        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), Modifiers::NONE));
         editor.with_scratch_context(|ed| {
             ed.doc = Rope::from("ctrl-enter-test");
             ed.cursor = ed.doc.len_chars();
             ed.selection = Selection::point(ed.cursor);
         });
         // Stay in insert mode and execute with Ctrl+Enter
-        editor.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::CONTROL));
+        editor.handle_key(KeyEvent::new(KeyCode::Enter, Modifiers::CONTROL));
         assert_eq!(editor.message, Some("Unknown command: ctrl-enter-test".to_string()));
     }
 
@@ -615,35 +640,35 @@ mod tests {
         // Many terminals send Ctrl+Enter as Ctrl+J (byte 0x0A = Line Feed).
         // Verify that Ctrl+J also triggers scratch execution.
         let mut editor = test_editor("content");
-        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), Modifiers::NONE));
         editor.with_scratch_context(|ed| {
             ed.doc = Rope::from("ctrl-j-test");
             ed.cursor = ed.doc.len_chars();
             ed.selection = Selection::point(ed.cursor);
         });
         // Stay in insert mode and execute with Ctrl+J (alias for Ctrl+Enter)
-        editor.handle_key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('j'), Modifiers::CONTROL));
         assert_eq!(editor.message, Some("Unknown command: ctrl-j-test".to_string()));
     }
 
     #[test]
     fn test_scratch_escape_closes_panel() {
         let mut editor = test_editor("content");
-        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), Modifiers::NONE));
         assert!(editor.scratch_open && editor.scratch_focused);
 
         // Type something in insert mode
-        editor.handle_key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('a'), Modifiers::NONE));
         assert_eq!(editor.with_scratch_context(|ed| ed.doc.to_string()), "a");
 
         // First escape should move to NORMAL within scratch
-        editor.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Escape, Modifiers::NONE));
         assert!(editor.scratch_open, "scratch stays open after first escape");
         assert!(editor.scratch_focused, "scratch remains focused after first escape");
         assert!(matches!(editor.mode(), Mode::Normal));
 
         // Second escape should close the scratch buffer
-        editor.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Escape, Modifiers::NONE));
         assert!(!editor.scratch_open, "scratch should close on second escape");
         assert!(!editor.scratch_focused, "scratch focus should be cleared");
     }

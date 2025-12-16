@@ -617,10 +617,10 @@ mod tests {
         }
     }
 
-    /// Simulates what crossterm actually sends: Shift+w comes as uppercase 'W' with shift modifier.
+    /// Simulates what the terminal sends: Shift+w comes as uppercase 'W' with shift modifier.
     /// (We no longer call normalize() in the From<KeyEvent> impl)
-    fn key_from_crossterm_shifted(c: char) -> Key {
-        // Crossterm sends: Char(uppercase) + Shift modifier
+    fn key_shifted_uppercase(c: char) -> Key {
+        // Terminal sends: Char(uppercase) + Shift modifier
         Key {
             code: KeyCode::Char(c.to_ascii_uppercase()),
             modifiers: Modifiers { shift: true, ..Modifiers::NONE },
@@ -628,12 +628,12 @@ mod tests {
     }
 
     #[test]
-    fn test_shift_w_from_crossterm_sets_extend() {
-        // Crossterm sends 'W' with shift=true
+    fn test_shift_w_uppercase_sets_extend() {
+        // Terminal sends 'W' with shift=true
         // Since W has its own binding (next_long_word_start), we use that with extend
-        let key = key_from_crossterm_shifted('w');
+        let key = key_shifted_uppercase('w');
         assert_eq!(key.code, KeyCode::Char('W'));
-        assert!(key.modifiers.shift, "crossterm preserves shift modifier");
+        assert!(key.modifiers.shift, "terminal preserves shift modifier");
 
         let mut h = InputHandler::new();
         let res = h.handle_key(key);
@@ -647,8 +647,8 @@ mod tests {
     }
 
     #[test]
-    fn test_shift_l_from_crossterm_sets_extend() {
-        let key = key_from_crossterm_shifted('l');
+    fn test_shift_l_uppercase_sets_extend() {
+        let key = key_shifted_uppercase('l');
         assert_eq!(key.code, KeyCode::Char('L'));
         assert!(key.modifiers.shift);
 
@@ -682,7 +682,7 @@ mod tests {
     fn test_shift_u_is_redo_with_extend() {
         // Shift+U triggers U binding (redo) with extend=true
         // Redo ignores extend, but it's still set
-        let key = key_from_crossterm_shifted('u');
+        let key = key_shifted_uppercase('u');
         assert_eq!(key.code, KeyCode::Char('U'));
         assert!(key.modifiers.shift);
 
@@ -701,7 +701,7 @@ mod tests {
     fn test_shift_w_uses_uppercase_w_binding_with_extend() {
         // W has its own binding (next_long_word_start)
         // Shift+W should use W binding with extend=true
-        let key = key_from_crossterm_shifted('w');
+        let key = key_shifted_uppercase('w');
 
         let mut h = InputHandler::new();
         let res = h.handle_key(key);

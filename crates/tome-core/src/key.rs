@@ -310,22 +310,21 @@ impl MouseEvent {
     }
 }
 
-/// Conversion from crossterm's MouseEvent.
-#[cfg(feature = "crossterm")]
-impl From<crossterm::event::MouseEvent> for MouseEvent {
-    fn from(event: crossterm::event::MouseEvent) -> Self {
-        use crossterm::event::{MouseButton as CtButton, MouseEventKind, KeyModifiers};
+/// Conversion from termina's MouseEvent.
+impl From<termina::event::MouseEvent> for MouseEvent {
+    fn from(event: termina::event::MouseEvent) -> Self {
+        use termina::event::{MouseButton as TmButton, MouseEventKind, Modifiers as TmModifiers};
 
         let modifiers = Modifiers {
-            ctrl: event.modifiers.contains(KeyModifiers::CONTROL),
-            alt: event.modifiers.contains(KeyModifiers::ALT),
-            shift: event.modifiers.contains(KeyModifiers::SHIFT),
+            ctrl: event.modifiers.contains(TmModifiers::CONTROL),
+            alt: event.modifiers.contains(TmModifiers::ALT),
+            shift: event.modifiers.contains(TmModifiers::SHIFT),
         };
 
-        let convert_button = |btn: CtButton| match btn {
-            CtButton::Left => MouseButton::Left,
-            CtButton::Right => MouseButton::Right,
-            CtButton::Middle => MouseButton::Middle,
+        let convert_button = |btn: TmButton| match btn {
+            TmButton::Left => MouseButton::Left,
+            TmButton::Right => MouseButton::Right,
+            TmButton::Middle => MouseButton::Middle,
         };
 
         match event.kind {
@@ -396,35 +395,34 @@ impl fmt::Display for Key {
     }
 }
 
-/// Conversion from crossterm's KeyEvent.
-#[cfg(feature = "crossterm")]
-impl From<crossterm::event::KeyEvent> for Key {
-    fn from(event: crossterm::event::KeyEvent) -> Self {
-        use crossterm::event::{KeyCode as CtKeyCode, KeyModifiers};
+/// Conversion from termina's KeyEvent.
+impl From<termina::event::KeyEvent> for Key {
+    fn from(event: termina::event::KeyEvent) -> Self {
+        use termina::event::{KeyCode as TmKeyCode, Modifiers as TmModifiers};
 
         let modifiers = Modifiers {
-            ctrl: event.modifiers.contains(KeyModifiers::CONTROL),
-            alt: event.modifiers.contains(KeyModifiers::ALT),
-            shift: event.modifiers.contains(KeyModifiers::SHIFT),
+            ctrl: event.modifiers.contains(TmModifiers::CONTROL),
+            alt: event.modifiers.contains(TmModifiers::ALT),
+            shift: event.modifiers.contains(TmModifiers::SHIFT),
         };
 
         let code = match event.code {
-            CtKeyCode::Char(c) => KeyCode::Char(c),
-            CtKeyCode::Esc => KeyCode::Special(SpecialKey::Escape),
-            CtKeyCode::Enter => KeyCode::Special(SpecialKey::Enter),
-            CtKeyCode::Tab => KeyCode::Special(SpecialKey::Tab),
-            CtKeyCode::Backspace => KeyCode::Special(SpecialKey::Backspace),
-            CtKeyCode::Delete => KeyCode::Special(SpecialKey::Delete),
-            CtKeyCode::Insert => KeyCode::Special(SpecialKey::Insert),
-            CtKeyCode::Home => KeyCode::Special(SpecialKey::Home),
-            CtKeyCode::End => KeyCode::Special(SpecialKey::End),
-            CtKeyCode::PageUp => KeyCode::Special(SpecialKey::PageUp),
-            CtKeyCode::PageDown => KeyCode::Special(SpecialKey::PageDown),
-            CtKeyCode::Up => KeyCode::Special(SpecialKey::Up),
-            CtKeyCode::Down => KeyCode::Special(SpecialKey::Down),
-            CtKeyCode::Left => KeyCode::Special(SpecialKey::Left),
-            CtKeyCode::Right => KeyCode::Special(SpecialKey::Right),
-            CtKeyCode::F(n) => KeyCode::Special(SpecialKey::F(n)),
+            TmKeyCode::Char(c) => KeyCode::Char(c),
+            TmKeyCode::Escape => KeyCode::Special(SpecialKey::Escape),
+            TmKeyCode::Enter => KeyCode::Special(SpecialKey::Enter),
+            TmKeyCode::Tab => KeyCode::Special(SpecialKey::Tab),
+            TmKeyCode::Backspace => KeyCode::Special(SpecialKey::Backspace),
+            TmKeyCode::Delete => KeyCode::Special(SpecialKey::Delete),
+            TmKeyCode::Insert => KeyCode::Special(SpecialKey::Insert),
+            TmKeyCode::Home => KeyCode::Special(SpecialKey::Home),
+            TmKeyCode::End => KeyCode::Special(SpecialKey::End),
+            TmKeyCode::PageUp => KeyCode::Special(SpecialKey::PageUp),
+            TmKeyCode::PageDown => KeyCode::Special(SpecialKey::PageDown),
+            TmKeyCode::Up => KeyCode::Special(SpecialKey::Up),
+            TmKeyCode::Down => KeyCode::Special(SpecialKey::Down),
+            TmKeyCode::Left => KeyCode::Special(SpecialKey::Left),
+            TmKeyCode::Right => KeyCode::Special(SpecialKey::Right),
+            TmKeyCode::Function(n) => KeyCode::Special(SpecialKey::F(n)),
             _ => KeyCode::Char('\0'),
         };
 

@@ -555,17 +555,17 @@ impl Editor {
         }
     }
 
-    pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> bool {
-        use crossterm::event::KeyCode as CtKeyCode;
-        use crossterm::event::KeyModifiers as CtKeyModifiers;
+    pub fn handle_key(&mut self, key: termina::event::KeyEvent) -> bool {
+        use termina::event::KeyCode as TmKeyCode;
+        use termina::event::Modifiers as TmModifiers;
 
         if self.scratch_open && self.scratch_focused {
             // Many terminals send Ctrl+Enter as byte 0x0A (Line Feed = Ctrl+J).
-            // Crossterm parses this as Char('j') with CONTROL modifier.
+            // Termina parses this as Char('j') with CONTROL modifier.
             // We accept all three variants: Enter, '\n', and 'j' with Ctrl.
             let raw_ctrl_enter =
-                matches!(key.code, CtKeyCode::Enter | CtKeyCode::Char('\n') | CtKeyCode::Char('j'))
-                    && key.modifiers.contains(CtKeyModifiers::CONTROL);
+                matches!(key.code, TmKeyCode::Enter | TmKeyCode::Char('\n') | TmKeyCode::Char('j'))
+                    && key.modifiers.contains(TmModifiers::CONTROL);
             if raw_ctrl_enter {
                 return self.with_scratch_context(|ed| ed.execute_scratch());
             }
@@ -574,7 +574,7 @@ impl Editor {
         self.handle_key_active(key)
     }
 
-    fn handle_key_active(&mut self, key: crossterm::event::KeyEvent) -> bool {
+    fn handle_key_active(&mut self, key: termina::event::KeyEvent) -> bool {
         self.message = None;
 
         let old_mode = self.mode();
@@ -715,14 +715,14 @@ impl Editor {
         }
     }
 
-    pub fn handle_mouse(&mut self, mouse: crossterm::event::MouseEvent) -> bool {
+    pub fn handle_mouse(&mut self, mouse: termina::event::MouseEvent) -> bool {
         if self.scratch_open && self.scratch_focused {
             return self.with_scratch_context(|ed| ed.handle_mouse_active(mouse));
         }
         self.handle_mouse_active(mouse)
     }
 
-    fn handle_mouse_active(&mut self, mouse: crossterm::event::MouseEvent) -> bool {
+    fn handle_mouse_active(&mut self, mouse: termina::event::MouseEvent) -> bool {
         self.message = None;
         let event: MouseEvent = mouse.into();
         let result = self.input.handle_mouse(event);
