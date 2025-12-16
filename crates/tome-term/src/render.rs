@@ -1,7 +1,7 @@
 use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Paragraph, Widget};
+use ratatui::widgets::{Block, Borders, Clear, Paragraph, Widget};
 
 use tome_core::ext::{
     RenderedSegment, SegmentPosition, SegmentStyle, StatuslineContext, render_position,
@@ -28,72 +28,91 @@ impl Editor {
         // In insert mode, we use the terminal cursor (bar), not a fake block cursor
         let use_block_cursor = !matches!(self.mode(), Mode::Insert);
 
-        if self.scratch_open {
-            let constraints = [
-                Constraint::Min(1),
-                Constraint::Length(self.scratch_height),
-                Constraint::Length(1),
-                Constraint::Length(1),
-            ];
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints(constraints)
-                .split(frame.area());
+        let area = frame.area();
+        
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(1), // Main doc
+                Constraint::Length(1), // Status
+                Constraint::Length(1), // Message
+            ])
+            .split(area);
 
-            // Main document
-            self.ensure_cursor_visible(chunks[0]);
-            let main_result = self.render_document_with_cursor(chunks[0], use_block_cursor && !self.scratch_focused);
-            frame.render_widget(main_result.widget, chunks[0]);
+        // Render main document
+        // When scratch is focused, we don't draw cursor on main doc
+        self.ensure_cursor_visible(chunks[0]);
+        let main_result = self.render_document_with_cursor(chunks[0], use_block_cursor && !self.scratch_focused);
+        frame.render_widget(main_result.widget, chunks[0]);
 
-            // Scratch buffer
-            self.enter_scratch_context();
-            self.ensure_cursor_visible(chunks[1]);
-            let scratch_use_block = !matches!(self.mode(), Mode::Insert);
-            let scratch_result = self.render_document_with_cursor(chunks[1], scratch_use_block && self.scratch_focused);
-            frame.render_widget(scratch_result.widget, chunks[1]);
-
-            // Set terminal cursor position for the focused buffer
-            if self.scratch_focused
-                && let Some((row, col)) = scratch_result.cursor_position {
-                    frame.set_cursor_position(Position::new(col, row));
-                }
-            self.leave_scratch_context();
-
-            if !self.scratch_focused
-                && let Some((row, col)) = main_result.cursor_position {
-                    frame.set_cursor_position(Position::new(col, row));
-                }
-
-            // Status line reflects focused buffer
-            if self.scratch_focused {
-                self.enter_scratch_context();
-                let status = self.render_status_line();
-                frame.render_widget(status, chunks[2]);
-                self.leave_scratch_context();
-            } else {
-                frame.render_widget(self.render_status_line(), chunks[2]);
-            }
-            frame.render_widget(self.render_message_line(), chunks[3]);
-        } else {
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Min(1),
-                    Constraint::Length(1),
-                    Constraint::Length(1),
-                ])
-                .split(frame.area());
-
-            self.ensure_cursor_visible(chunks[0]);
-            let result = self.render_document_with_cursor(chunks[0], use_block_cursor);
-            frame.render_widget(result.widget, chunks[0]);
-
-            if let Some((row, col)) = result.cursor_position {
+        if !self.scratch_focused {
+            if let Some((row, col)) = main_result.cursor_position {
                 frame.set_cursor_position(Position::new(col, row));
             }
+        }
 
+        // Render status line
+        // We render status line based on which buffer is focused
+        if self.scratch_focused {
+            self.enter_scratch_context();
+            let status = self.render_status_line();
+            frame.render_widget(status, chunks[1]);
+            self.leave_scratch_context();
+        } else {
             frame.render_widget(self.render_status_line(), chunks[1]);
-            frame.render_widget(self.render_message_line(), chunks[2]);
+        }
+        
+        // Render message line
+        frame.render_widget(self.render_message_line(), chunks[2]);
+
+        // Render Scratch Popup if open
+        if self.scratch_open {
+            // Command palette layout: centered horizontally, slightly above center vertically
+            let popup_width_percent = 60;
+            let popup_height = 12; 
+            
+            let popup_vertical = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Percentage(20), // Top spacer
+                    Constraint::Length(popup_height), // Popup
+                    Constraint::Min(1), // Bottom spacer
+                ])
+                .split(area);
+                
+            let popup_area = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage((100 - popup_width_percent) / 2),
+                    Constraint::Percentage(popup_width_percent),
+                    Constraint::Percentage((100 - popup_width_percent) / 2),
+                ])
+                .split(popup_vertical[1])[1];
+
+            frame.render_widget(Clear, popup_area);
+            
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .title(" Command Palette ")
+                .title_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                .style(Style::default().bg(Color::Rgb(10, 10, 10)).fg(Color::White));
+                
+            let inner_area = block.inner(popup_area);
+            frame.render_widget(block, popup_area);
+            
+            self.enter_scratch_context();
+            // Ensure cursor visible in small area
+            self.ensure_cursor_visible(inner_area);
+            let scratch_use_block = !matches!(self.mode(), Mode::Insert);
+            let scratch_result = self.render_document_with_cursor(inner_area, scratch_use_block);
+            frame.render_widget(scratch_result.widget, inner_area);
+            
+            if self.scratch_focused {
+                if let Some((row, col)) = scratch_result.cursor_position {
+                    frame.set_cursor_position(Position::new(col, row));
+                }
+            }
+            self.leave_scratch_context();
         }
     }
 
@@ -505,3 +524,4 @@ impl Editor {
         Paragraph::new("").style(Style::default().fg(Color::Yellow))
     }
 }
+

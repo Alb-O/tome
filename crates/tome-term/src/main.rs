@@ -29,7 +29,7 @@ fn enable_terminal_features(terminal: &mut PlatformTerminal) -> io::Result<()> {
             DecPrivateModeCode::ClearAndEnableAlternateScreen
         ))),
         Csi::Keyboard(Keyboard::PushFlags(
-            KittyKeyboardFlags::DISAMBIGUATE_ESCAPE_CODES | KittyKeyboardFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
+            KittyKeyboardFlags::DISAMBIGUATE_ESCAPE_CODES
         ))
     )?;
     write!(

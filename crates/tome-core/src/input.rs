@@ -266,6 +266,17 @@ impl InputHandler {
             };
         }
 
+        // Normalize Shift+Letter -> Uppercase Letter (no shift)
+        // This ensures typing Shift+a produces 'A' even if terminal sends 'a'+Shift.
+        let key = if key.modifiers.shift 
+            && let KeyCode::Char(c) = key.code 
+            && c.is_ascii_lowercase() 
+        {
+             key.normalize()
+        } else {
+             key
+        };
+
         // Try insert-mode keybindings first
         if let Some(binding) = find_binding(BindingMode::Insert, key) {
             let count = if self.count > 0 { self.count as usize } else { 1 };
@@ -371,6 +382,15 @@ impl InputHandler {
     }
 
     fn handle_command_key(&mut self, key: Key, prompt: char, mut input: String) -> KeyResult {
+        let key = if key.modifiers.shift 
+            && let KeyCode::Char(c) = key.code 
+            && c.is_ascii_lowercase() 
+        {
+             key.normalize()
+        } else {
+             key
+        };
+
         match key.code {
             KeyCode::Special(SpecialKey::Escape) => {
                 self.mode = Mode::Normal;
@@ -437,6 +457,15 @@ impl InputHandler {
     }
 
     fn handle_pending_action_key(&mut self, key: Key, pending: PendingKind) -> KeyResult {
+        let key = if key.modifiers.shift 
+            && let KeyCode::Char(c) = key.code 
+            && c.is_ascii_lowercase() 
+        {
+             key.normalize()
+        } else {
+             key
+        };
+
         match pending {
             PendingKind::FindChar { inclusive: _ } => match key.code {
                 KeyCode::Char(ch) => {
@@ -541,40 +570,48 @@ impl InputHandler {
 
     /// If shift is held, set extend mode. For uppercase letters, use the uppercase binding
     /// if it exists, otherwise lowercase for binding lookup.
-    ///
-    /// This implements Kakoune-style shift behavior:
-    /// - Shift+w (sent as 'W' with shift) → extend + W binding (WORD motion)
-    /// - Shift+l (sent as 'L' with shift) → extend + l binding (L has no binding, use l)
-    /// - Shift+u (sent as 'U' with shift) → extend + U binding (redo, which ignores extend)
     fn extend_and_lower_if_shift(&mut self, key: Key) -> Key {
-        if key.modifiers.shift {
+        // Handle Uppercase characters (Shift+Char or CapsLock+Char)
+        // These always imply extend unless explicitly bound.
+        if let KeyCode::Char(c) = key.code
+            && c.is_ascii_uppercase()
+        {
             self.extend = true;
-            if let KeyCode::Char(c) = key.code
-                && c.is_ascii_uppercase()
-            {
-                // Check if uppercase has its own binding
-                let upper_key = Key {
-                    code: KeyCode::Char(c),
-                    modifiers: Modifiers {
-                        shift: false,
-                        ..key.modifiers
-                    },
-                };
-                if find_binding(BindingMode::Normal, upper_key).is_some() {
-                    // Uppercase has its own binding, use it with extend
-                    return upper_key;
-                }
-                // No uppercase binding, lowercase for lookup
-                return Key {
-                    code: KeyCode::Char(c.to_ascii_lowercase()),
-                    modifiers: Modifiers {
-                        shift: false,
-                        ..key.modifiers
-                    },
-                };
+            
+            // Check if uppercase key has its own binding (e.g. 'W')
+            // We look up using the key without Shift modifier (since the char itself is uppercase)
+            let lookup_key = key.drop_shift();
+            
+            if find_binding(BindingMode::Normal, lookup_key).is_some() {
+                // Uppercase has its own binding, use it with extend
+                return lookup_key;
+            }
+            
+            // Fallback to lowercase
+            return Key {
+                code: KeyCode::Char(c.to_ascii_lowercase()),
+                modifiers: lookup_key.modifiers,
+            };
+        }
+
+        // For non-uppercase chars, only handle explicit Shift modifier
+        if !key.modifiers.shift {
+            return key;
+        }
+
+        match key.code {
+            // Punctuation/Symbols (e.g. ':', '!', '<')
+            // These are produced by Shift, but we treat them as distinct keys without implicit extend.
+            // Just drop the shift modifier so they match the bindings (which are usually Key::char(':')).
+            KeyCode::Char(_) => {
+                return key.drop_shift();
+            }
+            // Special keys (Arrows, PageUp, etc) with Shift -> Extend
+            KeyCode::Special(_) => {
+                self.extend = true;
+                return key.drop_shift();
             }
         }
-        key.drop_shift()
     }
 }
 
