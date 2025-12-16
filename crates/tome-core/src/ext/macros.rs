@@ -222,7 +222,7 @@ macro_rules! keybind {
     };
     ($mode:ident, $key:expr, $action:expr, priority: $priority:expr) => {
         paste::paste! {
-            #[linkme::distributed_slice($crate::ext::keybindings::KEYBINDINGS)]
+            #[linkme::distributed_slice($crate::ext::keybindings::[<KEYBINDINGS_ $mode:upper>])]
             static [<KB_ $mode:upper _ $action:upper>]: $crate::ext::keybindings::KeyBindingDef =
                 $crate::ext::keybindings::KeyBindingDef {
                     mode: $crate::ext::keybindings::BindingMode::$mode,

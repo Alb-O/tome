@@ -13,9 +13,22 @@ use linkme::distributed_slice;
 use crate::key::Key;
 use crate::Mode;
 
-/// Registry of all keybindings, populated at link time.
-#[distributed_slice]
-pub static KEYBINDINGS: [KeyBindingDef];
+macro_rules! keybinding_slices {
+    ($($slice:ident),+ $(,)?) => {
+        $(#[distributed_slice]
+        pub static $slice: [KeyBindingDef];)+
+    };
+}
+
+keybinding_slices!(
+    KEYBINDINGS_NORMAL,
+    KEYBINDINGS_INSERT,
+    KEYBINDINGS_GOTO,
+    KEYBINDINGS_VIEW,
+    KEYBINDINGS_MATCH,
+    KEYBINDINGS_WINDOW,
+    KEYBINDINGS_SPACE,
+);
 
 /// A keybinding definition that maps a key to an action in a specific mode.
 #[derive(Clone, Copy)]
@@ -74,23 +87,46 @@ impl From<Mode> for BindingMode {
     }
 }
 
+fn slice_for_mode(mode: BindingMode) -> &'static [KeyBindingDef] {
+    match mode {
+        BindingMode::Normal => &KEYBINDINGS_NORMAL,
+        BindingMode::Insert => &KEYBINDINGS_INSERT,
+        BindingMode::Goto => &KEYBINDINGS_GOTO,
+        BindingMode::View => &KEYBINDINGS_VIEW,
+        BindingMode::Match => &KEYBINDINGS_MATCH,
+        BindingMode::Window => &KEYBINDINGS_WINDOW,
+        BindingMode::Space => &KEYBINDINGS_SPACE,
+    }
+}
+
+fn all_slices() -> impl Iterator<Item = &'static KeyBindingDef> {
+    KEYBINDINGS_NORMAL
+        .iter()
+        .chain(KEYBINDINGS_INSERT.iter())
+        .chain(KEYBINDINGS_GOTO.iter())
+        .chain(KEYBINDINGS_VIEW.iter())
+        .chain(KEYBINDINGS_MATCH.iter())
+        .chain(KEYBINDINGS_WINDOW.iter())
+        .chain(KEYBINDINGS_SPACE.iter())
+}
+
 /// Look up a keybinding for the given mode and key.
 /// Returns the highest-priority (lowest value) binding if multiple match.
 pub fn find_binding(mode: BindingMode, key: Key) -> Option<&'static KeyBindingDef> {
-    KEYBINDINGS
+    slice_for_mode(mode)
         .iter()
-        .filter(|kb| kb.mode == mode && kb.key == key)
+        .filter(|kb| kb.key == key)
         .min_by_key(|kb| kb.priority)
 }
 
 /// Get all keybindings for a specific mode.
 pub fn bindings_for_mode(mode: BindingMode) -> impl Iterator<Item = &'static KeyBindingDef> {
-    KEYBINDINGS.iter().filter(move |kb| kb.mode == mode)
+    slice_for_mode(mode).iter()
 }
 
 /// Get all keybindings for a specific action.
 pub fn bindings_for_action(action: &str) -> impl Iterator<Item = &'static KeyBindingDef> {
-    KEYBINDINGS.iter().filter(move |kb| kb.action == action)
+    all_slices().filter(move |kb| kb.action == action)
 }
 
 #[cfg(test)]

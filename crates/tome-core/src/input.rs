@@ -576,14 +576,17 @@ impl InputHandler {
         if let KeyCode::Char(c) = key.code
             && c.is_ascii_uppercase()
         {
-            self.extend = true;
-            
+            // Terminal may send uppercase without shift modifier (CapsLock or explicit uppercase key).
+            // Only set extend if the Shift modifier was actually present; otherwise keep existing extend state.
+            if key.modifiers.shift {
+                self.extend = true;
+            }
+
             // Check if uppercase key has its own binding (e.g. 'W')
             // We look up using the key without Shift modifier (since the char itself is uppercase)
             let lookup_key = key.drop_shift();
             
             if find_binding(BindingMode::Normal, lookup_key).is_some() {
-                // Uppercase has its own binding, use it with extend
                 return lookup_key;
             }
             
@@ -604,6 +607,8 @@ impl InputHandler {
             // These are produced by Shift, but we treat them as distinct keys without implicit extend.
             // Just drop the shift modifier so they match the bindings (which are usually Key::char(':')).
             KeyCode::Char(_) => {
+                // Shift+char should still extend selection even if we drop the modifier for lookup.
+                self.extend = true;
                 key.drop_shift()
             }
             // Special keys (Arrows, PageUp, etc) with Shift -> Extend

@@ -2,14 +2,14 @@
 
 use linkme::distributed_slice;
 
-use crate::ext::keybindings::{BindingMode, KeyBindingDef, KEYBINDINGS};
+use crate::ext::keybindings::{BindingMode, KeyBindingDef, KEYBINDINGS_VIEW};
 use crate::key::Key;
 
 const DEFAULT_PRIORITY: i16 = 100;
 
 macro_rules! bind {
     ($name:ident, $key:expr, $action:expr) => {
-        #[distributed_slice(KEYBINDINGS)]
+        #[distributed_slice(KEYBINDINGS_VIEW)]
         static $name: KeyBindingDef = KeyBindingDef {
             mode: BindingMode::View,
             key: $key,

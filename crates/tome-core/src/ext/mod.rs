@@ -67,7 +67,7 @@ pub use hooks::{
 };
 #[cfg(feature = "host")]
 pub use keybindings::{
-    BindingMode, KeyBindingDef, KEYBINDINGS, find_binding, bindings_for_mode, bindings_for_action,
+    BindingMode, KeyBindingDef, bindings_for_action, bindings_for_mode, find_binding,
 };
 #[cfg(feature = "host")]
 pub use options::{
@@ -83,7 +83,7 @@ pub use editor_ctx::{
     CursorAccess, EditAccess, EditorCapabilities, EditorContext, HandleOutcome, JumpAccess,
     MacroAccess, MessageAccess, ModeAccess, ResultHandler, SearchAccess, ScratchAccess,
     SelectionAccess, SelectionOpsAccess, TextAccess, TransformAccess, UndoAccess,
-    RESULT_HANDLERS, dispatch_result,
+    dispatch_result,
 };
 
 #[cfg(feature = "host")]
