@@ -15,6 +15,7 @@ pub struct WrapSegment {
 
 impl Editor {
     pub fn render(&mut self, frame: &mut ratatui::Frame) {
+        self.refresh_scratch_completion_hint();
         if self.scratch_open {
             let constraints = [
                 Constraint::Min(1),
@@ -164,6 +165,12 @@ impl Editor {
         let sel_start = primary.from();
         let sel_end = primary.to();
 
+        let ghost_remainder = if self.in_scratch_context() && self.scratch_focused {
+            self.scratch_completion_remainder()
+        } else {
+            None
+        };
+
         let mut output_lines: Vec<Line> = Vec::new();
         let mut current_line_idx = self.scroll_line;
         let mut start_segment = self.scroll_segment;
@@ -179,6 +186,7 @@ impl Editor {
 
             let line_text: String = self.doc.slice(line_start..line_end).into();
             let line_text = line_text.trim_end_matches('\n');
+            let line_content_end = line_start + line_text.chars().count();
 
             let wrapped_segments = self.wrap_line(line_text, text_width);
             let num_segments = wrapped_segments.len().max(1);
@@ -231,8 +239,12 @@ impl Editor {
                     spans.push(Span::styled("·".repeat(fill_count), fill_style));
                 }
 
+                let seg_start = line_start + seg_char_offset;
+                let seg_end = seg_start + seg_char_count;
+                let cursor_in_seg = (cursor >= seg_start && cursor <= seg_end)
+                    || (is_last_segment && cursor >= line_content_end && cursor <= line_end);
+
                 if is_last_segment {
-                    let line_content_end = line_start + line_text.chars().count();
                     let is_last_doc_line = current_line_idx + 1 >= total_lines;
                     let cursor_at_eol = if is_last_doc_line {
                         cursor >= line_content_end && cursor <= line_end
@@ -248,6 +260,15 @@ impl Editor {
                                 .add_modifier(Modifier::BOLD),
                         ));
                     }
+                }
+
+                if cursor_in_seg
+                    && let Some(ghost) = ghost_remainder.as_ref().filter(|g| !g.is_empty())
+                {
+                    spans.push(Span::styled(
+                        ghost.clone(),
+                        Style::default().fg(Color::Rgb(120, 120, 120)),
+                    ));
                 }
 
                 output_lines.push(Line::from(spans));
@@ -273,6 +294,13 @@ impl Editor {
                                 .fg(Color::Black)
                                 .add_modifier(Modifier::BOLD),
                         ));
+
+                        if let Some(ghost) = ghost_remainder.as_ref().filter(|g| !g.is_empty()) {
+                            spans.push(Span::styled(
+                                ghost.clone(),
+                                Style::default().fg(Color::Rgb(120, 120, 120)),
+                            ));
+                        }
                     }
 
                     output_lines.push(Line::from(spans));
@@ -410,7 +438,9 @@ impl Editor {
             return Paragraph::new(format!("{}{}", prompt, input))
                 .style(Style::default().fg(Color::White));
         }
-        let text = self.message.as_deref().unwrap_or("");
-        Paragraph::new(text).style(Style::default().fg(Color::Yellow))
+        if let Some(msg) = self.message.as_deref() {
+            return Paragraph::new(msg).style(Style::default().fg(Color::Yellow));
+        }
+        Paragraph::new("").style(Style::default().fg(Color::Yellow))
     }
 }

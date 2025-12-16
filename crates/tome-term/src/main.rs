@@ -3,6 +3,7 @@ mod editor;
 mod render;
 mod styles;
 mod backend;
+mod nu_engine;
 
 use std::io::{self, Write};
 use std::time::Duration;
@@ -649,7 +650,14 @@ mod tests {
 
         // Ctrl+Enter executes the scratch buffer (insert mode)
         editor.handle_key(KeyEvent::new(KeyCode::Enter, Modifiers::CONTROL));
-        assert_eq!(editor.message, Some("Unknown command: foo".to_string()));
+        assert!(
+            editor
+                .message
+                .as_ref()
+                .map(|m| m.contains("Nu"))
+                .unwrap_or(false),
+            "expected Nu error message"
+        );
 
         // Now ensure plain Enter in NORMAL inside scratch also executes
         editor.handle_key(KeyEvent::new(KeyCode::Char(':'), Modifiers::NONE));
@@ -661,7 +669,52 @@ mod tests {
         editor.handle_key(KeyEvent::new(KeyCode::Escape, Modifiers::NONE));
         assert!(matches!(editor.mode(), Mode::Normal));
         editor.handle_key(KeyEvent::new(KeyCode::Enter, Modifiers::NONE));
-        assert_eq!(editor.message, Some("Unknown command: zzz".to_string()));
+        assert!(
+            editor
+                .message
+                .as_ref()
+                .map(|m| m.contains("Nu"))
+                .unwrap_or(false),
+            "expected Nu error message"
+        );
+    }
+
+    #[test]
+    fn test_scratch_colon_routes_to_legacy_commands() {
+        let mut editor = test_editor("content");
+        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), Modifiers::NONE));
+        editor.with_scratch_context(|ed| {
+            ed.doc = Rope::from(":foo");
+            ed.cursor = ed.doc.len_chars();
+            ed.selection = Selection::point(ed.cursor);
+            ed.input.set_mode(Mode::Normal);
+        });
+
+        editor.handle_key(KeyEvent::new(KeyCode::Enter, Modifiers::NONE));
+        assert_eq!(editor.message, Some("Unknown command: foo".to_string()));
+    }
+
+    #[test]
+    fn test_scratch_completion_hint_from_nu() {
+        let mut editor = test_editor("content");
+        editor.handle_key(KeyEvent::new(KeyCode::Char(':'), Modifiers::NONE));
+        editor.with_scratch_context(|ed| {
+            ed.doc = Rope::from("he");
+            ed.cursor = ed.doc.len_chars();
+            ed.selection = Selection::point(ed.cursor);
+            ed.input.set_mode(Mode::Insert);
+        });
+
+        editor.refresh_scratch_completion_hint();
+
+        let hint = editor.scratch_completion_hint();
+        assert!(editor.scratch.completion.is_some(), "no scratch completion recorded");
+        assert!(
+            hint.as_deref()
+                .map(|h| h.starts_with("he"))
+                .unwrap_or(false),
+            "expected Nu completion hint for prefix"
+        );
     }
 
     #[test]
@@ -675,7 +728,14 @@ mod tests {
         });
         // Stay in insert mode and execute with Ctrl+Enter
         editor.handle_key(KeyEvent::new(KeyCode::Enter, Modifiers::CONTROL));
-        assert_eq!(editor.message, Some("Unknown command: ctrl-enter-test".to_string()));
+        assert!(
+            editor
+                .message
+                .as_ref()
+                .map(|m| m.contains("Nu"))
+                .unwrap_or(false),
+            "expected Nu error message"
+        );
     }
 
     #[test]
@@ -691,7 +751,14 @@ mod tests {
         });
         // Stay in insert mode and execute with Ctrl+J (alias for Ctrl+Enter)
         editor.handle_key(KeyEvent::new(KeyCode::Char('j'), Modifiers::CONTROL));
-        assert_eq!(editor.message, Some("Unknown command: ctrl-j-test".to_string()));
+        assert!(
+            editor
+                .message
+                .as_ref()
+                .map(|m| m.contains("Nu"))
+                .unwrap_or(false),
+            "expected Nu error message"
+        );
     }
 
     #[test]

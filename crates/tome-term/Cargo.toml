@@ -13,6 +13,8 @@ path = "src/main.rs"
 clap.workspace = true
 ratatui.workspace = true
 termina.workspace = true
+embed-nu = "0.9.1"
+nu-protocol = "0.90.1"
 tome-core = { workspace = true }
 
 [dev-dependencies]

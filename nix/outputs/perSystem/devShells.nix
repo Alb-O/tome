@@ -24,6 +24,8 @@
           pkgs.cargo-edit
           pkgs.cargo-insta
           pkgs.rust-analyzer
+          pkgs.pkg-config
+          pkgs.openssl
           self'.formatter
         ];
 
