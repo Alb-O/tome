@@ -244,12 +244,11 @@ impl Editor {
         result
     }
 
-    fn open_scratch(&mut self, focus: bool) {
+    pub(crate) fn do_open_scratch(&mut self, focus: bool) {
         self.scratch_open = true;
         self.scratch.completion = None;
         if focus {
             self.scratch_focused = true;
-            // Ensure scratch buffer starts in insert mode at top
             self.with_scratch_context(|ed| {
                 if ed.doc.len_chars() == 0 {
                     ed.cursor = 0;
@@ -260,7 +259,7 @@ impl Editor {
         }
     }
 
-    fn close_scratch(&mut self) {
+    pub(crate) fn do_close_scratch(&mut self) {
         if self.in_scratch_context {
             self.leave_scratch_context();
         }
@@ -269,17 +268,17 @@ impl Editor {
         self.scratch.completion = None;
     }
 
-    fn toggle_scratch(&mut self) {
+    pub(crate) fn do_toggle_scratch(&mut self) {
         if !self.scratch_open {
-            self.open_scratch(true);
+            self.do_open_scratch(true);
         } else if self.scratch_focused {
-            self.close_scratch();
+            self.do_close_scratch();
         } else {
             self.scratch_focused = true;
         }
     }
 
-    fn execute_scratch(&mut self) -> bool {
+    pub(crate) fn do_execute_scratch(&mut self) -> bool {
         if !self.scratch_open {
             self.message = Some("Scratch is not open".to_string());
             return false;
@@ -302,7 +301,7 @@ impl Editor {
         if let Some(stripped) = trimmed.strip_prefix(':') {
             let result = self.execute_command_line(stripped.trim_start());
             if !self.scratch_keep_open {
-                self.close_scratch();
+                self.do_close_scratch();
             }
             return result;
         }
@@ -328,7 +327,7 @@ impl Editor {
         self.message = message;
 
         if !self.scratch_keep_open {
-            self.close_scratch();
+            self.do_close_scratch();
         }
         false
     }
@@ -733,7 +732,7 @@ impl Editor {
             }
 
             if raw_ctrl_enter {
-                return self.with_scratch_context(|ed| ed.execute_scratch());
+                return self.with_scratch_context(|ed| ed.do_execute_scratch());
             }
             return self.with_scratch_context(|ed| ed.handle_key_active(key));
         }
@@ -751,14 +750,14 @@ impl Editor {
                 if matches!(self.mode(), Mode::Insert) {
                     self.input.set_mode(Mode::Normal);
                 } else {
-                    self.close_scratch();
+                    self.do_close_scratch();
                 }
                 return false;
             }
             let is_enter = matches!(key.code, KeyCode::Special(SpecialKey::Enter))
                 || matches!(key.code, KeyCode::Char('\n'));
             if is_enter && (key.modifiers.ctrl || matches!(self.mode(), Mode::Normal)) {
-                return self.execute_scratch();
+                return self.do_execute_scratch();
             }
         }
 
@@ -1084,137 +1083,20 @@ impl Editor {
     fn apply_action_result(&mut self, result: ext::ActionResult, extend: bool) -> bool {
         use ext::ActionResult;
 
-        match result {
-            ActionResult::Ok => false,
-            ActionResult::CursorMove(new_cursor) => {
-                self.cursor = new_cursor;
-                false
-            }
-            ActionResult::Motion(new_selection) => {
-                self.cursor = new_selection.primary().head;
-                self.selection = new_selection;
-                false
-            }
-            ActionResult::InsertWithMotion(new_selection) => {
-                self.cursor = new_selection.primary().head;
-                self.selection = new_selection;
-                self.input.set_mode(Mode::Insert);
-                false
-            }
+        // Handle Edit and SplitLines locally - they need direct editor access
+        match &result {
             ActionResult::Edit(edit_action) => {
-                self.execute_edit_action(edit_action, extend)
-            }
-            ActionResult::ModeChange(mode) => {
-                self.apply_mode_change(mode)
-            }
-            ActionResult::Quit => true,
-            ActionResult::ForceQuit => true,
-            ActionResult::Error(msg) => {
-                self.message = Some(msg);
-                false
-            }
-            ActionResult::Pending(pending) => {
-                self.message = Some(pending.prompt.clone());
-                self.input.set_mode(Mode::PendingAction(pending.kind));
-                false
-            }
-            ActionResult::SearchNext { add_selection } => {
-                self.search_next(add_selection, extend)
-            }
-            ActionResult::SearchPrev { add_selection } => {
-                self.search_prev(add_selection, extend)
-            }
-            ActionResult::UseSelectionAsSearch => {
-                self.use_selection_as_search()
+                return self.execute_edit_action(edit_action.clone(), extend);
             }
             ActionResult::SplitLines => {
-                self.split_lines()
+                return self.split_lines();
             }
-            ActionResult::JumpForward => {
-                self.message = Some("Jump list not yet implemented".to_string());
-                false
-            }
-            ActionResult::JumpBackward => {
-                self.message = Some("Jump list not yet implemented".to_string());
-                false
-            }
-            ActionResult::SaveJump => {
-                self.message = Some("Jump list not yet implemented".to_string());
-                false
-            }
-            ActionResult::RecordMacro => {
-                self.message = Some("Macros not yet implemented".to_string());
-                false
-            }
-            ActionResult::PlayMacro => {
-                self.message = Some("Macros not yet implemented".to_string());
-                false
-            }
-            ActionResult::SaveSelections => {
-                self.message = Some("Marks not yet implemented".to_string());
-                false
-            }
-            ActionResult::RestoreSelections => {
-                self.message = Some("Marks not yet implemented".to_string());
-                false
-            }
-            ActionResult::ForceRedraw => {
-                false
-            }
-            ActionResult::RepeatLastInsert => {
-                self.message = Some("Repeat insert not yet implemented".to_string());
-                false
-            }
-            ActionResult::RepeatLastObject => {
-                self.message = Some("Repeat object not yet implemented".to_string());
-                false
-            }
-            ActionResult::DuplicateSelectionsDown => {
-                self.message = Some("Duplicate down not yet implemented".to_string());
-                false
-            }
-            ActionResult::DuplicateSelectionsUp => {
-                self.message = Some("Duplicate up not yet implemented".to_string());
-                false
-            }
-            ActionResult::MergeSelections => {
-                self.message = Some("Merge selections not yet implemented".to_string());
-                false
-            }
-            ActionResult::OpenScratch { focus } => {
-                self.open_scratch(focus);
-                false
-            }
-            ActionResult::CloseScratch => {
-                self.close_scratch();
-                false
-            }
-            ActionResult::ToggleScratch => {
-                self.toggle_scratch();
-                false
-            }
-            ActionResult::ExecuteScratch => self.execute_scratch(),
-            ActionResult::Align => {
-                self.message = Some("Align not yet implemented".to_string());
-                false
-            }
-            ActionResult::CopyIndent => {
-                self.message = Some("Copy indent not yet implemented".to_string());
-                false
-            }
-            ActionResult::TabsToSpaces => {
-                self.message = Some("Tabs to spaces not yet implemented".to_string());
-                false
-            }
-            ActionResult::SpacesToTabs => {
-                self.message = Some("Spaces to tabs not yet implemented".to_string());
-                false
-            }
-            ActionResult::TrimSelections => {
-                self.message = Some("Trim selections not yet implemented".to_string());
-                false
-            }
+            _ => {}
         }
+
+        // Dispatch to registered handlers
+        let mut ctx = ext::EditorContext::new(self);
+        ext::dispatch_result(&result, &mut ctx, extend)
     }
 
     fn execute_edit_action(&mut self, action: ext::EditAction, _extend: bool) -> bool {
@@ -1470,84 +1352,8 @@ impl Editor {
         }
     }
 
-    fn apply_mode_change(&mut self, mode: ext::ActionMode) -> bool {
-        use ext::ActionMode;
-        match mode {
-            ActionMode::Normal => self.input.set_mode(Mode::Normal),
-            ActionMode::Insert => self.input.set_mode(Mode::Insert),
-            ActionMode::Goto => self.input.set_mode(Mode::Goto),
-            ActionMode::View => self.input.set_mode(Mode::View),
-            ActionMode::Command => {
-                self.input.set_mode(Mode::Command {
-                    prompt: ':',
-                    input: String::new(),
-                });
-            }
-            ActionMode::SearchForward => {
-                self.input.set_mode(Mode::Command {
-                    prompt: '/',
-                    input: String::new(),
-                });
-            }
-            ActionMode::SearchBackward => {
-                self.input.set_mode(Mode::Command {
-                    prompt: '?',
-                    input: String::new(),
-                });
-            }
-            ActionMode::SelectRegex => {
-                self.input.set_mode(Mode::Command {
-                    prompt: 's',
-                    input: String::new(),
-                });
-            }
-            ActionMode::SplitRegex => {
-                self.input.set_mode(Mode::Command {
-                    prompt: 'S',
-                    input: String::new(),
-                });
-            }
-            ActionMode::KeepMatching => {
-                self.input.set_mode(Mode::Command {
-                    prompt: 'k',
-                    input: String::new(),
-                });
-            }
-            ActionMode::KeepNotMatching => {
-                self.input.set_mode(Mode::Command {
-                    prompt: 'K',
-                    input: String::new(),
-                });
-            }
-            ActionMode::PipeReplace => {
-                self.input.set_mode(Mode::Command {
-                    prompt: '|',
-                    input: String::new(),
-                });
-            }
-            ActionMode::PipeIgnore => {
-                self.input.set_mode(Mode::Command {
-                    prompt: '\\',
-                    input: String::new(),
-                });
-            }
-            ActionMode::InsertOutput => {
-                self.input.set_mode(Mode::Command {
-                    prompt: '!',
-                    input: String::new(),
-                });
-            }
-            ActionMode::AppendOutput => {
-                self.input.set_mode(Mode::Command {
-                    prompt: '@',
-                    input: String::new(),
-                });
-            }
-        }
-        false
-    }
 
-    fn search_next(&mut self, add_selection: bool, extend: bool) -> bool {
+    pub(crate) fn do_search_next(&mut self, add_selection: bool, extend: bool) -> bool {
         if let Some((pattern, _reverse)) = self.input.last_search() {
             match movement::find_next(self.doc.slice(..), pattern, self.cursor + 1) {
                 Ok(Some(range)) => {
@@ -1574,7 +1380,7 @@ impl Editor {
         false
     }
 
-    fn search_prev(&mut self, add_selection: bool, extend: bool) -> bool {
+    pub(crate) fn do_search_prev(&mut self, add_selection: bool, extend: bool) -> bool {
         if let Some((pattern, _reverse)) = self.input.last_search() {
             match movement::find_prev(self.doc.slice(..), pattern, self.cursor) {
                 Ok(Some(range)) => {
@@ -1601,7 +1407,7 @@ impl Editor {
         false
     }
 
-    fn use_selection_as_search(&mut self) -> bool {
+    pub(crate) fn do_use_selection_as_search(&mut self) -> bool {
         let primary = self.selection.primary();
         let from = primary.from();
         let to = primary.to();

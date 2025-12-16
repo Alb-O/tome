@@ -1,9 +1,10 @@
+mod backend;
+mod capabilities;
 mod cli;
 mod editor;
+mod nu_engine;
 mod render;
 mod styles;
-mod backend;
-mod nu_engine;
 
 use std::io::{self, Write};
 use std::time::Duration;
