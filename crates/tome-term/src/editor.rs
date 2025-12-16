@@ -11,7 +11,6 @@ use tome_core::{
 };
 use tome_core::ext::{HookContext, emit_hook};
 
-use crate::nu_engine;
 use crate::render::WrapSegment;
 
 /// A history entry for undo/redo.
@@ -39,13 +38,6 @@ pub struct ScratchState {
     pub undo_stack: Vec<HistoryEntry>,
     pub redo_stack: Vec<HistoryEntry>,
     pub text_width: usize,
-    pub completion: Option<ScratchCompletion>,
-}
-
-#[derive(Clone, Default)]
-pub struct ScratchCompletion {
-    pub suggestion: String,
-    pub current_token: String,
 }
 
 impl Default for ScratchState {
@@ -63,7 +55,6 @@ impl Default for ScratchState {
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
             text_width: 80,
-            completion: None,
         }
     }
 }
@@ -303,7 +294,6 @@ impl Editor {
 
     pub(crate) fn do_open_scratch(&mut self, focus: bool) {
         self.scratch_open = true;
-        self.scratch.completion = None;
         if focus {
             self.scratch_focused = true;
             self.with_scratch_context(|ed| {
@@ -322,7 +312,6 @@ impl Editor {
         }
         self.scratch_open = false;
         self.scratch_focused = false;
-        self.scratch.completion = None;
     }
 
     pub(crate) fn do_toggle_scratch(&mut self) {
@@ -355,150 +344,24 @@ impl Editor {
             return false;
         }
 
-        if let Some(stripped) = trimmed.strip_prefix(':') {
-            let result = self.execute_command_line(stripped.trim_start());
-            if !self.scratch_keep_open {
-                self.do_close_scratch();
-            }
-            return result;
+        let command = if let Some(stripped) = trimmed.strip_prefix(':') {
+            stripped.trim_start()
+        } else {
+            trimmed
+        };
+        
+        // Alias 'exit' to 'quit' if needed, or just rely on execute_command_line
+        if command == "exit" {
+             return true; 
         }
 
-        let input = self.with_scratch_context(|ed| {
-            let selection = ed.selection.clone();
-            let doc = ed.doc.clone();
-            nu_engine::pipeline_from_selection(&doc, &selection)
-        });
-
-        let message = match nu_engine::NuEngine::global() {
-            Ok(engine) => match engine.run(trimmed, input) {
-                Ok(output) => match engine.render_output(output) {
-                    Ok(rendered) => Some(rendered),
-                    Err(err) => Some(format!("Nu error: {}", err)),
-                },
-                Err(err) => Some(format!("Nu error: {}", err)),
-            },
-            Err(err) => Some(format!("Nu disabled: {}", err)),
-        };
-
-        self.scratch.completion = None;
-        self.message = message;
-
+        let result = self.execute_command_line(command);
+        
         if !self.scratch_keep_open {
             self.do_close_scratch();
         }
-        false
-    }
-
-    #[cfg(test)]
-    pub(crate) fn scratch_completion_hint(&self) -> Option<String> {
-        if !(self.scratch_open && self.scratch_focused) {
-            return None;
-        }
-        self.scratch
-            .completion
-            .as_ref()
-            .map(|completion| completion.suggestion.clone())
-    }
-
-    pub(crate) fn scratch_completion_remainder(&self) -> Option<String> {
-        if !(self.scratch_open && self.scratch_focused) {
-            return None;
-        }
-        let completion = self.scratch.completion.as_ref()?;
-        if !completion
-            .suggestion
-            .starts_with(&completion.current_token)
-        {
-            return None;
-        }
-        let remainder = &completion.suggestion[completion.current_token.len()..];
-        if remainder.is_empty() {
-            None
-        } else {
-            Some(remainder.to_string())
-        }
-    }
-
-    fn apply_scratch_completion(&mut self) -> bool {
-        let completion = match self.scratch.completion.clone() {
-            Some(completion) => completion,
-            None => return false,
-        };
-
-        if !completion
-            .suggestion
-            .starts_with(&completion.current_token)
-        {
-            self.scratch.completion = None;
-            return false;
-        }
-
-        let remainder = &completion.suggestion[completion.current_token.len()..];
-        if remainder.is_empty() {
-            return false;
-        }
-
-        self.with_scratch_context(|ed| ed.insert_text(remainder));
-        self.refresh_scratch_completion_hint();
-        true
-    }
-
-    pub(crate) fn refresh_scratch_completion_hint(&mut self) {
-        let scratch_mode = if self.scratch_open {
-            self.with_scratch_context(|ed| ed.input.mode())
-        } else {
-            self.mode()
-        };
-
-        if !(self.scratch_open && self.scratch_focused && matches!(scratch_mode, Mode::Insert)) {
-            self.scratch.completion = None;
-            return;
-        }
-
-        let (spans, current_token) = self.with_scratch_context(|ed| {
-            let line = ed.cursor_line();
-            let line_start = ed.doc.line_to_char(line);
-            let prefix: String = ed.doc.slice(line_start..ed.cursor).to_string();
-            let spans: Vec<String> = prefix.split_whitespace().map(|s| s.to_string()).collect();
-            let token = prefix
-                .split_whitespace()
-                .last()
-                .unwrap_or("")
-                .to_string();
-            (spans, token)
-        });
-
-        if current_token.is_empty() {
-            self.scratch.completion = None;
-            return;
-        }
-
-        let engine = match nu_engine::NuEngine::global() {
-            Ok(engine) => engine,
-            Err(_) => {
-                self.scratch.completion = None;
-                return;
-            }
-        };
-
-        let Ok(items) = engine.complete(&spans) else {
-            self.scratch.completion = None;
-            return;
-        };
-
-        let suggestion = items
-            .into_iter()
-            .find(|item| item.value.starts_with(&current_token))
-            .map(|item| item.value);
-
-        if let Some(suggestion) = suggestion {
-            self.scratch.completion = Some(ScratchCompletion {
-                suggestion,
-                current_token,
-            });
-        } else {
-            self.scratch.completion = None;
-        }
+        
+        result
     }
 
     pub fn cursor_line(&self) -> usize {
@@ -780,13 +643,6 @@ impl Editor {
             let raw_ctrl_enter =
                 matches!(key.code, TmKeyCode::Enter | TmKeyCode::Char('\n') | TmKeyCode::Char('j'))
                     && key.modifiers.contains(TmModifiers::CONTROL);
-
-            let accept_completion =
-                (matches!(key.code, TmKeyCode::Char(' ')) && key.modifiers.contains(TmModifiers::CONTROL))
-                    || (matches!(key.code, TmKeyCode::Right) && matches!(self.mode(), Mode::Insert));
-            if accept_completion && self.apply_scratch_completion() {
-                return false;
-            }
 
             if raw_ctrl_enter {
                 return self.with_scratch_context(|ed| ed.do_execute_scratch());

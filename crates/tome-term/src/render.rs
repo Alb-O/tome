@@ -24,7 +24,6 @@ pub struct RenderResult {
 
 impl Editor {
     pub fn render(&mut self, frame: &mut ratatui::Frame) {
-        self.refresh_scratch_completion_hint();
         // In insert mode, we use the terminal cursor (bar), not a fake block cursor
         let use_block_cursor = !matches!(self.mode(), Mode::Insert);
 
@@ -217,12 +216,6 @@ impl Editor {
         let sel_start = primary.from();
         let sel_end = primary.to();
 
-        let ghost_remainder = if self.in_scratch_context() && self.scratch_focused {
-            self.scratch_completion_remainder()
-        } else {
-            None
-        };
-
         let mut output_lines: Vec<Line> = Vec::new();
         let mut current_line_idx = self.scroll_line;
         let mut start_segment = self.scroll_segment;
@@ -300,11 +293,6 @@ impl Editor {
                     spans.push(Span::styled("·".repeat(fill_count), fill_style));
                 }
 
-                let seg_start = line_start + seg_char_offset;
-                let seg_end = seg_start + seg_char_count;
-                let cursor_in_seg = (cursor >= seg_start && cursor <= seg_end)
-                    || (is_last_segment && cursor >= line_content_end && cursor <= line_end);
-
                 if is_last_segment {
                     let is_last_doc_line = current_line_idx + 1 >= total_lines;
                     let cursor_at_eol = if is_last_doc_line {
@@ -328,15 +316,6 @@ impl Editor {
                             ));
                         }
                     }
-                }
-
-                if cursor_in_seg
-                    && let Some(ghost) = ghost_remainder.as_ref().filter(|g| !g.is_empty())
-                {
-                    spans.push(Span::styled(
-                        ghost.clone(),
-                        Style::default().fg(Color::Rgb(120, 120, 120)),
-                    ));
                 }
 
                 output_lines.push(Line::from(spans));
@@ -367,13 +346,6 @@ impl Editor {
                                     .bg(Color::White)
                                     .fg(Color::Black)
                                     .add_modifier(Modifier::BOLD),
-                            ));
-                        }
-
-                        if let Some(ghost) = ghost_remainder.as_ref().filter(|g| !g.is_empty()) {
-                            spans.push(Span::styled(
-                                ghost.clone(),
-                                Style::default().fg(Color::Rgb(120, 120, 120)),
                             ));
                         }
                     }
