@@ -26,6 +26,13 @@ pub fn run_editor(mut editor: Editor) -> io::Result<()> {
         loop {
             if let Some(term) = &mut editor.terminal {
                 term.update();
+                if !term.is_alive() {
+                     // Shell exited. Close terminal panel.
+                     editor.terminal_open = false;
+                     editor.terminal_focused = false;
+                     // We can drop the terminal state, next open will recreate it.
+                     editor.terminal = None;
+                }
             }
 
             terminal.draw(|frame| editor.render(frame))?;

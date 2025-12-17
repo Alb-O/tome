@@ -23,6 +23,9 @@ impl Editor {
         self.window_width = Some(area.width);
         self.window_height = Some(area.height);
 
+        // Clear the screen to remove artifacts (e.g. terminal ghosts)
+        frame.render_widget(Clear, area);
+
         // Set background color for the whole screen
         let bg_block = Block::default().style(Style::default().bg(self.theme.colors.ui.bg));
         frame.render_widget(bg_block, area);

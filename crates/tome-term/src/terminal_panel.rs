@@ -65,6 +65,20 @@ impl TerminalState {
         loop {
             match self.receiver.try_recv() {
                 Ok(bytes) => {
+                    // Hack: Check for DA1 query (Primary Device Attributes) from shell (e.g. fish)
+                    // The query is \e[c or \e[0c.
+                    // If detected, we send a response manually because vt100 parser doesn't handle responses.
+                    // We look for the sequence in the incoming bytes.
+                    // This is simple substring search, might miss fragmented sequences but covers most startup cases.
+                    let da1_query = b"\x1b[c";
+                    let da1_query_0 = b"\x1b[0c";
+                    
+                    if bytes.windows(da1_query.len()).any(|w| w == da1_query) || 
+                       bytes.windows(da1_query_0.len()).any(|w| w == da1_query_0) {
+                        // Respond as VT102 (\e[?6c)
+                        let _ = self.pty_writer.write_all(b"\x1b[?6c");
+                    }
+
                     self.parser.process(&bytes);
                 }
                 Err(TryRecvError::Empty) => break,
@@ -87,5 +101,13 @@ impl TerminalState {
 
     pub fn write_key(&mut self, bytes: &[u8]) -> Result<(), String> {
         self.pty_writer.write_all(bytes).map_err(|e| e.to_string())
+    }
+
+    pub fn is_alive(&mut self) -> bool {
+        match self.child.try_wait() {
+            Ok(Some(_)) => false, // Exited
+            Ok(None) => true,     // Still running
+            Err(_) => false,      // Error presumably means dead or inaccessible
+        }
     }
 }
