@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph, Widget};
@@ -53,11 +53,6 @@ impl Editor {
         self.ensure_cursor_visible(chunks[0]);
         let main_result = self.render_document_with_cursor(chunks[0], use_block_cursor && !self.scratch_focused);
         frame.render_widget(main_result.widget, chunks[0]);
-
-        if !self.scratch_focused
-            && let Some((row, col)) = main_result.cursor_position {
-                frame.set_cursor_position(Position::new(col, row));
-            }
 
         // Render status line background (matches popup background)
         let status_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
@@ -114,11 +109,7 @@ impl Editor {
             let scratch_use_block = !matches!(self.mode(), Mode::Insert);
             let scratch_result = self.render_document_with_cursor(inner_area, scratch_use_block);
             frame.render_widget(scratch_result.widget, inner_area);
-            
-            if self.scratch_focused
-                && let Some((row, col)) = scratch_result.cursor_position {
-                    frame.set_cursor_position(Position::new(col, row));
-                }
+
             self.leave_scratch_context();
         }
     }
