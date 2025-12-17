@@ -218,9 +218,9 @@ impl Editor {
         let text_width = area.width.saturating_sub(gutter_width) as usize;
 
         let cursor = self.cursor;
-        let primary = self.selection.primary();
-        let sel_start = primary.from();
-        let sel_end = primary.to();
+        let ranges = self.selection.ranges();
+        let _primary_index = self.selection.primary_index();
+        let primary_cursor = cursor;
 
         let mut output_lines: Vec<Line> = Vec::new();
         let mut current_line_idx = self.scroll_line;
@@ -276,20 +276,27 @@ impl Editor {
                 let seg_char_count = segment.text.chars().count();
                 for (i, ch) in segment.text.chars().enumerate() {
                     let doc_pos = line_start + seg_char_offset + i;
-                    let in_selection = doc_pos >= sel_start && doc_pos < sel_end;
-                    let is_cursor = doc_pos == cursor;
 
-                    if is_cursor {
+                    let cursor_match = ranges.iter().position(|r| r.head == doc_pos);
+                    let is_primary_cursor = doc_pos == primary_cursor;
+                    let in_selection = ranges.iter().any(|r| doc_pos >= r.from() && doc_pos < r.to());
+
+                    if is_primary_cursor {
                         let screen_col = area.x + gutter_width + i as u16;
                         let screen_row = area.y + visual_row;
                         cursor_screen_pos = Some((screen_row, screen_col));
                     }
 
-                    let style = if is_cursor && use_block_cursor {
+                    let style = if is_primary_cursor && use_block_cursor {
                         Style::default()
                             .bg(self.theme.colors.ui.cursor_bg)
                             .fg(self.theme.colors.ui.cursor_fg)
                             .add_modifier(Modifier::BOLD)
+                    } else if cursor_match.is_some() && use_block_cursor {
+                        // Secondary cursors: draw block cursor but do not set terminal cursor position
+                        Style::default()
+                            .bg(self.theme.colors.ui.cursor_bg)
+                            .fg(self.theme.colors.ui.cursor_fg)
                     } else if in_selection {
                         Style::default().bg(self.theme.colors.ui.selection_bg).fg(self.theme.colors.ui.selection_fg)
                     } else {
@@ -314,11 +321,11 @@ impl Editor {
                 if is_last_segment {
                     let is_last_doc_line = current_line_idx + 1 >= total_lines;
                     let cursor_at_eol = if is_last_doc_line {
-                        cursor >= line_content_end && cursor <= line_end
+                        primary_cursor >= line_content_end && primary_cursor <= line_end
                     } else {
-                        cursor >= line_content_end && cursor < line_end
+                        primary_cursor >= line_content_end && primary_cursor < line_end
                     };
-                    if cursor_at_eol && cursor >= line_content_end {
+                    if cursor_at_eol && primary_cursor >= line_content_end {
                         if cursor_screen_pos.is_none() {
                             let screen_col = area.x + gutter_width + seg_char_count as u16;
                             let screen_row = area.y + visual_row;
@@ -348,9 +355,9 @@ impl Editor {
 
                     let is_last_doc_line = current_line_idx + 1 >= total_lines;
                     let cursor_at_eol = if is_last_doc_line {
-                        cursor >= line_start && cursor <= line_end
+                        primary_cursor >= line_start && primary_cursor <= line_end
                     } else {
-                        cursor >= line_start && cursor < line_end
+                        primary_cursor >= line_start && primary_cursor < line_end
                     };
                     if cursor_at_eol {
                         let screen_col = area.x + gutter_width;

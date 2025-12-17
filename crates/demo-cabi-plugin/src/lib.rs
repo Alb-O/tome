@@ -6,6 +6,8 @@ use std::ffi::CString;
 use tome_cabi_types::{TomeGuestV1, TomeHostV1, TomeStatus, TOME_C_ABI_VERSION};
 
 #[unsafe(no_mangle)]
+/// # Safety
+/// Caller must provide valid pointers; `host` and `out_guest` must be non-null and live for the duration of this call, and the host ABI version must match.
 pub unsafe extern "C" fn tome_plugin_entry(host: *const TomeHostV1, out_guest: *mut TomeGuestV1) -> TomeStatus {
     if out_guest.is_null() || host.is_null() {
         return TomeStatus::Failed;
@@ -24,11 +26,10 @@ pub unsafe extern "C" fn tome_plugin_entry(host: *const TomeHostV1, out_guest: *
 }
 
 extern "C" fn plugin_init() -> TomeStatus {
-    if let Some(log) = unsafe { HOST_LOG } {
-        if let std::result::Result::Ok(msg) = CString::new("hello from cabi demo plugin") {
+    if let Some(log) = unsafe { HOST_LOG }
+        && let std::result::Result::Ok(msg) = CString::new("hello from cabi demo plugin") {
             log(msg.as_ptr());
         }
-    }
     TomeStatus::Ok
 }
 

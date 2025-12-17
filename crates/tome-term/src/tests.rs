@@ -1,13 +1,42 @@
 #[cfg(test)]
-mod tests {
+mod suite {
     use crate::editor::Editor;
     use crate::theme::CMD_THEME;
     use crate::theme::{get_theme, THEMES};
     use std::path::PathBuf;
     use termina::event::{KeyCode, KeyEvent, Modifiers};
     use insta::assert_snapshot;
-    use ratatui::{Terminal, backend::TestBackend};
-    use tome_core::{Mode, Rope, Selection};
+use ratatui::{Terminal, backend::TestBackend};
+use tome_core::{Mode, Rope, Selection};
+
+#[derive(Debug, Clone)]
+struct KeyStep {
+    desc: &'static str,
+    key: KeyEvent,
+}
+
+fn run_key_sequence(editor: &mut Editor, steps: &[KeyStep]) -> Vec<String> {
+    let mut snapshots = Vec::new();
+    for step in steps {
+        editor.handle_key(step.key);
+        let ranges: Vec<(usize, usize)> = editor
+            .selection
+            .ranges()
+            .iter()
+            .map(|r| (r.from(), r.to()))
+            .collect();
+        snapshots.push(format!(
+            "{} -> cursor:{} line:{} sel:{:?} doc:{:?}",
+            step.desc,
+            editor.cursor,
+            editor.cursor_line(),
+            ranges,
+            editor.doc.to_string()
+        ));
+    }
+    snapshots
+}
+
     use tome_core::ext::{CommandContext, CommandOutcome};
 
     fn test_editor(content: &str) -> Editor {
@@ -669,5 +698,90 @@ mod tests {
         editor.handle_key(KeyEvent::new(KeyCode::Escape, Modifiers::NONE));
         assert!(!editor.scratch_open, "scratch should close on second escape");
         assert!(!editor.scratch_focused, "scratch focus should be cleared");
+    }
+
+    #[test]
+    fn test_split_lines_via_keybindings() {
+        let mut editor = test_editor("one\ntwo\nthree\n");
+
+        // Select all then split lines (%% Alt-s)
+        editor.handle_key(KeyEvent::new(KeyCode::Char('%'), Modifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('s'), Modifiers::ALT));
+
+        let ranges = editor.selection.ranges();
+        assert_eq!(ranges.len(), 3, "expected per-line selections after split");
+
+        let doc = editor.doc.slice(..);
+        let line_ends: Vec<usize> = (0..editor.doc.len_lines())
+            .map(|line| {
+                if line + 1 < editor.doc.len_lines() {
+                    editor.doc.line_to_char(line + 1)
+                } else {
+                    editor.doc.len_chars()
+                }
+            })
+            .collect();
+
+        assert_eq!(ranges[0].from(), 0);
+        assert_eq!(ranges[0].to(), line_ends[0]);
+        assert_eq!(ranges[1].from(), line_ends[0]);
+        assert_eq!(ranges[1].to(), line_ends[1]);
+        assert_eq!(ranges[2].from(), line_ends[1]);
+        assert_eq!(ranges[2].to(), line_ends[2]);
+
+        // Ensure buffer text unchanged
+        assert_eq!(doc.to_string(), "one\ntwo\nthree\n");
+    }
+
+    #[test]
+    fn test_duplicate_down_then_delete() {
+        let mut editor = test_editor("alpha\nbeta\ngamma\n");
+
+        // Move cursor to second line manually and select it (select_line uses current head)
+        editor.cursor = editor.doc.line_to_char(1);
+        editor.selection = Selection::point(editor.cursor);
+
+        editor.handle_key(KeyEvent::new(KeyCode::Char('x'), Modifiers::NONE));
+        assert_eq!(editor.selection.ranges().len(), 1, "expected single line selection after x");
+        let ranges_after_select: Vec<(usize, usize)> = editor
+            .selection
+            .ranges()
+            .iter()
+            .map(|r| (r.from(), r.to()))
+            .collect();
+
+        // Duplicate down then delete selections
+        editor.handle_key(KeyEvent::new(KeyCode::Char('+'), Modifiers::NONE));
+        assert_eq!(editor.selection.ranges().len(), 2, "expected selection duplicated down");
+        let ranges_after_dup: Vec<(usize, usize)> = editor
+            .selection
+            .ranges()
+            .iter()
+            .map(|r| (r.from(), r.to()))
+            .collect();
+
+        let before_delete = editor.doc.to_string();
+        editor.handle_key(KeyEvent::new(KeyCode::Char('d'), Modifiers::NONE));
+
+        let text = editor.doc.to_string();
+        assert!(text.contains("alpha"), "before delete: {before_delete:?} after: {text:?} ranges after select: {ranges_after_select:?} ranges after dup: {ranges_after_dup:?}");
+        assert!(!text.contains("beta"), "doc after delete: {text:?}");
+        assert!(!text.contains("gamma"), "doc after delete: {text:?}");
+    }
+
+    #[test]
+    fn test_duplicate_down_then_delete_keypath() {
+        let mut editor = test_editor("alpha\nbeta\ngamma\n");
+        let steps = vec![
+            KeyStep { desc: "j to line 2", key: KeyEvent::new(KeyCode::Char('j'), Modifiers::NONE) },
+            KeyStep { desc: "x select line", key: KeyEvent::new(KeyCode::Char('x'), Modifiers::NONE) },
+            KeyStep { desc: "+ duplicate down", key: KeyEvent::new(KeyCode::Char('+'), Modifiers::NONE) },
+            KeyStep { desc: "d delete", key: KeyEvent::new(KeyCode::Char('d'), Modifiers::NONE) },
+        ];
+        let snapshots = run_key_sequence(&mut editor, &steps);
+        let text = editor.doc.to_string();
+        assert!(text.contains("alpha"), "seq: {snapshots:?}");
+        assert!(!text.contains("beta"), "seq: {snapshots:?}");
+        assert!(!text.contains("gamma"), "seq: {snapshots:?}");
     }
 }

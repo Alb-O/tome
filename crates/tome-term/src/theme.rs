@@ -140,7 +140,7 @@ pub fn suggest_theme(name: &str) -> Option<&'static str> {
     let mut best_score = 0.0;
 
     for theme in THEMES {
-        let score = strsim::jaro_winkler(&name, &theme.name);
+        let score = strsim::jaro_winkler(&name, theme.name);
         if score > best_score {
             best_score = score;
             best_match = Some(theme.name);

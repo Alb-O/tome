@@ -1,8 +1,10 @@
 //! Selection manipulation actions (collapse, flip, select all, etc.).
 
 use linkme::distributed_slice;
+use smallvec::SmallVec;
 
 use crate::ext::actions::{ActionContext, ActionDef, ActionResult, ACTIONS};
+use crate::range::Range;
 use crate::selection::Selection;
 
 fn collapse_selection(ctx: &ActionContext) -> ActionResult {
@@ -153,6 +155,115 @@ static ACTION_REMOVE_PRIMARY: ActionDef = ActionDef {
     name: "remove_primary_selection",
     description: "Remove primary selection",
     handler: remove_primary_selection,
+};
+
+fn merge_selections(ctx: &ActionContext) -> ActionResult {
+    let mut new_sel = ctx.selection.clone();
+    new_sel.merge_overlaps_and_adjacent();
+    ActionResult::Motion(new_sel)
+}
+
+#[distributed_slice(ACTIONS)]
+static ACTION_MERGE_SELECTIONS: ActionDef = ActionDef {
+    name: "merge_selections",
+    description: "Merge overlapping or adjacent selections explicitly",
+    handler: merge_selections,
+};
+
+fn split_selection_lines(ctx: &ActionContext) -> ActionResult {
+    let mut ranges = SmallVec::<[Range; 4]>::new();
+    let primary = ctx.selection.primary();
+    let primary_line = ctx.text.char_to_line(primary.head);
+
+    for r in ctx.selection.ranges().iter() {
+        let start = r.from().min(r.to());
+        let end = r.from().max(r.to());
+        let start_line = ctx.text.char_to_line(start);
+        let end_line = ctx.text.char_to_line(end);
+
+        for line in start_line..=end_line {
+            let line_start = ctx.text.line_to_char(line);
+            let line_end = if line + 1 < ctx.text.len_lines() {
+                ctx.text.line_to_char(line + 1)
+            } else {
+                ctx.text.len_chars()
+            };
+            ranges.push(Range::new(line_start, line_end));
+        }
+    }
+
+    if ranges.is_empty() {
+        return ActionResult::Ok;
+    }
+
+    let mut sel = Selection::from_vec(ranges.into_vec(), 0);
+    // Set primary to the range on the original primary line if present
+    let primary_idx = sel
+        .ranges()
+        .iter()
+        .position(|r| {
+            let line = ctx.text.char_to_line(r.head);
+            line == primary_line
+        })
+        .unwrap_or(0);
+    sel.set_primary(primary_idx);
+    ActionResult::Motion(sel)
+}
+
+#[distributed_slice(ACTIONS)]
+static ACTION_SPLIT_SELECTION_LINES: ActionDef = ActionDef {
+    name: "split_selection_lines",
+    description: "Split selections into per-line selections (multi-cursor lines)",
+    handler: split_selection_lines,
+};
+
+fn clone_selections_to_matches(ctx: &ActionContext) -> ActionResult {
+    let primary = ctx.selection.primary();
+    let from = primary.from();
+    let to = primary.to();
+    if from == to {
+        return ActionResult::Ok;
+    }
+
+    let pattern: String = ctx.text.slice(from..to).to_string();
+    if pattern.is_empty() {
+        return ActionResult::Ok;
+    }
+
+    let haystack: String = ctx.text.to_string();
+    let mut ranges = SmallVec::<[Range; 4]>::new();
+
+    let mut search_start = 0;
+    let pattern_bytes = pattern.as_bytes();
+    let mut primary_index = 0usize;
+
+    while let Some(idx) = haystack[search_start..].find(&pattern) {
+        let abs_byte = search_start + idx;
+        let start_char = haystack[..abs_byte].chars().count();
+        let pat_len_chars = pattern.chars().count();
+        let end_char = start_char + pat_len_chars;
+        let r = Range::new(start_char, end_char);
+        if r.from() == from && r.to() == to {
+            primary_index = ranges.len();
+        }
+        ranges.push(r);
+        // Advance past this match (non-overlapping)
+        search_start = abs_byte + pattern_bytes.len();
+    }
+
+    if ranges.is_empty() {
+        return ActionResult::Ok;
+    }
+
+    let sel = Selection::from_vec(ranges.into_vec(), primary_index);
+    ActionResult::Motion(sel)
+}
+
+#[distributed_slice(ACTIONS)]
+static ACTION_CLONE_SELECTIONS_TO_MATCHES: ActionDef = ActionDef {
+    name: "clone_selections_to_matches",
+    description: "Clone primary selection to all exact matches in buffer",
+    handler: clone_selections_to_matches,
 };
 
 fn trim_to_line(ctx: &ActionContext) -> ActionResult {

@@ -1,5 +1,6 @@
-use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use ropey::Rope;
+use std::hint::black_box;
 use tome_core::{
     Range, Selection, Transaction,
     graphemes::{is_grapheme_boundary, next_grapheme_boundary, prev_grapheme_boundary},

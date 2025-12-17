@@ -9,4 +9,4 @@ authors = ["Tome"]
 path = "src/lib.rs"
 
 [build-dependencies]
-cbindgen = "0.27"
+cbindgen = "0.29"

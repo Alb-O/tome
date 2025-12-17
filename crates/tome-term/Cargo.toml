@@ -19,3 +19,5 @@ tome-core = { workspace = true }
 
 [dev-dependencies]
 insta.workspace = true
+kitty-test-harness.workspace = true
+termwiz = "0.23"

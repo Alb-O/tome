@@ -1,6 +1,7 @@
 use tome_core::range::Direction as MoveDir;
 use tome_core::ScrollDirection;
 use crate::render::WrapSegment;
+use tome_core::Selection;
 
 use super::Editor;
 
@@ -108,6 +109,9 @@ impl Editor {
                 self.selection.transform_mut(|r| {
                     r.head = new_pos;
                 });
+            } else {
+                // Collapse selection to the new cursor position when not extending.
+                self.selection = Selection::point(new_pos);
             }
         }
     }
