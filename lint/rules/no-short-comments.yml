@@ -12,4 +12,7 @@ rule:
     - kind: line_comment
       regex: ^//\s*.{0,25}\s*$
     - not:
-        regex: ^//[/!]
+        any:
+          - regex: ^//[/!]
+          - regex: ^//\s*(?i)(TODO|FIXME|BUG|SAFETY|NOTE|CHECK|XXX|HACK|DEBUG|INTERNAL|TEST|STUB|WAIT|FALLTHROUGH|REFACTOR|OPTIMIZE|DOCS|FIX|PERF|WARN|WARNING|INFO|LINT|ANCHOR)
+          - regex: ^//\s*(\.\.\.|$)
