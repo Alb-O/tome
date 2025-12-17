@@ -1,0 +1,12 @@
+id: no-short-comments
+language: rust
+severity: info
+message: "Short single-line comments may not be necessary. Code should be self-explanatory."
+files:
+  - crates/**/*.rs
+rule:
+  all:
+    - kind: line_comment
+      regex: ^//\s*.{0,5}\s*$
+    - not:
+        regex: ^//[/!]

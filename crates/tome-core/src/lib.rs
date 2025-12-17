@@ -14,10 +14,11 @@ pub mod selection;
 #[cfg(feature = "host")]
 pub mod transaction;
 
+// Core library re-exports
 #[cfg(feature = "host")]
 pub use ext::{
-    CommandContext, CommandDef, CommandError, CommandResult, FileTypeDef, MotionDef,
-    TextObjectDef, COMMANDS, FILE_TYPES, MOTIONS, TEXT_OBJECTS,
+    COMMANDS, CommandContext, CommandDef, CommandError, CommandResult, FILE_TYPES, FileTypeDef,
+    MOTIONS, MotionDef, TEXT_OBJECTS, TextObjectDef,
 };
 #[cfg(feature = "host")]
 pub use input::{InputHandler, KeyResult, Mode};
@@ -33,4 +34,3 @@ pub use ropey::{Rope, RopeSlice};
 pub use selection::Selection;
 #[cfg(feature = "host")]
 pub use transaction::{ChangeSet, Transaction};
-

@@ -26,10 +26,19 @@
           pkgs.rust-analyzer
           pkgs.pkg-config
           pkgs.openssl
+          pkgs.ast-grep
           self'.formatter
         ];
 
         shellHook = ''
+          if [ -t 0 ]; then
+            # Install pre-commit hook
+            if [ -d .git ]; then
+              cp ${rootSrc}/nix/scripts/pre-commit .git/hooks/pre-commit
+              chmod +x .git/hooks/pre-commit
+            fi
+          fi
+
           echo "Rust dev shell"
           echo "  Rust: $(rustc --version)"
           echo "  Cargo: $(cargo --version)"

@@ -36,6 +36,12 @@
     {
       formatting = formatterEval.config.build.check self;
 
+      ast-grep-scan = pkgs.runCommand "ast-grep-scan" { } ''
+        cd ${rootSrc}
+        ${pkgs.ast-grep}/bin/ast-grep scan
+        touch $out
+      '';
+
       # Package build implicitly runs tests via doCheck
       build = self'.packages.default;
     };
