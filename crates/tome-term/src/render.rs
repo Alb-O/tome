@@ -215,22 +215,21 @@ impl Editor {
         let _primary_index = self.selection.primary_index();
         let primary_cursor = cursor;
         let cursor_heads: HashSet<usize> = ranges.iter().map(|r| r.head).collect();
-        let _insert_mode = matches!(self.mode(), Mode::Insert);
+        let primary_cursor_style = Style::default()
+            .bg(self.theme.colors.ui.cursor_bg)
+            .fg(self.theme.colors.ui.cursor_fg)
+            .add_modifier(Modifier::BOLD | Modifier::RAPID_BLINK);
+        let secondary_cursor_style = {
+            let bg = blend_colors(self.theme.colors.ui.cursor_bg, self.theme.colors.ui.bg, 0.4);
+            let fg = blend_colors(self.theme.colors.ui.cursor_fg, self.theme.colors.ui.fg, 0.4);
+            Style::default().bg(bg).fg(fg).add_modifier(Modifier::BOLD)
+        };
 
         let mut output_lines: Vec<Line> = Vec::new();
         let mut current_line_idx = self.scroll_line;
         let mut start_segment = self.scroll_segment;
         let viewport_height = area.height as usize;
-
         let mut cursor_screen_pos: Option<(u16, u16)> = None;
-        let primary_cursor_style = Style::default()
-            .bg(self.theme.colors.ui.cursor_fg)
-            .fg(self.theme.colors.ui.cursor_bg)
-            .add_modifier(Modifier::BOLD | Modifier::RAPID_BLINK);
-        let secondary_cursor_style = Style::default()
-            .bg(self.theme.colors.ui.cursor_bg)
-            .fg(self.theme.colors.ui.cursor_fg)
-            .add_modifier(Modifier::BOLD);
 
         while output_lines.len() < viewport_height && current_line_idx < total_lines {
             let line_start = self.doc.line_to_char(current_line_idx);
