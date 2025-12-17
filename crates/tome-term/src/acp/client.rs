@@ -1,7 +1,6 @@
 use std::future::Future;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 
 use agent_client_protocol::{
@@ -13,6 +12,7 @@ use agent_client_protocol::{
 };
 use tokio::process::Command;
 use tokio::runtime::Runtime;
+use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::task::LocalSet;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
@@ -48,8 +48,8 @@ pub struct AcpClientRuntime {
 }
 
 impl AcpClientRuntime {
-    pub fn new(ui_tx: Sender<AgentUiEvent>) -> Self {
-        let (cmd_tx, cmd_rx) = channel();
+    pub fn new(ui_tx: std::sync::mpsc::Sender<AgentUiEvent>) -> Self {
+        let (cmd_tx, cmd_rx) = mpsc::channel(100);
 
         thread::spawn(move || {
             let rt = Runtime::new().unwrap();
@@ -64,18 +64,21 @@ impl AcpClientRuntime {
     }
 
     pub fn send(&self, cmd: AgentCommand) {
-        let _ = self.cmd_tx.send(cmd);
+        let cmd_tx = self.cmd_tx.clone();
+        tokio::spawn(async move {
+            let _ = cmd_tx.send(cmd).await;
+        });
     }
 }
 
 struct AcpBackend {
-    ui_tx: Sender<AgentUiEvent>,
+    ui_tx: std::sync::mpsc::Sender<AgentUiEvent>,
     cmd_rx: Receiver<AgentCommand>,
     session_id: Option<String>,
 }
 
 impl AcpBackend {
-    fn new(ui_tx: Sender<AgentUiEvent>, cmd_rx: Receiver<AgentCommand>) -> Self {
+    fn new(ui_tx: std::sync::mpsc::Sender<AgentUiEvent>, cmd_rx: Receiver<AgentCommand>) -> Self {
         Self {
             ui_tx,
             cmd_rx,
@@ -84,12 +87,7 @@ impl AcpBackend {
     }
 
     async fn run(mut self) {
-        loop {
-            let cmd = match self.cmd_rx.recv() {
-                Ok(c) => c,
-                Err(_) => break,
-            };
-
+        while let Some(cmd) = self.cmd_rx.recv().await {
             match cmd {
                 AgentCommand::Start { cwd } => {
                     if let Err(e) = self.start_agent(cwd).await {
@@ -172,12 +170,7 @@ impl AcpBackend {
     }
 
     async fn session_loop(&mut self, conn: Arc<ClientSideConnection>) {
-        loop {
-            let cmd = match self.cmd_rx.recv() {
-                Ok(c) => c,
-                Err(_) => break,
-            };
-
+        while let Some(cmd) = self.cmd_rx.recv().await {
             match cmd {
                 AgentCommand::Prompt { content } => {
                     if let Some(session_id) = &self.session_id {
@@ -211,7 +204,7 @@ impl AcpBackend {
 
 #[derive(Clone)]
 struct TomeMessageHandler {
-    ui_tx: Sender<AgentUiEvent>,
+    ui_tx: std::sync::mpsc::Sender<AgentUiEvent>,
 }
 
 impl MessageHandler<ClientSide> for TomeMessageHandler {
