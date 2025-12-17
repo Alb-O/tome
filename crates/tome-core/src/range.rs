@@ -98,7 +98,11 @@ impl Range {
     }
 
     pub fn overlaps(&self, other: &Range) -> bool {
-        self.from() < other.to() && other.from() < self.to()
+        if self.from() < other.to() && other.from() < self.to() {
+            return true;
+        }
+
+        self.is_empty() && other.is_empty() && self.from() == other.from()
     }
 
     pub fn merge(&self, other: &Range) -> Self {
@@ -175,6 +179,14 @@ mod tests {
 
         assert!(r1.overlaps(&r2));
         assert!(!r1.overlaps(&r3));
+    }
+
+    #[test]
+    fn test_range_overlaps_same_point() {
+        let r1 = Range::point(5);
+        let r2 = Range::point(5);
+
+        assert!(r1.overlaps(&r2));
     }
 
     #[test]

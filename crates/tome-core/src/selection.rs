@@ -246,6 +246,14 @@ mod tests {
     }
 
     #[test]
+    fn test_merge_duplicate_cursors() {
+        let ranges = smallvec![Range::point(5), Range::point(5)];
+        let sel = Selection::new(ranges, 0);
+        assert_eq!(sel.len(), 1);
+        assert_eq!(sel.primary(), Range::point(5));
+    }
+
+    #[test]
     fn test_do_not_merge_adjacent() {
         let ranges = smallvec![Range::new(0, 5), Range::new(5, 10)];
         let sel = Selection::new(ranges, 0);
