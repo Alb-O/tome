@@ -215,7 +215,7 @@ impl Editor {
         let _primary_index = self.selection.primary_index();
         let primary_cursor = cursor;
         let cursor_heads: HashSet<usize> = ranges.iter().map(|r| r.head).collect();
-        let insert_mode = matches!(self.mode(), Mode::Insert);
+        let _insert_mode = matches!(self.mode(), Mode::Insert);
 
         let mut output_lines: Vec<Line> = Vec::new();
         let mut current_line_idx = self.scroll_line;
@@ -223,6 +223,14 @@ impl Editor {
         let viewport_height = area.height as usize;
 
         let mut cursor_screen_pos: Option<(u16, u16)> = None;
+        let primary_cursor_style = Style::default()
+            .bg(self.theme.colors.ui.cursor_fg)
+            .fg(self.theme.colors.ui.cursor_bg)
+            .add_modifier(Modifier::BOLD | Modifier::RAPID_BLINK);
+        let secondary_cursor_style = Style::default()
+            .bg(self.theme.colors.ui.cursor_bg)
+            .fg(self.theme.colors.ui.cursor_fg)
+            .add_modifier(Modifier::BOLD);
 
         while output_lines.len() < viewport_height && current_line_idx < total_lines {
             let line_start = self.doc.line_to_char(current_line_idx);
@@ -283,14 +291,11 @@ impl Editor {
                     }
 
                     let style = if is_cursor && use_block_cursor {
-                        let mut s = Style::default()
-                            .bg(self.theme.colors.ui.cursor_bg)
-                            .fg(self.theme.colors.ui.cursor_fg)
-                            .add_modifier(Modifier::BOLD);
-                        if insert_mode {
-                            s = s.add_modifier(Modifier::RAPID_BLINK);
+                        if is_primary_cursor {
+                            primary_cursor_style
+                        } else {
+                            secondary_cursor_style
                         }
-                        s
                     } else if in_selection {
                         Style::default().bg(self.theme.colors.ui.selection_bg).fg(self.theme.colors.ui.selection_fg)
                     } else {
@@ -329,13 +334,11 @@ impl Editor {
                             cursor_screen_pos = Some((screen_row, screen_col));
                         }
                         if use_block_cursor {
-                            let mut cursor_style = Style::default()
-                                .bg(self.theme.colors.ui.cursor_bg)
-                                .fg(self.theme.colors.ui.cursor_fg)
-                                .add_modifier(Modifier::BOLD);
-                            if insert_mode {
-                                cursor_style = cursor_style.add_modifier(Modifier::RAPID_BLINK);
-                            }
+                            let cursor_style = if cursor_heads.contains(&primary_cursor) {
+                                primary_cursor_style
+                            } else {
+                                secondary_cursor_style
+                            };
                             spans.push(Span::styled(" ", cursor_style));
                         }
                     }
@@ -367,13 +370,11 @@ impl Editor {
                         }
 
                         if use_block_cursor {
-                            let mut cursor_style = Style::default()
-                                .bg(self.theme.colors.ui.cursor_bg)
-                                .fg(self.theme.colors.ui.cursor_fg)
-                                .add_modifier(Modifier::BOLD);
-                            if insert_mode {
-                                cursor_style = cursor_style.add_modifier(Modifier::RAPID_BLINK);
-                            }
+                            let cursor_style = if cursor_heads.contains(&primary_cursor) {
+                                primary_cursor_style
+                            } else {
+                                secondary_cursor_style
+                            };
                             spans.push(Span::styled(" ", cursor_style));
                         }
                     }
