@@ -1,11 +1,13 @@
 use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
 use tome_core::Mode;
+
+use super::terminal::ThemedVt100Terminal;
 
 use crate::editor::Editor;
 use crate::theme::blend_colors;
@@ -22,6 +24,9 @@ impl Editor {
         self.window_width = Some(area.width);
         self.window_height = Some(area.height);
 
+        // Clear the screen to remove artifacts (e.g. terminal ghosts)
+        frame.render_widget(Clear, area);
+
         // Set background color for the whole screen
         let bg_block = Block::default().style(Style::default().bg(self.theme.colors.ui.bg));
         frame.render_widget(bg_block, area);
@@ -29,18 +34,65 @@ impl Editor {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(1),    // Main doc
+                Constraint::Min(1),    // Main doc area (potentially split with terminal)
                 Constraint::Length(1), // Status
                 Constraint::Length(1), // Message
             ])
             .split(area);
 
+        let (doc_area, terminal_area) = if self.terminal_open {
+            let sub = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
+                .split(chunks[0]);
+            (sub[0], Some(sub[1]))
+        } else {
+            (chunks[0], None)
+        };
+
         // Render main document
         // When scratch is focused, we don't draw cursor on main doc
-        self.ensure_cursor_visible(chunks[0]);
+        self.ensure_cursor_visible(doc_area);
         let main_result =
-            self.render_document_with_cursor(chunks[0], use_block_cursor && !self.scratch_focused);
-        frame.render_widget(main_result.widget, chunks[0]);
+            self.render_document_with_cursor(doc_area, use_block_cursor && !self.scratch_focused && !self.terminal_focused);
+        frame.render_widget(main_result.widget, doc_area);
+
+        // Render Terminal
+        if let Some(term_area) = terminal_area {
+            if let Some(term) = &mut self.terminal {
+                // Resize if needed
+                let (rows, cols) = term.parser.screen().size();
+                if rows != term_area.height || cols != term_area.width {
+                    let _ = term.resize(term_area.width, term_area.height);
+                }
+
+                let screen = term.parser.screen();
+
+                let base_style = Style::default()
+                    .bg(self.theme.colors.popup.bg)
+                    .fg(self.theme.colors.popup.fg);
+
+                let term_widget = ThemedVt100Terminal::new(screen, base_style);
+                frame.render_widget(term_widget, term_area);
+
+                // Use the real terminal cursor (so the emulator draws it with the user's preferred shape).
+                if self.terminal_focused && !screen.hide_cursor() {
+                    let (cur_row, cur_col) = screen.cursor_position();
+                    if cur_row < term_area.height && cur_col < term_area.width {
+                        frame.set_cursor_position(Position {
+                            x: term_area.x + cur_col,
+                            y: term_area.y + cur_row,
+                        });
+                    }
+                }
+            } else {
+                // Terminal is starting: just paint the panel background.
+                let style = Style::default()
+                    .bg(self.theme.colors.popup.bg)
+                    .fg(self.theme.colors.popup.fg);
+                frame.render_widget(Block::default().style(style), term_area);
+            }
+        }
 
         // Render status line background (matches popup background)
         let status_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));

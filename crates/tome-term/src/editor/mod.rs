@@ -7,6 +7,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::mem;
 use std::path::PathBuf;
+use std::sync::mpsc::{Receiver, TryRecvError};
 
 use tome_core::ext::{HookContext, emit_hook};
 use tome_core::key::{KeyCode, SpecialKey};
@@ -16,6 +17,7 @@ use tome_core::{
 };
 
 use crate::theme::Theme;
+use crate::terminal_panel::TerminalState;
 
 pub use types::{HistoryEntry, Message, MessageKind, Registers, ScratchState};
 
@@ -37,6 +39,13 @@ pub struct Editor {
     pub scratch_open: bool,
     pub scratch_keep_open: bool,
     pub scratch_focused: bool,
+
+    pub terminal: Option<TerminalState>,
+    terminal_prewarm: Option<Receiver<Result<TerminalState, String>>>,
+    terminal_input_buffer: Vec<u8>,
+    pub terminal_open: bool,
+    pub terminal_focused: bool,
+    terminal_focus_pending: bool,
 
     in_scratch_context: bool,
     pub file_type: Option<String>,
@@ -152,6 +161,12 @@ impl Editor {
             scratch_open: false,
             scratch_keep_open: true,
             scratch_focused: false,
+            terminal: None,
+            terminal_prewarm: None,
+            terminal_input_buffer: Vec::new(),
+            terminal_open: false,
+            terminal_focused: false,
+            terminal_focus_pending: false,
             in_scratch_context: false,
             file_type: file_type.map(|s| s.to_string()),
             theme: &crate::themes::solarized::SOLARIZED_DARK,
@@ -256,6 +271,100 @@ impl Editor {
         }
         self.scratch_open = false;
         self.scratch_focused = false;
+    }
+
+    pub(crate) fn start_terminal_prewarm(&mut self) {
+        if self.terminal.is_some() || self.terminal_prewarm.is_some() {
+            return;
+        }
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.terminal_prewarm = Some(rx);
+
+        std::thread::spawn(move || {
+            let _ = tx.send(TerminalState::new(80, 24));
+        });
+    }
+
+    pub(crate) fn poll_terminal_prewarm(&mut self) {
+        let recv = match self.terminal_prewarm.as_ref() {
+            Some(rx) => rx.try_recv(),
+            None => return,
+        };
+
+        match recv {
+            Ok(Ok(mut term)) => {
+                // Flush any buffered keystrokes typed while the terminal was opening.
+                if !self.terminal_input_buffer.is_empty() {
+                    let _ = term.write_key(&self.terminal_input_buffer);
+                    self.terminal_input_buffer.clear();
+                }
+
+                self.terminal = Some(term);
+                self.terminal_prewarm = None;
+
+                if self.terminal_open && self.terminal_focus_pending {
+                    // Keep terminal focused unless the user explicitly unfocused it while loading.
+                    self.terminal_focused = true;
+                    self.terminal_focus_pending = false;
+                }
+            }
+            Ok(Err(e)) => {
+                self.show_error(format!("Failed to start terminal: {}", e));
+                self.terminal_prewarm = None;
+                self.terminal_focus_pending = false;
+            }
+            Err(TryRecvError::Empty) => {}
+            Err(TryRecvError::Disconnected) => {
+                self.terminal_prewarm = None;
+                self.terminal_focus_pending = false;
+            }
+        }
+    }
+
+    pub(crate) fn on_terminal_exit(&mut self) {
+        self.terminal_open = false;
+        self.terminal_focused = false;
+        self.terminal_focus_pending = false;
+        self.terminal_input_buffer.clear();
+        self.terminal = None;
+
+        // Keep a fresh shell ready for the next toggle.
+        self.start_terminal_prewarm();
+    }
+
+    pub(crate) fn do_toggle_terminal(&mut self) {
+        // Always poll in case the prewarm completed since the last frame.
+        self.poll_terminal_prewarm();
+
+        if self.terminal_open {
+            if self.terminal_focused {
+                self.terminal_open = false;
+                self.terminal_focused = false;
+                self.terminal_focus_pending = false;
+                self.terminal_input_buffer.clear();
+            } else {
+                if self.terminal.is_some() {
+                    self.terminal_focused = true;
+                    self.terminal_focus_pending = false;
+                } else {
+                    self.start_terminal_prewarm();
+                    self.terminal_focus_pending = true;
+                }
+            }
+            return;
+        }
+
+        // Opening.
+        self.terminal_open = true;
+        if self.terminal.is_some() {
+            self.terminal_focused = true;
+            self.terminal_focus_pending = false;
+        } else {
+            self.start_terminal_prewarm();
+            self.terminal_focused = true;
+            self.terminal_focus_pending = true;
+        }
     }
 
     pub(crate) fn do_toggle_scratch(&mut self) {
@@ -469,6 +578,64 @@ impl Editor {
         use termina::event::KeyCode as TmKeyCode;
         use termina::event::Modifiers as TmModifiers;
 
+        // Toggle terminal with Ctrl+` (or similar, but let's just use a command for now, 
+        // wait, I can bind a key here or rely on command. 
+        // Let's add a check for a specific toggle key globally or just handle focus)
+        // Actually, keybinding system in tome-core handles global keys. 
+        // But if terminal is focused, we swallow keys.
+        // We need a way to toggle terminal even if focused.
+        // Let's say Ctrl+t toggles terminal for now (hardcoded)
+        if matches!(key.code, TmKeyCode::Char('t')) && key.modifiers.contains(TmModifiers::CONTROL) {
+            self.do_toggle_terminal();
+            return false;
+        }
+
+        if self.terminal_open && self.terminal_focused {
+            // Esc to exit terminal focus (but keep open)
+            if matches!(key.code, TmKeyCode::Escape) {
+                self.terminal_focused = false;
+                self.terminal_focus_pending = false;
+                self.terminal_input_buffer.clear();
+                return false;
+            }
+
+            // Convert key -> terminal bytes.
+            let bytes = match key.code {
+                TmKeyCode::Char(c) => {
+                    if key.modifiers.contains(TmModifiers::CONTROL) {
+                        let byte = c.to_ascii_lowercase() as u8;
+                        if byte >= b'a' && byte <= b'z' {
+                            vec![byte - b'a' + 1]
+                        } else {
+                            vec![byte]
+                        }
+                    } else {
+                        let mut b = [0; 4];
+                        c.encode_utf8(&mut b).as_bytes().to_vec()
+                    }
+                }
+                TmKeyCode::Enter => vec![b'\r'],
+                TmKeyCode::Backspace => vec![0x7f],
+                TmKeyCode::Tab => vec![b'\t'],
+                TmKeyCode::Up => b"\x1b[A".to_vec(),
+                TmKeyCode::Down => b"\x1b[B".to_vec(),
+                TmKeyCode::Right => b"\x1b[C".to_vec(),
+                TmKeyCode::Left => b"\x1b[D".to_vec(),
+                _ => vec![],
+            };
+
+            if !bytes.is_empty() {
+                if let Some(term) = &mut self.terminal {
+                    let _ = term.write_key(&bytes);
+                } else {
+                    // Terminal is still starting: buffer until the prewarm completes.
+                    self.terminal_input_buffer.extend_from_slice(&bytes);
+                }
+            }
+
+            return false;
+        }
+
         if self.scratch_open && self.scratch_focused {
             // Many terminals send Ctrl+Enter as byte 0x0A (Line Feed = Ctrl+J).
             // Termina parses this as Char('j') with CONTROL modifier.
@@ -641,8 +808,31 @@ impl Editor {
     }
 
     pub fn handle_mouse(&mut self, mouse: termina::event::MouseEvent) -> bool {
+        let height = self.window_height.unwrap_or(24);
+
+        // Check terminal panel first (70/30 split when open)
+        if self.terminal_open {
+            // Terminal takes bottom 30% of main area (before status/message lines)
+            let main_area_height = height.saturating_sub(2); // -2 for status and message
+            let doc_height = (main_area_height * 70) / 100;
+            let term_start = doc_height;
+            let term_end = main_area_height;
+
+            if mouse.row >= term_start && mouse.row < term_end {
+                // Click is in terminal area - focus it and swallow the event
+                if !self.terminal_focused {
+                    self.terminal_focused = true;
+                }
+                // Terminal doesn't process mouse events yet, just swallow them
+                return false;
+            } else if self.terminal_focused {
+                // Click outside terminal while focused - unfocus it
+                self.terminal_focused = false;
+                // Fall through to process click in main editor
+            }
+        }
+
         if self.scratch_open {
-            let height = self.window_height.unwrap_or(24);
             let popup_height = 12;
             let popup_y = height.saturating_sub(popup_height + 2); // +2 for status and message
             let popup_end = height.saturating_sub(2);
@@ -675,6 +865,17 @@ impl Editor {
     }
 
     pub fn handle_paste(&mut self, content: String) {
+        // Route paste to focused terminal first
+        if self.terminal_open && self.terminal_focused {
+            if let Some(term) = &mut self.terminal {
+                let _ = term.write_key(content.as_bytes());
+            } else {
+                // Terminal is still starting: buffer the paste
+                self.terminal_input_buffer.extend_from_slice(content.as_bytes());
+            }
+            return;
+        }
+
         if self.scratch_open && self.scratch_focused {
             self.with_scratch_context(|ed| ed.insert_text(&content));
             return;

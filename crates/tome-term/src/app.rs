@@ -22,12 +22,33 @@ pub fn run_editor(mut editor: Editor) -> io::Result<()> {
     let backend = TerminaBackend::new(terminal);
     let mut terminal = Terminal::new(backend)?;
 
+    // Pre-warm an embedded shell in the background so opening the terminal panel is instant.
+    editor.start_terminal_prewarm();
+
     let result = (|| {
         loop {
+            editor.poll_terminal_prewarm();
+
+            let mut terminal_exited = false;
+            if let Some(term) = &mut editor.terminal {
+                term.update();
+                if !term.is_alive() {
+                    terminal_exited = true;
+                }
+            }
+            if terminal_exited {
+                editor.on_terminal_exit();
+            }
+
             terminal.draw(|frame| editor.render(frame))?;
 
-            // Set terminal cursor style based on mode
-            let cursor_style = cursor_style_for_mode(editor.mode());
+            // Set terminal cursor style based on mode.
+            // When the embedded terminal is focused, prefer the user's terminal default.
+            let cursor_style = if editor.terminal_focused {
+                termina::style::CursorStyle::Default
+            } else {
+                cursor_style_for_mode(editor.mode())
+            };
             write!(
                 terminal.backend_mut().terminal_mut(),
                 "{}",
@@ -36,8 +57,8 @@ pub fn run_editor(mut editor: Editor) -> io::Result<()> {
             terminal.backend_mut().terminal_mut().flush()?;
 
             let mut filter = |e: &Event| !e.is_escape();
-            let timeout = if matches!(editor.mode(), tome_core::Mode::Insert) {
-                Some(Duration::from_millis(50))
+            let timeout = if matches!(editor.mode(), tome_core::Mode::Insert) || editor.terminal_open {
+                Some(Duration::from_millis(16)) // ~60fps
             } else {
                 None
             };
