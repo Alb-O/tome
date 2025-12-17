@@ -1,7 +1,7 @@
-use tome_core::range::Direction as MoveDir;
 use tome_core::ScrollDirection;
 use crate::render::WrapSegment;
 use tome_core::Selection;
+use tome_core::range::{Direction as MoveDir, Range};
 
 use super::Editor;
 
@@ -27,91 +27,107 @@ impl Editor {
     }
 
     pub fn move_visual_vertical(&mut self, direction: MoveDir, count: usize, extend: bool) {
-        for _ in 0..count {
-            let cursor = self.cursor;
-            let doc_line = self.doc.char_to_line(cursor);
-            let line_start = self.doc.line_to_char(doc_line);
-            let col_in_line = cursor - line_start;
+        let ranges = self.selection.ranges().to_vec();
+        let primary_index = self.selection.primary_index();
+        let mut new_ranges = Vec::with_capacity(ranges.len());
 
-            let total_lines = self.doc.len_lines();
-            let _line_end = if doc_line + 1 < total_lines {
-                self.doc.line_to_char(doc_line + 1)
-            } else {
-                self.doc.len_chars()
-            };
-            let line_text: String = self.doc.slice(line_start.._line_end).into();
-            let line_text = line_text.trim_end_matches('\n');
+        for (idx, range) in ranges.iter().enumerate() {
+            let mut pos = range.head;
+            for _ in 0..count {
+                pos = self.visual_move_from(pos, direction);
+            }
 
-            let segments = self.wrap_line(line_text, self.text_width);
-            let current_seg_idx = self.find_segment_for_col(&segments, col_in_line);
-            let col_in_seg = if current_seg_idx < segments.len() {
-                col_in_line.saturating_sub(segments[current_seg_idx].start_offset)
-            } else {
-                col_in_line
-            };
-
-            let new_pos = match direction {
-                MoveDir::Forward => {
-                    if current_seg_idx + 1 < segments.len() {
-                        let next_seg = &segments[current_seg_idx + 1];
-                        let new_col = next_seg.start_offset + col_in_seg.min(next_seg.text.chars().count().saturating_sub(1));
-                        line_start + new_col
-                    } else if doc_line + 1 < total_lines {
-                        let next_line_start = self.doc.line_to_char(doc_line + 1);
-                        let next_line_end = if doc_line + 2 < total_lines {
-                            self.doc.line_to_char(doc_line + 2)
-                        } else {
-                            self.doc.len_chars()
-                        };
-                        let next_line_text: String = self.doc.slice(next_line_start..next_line_end).into();
-                        let next_line_text = next_line_text.trim_end_matches('\n');
-                        let next_segments = self.wrap_line(next_line_text, self.text_width);
-
-                        if next_segments.is_empty() {
-                            next_line_start
-                        } else {
-                            let first_seg = &next_segments[0];
-                            let new_col = col_in_seg.min(first_seg.text.chars().count().saturating_sub(1).max(0));
-                            next_line_start + new_col
-                        }
-                    } else {
-                        cursor
-                    }
-                }
-                MoveDir::Backward => {
-                    if current_seg_idx > 0 {
-                        let prev_seg = &segments[current_seg_idx - 1];
-                        let new_col = prev_seg.start_offset + col_in_seg.min(prev_seg.text.chars().count().saturating_sub(1));
-                        line_start + new_col
-                    } else if doc_line > 0 {
-                        let prev_line = doc_line - 1;
-                        let prev_line_start = self.doc.line_to_char(prev_line);
-                        let prev_line_end = line_start;
-                        let prev_line_text: String = self.doc.slice(prev_line_start..prev_line_end).into();
-                        let prev_line_text = prev_line_text.trim_end_matches('\n');
-                        let prev_segments = self.wrap_line(prev_line_text, self.text_width);
-
-                        if prev_segments.is_empty() {
-                            prev_line_start
-                        } else {
-                            let last_seg = &prev_segments[prev_segments.len() - 1];
-                            let new_col = last_seg.start_offset + col_in_seg.min(last_seg.text.chars().count().saturating_sub(1).max(0));
-                            prev_line_start + new_col
-                        }
-                    } else {
-                        cursor
-                    }
-                }
-            };
-
-            self.cursor = new_pos;
+            let mut new_range = if extend { *range } else { Range::point(pos) };
             if extend {
-                self.selection.transform_mut(|r| {
-                    r.head = new_pos;
-                });
-            } else {
-                // Collapse selection to the new cursor position when not extending.
-                self.selection = Selection::point(new_pos);
+                new_range.head = pos;
+            }
+
+            if idx == primary_index {
+                // We'll reset cursor after rebuilding selection; keep tracking via index.
+            }
+            new_ranges.push(new_range);
+        }
+
+        self.selection = Selection::from_vec(new_ranges, primary_index);
+        self.cursor = self.selection.primary().head;
+    }
+
+    fn visual_move_from(&self, cursor: usize, direction: MoveDir) -> usize {
+        let doc_line = self.doc.char_to_line(cursor);
+        let line_start = self.doc.line_to_char(doc_line);
+        let col_in_line = cursor.saturating_sub(line_start);
+
+        let total_lines = self.doc.len_lines();
+        let _line_end = if doc_line + 1 < total_lines {
+            self.doc.line_to_char(doc_line + 1)
+        } else {
+            self.doc.len_chars()
+        };
+        let line_text: String = self.doc.slice(line_start.._line_end).into();
+        let line_text = line_text.trim_end_matches('\n');
+
+        let segments = self.wrap_line(line_text, self.text_width);
+        let current_seg_idx = self.find_segment_for_col(&segments, col_in_line);
+        let col_in_seg = if current_seg_idx < segments.len() {
+            col_in_line.saturating_sub(segments[current_seg_idx].start_offset)
+        } else {
+            col_in_line
+        };
+
+        match direction {
+            MoveDir::Forward => {
+                if current_seg_idx + 1 < segments.len() {
+                    let next_seg = &segments[current_seg_idx + 1];
+                    let new_col = next_seg.start_offset
+                        + col_in_seg.min(next_seg.text.chars().count().saturating_sub(1));
+                    line_start + new_col
+                } else if doc_line + 1 < total_lines {
+                    let next_line_start = self.doc.line_to_char(doc_line + 1);
+                    let next_line_end = if doc_line + 2 < total_lines {
+                        self.doc.line_to_char(doc_line + 2)
+                    } else {
+                        self.doc.len_chars()
+                    };
+                    let next_line_text: String = self.doc.slice(next_line_start..next_line_end).into();
+                    let next_line_text = next_line_text.trim_end_matches('\n');
+                    let next_segments = self.wrap_line(next_line_text, self.text_width);
+
+                    if next_segments.is_empty() {
+                        next_line_start
+                    } else {
+                        let first_seg = &next_segments[0];
+                        let new_col = col_in_seg.min(first_seg.text.chars().count().saturating_sub(1).max(0));
+                        next_line_start + new_col
+                    }
+                } else {
+                    cursor
+                }
+            }
+            MoveDir::Backward => {
+                if current_seg_idx > 0 {
+                    let prev_seg = &segments[current_seg_idx - 1];
+                    let new_col = prev_seg.start_offset
+                        + col_in_seg.min(prev_seg.text.chars().count().saturating_sub(1));
+                    line_start + new_col
+                } else if doc_line > 0 {
+                    let prev_line = doc_line - 1;
+                    let prev_line_start = self.doc.line_to_char(prev_line);
+                    let prev_line_end = line_start;
+                    let prev_line_text: String = self.doc.slice(prev_line_start..prev_line_end).into();
+                    let prev_line_text = prev_line_text.trim_end_matches('\n');
+                    let prev_segments = self.wrap_line(prev_line_text, self.text_width);
+
+                    if prev_segments.is_empty() {
+                        prev_line_start
+                    } else {
+                        let last_seg = &prev_segments[prev_segments.len() - 1];
+                        let new_col = last_seg.start_offset
+                            + col_in_seg.min(last_seg.text.chars().count().saturating_sub(1).max(0));
+                        prev_line_start + new_col
+                    }
+                } else {
+                    cursor
+                }
             }
         }
     }

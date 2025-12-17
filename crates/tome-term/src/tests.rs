@@ -798,4 +798,32 @@ fn run_key_sequence(editor: &mut Editor, steps: &[KeyStep]) -> Vec<String> {
 
         assert_eq!(editor.doc.to_string(), "Xone\nXtwo\nXthree\n");
     }
+
+    #[test]
+    fn test_duplicate_down_insert_inserts_at_all_cursors() {
+        let mut editor = test_editor("one\ntwo\nthree\n");
+
+        // Duplicate the initial cursor down to subsequent lines.
+        editor.handle_key(KeyEvent::new(KeyCode::Char('C'), Modifiers::SHIFT));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('C'), Modifiers::SHIFT));
+
+        // Enter insert mode and type a couple characters.
+        editor.handle_key(KeyEvent::new(KeyCode::Char('i'), Modifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('a'), Modifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('b'), Modifiers::NONE));
+
+        assert_eq!(editor.doc.to_string(), "abone\nabtwo\nabthree\n");
+
+        // Backspace should delete at every cursor in insert mode.
+        editor.handle_key(KeyEvent::new(KeyCode::Backspace, Modifiers::NONE));
+        assert_eq!(editor.doc.to_string(), "aone\natwo\nathree\n");
+
+        editor.handle_key(KeyEvent::new(KeyCode::Backspace, Modifiers::NONE));
+        assert_eq!(editor.doc.to_string(), "one\ntwo\nthree\n");
+
+        // Navigation keys in insert mode should move all cursors.
+        editor.handle_key(KeyEvent::new(KeyCode::End, Modifiers::NONE));
+        editor.handle_key(KeyEvent::new(KeyCode::Char('X'), Modifiers::NONE));
+        assert_eq!(editor.doc.to_string(), "oneX\ntwoX\nthreeX\n");
+    }
 }

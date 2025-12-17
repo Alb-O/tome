@@ -5,30 +5,41 @@ use linkme::distributed_slice;
 use crate::ext::actions::{ActionContext, ActionDef, ActionResult, ACTIONS};
 use crate::ext::find_motion;
 use crate::range::Range;
+use crate::selection::Selection;
 
-/// Cursor movement - moves cursor only, does not affect selections.
-/// When extend is true, extends selection from anchor to new cursor position.
+/// Cursor movement - moves cursor (and all cursors) without creating new selections unless extending.
 fn cursor_move_action(ctx: &ActionContext, motion_name: &str) -> ActionResult {
     let motion = match find_motion(motion_name) {
         Some(m) => m,
         None => return ActionResult::Error(format!("Unknown motion: {}", motion_name)),
     };
 
-    // Apply motion to get new cursor position
-    let current_range = Range::point(ctx.cursor);
-    let new_range = (motion.handler)(ctx.text, current_range, ctx.count, false);
-    let new_cursor = new_range.head;
+    let primary_index = ctx.selection.primary_index();
+
+    // Move every selection head; when not extending, collapse to points at the new head.
+    let new_ranges: Vec<Range> = ctx
+        .selection
+        .ranges()
+        .iter()
+        .map(|range| {
+            let seed = if ctx.extend {
+                *range
+            } else {
+                Range::point(range.head)
+            };
+            let moved = (motion.handler)(ctx.text, seed, ctx.count, ctx.extend);
+            if ctx.extend {
+                moved
+            } else {
+                Range::point(moved.head)
+            }
+        })
+        .collect();
 
     if ctx.extend {
-        // When extending, modify selection to extend from anchor to new cursor
-        let mut new_selection = ctx.selection.clone();
-        new_selection.transform_mut(|range| {
-            range.head = new_cursor;
-        });
-        ActionResult::Motion(new_selection)
+        ActionResult::Motion(Selection::from_vec(new_ranges, primary_index))
     } else {
-        // Just move cursor, leave selections alone
-        ActionResult::CursorMove(new_cursor)
+        ActionResult::Motion(Selection::from_vec(new_ranges, primary_index))
     }
 }
 

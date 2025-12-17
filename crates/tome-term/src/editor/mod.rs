@@ -9,7 +9,7 @@ use std::mem;
 use std::path::PathBuf;
 
 use tome_core::key::{KeyCode, SpecialKey};
-use tome_core::range::{Direction as MoveDir, Range};
+use tome_core::range::Direction as MoveDir;
 use tome_core::{
     InputHandler, Key, KeyResult, Mode, MouseEvent, Rope, Selection, Transaction,
     ext, movement,
@@ -357,20 +357,16 @@ impl Editor {
             r.head = pos;
         });
 
-        let insert_len = text.chars().count();
         let tx = Transaction::insert(self.doc.slice(..), &insertion_points, text.to_string());
+        let mut new_selection = tx.map_selection(&insertion_points);
+        new_selection.transform_mut(|r| {
+            let pos = r.to();
+            r.anchor = pos;
+            r.head = pos;
+        });
         tx.apply(&mut self.doc);
 
-        // Advance each cursor by the inserted text length.
-        let new_ranges: Vec<Range> = insertion_points
-            .ranges()
-            .iter()
-            .map(|r| {
-                let pos = r.head + insert_len;
-                Range::point(pos)
-            })
-            .collect();
-        self.selection = Selection::from_vec(new_ranges, insertion_points.primary_index());
+        self.selection = new_selection;
         self.cursor = self.selection.primary().head;
         self.modified = true;
     }

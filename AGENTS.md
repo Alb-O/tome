@@ -26,8 +26,8 @@ Uses `linkme` for compile-time registration. Drop a file in, it's automatically 
 
 Running cargo: `nix develop -c cargo {build/test/etc}`. Kitty GUI tests: `KITTY_TESTS=1 DISPLAY=:0 nix develop -c cargo test -p tome-term --test kitty_multiselect -- --nocapture --test-threads=1`.
 
-## Agent Notes: GUI-Driven Debugging
+## Integration & GUI-Driven Testing
 
-- Approach: keep tight red/green loops with assertions in both unit tests and kitty GUI integration tests. Write failing assertions first, then iterate fixes in `tome-term` (movement/selection, multi-cursor insert) until GUI captures go green.
+- Approach: keep tight red/green loops with assertions in both unit tests and kitty GUI integration tests. Write failing assertions first, then iterate fixes until GUI captures go green.
 - Harness: `kitty-test-harness` (git dependency, own flake) drives the real terminal, sending key sequences and capturing screens. Defaults favor WSL/kitty (X11, software GL). Current GUI suite lives in `crates/tome-term/tests/kitty_multiselect.rs`; keep tests serial and isolated per file to avoid socket/file contention.
 - Why it matters: core selection ops can pass unit tests, but the live GUI harness exposes cursor/selection drift and per-cursor insert bugs. Running against the real terminal ensures fixes match user-facing behavior.

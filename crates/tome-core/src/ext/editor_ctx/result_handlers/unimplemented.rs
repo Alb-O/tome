@@ -71,8 +71,13 @@ result_handler!(RESULT_DUPLICATE_SELECTIONS_DOWN_HANDLERS, HANDLE_DUPLICATE_DOWN
 
             let new_anchor = anchor_start + anchor_col.min(anchor_line_len);
             let new_head = head_start + head_col.min(head_line_len);
+            let new_range = crate::range::Range::new(new_anchor, new_head);
 
-            new_ranges.push(crate::range::Range::new(new_anchor, new_head));
+            if new_ranges.contains(&new_range) {
+                continue;
+            }
+
+            new_ranges.push(new_range);
             if idx == primary_index {
                 primary_index = new_ranges.len() - 1;
             }
@@ -113,8 +118,13 @@ result_handler!(RESULT_DUPLICATE_SELECTIONS_UP_HANDLERS, HANDLE_DUPLICATE_UP, "d
 
             let new_anchor = anchor_start + anchor_col.min(anchor_line_len);
             let new_head = head_start + head_col.min(head_line_len);
+            let new_range = crate::range::Range::new(new_anchor, new_head);
 
-            new_ranges.push(crate::range::Range::new(new_anchor, new_head));
+            if new_ranges.contains(&new_range) {
+                continue;
+            }
+
+            new_ranges.push(new_range);
             if idx == primary_index {
                 primary_index = new_ranges.len() - 1;
             }

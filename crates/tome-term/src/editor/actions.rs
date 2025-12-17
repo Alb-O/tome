@@ -1,6 +1,6 @@
 use tome_core::{Mode, Selection, Transaction, movement};
 use tome_core::ext::{EditAction, VisualDirection, ScrollAmount, ScrollDir};
-use tome_core::range::Direction as MoveDir;
+use tome_core::range::{Direction as MoveDir, Range};
 
 use super::Editor;
 
@@ -145,15 +145,37 @@ impl Editor {
                 }
             }
             EditAction::DeleteBack => {
-                if self.cursor > 0 {
-                    self.save_undo_state();
-                    self.selection = Selection::single(self.cursor - 1, self.cursor);
-                    let tx = Transaction::delete(self.doc.slice(..), &self.selection);
-                    self.selection = tx.map_selection(&self.selection);
-                    tx.apply(&mut self.doc);
-                    self.cursor -= 1;
-                    self.modified = true;
+                // Delete backward across all cursors (skip any at buffer start).
+                let mut ranges = Vec::new();
+                let mut primary_index = 0usize;
+                for (idx, range) in self.selection.ranges().iter().enumerate() {
+                    if range.head == 0 {
+                        continue;
+                    }
+                    if idx == self.selection.primary_index() {
+                        primary_index = ranges.len();
+                    }
+                    ranges.push(Range::new(range.head - 1, range.head));
                 }
+
+                if ranges.is_empty() {
+                    return false;
+                }
+
+                self.save_undo_state();
+                let deletion_selection = Selection::from_vec(ranges, primary_index);
+                let tx = Transaction::delete(self.doc.slice(..), &deletion_selection);
+                let mut new_selection = tx.map_selection(&deletion_selection);
+                new_selection.transform_mut(|r| {
+                    let pos = r.from();
+                    r.anchor = pos;
+                    r.head = pos;
+                });
+                tx.apply(&mut self.doc);
+
+                self.selection = new_selection;
+                self.cursor = self.selection.primary().head;
+                self.modified = true;
             }
             EditAction::OpenBelow => {
                 let slice = self.doc.slice(..);
