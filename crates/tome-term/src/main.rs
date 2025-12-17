@@ -118,7 +118,23 @@ fn run_editor(mut editor: Editor) -> io::Result<()> {
             )?;
             terminal.backend_mut().terminal_mut().flush()?;
 
-            let event = events.read(|e| !e.is_escape())?;
+            let mut filter = |e: &Event| !e.is_escape();
+            let timeout = if matches!(editor.mode(), tome_core::Mode::Insert) {
+                Some(Duration::from_millis(50))
+            } else {
+                None
+            };
+
+            let has_event = match timeout {
+                Some(t) => events.poll(Some(t), &mut filter)?,
+                None => true,
+            };
+
+            if !has_event {
+                continue;
+            }
+
+            let event = events.read(&mut filter)?;
 
             match event {
                 Event::Key(key)

@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -215,15 +217,23 @@ impl Editor {
         let _primary_index = self.selection.primary_index();
         let primary_cursor = cursor;
         let cursor_heads: HashSet<usize> = ranges.iter().map(|r| r.head).collect();
+        let insert_mode = matches!(self.mode(), Mode::Insert);
+        let now_ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis();
+        let blink_on = if insert_mode { (now_ms / 200) % 2 == 0 } else { true };
+
         let primary_cursor_style = Style::default()
             .bg(self.theme.colors.ui.cursor_bg)
             .fg(self.theme.colors.ui.cursor_fg)
-            .add_modifier(Modifier::BOLD | Modifier::RAPID_BLINK);
+            .add_modifier(Modifier::BOLD);
         let secondary_cursor_style = {
             let bg = blend_colors(self.theme.colors.ui.cursor_bg, self.theme.colors.ui.bg, 0.4);
             let fg = blend_colors(self.theme.colors.ui.cursor_fg, self.theme.colors.ui.fg, 0.4);
             Style::default().bg(bg).fg(fg).add_modifier(Modifier::BOLD)
         };
+        let base_style = Style::default().fg(self.theme.colors.ui.fg).bg(self.theme.colors.ui.bg);
 
         let mut output_lines: Vec<Line> = Vec::new();
         let mut current_line_idx = self.scroll_line;
@@ -290,15 +300,19 @@ impl Editor {
                     }
 
                     let style = if is_cursor && use_block_cursor {
-                        if is_primary_cursor {
-                            primary_cursor_style
+                        if blink_on {
+                            if is_primary_cursor {
+                                primary_cursor_style
+                            } else {
+                                secondary_cursor_style
+                            }
                         } else {
-                            secondary_cursor_style
+                            base_style
                         }
                     } else if in_selection {
                         Style::default().bg(self.theme.colors.ui.selection_bg).fg(self.theme.colors.ui.selection_fg)
                     } else {
-                        Style::default().fg(self.theme.colors.ui.fg).bg(self.theme.colors.ui.bg)
+                        base_style
                     };
 
                     spans.push(Span::styled(ch.to_string(), style));
@@ -327,13 +341,19 @@ impl Editor {
                     });
 
                     if cursor_at_eol {
-                        if cursor_screen_pos.is_none() && cursor_heads.contains(&primary_cursor) {
+                        let primary_here = if is_last_doc_line {
+                            primary_cursor >= line_content_end && primary_cursor <= line_end
+                        } else {
+                            primary_cursor >= line_content_end && primary_cursor < line_end
+                        };
+
+                        if cursor_screen_pos.is_none() && primary_here {
                             let screen_col = area.x + gutter_width + seg_char_count as u16;
                             let screen_row = area.y + visual_row;
                             cursor_screen_pos = Some((screen_row, screen_col));
                         }
-                        if use_block_cursor {
-                            let cursor_style = if cursor_heads.contains(&primary_cursor) {
+                        if use_block_cursor && blink_on {
+                            let cursor_style = if primary_here {
                                 primary_cursor_style
                             } else {
                                 secondary_cursor_style
@@ -362,14 +382,20 @@ impl Editor {
                         }
                     });
                     if cursor_at_eol {
+                        let primary_here = if is_last_doc_line {
+                            primary_cursor >= line_start && primary_cursor <= line_end
+                        } else {
+                            primary_cursor >= line_start && primary_cursor < line_end
+                        };
+
                         let screen_col = area.x + gutter_width;
                         let screen_row = area.y + visual_row;
-                        if cursor_heads.contains(&primary_cursor) {
+                        if primary_here {
                             cursor_screen_pos = Some((screen_row, screen_col));
                         }
 
-                        if use_block_cursor {
-                            let cursor_style = if cursor_heads.contains(&primary_cursor) {
+                        if use_block_cursor && blink_on {
+                            let cursor_style = if primary_here {
                                 primary_cursor_style
                             } else {
                                 secondary_cursor_style
