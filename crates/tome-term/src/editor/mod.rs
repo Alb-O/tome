@@ -433,6 +433,7 @@ impl Editor {
             None => return false,
         };
 
+        let plugin_idx = cmd.plugin_idx;
         let handler = cmd.handler;
 
         let arg_tome_strs: Vec<TomeStr> = args
@@ -470,7 +471,9 @@ impl Editor {
             ACTIVE_MANAGER.with(|ctx| ctx.replace(Some(&mut self.plugins as *mut PluginManager)));
         let old_ed = ACTIVE_EDITOR.with(|ctx| ctx.replace(Some(self as *mut Editor)));
 
+        self.plugins.current_plugin_idx = Some(plugin_idx);
         let status = handler(&mut ctx);
+        self.plugins.current_plugin_idx = None;
 
         ACTIVE_MANAGER.with(|ctx| ctx.replace(old_mgr));
         ACTIVE_EDITOR.with(|ctx| ctx.replace(old_ed));
@@ -518,18 +521,22 @@ impl Editor {
 
         match event.kind {
             TomePluginEventKind::PanelAppend => {
-                if let Some(panel) = self.plugins.panels.get_mut(&event.panel_id) {
-                    if let Some(text) = tome_owned_to_string(event.text) {
-                        panel.transcript.push(ChatItem {
-                            role: event.role,
-                            text,
-                        });
+                if self.plugins.panel_owners.get(&event.panel_id) == Some(&plugin_idx) {
+                    if let Some(panel) = self.plugins.panels.get_mut(&event.panel_id) {
+                        if let Some(text) = tome_owned_to_string(event.text) {
+                            panel.transcript.push(ChatItem {
+                                role: event.role,
+                                text,
+                            });
+                        }
                     }
                 }
             }
             TomePluginEventKind::PanelSetOpen => {
-                if let Some(panel) = self.plugins.panels.get_mut(&event.panel_id) {
-                    panel.open = event.bool_val.0 != 0;
+                if self.plugins.panel_owners.get(&event.panel_id) == Some(&plugin_idx) {
+                    if let Some(panel) = self.plugins.panels.get_mut(&event.panel_id) {
+                        panel.open = event.bool_val.0 != 0;
+                    }
                 }
             }
             TomePluginEventKind::ShowMessage => {

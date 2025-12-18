@@ -24,6 +24,7 @@ pub struct LoadedPlugin {
 }
 
 pub struct PluginCommand {
+    pub plugin_idx: usize,
     pub namespace: String,
     pub name: String,
     pub handler: extern "C" fn(ctx: *mut TomeCommandContextV1) -> TomeStatus,
@@ -124,9 +125,9 @@ impl PluginManager {
     }
 
     pub fn register_command(&mut self, spec: TomeCommandSpecV1) {
-        let namespace = match &self.current_namespace {
-            Some(ns) => ns.clone(),
-            None => {
+        let (namespace, plugin_idx) = match (&self.current_namespace, self.current_plugin_idx) {
+            (Some(ns), Some(idx)) => (ns.clone(), idx),
+            _ => {
                 eprintln!("Warning: register_command called outside of plugin init");
                 return;
             }
@@ -139,6 +140,7 @@ impl PluginManager {
             self.commands.insert(
                 full_name,
                 PluginCommand {
+                    plugin_idx,
                     namespace: namespace.clone(),
                     name,
                     handler,
@@ -154,6 +156,7 @@ impl PluginManager {
                 self.commands.insert(
                     full_alias,
                     PluginCommand {
+                        plugin_idx,
                         namespace: namespace.clone(),
                         name: alias_name,
                         handler,
@@ -258,8 +261,10 @@ pub(crate) extern "C" fn host_panel_set_open(id: TomePanelId, open: TomeBool) {
     ACTIVE_MANAGER.with(|ctx| {
         if let Some(mgr_ptr) = *ctx.borrow() {
             let mgr = unsafe { &mut *mgr_ptr };
-            if let Some(panel) = mgr.panels.get_mut(&id) {
-                panel.open = open.0 != 0;
+            if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref() {
+                if let Some(panel) = mgr.panels.get_mut(&id) {
+                    panel.open = open.0 != 0;
+                }
             }
         }
     })
@@ -269,12 +274,14 @@ pub(crate) extern "C" fn host_panel_set_focused(id: TomePanelId, focused: TomeBo
     ACTIVE_MANAGER.with(|ctx| {
         if let Some(mgr_ptr) = *ctx.borrow() {
             let mgr = unsafe { &mut *mgr_ptr };
-            if let Some(panel) = mgr.panels.get_mut(&id) {
-                panel.focused = focused.0 != 0;
-                if panel.focused {
-                    for (pid, p) in &mut mgr.panels {
-                        if *pid != id {
-                            p.focused = false;
+            if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref() {
+                if let Some(panel) = mgr.panels.get_mut(&id) {
+                    panel.focused = focused.0 != 0;
+                    if panel.focused {
+                        for (pid, p) in &mut mgr.panels {
+                            if *pid != id {
+                                p.focused = false;
+                            }
                         }
                     }
                 }
@@ -291,11 +298,13 @@ pub(crate) extern "C" fn host_panel_append_transcript(
     ACTIVE_MANAGER.with(|ctx| {
         if let Some(mgr_ptr) = *ctx.borrow() {
             let mgr = unsafe { &mut *mgr_ptr };
-            if let Some(panel) = mgr.panels.get_mut(&id) {
-                panel.transcript.push(ChatItem {
-                    role,
-                    text: tome_str_to_str(text).to_string(),
-                });
+            if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref() {
+                if let Some(panel) = mgr.panels.get_mut(&id) {
+                    panel.transcript.push(ChatItem {
+                        role,
+                        text: tome_str_to_str(text).to_string(),
+                    });
+                }
             }
         }
     })
