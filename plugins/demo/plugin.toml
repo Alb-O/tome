@@ -1,0 +1,11 @@
+id = "demo"
+name = "Demo Plugin"
+version = "0.1.0"
+abi = 2
+description = "A demonstration plugin showcasing the Tome plugin API"
+
+# Built library (release)
+library_path = "libdemo_cabi_plugin.so"
+
+# Dev path for cargo watch workflows (debug build, workspace target dir)
+dev_library_path = "../../target/debug/libdemo_cabi_plugin.so"

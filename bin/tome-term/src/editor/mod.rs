@@ -63,6 +63,7 @@ pub struct Editor {
 	pub pending_permissions: Vec<crate::plugin::manager::PendingPermission>,
 	pub notifications: Notifications,
 	pub last_tick: std::time::SystemTime,
+	pub ipc: Option<crate::ipc::IpcServer>,
 }
 
 impl Editor {
@@ -246,6 +247,7 @@ impl Editor {
 				.max_concurrent(Some(5))
 				.overflow(Overflow::DiscardOldest),
 			last_tick: std::time::SystemTime::now(),
+			ipc: crate::ipc::IpcServer::start().ok(),
 		}
 	}
 
@@ -533,7 +535,29 @@ impl Editor {
 		self.plugins.save_config();
 	}
 
+	fn poll_ipc(&mut self) {
+		let mut reloads = Vec::new();
+		if let Some(ipc) = &self.ipc {
+			while let Some(msg) = ipc.poll() {
+				match msg {
+					crate::ipc::IpcMessage::ReloadPlugin(id) => {
+						reloads.push(id);
+					}
+				}
+			}
+		}
+
+		for id in reloads {
+			if let Err(e) = self.plugin_command(&["reload", &id]) {
+				self.show_error(format!("IPC reload failed: {}", e));
+			} else {
+				self.show_message(format!("IPC: Reloaded plugin {}", id));
+			}
+		}
+	}
+
 	pub fn poll_plugins(&mut self) {
+		self.poll_ipc();
 		use crate::plugin::manager::PluginContextGuard;
 		let mut events = Vec::new();
 		let plugin_ids: Vec<String> = self.plugins.plugins.keys().cloned().collect();
@@ -1504,6 +1528,20 @@ impl ext::EditorOps for Editor {
 				let id = args[1];
 				let mgr_ptr = &mut self.plugins as *mut PluginManager;
 				unsafe { (*mgr_ptr).load(self, id)? };
+				Ok(())
+			}
+			"logs" => {
+				if args.len() < 2 {
+					return Err("Usage: :plugins logs <id>".to_string());
+				}
+				let id = args[1];
+				let logs = self.plugins.logs.get(id).cloned().unwrap_or_default();
+				let content = logs.join("\n");
+				self.enter_scratch_context();
+				self.doc = Rope::from(content.as_str());
+				self.path = Some(std::path::PathBuf::from(format!("plugin-logs-{}", id)));
+				self.scratch_open = true;
+				self.scratch_focused = true;
 				Ok(())
 			}
 			_ => Err(format!("Unknown plugin command: {}", args[0])),

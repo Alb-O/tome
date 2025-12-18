@@ -3,6 +3,7 @@ mod backend;
 mod capabilities;
 mod cli;
 mod editor;
+mod ipc;
 mod plugin;
 mod render;
 mod styles;
@@ -14,12 +15,13 @@ pub mod theme;
 pub mod themes;
 
 use std::io;
+use std::path::PathBuf;
 
 use app::run_editor;
 use clap::Parser;
 use cli::{Cli, Commands, PluginCommands};
 use editor::Editor;
-use plugin::PluginManager;
+use plugin::manager::{get_plugins_dir, PluginManager};
 
 fn main() -> io::Result<()> {
 	let cli = Cli::parse();
@@ -86,6 +88,7 @@ fn handle_plugin_command(cmd: PluginCommands) -> io::Result<()> {
 
 	match cmd {
 		PluginCommands::DevAdd { path } => {
+			let path = std::fs::canonicalize(&path)?;
 			let manifest_path = path.join("plugin.toml");
 			if !manifest_path.exists() {
 				return Err(io::Error::new(
@@ -107,13 +110,34 @@ fn handle_plugin_command(cmd: PluginCommands) -> io::Result<()> {
 					manifest.id.replace('-', "_"),
 					ext
 				);
-				let dev_path = path.join("target/debug").join(lib_name);
+				// Try workspace root first (guessing it's parent of plugins/)
+				let mut dev_path = path.join("target/debug").join(&lib_name);
+				if !dev_path.exists() {
+					// Maybe it's a workspace and we are in plugins/
+					if let Some(parent) = path.parent()
+						&& parent.file_name().and_then(|n| n.to_str()) == Some("plugins")
+						&& let Some(workspace_root) = parent.parent()
+					{
+						let ws_dev_path = workspace_root.join("target/debug").join(&lib_name);
+						if ws_dev_path.exists() {
+							dev_path = ws_dev_path;
+						}
+					}
+				}
 				manifest.dev_library_path = Some(dev_path.to_string_lossy().to_string());
+			} else {
+				// Canonicalize existing dev_library_path if it's relative to the crate
+				let dev_path_str = manifest.dev_library_path.as_ref().unwrap();
+				let dev_path = PathBuf::from(dev_path_str);
+				if dev_path.is_relative() {
+					let abs_dev_path = path.join(dev_path);
+					manifest.dev_library_path = Some(abs_dev_path.to_string_lossy().to_string());
+				}
 			}
 
-			let plugin_dir = home::home_dir()
-				.map(|h| h.join(".config/tome/plugins").join(&manifest.id))
-				.ok_or_else(|| io::Error::other("Could not find home directory"))?;
+			let plugin_dir = get_plugins_dir()
+				.map(|d| d.join(&manifest.id))
+				.ok_or_else(|| io::Error::other("Could not resolve plugins directory"))?;
 
 			std::fs::create_dir_all(&plugin_dir)?;
 			let new_manifest_content = toml::to_string(&manifest)
@@ -134,9 +158,9 @@ fn handle_plugin_command(cmd: PluginCommands) -> io::Result<()> {
 			let manifest: plugin::manager::PluginManifest = toml::from_str(&content)
 				.map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-			let plugin_dir = home::home_dir()
-				.map(|h| h.join(".config/tome/plugins").join(&manifest.id))
-				.ok_or_else(|| io::Error::other("Could not find home directory"))?;
+			let plugin_dir = get_plugins_dir()
+				.map(|d| d.join(&manifest.id))
+				.ok_or_else(|| io::Error::other("Could not resolve plugins directory"))?;
 
 			if plugin_dir.exists() {
 				return Err(io::Error::other(format!(
@@ -157,9 +181,9 @@ fn handle_plugin_command(cmd: PluginCommands) -> io::Result<()> {
 			}
 		}
 		PluginCommands::Remove { id } => {
-			let plugin_dir = home::home_dir()
-				.map(|h| h.join(".config/tome/plugins").join(&id))
-				.ok_or_else(|| io::Error::other("Could not find home directory"))?;
+			let plugin_dir = get_plugins_dir()
+				.map(|d| d.join(&id))
+				.ok_or_else(|| io::Error::other("Could not resolve plugins directory"))?;
 
 			if plugin_dir.exists() {
 				std::fs::remove_dir_all(plugin_dir)?;
@@ -190,10 +214,17 @@ fn handle_plugin_command(cmd: PluginCommands) -> io::Result<()> {
 			}
 		}
 		PluginCommands::Reload { id } => {
-			println!(
-				"Please use :plugins reload {} inside Tome to reload without restarting.",
-				id
-			);
+			let rt = tokio::runtime::Builder::new_current_thread()
+				.enable_all()
+				.build()?;
+			match rt.block_on(crate::ipc::send_client_msg(&format!("reload {}", id))) {
+				Ok(_) => println!("Sent reload command for plugin {}", id),
+				Err(e) => {
+					println!("Failed to send reload command: {}", e);
+					println!("Is Tome running?");
+					println!("(You can also use :plugins reload {} inside Tome)", id);
+				}
+			}
 		}
 	}
 	Ok(())
@@ -201,11 +232,10 @@ fn handle_plugin_command(cmd: PluginCommands) -> io::Result<()> {
 
 fn copy_dir(src: &std::path::Path, dst: &std::path::Path) -> io::Result<()> {
 	const IGNORE: &[&str] = &[".git", "target"];
-	if let Some(name) = src.file_name().and_then(|s| s.to_str()) {
-		if IGNORE.contains(&name) {
+	if let Some(name) = src.file_name().and_then(|s| s.to_str())
+		&& IGNORE.contains(&name) {
 			return Ok(());
 		}
-	}
 
 	std::fs::create_dir_all(dst)?;
 	for entry in std::fs::read_dir(src)? {

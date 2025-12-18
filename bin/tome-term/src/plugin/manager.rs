@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use libloading::{Library, Symbol};
 use serde::{Deserialize, Serialize};
@@ -132,6 +132,7 @@ pub struct PluginManager {
 	pub commands: HashMap<String, PluginCommand>,
 	pub panels: HashMap<u64, ChatPanelState>,
 	pub panel_owners: HashMap<u64, String>, // panel_id -> plugin_id
+	pub logs: HashMap<String, Vec<String>>,
 	next_panel_id: u64,
 	current_namespace: Option<String>,
 	pub(crate) current_plugin_id: Option<String>,
@@ -139,6 +140,17 @@ pub struct PluginManager {
 	pub plugins_open: bool,
 	pub plugins_focused: bool,
 	pub plugins_selected_idx: usize,
+}
+
+pub fn get_config_dir() -> Option<PathBuf> {
+	if let Ok(dir) = std::env::var("TOME_CONFIG_DIR") {
+		return Some(PathBuf::from(dir));
+	}
+	home::home_dir().map(|h| h.join(".config/tome"))
+}
+
+pub fn get_plugins_dir() -> Option<PathBuf> {
+	get_config_dir().map(|d| d.join("plugins"))
 }
 
 impl PluginManager {
@@ -150,6 +162,7 @@ impl PluginManager {
 			commands: HashMap::new(),
 			panels: HashMap::new(),
 			panel_owners: HashMap::new(),
+			logs: HashMap::new(),
 			next_panel_id: 1,
 			current_namespace: None,
 			current_plugin_id: None,
@@ -168,17 +181,23 @@ impl PluginManager {
 
 			if entry.manifest.abi != TOME_C_ABI_VERSION_V2 {
 				return Err(format!(
-					"Incompatible ABI version in manifest: host={}, plugin={}",
-					TOME_C_ABI_VERSION_V2, entry.manifest.abi
+					"Plugin {} ABI version mismatch: expected {}, got {}",
+					id, TOME_C_ABI_VERSION_V2, entry.manifest.abi
 				));
 			}
 
+			// Try dev_library_path first if it exists
 			if let Some(dev_path) = &entry.manifest.dev_library_path {
-				PathBuf::from(dev_path)
-			} else if let Some(rel_path) = &entry.manifest.library_path {
-				entry.path.join(rel_path)
+				let p = PathBuf::from(dev_path);
+				if p.is_absolute() {
+					p
+				} else {
+					entry.path.join(p)
+				}
+			} else if let Some(lib_name) = &entry.manifest.library_path {
+				entry.path.join(lib_name)
 			} else {
-				return Err(format!("Plugin {} has no library_path", id));
+				return Err(format!("Plugin {} has no library_path or dev_library_path", id));
 			}
 		};
 
@@ -186,94 +205,55 @@ impl PluginManager {
 			return Err(format!("Library not found at {:?}", lib_path));
 		}
 
-		// Unload if already loaded. We MUST set context before removing from HashMap to ensure clean shutdown.
-		if self.plugins.contains_key(id) {
-			let mgr_ptr = self as *mut PluginManager;
-			let ed_ptr = ed as *mut Editor;
-			unsafe {
-				let _guard = PluginContextGuard::new(mgr_ptr, ed_ptr, id);
-				self.plugins.remove(id);
-			}
-			// Also remove commands from this plugin
-			self.commands.retain(|_, cmd| cmd.plugin_id != id);
-		}
+		unsafe {
+			let lib = Library::new(&lib_path).map_err(|e| format!("Failed to load library: {}", e))?;
+			let entry_point: Symbol<TomePluginEntryV2> = lib
+				.get(b"tome_plugin_entry_v2")
+				.map_err(|e| format!("Failed to find entry point: {}", e))?;
 
-		match self.load_at_path(ed, &lib_path, id) {
-			Ok(()) => {
-				if let Some(entry) = self.entries.get_mut(id) {
-					entry.status = PluginStatus::Loaded;
-				}
-				Ok(())
-			}
-			Err(e) => {
-				if let Some(entry) = self.entries.get_mut(id) {
-					entry.status = PluginStatus::Failed(e.clone());
-				}
-				Err(e)
-			}
-		}
-	}
-
-	fn load_at_path(&mut self, ed: &mut Editor, path: &Path, id: &str) -> Result<(), String> {
-		let lib =
-			unsafe { Library::new(path) }.map_err(|e| format!("Failed to load library: {}", e))?;
-
-		let entry: Symbol<TomePluginEntryV2> = unsafe {
-			lib.get(b"tome_plugin_entry_v2\0")
-				.map_err(|_| "Missing entry symbol 'tome_plugin_entry_v2'")?
-		};
-
-		let mut guest = unsafe { std::mem::zeroed::<TomeGuestV2>() };
-
-		self.current_plugin_id = Some(id.to_string());
-
-		let mgr_ptr = self as *mut PluginManager;
-		let ed_ptr = ed as *mut Editor;
-
-		let status = unsafe {
-			let _guard = PluginContextGuard::new(mgr_ptr, ed_ptr, id);
-			entry(&HOST_V2, &mut guest)
-		};
-
-		if status != TomeStatus::Ok {
-			self.current_plugin_id = None;
-			return Err(format!("Plugin entry failed with status {:?}", status));
-		}
-
-		if guest.abi_version != TOME_C_ABI_VERSION_V2 {
-			return Err(format!(
-				"Incompatible ABI version: host={}, guest={}",
-				TOME_C_ABI_VERSION_V2, guest.abi_version
-			));
-		}
-
-		let namespace = tome_str_to_str(&guest.namespace).to_string();
-		self.current_namespace = Some(namespace);
-
-		// Call init
-		if let Some(init) = guest.init {
-			let status = unsafe {
-				let _guard = PluginContextGuard::new(mgr_ptr, ed_ptr, id);
-				init(&HOST_V2)
-			};
+			let mut guest = std::mem::MaybeUninit::<TomeGuestV2>::uninit();
+			let status = entry_point(&HOST_V2, guest.as_mut_ptr());
 			if status != TomeStatus::Ok {
-				self.current_namespace = None;
-				self.current_plugin_id = None;
-				return Err(format!("Plugin init failed with status {:?}", status));
+				return Err(format!("Plugin entry point failed with status {:?}", status));
+			}
+			let guest = guest.assume_init();
+
+			if guest.abi_version != TOME_C_ABI_VERSION_V2 {
+				return Err(format!(
+					"Plugin {} guest ABI version mismatch: expected {}, got {}",
+					id, TOME_C_ABI_VERSION_V2, guest.abi_version
+				));
+			}
+
+			self.current_plugin_id = Some(id.to_string());
+			self.current_namespace = Some(id.to_string());
+
+			if let Some(init) = guest.init {
+				let ed_ptr = ed as *mut Editor;
+				let mgr_ptr = self as *mut PluginManager;
+				let _guard = PluginContextGuard::new(mgr_ptr, ed_ptr, id);
+				let status = init(&HOST_V2);
+				if status != TomeStatus::Ok {
+					return Err(format!("Plugin {} init failed with status {:?}", id, status));
+				}
+			}
+
+			self.current_plugin_id = None;
+			self.current_namespace = None;
+
+			self.plugins.insert(
+				id.to_string(),
+				LoadedPlugin {
+					lib,
+					guest,
+					id: id.to_string(),
+				},
+			);
+
+			if let Some(entry) = self.entries.get_mut(id) {
+				entry.status = PluginStatus::Loaded;
 			}
 		}
-
-		self.plugins.insert(
-			id.to_string(),
-			LoadedPlugin {
-				lib,
-				guest,
-				id: id.to_string(),
-			},
-		);
-
-		self.current_namespace = None;
-		self.current_plugin_id = None;
 
 		Ok(())
 	}
@@ -281,8 +261,9 @@ impl PluginManager {
 	pub fn discover_plugins(&mut self) {
 		let dirs = vec![
 			std::env::var("TOME_PLUGIN_DIR").ok().map(PathBuf::from),
-			home::home_dir().map(|h| h.join(".config/tome/plugins")),
+			get_plugins_dir(),
 		];
+
 
 		for dir in dirs.into_iter().flatten() {
 			if !dir.exists() {
@@ -313,7 +294,7 @@ impl PluginManager {
 	}
 
 	pub fn load_config(&mut self) {
-		let config_path = home::home_dir().map(|h| h.join(".config/tome/config.toml"));
+		let config_path = get_config_dir().map(|d| d.join("config.toml"));
 		if let Some(path) = config_path
 			&& path.exists()
 			&& let Ok(content) = std::fs::read_to_string(path)
@@ -324,14 +305,12 @@ impl PluginManager {
 	}
 
 	pub fn save_config(&mut self) {
-		let config_dir = home::home_dir().map(|h| h.join(".config/tome"));
-		if let Some(dir) = config_dir {
-			if !dir.exists() {
-				if let Err(e) = std::fs::create_dir_all(&dir) {
+		if let Some(dir) = get_config_dir() {
+			if !dir.exists()
+				&& let Err(e) = std::fs::create_dir_all(&dir) {
 					eprintln!("Failed to create config directory {:?}: {}", dir, e);
 					return;
 				}
-			}
 			let path = dir.join("config.toml");
 			match toml::to_string(&self.config) {
 				Ok(content) => {
@@ -370,6 +349,10 @@ impl PluginManager {
 		for id in enabled {
 			if let Err(e) = self.load(ed, &id) {
 				eprintln!("Failed to load plugin {}: {}", id, e);
+				self.logs
+					.entry(id.clone())
+					.or_default()
+					.push(format!("ERROR: Failed to load: {}", e));
 			}
 		}
 	}
@@ -486,12 +469,18 @@ pub fn tome_owned_to_string(tos: TomeOwnedStr) -> Option<String> {
 // Host callbacks
 
 pub(crate) extern "C" fn host_log(msg: TomeStr) {
-	let s = tome_str_to_str(&msg);
-	ACTIVE_EDITOR.with(|ctx| {
-		if let Some(ed_ptr) = *ctx.borrow() {
-			let ed = unsafe { &mut *ed_ptr };
-			ed.show_message(format!("[plugin] {}", s));
-		}
+	let s = tome_str_to_str(&msg).to_string();
+	ACTIVE_MANAGER.with(|mgr_ctx| {
+		ACTIVE_EDITOR.with(|ed_ctx| {
+			if let (Some(mgr_ptr), Some(ed_ptr)) = (*mgr_ctx.borrow(), *ed_ctx.borrow()) {
+				let mgr = unsafe { &mut *mgr_ptr };
+				let _ed = unsafe { &mut *ed_ptr };
+
+				if let Some(id) = &mgr.current_plugin_id {
+					mgr.logs.entry(id.clone()).or_default().push(s);
+				}
+			}
+		});
 	});
 }
 
