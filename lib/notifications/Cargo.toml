@@ -1,8 +1,3 @@
-# FILE: Cargo.toml - Cargo manifest for ratatui-notifications library
-# VERSION: 1.1.0
-# WCTX: OFPF migration
-# CLOG: Updated example name from notification_demo to demo
-
 [package]
 name = "ratatui-notifications"
 version = "0.1.0"
@@ -17,8 +12,5 @@ categories = ["command-line-interface", "gui"]
 chrono = "0.4"
 crossterm = "0.29.0"
 log = "0.4"
-ratatui = { path = "../ratatui", features = ["crossterm"] }
+ratatui = { workspace = true, features = ["crossterm"] }
 thiserror = "2.0.12"
-
-# FILE: Cargo.toml - Cargo manifest for ratatui-notifications library
-# END OF VERSION: 1.1.0

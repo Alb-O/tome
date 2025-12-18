@@ -1,0 +1,10 @@
+[package]
+name = "demo-cabi-plugin"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+tome-cabi-types.workspace = true

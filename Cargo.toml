@@ -1,12 +1,16 @@
 [workspace]
 resolver = "3"
-members = ["crates/*"]
+members = [
+    "bin/*",
+    "lib/*",
+    "plugins/*",
+]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/albertlarsan68/tome"
+repository = "https://github.com/Alb-O/tome"
 
 [workspace.dependencies]
 agent-client-protocol = "0.9.1"
@@ -17,7 +21,8 @@ kitty-test-harness = { git = "https://github.com/Alb-O/kitty-test-harness", bran
 libloading = "0.9"
 linkme = "0.3"
 paste = "1"
-ratatui = { path = "crates/ratatui" }
+ratatui = { path = "lib/ratatui" }
+ratatui-notifications = { path = "lib/notifications" }
 regex = "1"
 ropey = "1.6"
 serde = { version = "1", features = ["derive"] }
@@ -27,10 +32,7 @@ smallvec = "1.15"
 termina = "0.1"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["compat"] }
-tome-cabi-types = { path = "crates/tome-cabi-types" }
-tome-core = { path = "crates/tome-core" }
+tome-cabi-types = { path = "lib/types" }
+tome-core = { path = "lib/core" }
 unicode-segmentation = "1.12"
 unicode-width = "0.2"
-
-[patch.crates-io]
-ratatui = { path = "crates/ratatui" }

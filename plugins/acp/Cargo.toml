@@ -17,4 +17,4 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
-tome-cabi-types = { path = "../tome-cabi-types" }
+tome-cabi-types.workspace = true

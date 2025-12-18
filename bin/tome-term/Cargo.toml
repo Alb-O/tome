@@ -10,20 +10,20 @@ name = "tome"
 path = "src/main.rs"
 
 [dependencies]
-agent-client-protocol = { workspace = true }
+agent-client-protocol.workspace = true
 clap.workspace = true
 home = "0.5"
 libloading = "0.8"
 linkme.workspace = true
 portable-pty = "0.9.0"
 ratatui.workspace = true
-ratatui-notifications = { path = "../ratatui-notifications" }
+ratatui-notifications.workspace = true
 strsim = "0.11"
 termina.workspace = true
-tokio = { workspace = true }
-tokio-util = { workspace = true }
-tome-cabi-types = { path = "../tome-cabi-types" }
-tome-core = { workspace = true }
+tokio.workspace = true 
+tokio-util.workspace = true
+tome-cabi-types.workspace = true
+tome-core.workspace = true
 tui-term = "0.2.0"
 
 [dev-dependencies]
