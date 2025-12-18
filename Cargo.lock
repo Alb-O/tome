@@ -2709,6 +2709,7 @@ dependencies = [
  "portable-pty",
  "ratatui 0.30.0-hackable",
  "ratatui-notifications",
+ "serde",
  "serial_test",
  "strsim",
  "termina",
@@ -2717,6 +2718,7 @@ dependencies = [
  "tokio-util",
  "tome-cabi-types",
  "tome-core",
+ "toml",
  "tui-term",
 ]
 

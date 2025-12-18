@@ -188,6 +188,11 @@ pub trait EditorOps {
 	fn on_permission_decision(&mut self, _request_id: u64, _option_id: &str) -> Result<(), String> {
 		Err("Permission handling not supported".to_string())
 	}
+
+	/// Execute a plugin-related command.
+	fn plugin_command(&mut self, _args: &[&str]) -> Result<(), String> {
+		Err("Plugin commands not supported".to_string())
+	}
 }
 
 /// Context passed to command handlers.

@@ -13,7 +13,7 @@ use ratatui_notifications::{
 	Anchor, Animation, Level, Notification, Notifications, Overflow, SizeConstraint, Timing,
 };
 use tome_cabi_types::{TomeCommandContextV1, TomeStatus, TomeStr};
-use tome_core::ext::{HookContext, emit_hook};
+use tome_core::ext::{EditorOps, HookContext, emit_hook};
 use tome_core::key::{KeyCode, SpecialKey};
 use tome_core::range::Direction as MoveDir;
 use tome_core::{
@@ -471,14 +471,14 @@ impl Editor {
 				len: text.len(),
 			};
 
-			if let Some(owner_idx) = self.plugins.panel_owners.get(&id).copied()
-				&& let Some(plugin) = self.plugins.plugins.get(owner_idx)
+			if let Some(owner_id) = self.plugins.panel_owners.get(&id).cloned()
+				&& let Some(plugin) = self.plugins.plugins.get(&owner_id)
 				&& let Some(on_submit) = plugin.guest.on_panel_submit
 			{
 				use crate::plugins::manager::PluginContextGuard;
 				let ed_ptr = self as *mut Editor;
 				let mgr_ptr = unsafe { &mut (*ed_ptr).plugins as *mut _ };
-				let _guard = unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, owner_idx) };
+				let _guard = unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, &owner_id) };
 				on_submit(id, text_tome);
 			}
 		}
@@ -490,7 +490,7 @@ impl Editor {
 			None => return false,
 		};
 
-		let plugin_idx = cmd.plugin_idx;
+		let plugin_id = cmd.plugin_id.clone();
 		let handler = cmd.handler;
 
 		let arg_tome_strs: Vec<TomeStr> = args
@@ -511,7 +511,7 @@ impl Editor {
 			use crate::plugins::manager::PluginContextGuard;
 			let ed_ptr = self as *mut Editor;
 			let mgr_ptr = unsafe { &mut (*ed_ptr).plugins as *mut _ };
-			let _guard = unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, plugin_idx) };
+			let _guard = unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, &plugin_id) };
 			handler(&mut ctx)
 		};
 
@@ -529,15 +529,21 @@ impl Editor {
 		unsafe { (*mgr_ptr).autoload(self) };
 	}
 
+	pub fn save_plugin_config(&mut self) {
+		self.plugins.save_config();
+	}
+
 	pub fn poll_plugins(&mut self) {
 		use crate::plugins::manager::PluginContextGuard;
 		let mut events = Vec::new();
-		let num_plugins = self.plugins.plugins.len();
-		for idx in 0..num_plugins {
-			if let Some(poll_event) = self.plugins.plugins[idx].guest.poll_event {
+		let plugin_ids: Vec<String> = self.plugins.plugins.keys().cloned().collect();
+		for id in plugin_ids {
+			if let Some(plugin) = self.plugins.plugins.get(&id)
+				&& let Some(poll_event) = plugin.guest.poll_event
+			{
 				let ed_ptr = self as *mut Editor;
 				let mgr_ptr = unsafe { &mut (*ed_ptr).plugins as *mut _ };
-				let _guard = unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, idx) };
+				let _guard = unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, &id) };
 				loop {
 					let mut event =
 						std::mem::MaybeUninit::<tome_cabi_types::TomePluginEventV1>::uninit();
@@ -546,31 +552,36 @@ impl Editor {
 						break;
 					}
 					let event = unsafe { event.assume_init() };
-					events.push((idx, event));
+					events.push((id.clone(), event));
 				}
 			}
 		}
 
-		for (idx, event) in events {
-			self.handle_plugin_event(idx, event);
+		for (id, event) in events {
+			self.handle_plugin_event(&id, event);
 		}
 	}
 
-	fn handle_plugin_event(
-		&mut self,
-		plugin_idx: usize,
-		event: tome_cabi_types::TomePluginEventV1,
-	) {
+	fn handle_plugin_event(&mut self, plugin_id: &str, event: tome_cabi_types::TomePluginEventV1) {
 		use tome_cabi_types::TomePluginEventKind;
 
 		use crate::plugins::manager::tome_owned_to_string;
 		use crate::plugins::panels::ChatItem;
 
-		let free_str_fn = self.plugins.plugins[plugin_idx].guest.free_str;
+		let free_str_fn = self
+			.plugins
+			.plugins
+			.get(plugin_id)
+			.and_then(|p| p.guest.free_str);
 
 		match event.kind {
 			TomePluginEventKind::PanelAppend => {
-				if self.plugins.panel_owners.get(&event.panel_id) == Some(&plugin_idx)
+				if self
+					.plugins
+					.panel_owners
+					.get(&event.panel_id)
+					.map(|s| s.as_str())
+					== Some(plugin_id)
 					&& let Some(panel) = self.plugins.panels.get_mut(&event.panel_id)
 					&& let Some(text) = tome_owned_to_string(event.text)
 				{
@@ -581,7 +592,12 @@ impl Editor {
 				}
 			}
 			TomePluginEventKind::PanelSetOpen => {
-				if self.plugins.panel_owners.get(&event.panel_id) == Some(&plugin_idx)
+				if self
+					.plugins
+					.panel_owners
+					.get(&event.panel_id)
+					.map(|s| s.as_str())
+					== Some(plugin_id)
 					&& let Some(panel) = self.plugins.panels.get_mut(&event.panel_id)
 				{
 					panel.open = event.bool_val.0 != 0;
@@ -607,7 +623,7 @@ impl Editor {
 
 				self.pending_permissions
 					.push(crate::plugins::manager::PendingPermission {
-						plugin_idx,
+						plugin_id: plugin_id.to_string(),
 						request_id: event.permission_request_id,
 						_prompt: prompt.clone(),
 						_options: options.clone(),
@@ -627,9 +643,11 @@ impl Editor {
 		}
 
 		if !event.permission_request.is_null()
-			&& let Some(free_perm) = self.plugins.plugins[plugin_idx]
-				.guest
-				.free_permission_request
+			&& let Some(free_perm) = self
+				.plugins
+				.plugins
+				.get(plugin_id)
+				.and_then(|p| p.guest.free_permission_request)
 		{
 			free_perm(event.permission_request);
 		}
@@ -833,6 +851,55 @@ impl Editor {
 		if matches!(key.code, TmKeyCode::Char('t')) && key.modifiers.contains(TmModifiers::CONTROL)
 		{
 			self.do_toggle_terminal();
+			return false;
+		}
+
+		if self.plugins.plugins_open && self.plugins.plugins_focused {
+			match key.code {
+				TmKeyCode::Char('j') | TmKeyCode::Down => {
+					let num_entries = self.plugins.entries.len();
+					if num_entries > 0 {
+						self.plugins.plugins_selected_idx =
+							(self.plugins.plugins_selected_idx + 1) % num_entries;
+					}
+				}
+				TmKeyCode::Char('k') | TmKeyCode::Up => {
+					let num_entries = self.plugins.entries.len();
+					if num_entries > 0 {
+						self.plugins.plugins_selected_idx = self
+							.plugins
+							.plugins_selected_idx
+							.checked_sub(1)
+							.unwrap_or(num_entries - 1);
+					}
+				}
+				TmKeyCode::Char(' ') | TmKeyCode::Enter => {
+					let mut sorted_ids: Vec<_> = self.plugins.entries.keys().cloned().collect();
+					sorted_ids.sort();
+					if let Some(id) = sorted_ids.get(self.plugins.plugins_selected_idx) {
+						let id = id.clone();
+						let enabled = self.plugins.config.plugins.enabled.contains(&id);
+						if enabled {
+							let _ = self.plugin_command(&["disable", &id]);
+						} else {
+							let _ = self.plugin_command(&["enable", &id]);
+						}
+					}
+				}
+				TmKeyCode::Char('r') => {
+					let mut sorted_ids: Vec<_> = self.plugins.entries.keys().cloned().collect();
+					sorted_ids.sort();
+					if let Some(id) = sorted_ids.get(self.plugins.plugins_selected_idx) {
+						let id = id.clone();
+						let _ = self.plugin_command(&["reload", &id]);
+					}
+				}
+				TmKeyCode::Escape | TmKeyCode::Char('q') => {
+					self.plugins.plugins_open = false;
+					self.plugins.plugins_focused = false;
+				}
+				_ => {}
+			}
 			return false;
 		}
 
@@ -1370,15 +1437,15 @@ impl ext::EditorOps for Editor {
 			.ok_or_else(|| format!("No pending permission request with ID {}", request_id))?;
 
 		let pending = self.pending_permissions.remove(pos);
-		let plugin_idx = pending.plugin_idx;
+		let plugin_id = pending.plugin_id;
 
-		if let Some(plugin) = self.plugins.plugins.get(plugin_idx)
+		if let Some(plugin) = self.plugins.plugins.get(&plugin_id)
 			&& let Some(on_decision) = plugin.guest.on_permission_decision
 		{
 			use crate::plugins::manager::PluginContextGuard;
 			let ed_ptr = self as *mut Editor;
 			let mgr_ptr = unsafe { &mut (*ed_ptr).plugins as *mut _ };
-			let _guard = unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, plugin_idx) };
+			let _guard = unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, &plugin_id) };
 			let option_tome = tome_cabi_types::TomeStr {
 				ptr: option_id.as_ptr(),
 				len: option_id.len(),
@@ -1389,8 +1456,58 @@ impl ext::EditorOps for Editor {
 
 		Err(format!(
 			"Plugin {} does not support permission decisions",
-			plugin_idx
+			plugin_id
 		))
+	}
+
+	fn plugin_command(&mut self, args: &[&str]) -> Result<(), String> {
+		if args.is_empty() {
+			self.plugins.plugins_open = !self.plugins.plugins_open;
+			self.plugins.plugins_focused = self.plugins.plugins_open;
+			return Ok(());
+		}
+
+		match args[0] {
+			"enable" => {
+				if args.len() < 2 {
+					return Err("Usage: :plugins enable <id>".to_string());
+				}
+				let id = args[1];
+				if !self
+					.plugins
+					.config
+					.plugins
+					.enabled
+					.contains(&id.to_string())
+				{
+					self.plugins.config.plugins.enabled.push(id.to_string());
+					self.save_plugin_config();
+				}
+				let mgr_ptr = &mut self.plugins as *mut PluginManager;
+				unsafe { (*mgr_ptr).load(self, id)? };
+				Ok(())
+			}
+			"disable" => {
+				if args.len() < 2 {
+					return Err("Usage: :plugins disable <id>".to_string());
+				}
+				let id = args[1];
+				self.plugins.config.plugins.enabled.retain(|e| e != id);
+				self.save_plugin_config();
+				self.show_message(format!("Plugin {} disabled. Restart to unload fully.", id));
+				Ok(())
+			}
+			"reload" => {
+				if args.len() < 2 {
+					return Err("Usage: :plugins reload <id>".to_string());
+				}
+				let id = args[1];
+				let mgr_ptr = &mut self.plugins as *mut PluginManager;
+				unsafe { (*mgr_ptr).load(self, id)? };
+				Ok(())
+			}
+			_ => Err(format!("Unknown plugin command: {}", args[0])),
+		}
 	}
 
 	fn set_theme(&mut self, theme_name: &str) -> Result<(), String> {

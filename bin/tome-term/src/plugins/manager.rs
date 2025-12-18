@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use libloading::{Library, Symbol};
+use serde::{Deserialize, Serialize};
 use tome_cabi_types::{
 	TOME_C_ABI_VERSION_V2, TomeBool, TomeChatRole, TomeCommandContextV1, TomeCommandSpecV1,
 	TomeGuestV2, TomeHostPanelApiV1, TomeHostV2, TomeMessageKind, TomeOwnedStr, TomePanelId,
@@ -16,6 +16,45 @@ use crate::editor::Editor;
 thread_local! {
 	pub(crate) static ACTIVE_MANAGER: RefCell<Option<*mut PluginManager>> = const { RefCell::new(None) };
 	pub(crate) static ACTIVE_EDITOR: RefCell<Option<*mut Editor>> = const { RefCell::new(None) };
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PluginManifest {
+	pub id: String,
+	pub name: String,
+	pub version: String,
+	pub abi: u32,
+	pub library_path: Option<String>,
+	pub dev_library_path: Option<String>,
+	pub description: Option<String>,
+	pub homepage: Option<String>,
+	pub permissions: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PluginStatus {
+	Installed,
+	Loaded,
+	Failed(String),
+	Disabled,
+}
+
+pub struct PluginEntry {
+	pub manifest: PluginManifest,
+	pub path: PathBuf, // directory containing plugin.toml
+	pub status: PluginStatus,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+pub struct TomeConfig {
+	pub plugins: PluginsConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+pub struct PluginsConfig {
+	#[serde(default)]
+	pub autoload: bool,
+	pub enabled: Vec<String>,
 }
 
 const HOST_PANEL_API_V1: TomeHostPanelApiV1 = TomeHostPanelApiV1 {
@@ -44,7 +83,7 @@ pub(crate) static HOST_V2: TomeHostV2 = TomeHostV2 {
 };
 
 pub struct PendingPermission {
-	pub plugin_idx: usize,
+	pub plugin_id: String,
 	pub request_id: u64,
 	pub _prompt: String,
 	pub _options: Vec<(String, String)>, // id, label
@@ -54,9 +93,7 @@ pub struct LoadedPlugin {
 	#[allow(dead_code)]
 	pub lib: Library,
 	pub guest: TomeGuestV2,
-	#[allow(dead_code)]
-	pub path: PathBuf,
-	pub plugin_idx: usize,
+	pub id: String,
 }
 
 impl Drop for LoadedPlugin {
@@ -65,8 +102,7 @@ impl Drop for LoadedPlugin {
 			ACTIVE_MANAGER.with(|mgr_ctx| {
 				ACTIVE_EDITOR.with(|ed_ctx| {
 					if let (Some(mgr_ptr), Some(ed_ptr)) = (*mgr_ctx.borrow(), *ed_ctx.borrow()) {
-						let _guard =
-							unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, self.plugin_idx) };
+						let _guard = unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, &self.id) };
 						shutdown();
 					} else {
 						// Fallback if context is missing - but we should ensure it's set.
@@ -79,7 +115,7 @@ impl Drop for LoadedPlugin {
 }
 
 pub struct PluginCommand {
-	pub plugin_idx: usize,
+	pub plugin_id: String,
 	#[allow(dead_code)]
 	pub namespace: String,
 	#[allow(dead_code)]
@@ -90,29 +126,95 @@ pub struct PluginCommand {
 }
 
 pub struct PluginManager {
-	pub plugins: Vec<LoadedPlugin>,
+	pub plugins: HashMap<String, LoadedPlugin>,
+	pub entries: HashMap<String, PluginEntry>,
+	pub config: TomeConfig,
 	pub commands: HashMap<String, PluginCommand>,
 	pub panels: HashMap<u64, ChatPanelState>,
-	pub panel_owners: HashMap<u64, usize>, // panel_id -> plugin_idx
+	pub panel_owners: HashMap<u64, String>, // panel_id -> plugin_id
 	next_panel_id: u64,
 	current_namespace: Option<String>,
-	pub(crate) current_plugin_idx: Option<usize>,
+	pub(crate) current_plugin_id: Option<String>,
+
+	pub plugins_open: bool,
+	pub plugins_focused: bool,
+	pub plugins_selected_idx: usize,
 }
 
 impl PluginManager {
 	pub fn new() -> Self {
 		Self {
-			plugins: Vec::new(),
+			plugins: HashMap::new(),
+			entries: HashMap::new(),
+			config: TomeConfig::default(),
 			commands: HashMap::new(),
 			panels: HashMap::new(),
 			panel_owners: HashMap::new(),
 			next_panel_id: 1,
 			current_namespace: None,
-			current_plugin_idx: None,
+			current_plugin_id: None,
+			plugins_open: false,
+			plugins_focused: false,
+			plugins_selected_idx: 0,
 		}
 	}
 
-	pub fn load(&mut self, ed: &mut Editor, path: &Path) -> Result<(), String> {
+	pub fn load(&mut self, ed: &mut Editor, id: &str) -> Result<(), String> {
+		let lib_path = {
+			let entry = self
+				.entries
+				.get(id)
+				.ok_or_else(|| format!("Plugin {} not found", id))?;
+
+			if entry.manifest.abi != TOME_C_ABI_VERSION_V2 {
+				return Err(format!(
+					"Incompatible ABI version in manifest: host={}, plugin={}",
+					TOME_C_ABI_VERSION_V2, entry.manifest.abi
+				));
+			}
+
+			if let Some(dev_path) = &entry.manifest.dev_library_path {
+				PathBuf::from(dev_path)
+			} else if let Some(rel_path) = &entry.manifest.library_path {
+				entry.path.join(rel_path)
+			} else {
+				return Err(format!("Plugin {} has no library_path", id));
+			}
+		};
+
+		if !lib_path.exists() {
+			return Err(format!("Library not found at {:?}", lib_path));
+		}
+
+		// Unload if already loaded. We MUST set context before removing from HashMap to ensure clean shutdown.
+		if self.plugins.contains_key(id) {
+			let mgr_ptr = self as *mut PluginManager;
+			let ed_ptr = ed as *mut Editor;
+			unsafe {
+				let _guard = PluginContextGuard::new(mgr_ptr, ed_ptr, id);
+				self.plugins.remove(id);
+			}
+			// Also remove commands from this plugin
+			self.commands.retain(|_, cmd| cmd.plugin_id != id);
+		}
+
+		match self.load_at_path(ed, &lib_path, id) {
+			Ok(()) => {
+				if let Some(entry) = self.entries.get_mut(id) {
+					entry.status = PluginStatus::Loaded;
+				}
+				Ok(())
+			}
+			Err(e) => {
+				if let Some(entry) = self.entries.get_mut(id) {
+					entry.status = PluginStatus::Failed(e.clone());
+				}
+				Err(e)
+			}
+		}
+	}
+
+	fn load_at_path(&mut self, ed: &mut Editor, path: &Path, id: &str) -> Result<(), String> {
 		let lib =
 			unsafe { Library::new(path) }.map_err(|e| format!("Failed to load library: {}", e))?;
 
@@ -123,19 +225,18 @@ impl PluginManager {
 
 		let mut guest = unsafe { std::mem::zeroed::<TomeGuestV2>() };
 
-		let plugin_idx = self.plugins.len();
-		self.current_plugin_idx = Some(plugin_idx);
+		self.current_plugin_id = Some(id.to_string());
 
 		let mgr_ptr = self as *mut PluginManager;
 		let ed_ptr = ed as *mut Editor;
 
 		let status = unsafe {
-			let _guard = PluginContextGuard::new(mgr_ptr, ed_ptr, plugin_idx);
+			let _guard = PluginContextGuard::new(mgr_ptr, ed_ptr, id);
 			entry(&HOST_V2, &mut guest)
 		};
 
 		if status != TomeStatus::Ok {
-			self.current_plugin_idx = None;
+			self.current_plugin_id = None;
 			return Err(format!("Plugin entry failed with status {:?}", status));
 		}
 
@@ -152,32 +253,130 @@ impl PluginManager {
 		// Call init
 		if let Some(init) = guest.init {
 			let status = unsafe {
-				let _guard = PluginContextGuard::new(mgr_ptr, ed_ptr, plugin_idx);
+				let _guard = PluginContextGuard::new(mgr_ptr, ed_ptr, id);
 				init(&HOST_V2)
 			};
 			if status != TomeStatus::Ok {
 				self.current_namespace = None;
-				self.current_plugin_idx = None;
+				self.current_plugin_id = None;
 				return Err(format!("Plugin init failed with status {:?}", status));
 			}
 		}
 
-		self.plugins.push(LoadedPlugin {
-			lib,
-			guest,
-			path: path.to_path_buf(),
-			plugin_idx,
-		});
+		self.plugins.insert(
+			id.to_string(),
+			LoadedPlugin {
+				lib,
+				guest,
+				id: id.to_string(),
+			},
+		);
 
 		self.current_namespace = None;
-		self.current_plugin_idx = None;
+		self.current_plugin_id = None;
 
 		Ok(())
 	}
 
+	pub fn discover_plugins(&mut self) {
+		let dirs = vec![
+			std::env::var("TOME_PLUGIN_DIR").ok().map(PathBuf::from),
+			home::home_dir().map(|h| h.join(".config/tome/plugins")),
+		];
+
+		for dir in dirs.into_iter().flatten() {
+			if !dir.exists() {
+				continue;
+			}
+			if let Ok(entries) = std::fs::read_dir(dir) {
+				for entry in entries.flatten() {
+					let path = entry.path();
+					if path.is_dir() {
+						let manifest_path = path.join("plugin.toml");
+						if manifest_path.exists()
+							&& let Ok(content) = std::fs::read_to_string(&manifest_path)
+							&& let Ok(manifest) = toml::from_str::<PluginManifest>(&content)
+						{
+							self.entries.insert(
+								manifest.id.clone(),
+								PluginEntry {
+									manifest,
+									path: path.clone(),
+									status: PluginStatus::Installed,
+								},
+							);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	pub fn load_config(&mut self) {
+		let config_path = home::home_dir().map(|h| h.join(".config/tome/config.toml"));
+		if let Some(path) = config_path
+			&& path.exists()
+			&& let Ok(content) = std::fs::read_to_string(path)
+			&& let Ok(config) = toml::from_str::<TomeConfig>(&content)
+		{
+			self.config = config;
+		}
+	}
+
+	pub fn save_config(&mut self) {
+		let config_dir = home::home_dir().map(|h| h.join(".config/tome"));
+		if let Some(dir) = config_dir {
+			if !dir.exists() {
+				if let Err(e) = std::fs::create_dir_all(&dir) {
+					eprintln!("Failed to create config directory {:?}: {}", dir, e);
+					return;
+				}
+			}
+			let path = dir.join("config.toml");
+			match toml::to_string(&self.config) {
+				Ok(content) => {
+					if let Err(e) = std::fs::write(&path, content) {
+						eprintln!("Failed to write config file {:?}: {}", path, e);
+					}
+				}
+				Err(e) => {
+					eprintln!("Failed to serialize config: {}", e);
+				}
+			}
+		}
+	}
+
+	pub fn autoload(&mut self, ed: &mut Editor) {
+		self.discover_plugins();
+		self.load_config();
+
+		if !self.config.plugins.autoload {
+			if !self.config.plugins.enabled.is_empty() {
+				eprintln!(
+					"Tome plugin autoloading is disabled (plugins.autoload = false in config.toml)."
+				);
+			}
+			return;
+		}
+
+		// Update status for disabled plugins
+		for (id, entry) in &mut self.entries {
+			if !self.config.plugins.enabled.contains(id) {
+				entry.status = PluginStatus::Disabled;
+			}
+		}
+
+		let enabled = self.config.plugins.enabled.clone();
+		for id in enabled {
+			if let Err(e) = self.load(ed, &id) {
+				eprintln!("Failed to load plugin {}: {}", id, e);
+			}
+		}
+	}
+
 	pub fn register_command(&mut self, spec: TomeCommandSpecV1) {
-		let (namespace, plugin_idx) = match (&self.current_namespace, self.current_plugin_idx) {
-			(Some(ns), Some(idx)) => (ns.clone(), idx),
+		let (namespace, plugin_id) = match (&self.current_namespace, &self.current_plugin_id) {
+			(Some(ns), Some(id)) => (ns.clone(), id.clone()),
 			_ => {
 				eprintln!("Warning: register_command called outside of plugin init");
 				return;
@@ -195,7 +394,7 @@ impl PluginManager {
 				}
 				Entry::Vacant(ve) => {
 					ve.insert(PluginCommand {
-						plugin_idx,
+						plugin_id: plugin_id.clone(),
 						namespace: namespace.clone(),
 						name,
 						handler,
@@ -217,7 +416,7 @@ impl PluginManager {
 						}
 						Entry::Vacant(ve) => {
 							ve.insert(PluginCommand {
-								plugin_idx,
+								plugin_id: plugin_id.clone(),
 								namespace: namespace.clone(),
 								name: alias_name,
 								handler,
@@ -229,60 +428,26 @@ impl PluginManager {
 			}
 		}
 	}
-
-	pub fn autoload(&mut self, ed: &mut Editor) {
-		let allow = std::env::var("TOME_ALLOW_AUTOLOAD").unwrap_or_default();
-		if allow != "1" {
-			if !allow.is_empty() {
-				eprintln!(
-					"Tome plugin autoloading is disabled (TOME_ALLOW_AUTOLOAD={}). Set to 1 to enable.",
-					allow
-				);
-			}
-			return;
-		}
-
-		let dirs = vec![
-			std::env::var("TOME_PLUGIN_DIR").ok().map(PathBuf::from),
-			home::home_dir().map(|h| h.join(".config/tome/plugins")),
-		];
-
-		for dir in dirs.into_iter().flatten() {
-			if !dir.exists() {
-				continue;
-			}
-			if let Ok(entries) = std::fs::read_dir(dir) {
-				for entry in entries.flatten() {
-					let path = entry.path();
-					if is_dynamic_lib(&path)
-						&& let Err(e) = self.load(ed, &path)
-					{
-						eprintln!("Failed to load plugin {:?}: {}", path, e);
-					}
-				}
-			}
-		}
-	}
 }
 
 pub struct PluginContextGuard {
 	old_mgr: Option<*mut PluginManager>,
 	old_ed: Option<*mut Editor>,
-	old_plugin_idx: Option<usize>,
+	old_plugin_id: Option<String>,
 	mgr_ptr: *mut PluginManager,
 }
 
 impl PluginContextGuard {
-	pub unsafe fn new(mgr_ptr: *mut PluginManager, ed_ptr: *mut Editor, plugin_idx: usize) -> Self {
+	pub unsafe fn new(mgr_ptr: *mut PluginManager, ed_ptr: *mut Editor, plugin_id: &str) -> Self {
 		let old_mgr = ACTIVE_MANAGER.with(|ctx| ctx.replace(Some(mgr_ptr)));
 		let old_ed = ACTIVE_EDITOR.with(|ctx| ctx.replace(Some(ed_ptr)));
-		let (old_plugin_idx, mgr_ptr_ref) =
-			unsafe { ((*mgr_ptr).current_plugin_idx, &mut *mgr_ptr) };
-		mgr_ptr_ref.current_plugin_idx = Some(plugin_idx);
+		let (old_plugin_id, mgr_ptr_ref) =
+			unsafe { ((*mgr_ptr).current_plugin_id.clone(), &mut *mgr_ptr) };
+		mgr_ptr_ref.current_plugin_id = Some(plugin_id.to_string());
 		Self {
 			old_mgr,
 			old_ed,
-			old_plugin_idx,
+			old_plugin_id,
 			mgr_ptr,
 		}
 	}
@@ -293,14 +458,9 @@ impl Drop for PluginContextGuard {
 		ACTIVE_MANAGER.with(|ctx| ctx.replace(self.old_mgr));
 		ACTIVE_EDITOR.with(|ctx| ctx.replace(self.old_ed));
 		unsafe {
-			(*self.mgr_ptr).current_plugin_idx = self.old_plugin_idx;
+			(*self.mgr_ptr).current_plugin_id = self.old_plugin_id.take();
 		}
 	}
-}
-
-pub fn is_dynamic_lib(path: &Path) -> bool {
-	let ext = path.extension().and_then(OsStr::to_str);
-	matches!(ext, Some("so") | Some("dylib") | Some("dll"))
 }
 
 pub fn tome_str_to_str(ts: &TomeStr) -> &str {
@@ -342,8 +502,8 @@ pub(crate) extern "C" fn host_panel_create(kind: TomePanelKind, title: TomeStr) 
 			let id = mgr.next_panel_id;
 			mgr.next_panel_id += 1;
 
-			if let Some(plugin_idx) = mgr.current_plugin_idx {
-				mgr.panel_owners.insert(id, plugin_idx);
+			if let Some(plugin_id) = &mgr.current_plugin_id {
+				mgr.panel_owners.insert(id, plugin_id.clone());
 			}
 
 			let title_str = tome_str_to_str(&title).to_string();
@@ -363,7 +523,7 @@ pub(crate) extern "C" fn host_panel_set_open(id: TomePanelId, open: TomeBool) {
 	ACTIVE_MANAGER.with(|ctx| {
 		if let Some(mgr_ptr) = *ctx.borrow() {
 			let mgr = unsafe { &mut *mgr_ptr };
-			if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref()
+			if mgr.panel_owners.get(&id) == mgr.current_plugin_id.as_ref()
 				&& let Some(panel) = mgr.panels.get_mut(&id)
 			{
 				panel.open = open.0 != 0;
@@ -383,7 +543,7 @@ pub(crate) extern "C" fn host_panel_set_focused(id: TomePanelId, focused: TomeBo
 	ACTIVE_MANAGER.with(|ctx| {
 		if let Some(mgr_ptr) = *ctx.borrow() {
 			let mgr = unsafe { &mut *mgr_ptr };
-			if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref()
+			if mgr.panel_owners.get(&id) == mgr.current_plugin_id.as_ref()
 				&& let Some(panel) = mgr.panels.get_mut(&id)
 			{
 				panel.focused = focused.0 != 0;
@@ -407,7 +567,7 @@ pub(crate) extern "C" fn host_panel_append_transcript(
 	ACTIVE_MANAGER.with(|ctx| {
 		if let Some(mgr_ptr) = *ctx.borrow() {
 			let mgr = unsafe { &mut *mgr_ptr };
-			if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref()
+			if mgr.panel_owners.get(&id) == mgr.current_plugin_id.as_ref()
 				&& let Some(panel) = mgr.panels.get_mut(&id)
 			{
 				panel.transcript.push(ChatItem {
