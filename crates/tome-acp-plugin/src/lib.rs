@@ -48,6 +48,10 @@ enum AgentCommand {
 }
 
 #[unsafe(no_mangle)]
+/// # Safety
+/// - `host` must be a valid pointer to a live `TomeHostV2` provided by the Tome host.
+/// - `out_guest` must be a valid pointer to writable storage for a `TomeGuestV2`.
+/// - Both pointers must remain valid for the duration of this call.
 pub unsafe extern "C" fn tome_plugin_entry_v2(
     host: *const TomeHostV2,
     out_guest: *mut TomeGuestV2,
@@ -151,6 +155,16 @@ extern "C" fn plugin_init(host: *const TomeHostV2) -> TomeStatus {
             handler: Some(command_insert_last),
             user_data: std::ptr::null_mut(),
         });
+        reg(TomeCommandSpecV1 {
+            name: tome_str("cancel"),
+            aliases: TomeStrArray {
+                ptr: std::ptr::null(),
+                len: 0,
+            },
+            description: tome_str("Cancel the in-flight request"),
+            handler: Some(command_cancel),
+            user_data: std::ptr::null_mut(),
+        });
     }
 
     TomeStatus::Ok
@@ -176,10 +190,13 @@ extern "C" fn plugin_poll_event(out: *mut TomePluginEventV1) -> TomeBool {
 }
 
 extern "C" fn plugin_free_str(s: TomeOwnedStr) {
-    if !s.ptr.is_null() {
-        unsafe {
-            let _ = Vec::from_raw_parts(s.ptr, s.len, s.len);
-        }
+    if s.ptr.is_null() {
+        return;
+    }
+
+    unsafe {
+        let slice = std::ptr::slice_from_raw_parts_mut(s.ptr, s.len);
+        drop(Box::from_raw(slice));
     }
 }
 
@@ -194,10 +211,27 @@ extern "C" fn plugin_on_panel_submit(id: TomePanelId, text: TomeStr) {
     }
 }
 
-extern "C" fn command_start(_ctx: *mut TomeCommandContextV1) -> TomeStatus {
+extern "C" fn command_start(ctx: *mut TomeCommandContextV1) -> TomeStatus {
     let plugin_guard = PLUGIN.lock();
     if let Some(plugin) = plugin_guard.as_ref() {
-        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let host = unsafe { &*(*ctx).host };
+        let mut cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+
+        if let (Some(get_path), Some(free_str)) = (host.get_current_path, host.free_str) {
+            let mut owned_str = unsafe { std::mem::zeroed::<TomeOwnedStr>() };
+            if get_path(&mut owned_str) == TomeStatus::Ok {
+                let path_str = tome_owned_to_string(owned_str);
+                free_str(owned_str);
+
+                if let Some(path_str) = path_str {
+                    let path = PathBuf::from(path_str);
+                    if let Some(parent) = path.parent() {
+                        cwd = parent.to_path_buf();
+                    }
+                }
+            }
+        }
+
         let _ = plugin.cmd_tx.try_send(AgentCommand::Start { cwd });
         TomeStatus::Ok
     } else {
@@ -251,6 +285,16 @@ extern "C" fn command_insert_last(ctx: *mut TomeCommandContextV1) -> TomeStatus 
         } else {
             TomeStatus::Failed
         }
+    } else {
+        TomeStatus::Failed
+    }
+}
+
+extern "C" fn command_cancel(_ctx: *mut TomeCommandContextV1) -> TomeStatus {
+    let plugin_guard = PLUGIN.lock();
+    if let Some(plugin) = plugin_guard.as_ref() {
+        let _ = plugin.cmd_tx.try_send(AgentCommand::Cancel);
+        TomeStatus::Ok
     } else {
         TomeStatus::Failed
     }
@@ -410,6 +454,7 @@ struct PluginMessageHandler {
 }
 
 impl MessageHandler<ClientSide> for PluginMessageHandler {
+    #[allow(clippy::manual_async_fn)]
     fn handle_request(
         &self,
         request: AgentRequest,
@@ -451,11 +496,8 @@ impl MessageHandler<ClientSide> for PluginMessageHandler {
         let panel_id = self.panel_id.clone();
         let last_text = self.last_assistant_text.clone();
         async move {
-            match notification {
-                AgentNotification::SessionNotification(sn) => {
-                    handle_session_update(sn.update, events, panel_id, last_text);
-                }
-                _ => {}
+            if let AgentNotification::SessionNotification(sn) = notification {
+                handle_session_update(sn.update, events, panel_id, last_text);
             }
             Ok(())
         }
@@ -527,10 +569,20 @@ fn tome_str_to_string(ts: TomeStr) -> String {
     }
 }
 
+fn tome_owned_to_string(tos: TomeOwnedStr) -> Option<String> {
+    if tos.ptr.is_null() {
+        return None;
+    }
+
+    unsafe {
+        let slice = std::slice::from_raw_parts(tos.ptr, tos.len);
+        Some(String::from_utf8_lossy(slice).into_owned())
+    }
+}
+
 fn string_to_tome_owned(s: String) -> TomeOwnedStr {
-    let mut b = s.into_bytes();
-    let ptr = b.as_mut_ptr();
-    let len = b.len();
-    std::mem::forget(b);
+    let bytes = s.into_bytes().into_boxed_slice();
+    let len = bytes.len();
+    let ptr = Box::into_raw(bytes) as *mut u8;
     TomeOwnedStr { ptr, len }
 }

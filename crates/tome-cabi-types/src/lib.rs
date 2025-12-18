@@ -146,6 +146,8 @@ pub struct TomeHostV2 {
     pub show_message: extern "C" fn(kind: TomeMessageKind, msg: TomeStr),
     pub insert_text: extern "C" fn(text: TomeStr),
     pub register_command: Option<extern "C" fn(spec: TomeCommandSpecV1)>,
+    pub get_current_path: Option<extern "C" fn(out: *mut TomeOwnedStr) -> TomeStatus>,
+    pub free_str: Option<extern "C" fn(s: TomeOwnedStr)>,
     pub fs_read_text: Option<extern "C" fn(path: TomeStr, out: *mut TomeOwnedStr) -> TomeStatus>,
     pub fs_write_text: Option<extern "C" fn(path: TomeStr, content: TomeStr) -> TomeStatus>,
 }

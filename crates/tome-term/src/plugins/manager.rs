@@ -13,21 +13,26 @@ use tome_cabi_types::{
 };
 
 thread_local! {
-    pub(crate) static ACTIVE_MANAGER: RefCell<Option<*mut PluginManager>> = RefCell::new(None);
-    pub(crate) static ACTIVE_EDITOR: RefCell<Option<*mut Editor>> = RefCell::new(None);
+    pub(crate) static ACTIVE_MANAGER: RefCell<Option<*mut PluginManager>> = const { RefCell::new(None) };
+    pub(crate) static ACTIVE_EDITOR: RefCell<Option<*mut Editor>> = const { RefCell::new(None) };
 }
 
 pub struct LoadedPlugin {
+    #[allow(dead_code)]
     pub lib: Library,
     pub guest: TomeGuestV2,
+    #[allow(dead_code)]
     pub path: PathBuf,
 }
 
 pub struct PluginCommand {
     pub plugin_idx: usize,
+    #[allow(dead_code)]
     pub namespace: String,
+    #[allow(dead_code)]
     pub name: String,
     pub handler: extern "C" fn(ctx: *mut TomeCommandContextV1) -> TomeStatus,
+    #[allow(dead_code)]
     pub user_data: *mut core::ffi::c_void,
 }
 
@@ -76,6 +81,8 @@ impl PluginManager {
             show_message: host_show_message,
             insert_text: host_insert_text,
             register_command: Some(host_register_command),
+            get_current_path: Some(host_get_current_path),
+            free_str: Some(host_free_str),
             fs_read_text: None,
             fs_write_text: None,
         };
@@ -187,10 +194,10 @@ impl PluginManager {
             if let Ok(entries) = std::fs::read_dir(dir) {
                 for entry in entries.flatten() {
                     let path = entry.path();
-                    if is_dynamic_lib(&path) {
-                        if let Err(e) = self.load(&path) {
-                            eprintln!("Failed to load plugin {:?}: {}", path, e);
-                        }
+                    if is_dynamic_lib(&path)
+                        && let Err(e) = self.load(&path)
+                    {
+                        eprintln!("Failed to load plugin {:?}: {}", path, e);
                     }
                 }
             }
@@ -200,10 +207,7 @@ impl PluginManager {
 
 fn is_dynamic_lib(path: &Path) -> bool {
     let ext = path.extension().and_then(OsStr::to_str);
-    match ext {
-        Some("so") | Some("dylib") | Some("dll") => true,
-        _ => false,
-    }
+    matches!(ext, Some("so") | Some("dylib") | Some("dll"))
 }
 
 pub fn tome_str_to_str<'a>(ts: TomeStr) -> &'a str {
@@ -261,10 +265,10 @@ pub(crate) extern "C" fn host_panel_set_open(id: TomePanelId, open: TomeBool) {
     ACTIVE_MANAGER.with(|ctx| {
         if let Some(mgr_ptr) = *ctx.borrow() {
             let mgr = unsafe { &mut *mgr_ptr };
-            if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref() {
-                if let Some(panel) = mgr.panels.get_mut(&id) {
-                    panel.open = open.0 != 0;
-                }
+            if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref()
+                && let Some(panel) = mgr.panels.get_mut(&id)
+            {
+                panel.open = open.0 != 0;
             }
         }
     })
@@ -274,14 +278,14 @@ pub(crate) extern "C" fn host_panel_set_focused(id: TomePanelId, focused: TomeBo
     ACTIVE_MANAGER.with(|ctx| {
         if let Some(mgr_ptr) = *ctx.borrow() {
             let mgr = unsafe { &mut *mgr_ptr };
-            if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref() {
-                if let Some(panel) = mgr.panels.get_mut(&id) {
-                    panel.focused = focused.0 != 0;
-                    if panel.focused {
-                        for (pid, p) in &mut mgr.panels {
-                            if *pid != id {
-                                p.focused = false;
-                            }
+            if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref()
+                && let Some(panel) = mgr.panels.get_mut(&id)
+            {
+                panel.focused = focused.0 != 0;
+                if panel.focused {
+                    for (pid, p) in &mut mgr.panels {
+                        if *pid != id {
+                            p.focused = false;
                         }
                     }
                 }
@@ -298,13 +302,13 @@ pub(crate) extern "C" fn host_panel_append_transcript(
     ACTIVE_MANAGER.with(|ctx| {
         if let Some(mgr_ptr) = *ctx.borrow() {
             let mgr = unsafe { &mut *mgr_ptr };
-            if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref() {
-                if let Some(panel) = mgr.panels.get_mut(&id) {
-                    panel.transcript.push(ChatItem {
-                        role,
-                        text: tome_str_to_str(text).to_string(),
-                    });
-                }
+            if mgr.panel_owners.get(&id) == mgr.current_plugin_idx.as_ref()
+                && let Some(panel) = mgr.panels.get_mut(&id)
+            {
+                panel.transcript.push(ChatItem {
+                    role,
+                    text: tome_str_to_str(text).to_string(),
+                });
             }
         }
     })
@@ -333,6 +337,50 @@ pub(crate) extern "C" fn host_insert_text(text: TomeStr) {
             ed.insert_text(s);
         }
     })
+}
+
+pub(crate) extern "C" fn host_get_current_path(out: *mut TomeOwnedStr) -> TomeStatus {
+    ACTIVE_EDITOR.with(|ctx| {
+        if let Some(ed_ptr) = *ctx.borrow() {
+            let ed = unsafe { &*ed_ptr };
+
+            // The editor swaps `path` and `scratch.path` while executing in scratch context.
+            // Prefer the "real" file path when possible.
+            let path = if ed.in_scratch_context() {
+                ed.scratch.path.as_ref().or(ed.path.as_ref())
+            } else {
+                ed.path.as_ref().or(ed.scratch.path.as_ref())
+            };
+
+            if let Some(path) = path {
+                let s = path.to_string_lossy().to_string();
+                unsafe { *out = string_to_tome_owned(s) };
+                TomeStatus::Ok
+            } else {
+                TomeStatus::Failed
+            }
+        } else {
+            TomeStatus::Failed
+        }
+    })
+}
+
+pub(crate) extern "C" fn host_free_str(s: TomeOwnedStr) {
+    if s.ptr.is_null() {
+        return;
+    }
+
+    unsafe {
+        let slice = std::ptr::slice_from_raw_parts_mut(s.ptr, s.len);
+        drop(Box::from_raw(slice));
+    }
+}
+
+fn string_to_tome_owned(s: String) -> TomeOwnedStr {
+    let bytes = s.into_bytes().into_boxed_slice();
+    let len = bytes.len();
+    let ptr = Box::into_raw(bytes) as *mut u8;
+    TomeOwnedStr { ptr, len }
 }
 
 pub(crate) extern "C" fn host_register_command(spec: TomeCommandSpecV1) {

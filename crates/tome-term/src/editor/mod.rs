@@ -350,14 +350,12 @@ impl Editor {
                 self.terminal_focused = false;
                 self.terminal_focus_pending = false;
                 self.terminal_input_buffer.clear();
+            } else if self.terminal.is_some() {
+                self.terminal_focused = true;
+                self.terminal_focus_pending = false;
             } else {
-                if self.terminal.is_some() {
-                    self.terminal_focused = true;
-                    self.terminal_focus_pending = false;
-                } else {
-                    self.start_terminal_prewarm();
-                    self.terminal_focus_pending = true;
-                }
+                self.start_terminal_prewarm();
+                self.terminal_focus_pending = true;
             }
             return;
         }
@@ -406,12 +404,11 @@ impl Editor {
                 len: text.len(),
             };
 
-            if let Some(owner_idx) = self.plugins.panel_owners.get(&id) {
-                if let Some(plugin) = self.plugins.plugins.get(*owner_idx) {
-                    if let Some(on_submit) = plugin.guest.on_panel_submit {
-                        on_submit(id, text_tome);
-                    }
-                }
+            if let Some(owner_idx) = self.plugins.panel_owners.get(&id)
+                && let Some(plugin) = self.plugins.plugins.get(*owner_idx)
+                && let Some(on_submit) = plugin.guest.on_panel_submit
+            {
+                on_submit(id, text_tome);
             }
         }
     }
@@ -419,8 +416,8 @@ impl Editor {
     pub fn try_execute_plugin_command(&mut self, full_name: &str, args: &[&str]) -> bool {
         use crate::plugins::PluginManager;
         use crate::plugins::manager::{
-            ACTIVE_EDITOR, ACTIVE_MANAGER, host_insert_text, host_log,
-            host_panel_append_transcript, host_panel_create, host_panel_set_focused,
+            ACTIVE_EDITOR, ACTIVE_MANAGER, host_free_str, host_get_current_path, host_insert_text,
+            host_log, host_panel_append_transcript, host_panel_create, host_panel_set_focused,
             host_panel_set_open, host_register_command, host_request_redraw, host_show_message,
         };
         use tome_cabi_types::{
@@ -457,6 +454,8 @@ impl Editor {
             show_message: host_show_message,
             insert_text: host_insert_text,
             register_command: Some(host_register_command),
+            get_current_path: Some(host_get_current_path),
+            free_str: Some(host_free_str),
             fs_read_text: None,
             fs_write_text: None,
         };
@@ -521,22 +520,21 @@ impl Editor {
 
         match event.kind {
             TomePluginEventKind::PanelAppend => {
-                if self.plugins.panel_owners.get(&event.panel_id) == Some(&plugin_idx) {
-                    if let Some(panel) = self.plugins.panels.get_mut(&event.panel_id) {
-                        if let Some(text) = tome_owned_to_string(event.text) {
-                            panel.transcript.push(ChatItem {
-                                role: event.role,
-                                text,
-                            });
-                        }
-                    }
+                if self.plugins.panel_owners.get(&event.panel_id) == Some(&plugin_idx)
+                    && let Some(panel) = self.plugins.panels.get_mut(&event.panel_id)
+                    && let Some(text) = tome_owned_to_string(event.text)
+                {
+                    panel.transcript.push(ChatItem {
+                        role: event.role,
+                        text,
+                    });
                 }
             }
             TomePluginEventKind::PanelSetOpen => {
-                if self.plugins.panel_owners.get(&event.panel_id) == Some(&plugin_idx) {
-                    if let Some(panel) = self.plugins.panels.get_mut(&event.panel_id) {
-                        panel.open = event.bool_val.0 != 0;
-                    }
+                if self.plugins.panel_owners.get(&event.panel_id) == Some(&plugin_idx)
+                    && let Some(panel) = self.plugins.panels.get_mut(&event.panel_id)
+                {
+                    panel.open = event.bool_val.0 != 0;
                 }
             }
             TomePluginEventKind::ShowMessage => {
@@ -782,7 +780,7 @@ impl Editor {
                 TmKeyCode::Char(c) => {
                     if key.modifiers.contains(TmModifiers::CONTROL) {
                         let byte = c.to_ascii_lowercase() as u8;
-                        if byte >= b'a' && byte <= b'z' {
+                        if byte.is_ascii_lowercase() {
                             vec![byte - b'a' + 1]
                         } else {
                             vec![byte]

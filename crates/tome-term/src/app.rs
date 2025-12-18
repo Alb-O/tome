@@ -61,7 +61,7 @@ pub fn run_editor(mut editor: Editor) -> io::Result<()> {
             let mut filter = |e: &Event| !e.is_escape();
             let timeout = if matches!(editor.mode(), tome_core::Mode::Insert)
                 || editor.terminal_open
-                || !editor.plugins.panels.is_empty()
+                || editor.plugins.panels.values().any(|p| p.open)
             {
                 Some(Duration::from_millis(16)) // ~60fps
             } else {
