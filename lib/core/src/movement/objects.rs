@@ -175,15 +175,12 @@ pub fn select_surround_object(
 	let close_pos = close_pos?;
 
 	if inner {
-		// Inner: between delimiters (exclusive)
 		if close_pos > open_pos + 1 {
 			Some(Range::new(open_pos + 1, close_pos - 1))
 		} else {
-			// Empty content
 			Some(Range::point(open_pos + 1))
 		}
 	} else {
-		// Around: including delimiters
 		Some(Range::new(open_pos, close_pos))
 	}
 }
@@ -199,17 +196,15 @@ mod tests {
 		let text = Rope::from("hello world");
 		let slice = text.slice(..);
 
-		// Cursor on 'e' in hello
 		let range = Range::point(1);
 		let selected = select_word_object(slice, range, WordType::Word, true);
 		assert_eq!(selected.from(), 0);
-		assert_eq!(selected.to(), 4); // "hello" is positions 0-4
+		assert_eq!(selected.to(), 4);
 
-		// Cursor on 'o' in world
 		let range = Range::point(7);
 		let selected = select_word_object(slice, range, WordType::Word, true);
 		assert_eq!(selected.from(), 6);
-		assert_eq!(selected.to(), 10); // "world" is positions 6-10
+		assert_eq!(selected.to(), 10);
 	}
 
 	#[test]
@@ -217,11 +212,10 @@ mod tests {
 		let text = Rope::from("hello world");
 		let slice = text.slice(..);
 
-		// Cursor on 'e' in hello - around includes trailing space
 		let range = Range::point(1);
 		let selected = select_word_object(slice, range, WordType::Word, false);
 		assert_eq!(selected.from(), 0);
-		assert_eq!(selected.to(), 5); // "hello " is positions 0-5
+		assert_eq!(selected.to(), 5);
 	}
 
 	#[test]
@@ -229,18 +223,15 @@ mod tests {
 		let text = Rope::from("foo(bar)baz");
 		let slice = text.slice(..);
 
-		// Cursor inside parens on 'a'
 		let range = Range::point(5);
 
-		// Inner: just "bar"
 		let selected = select_surround_object(slice, range, '(', ')', true).unwrap();
 		assert_eq!(selected.from(), 4);
-		assert_eq!(selected.to(), 6); // "bar" is positions 4-6
+		assert_eq!(selected.to(), 6);
 
-		// Around: "(bar)"
 		let selected = select_surround_object(slice, range, '(', ')', false).unwrap();
 		assert_eq!(selected.from(), 3);
-		assert_eq!(selected.to(), 7); // "(bar)" is positions 3-7
+		assert_eq!(selected.to(), 7);
 	}
 
 	#[test]
@@ -248,17 +239,15 @@ mod tests {
 		let text = Rope::from("foo(a(b)c)bar");
 		let slice = text.slice(..);
 
-		// Cursor on 'b' inside inner parens
 		let range = Range::point(6);
 		let selected = select_surround_object(slice, range, '(', ')', true).unwrap();
 		assert_eq!(selected.from(), 6);
-		assert_eq!(selected.to(), 6); // inner of (b) is just "b"
+		assert_eq!(selected.to(), 6);
 
-		// Cursor on 'a' - should get inner of outer parens
 		let range = Range::point(4);
 		let selected = select_surround_object(slice, range, '(', ')', true).unwrap();
 		assert_eq!(selected.from(), 4);
-		assert_eq!(selected.to(), 8); // inner of (a(b)c) is "a(b)c"
+		assert_eq!(selected.to(), 8);
 	}
 
 	#[test]
@@ -266,15 +255,12 @@ mod tests {
 		let text = Rope::from(r#"say "hello" now"#);
 		let slice = text.slice(..);
 
-		// Cursor on 'e' inside quotes
 		let range = Range::point(6);
 
-		// Inner: just "hello"
 		let selected = select_surround_object(slice, range, '"', '"', true).unwrap();
 		assert_eq!(selected.from(), 5);
-		assert_eq!(selected.to(), 9); // "hello" is positions 5-9
+		assert_eq!(selected.to(), 9);
 
-		// Around: "\"hello\""
 		let selected = select_surround_object(slice, range, '"', '"', false).unwrap();
 		assert_eq!(selected.from(), 4);
 		assert_eq!(selected.to(), 10);

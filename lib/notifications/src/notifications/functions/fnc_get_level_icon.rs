@@ -1,6 +1,5 @@
 use crate::notifications::types::Level;
 
-// Icon constants
 const ICON_INFO: &str = " ℹ";
 const ICON_WARN: &str = " ⚠";
 const ICON_ERROR: &str = " ✖";

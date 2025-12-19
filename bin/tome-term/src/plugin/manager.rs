@@ -86,7 +86,7 @@ pub struct PendingPermission {
 	pub plugin_id: String,
 	pub request_id: u64,
 	pub _prompt: String,
-	pub _options: Vec<(String, String)>, // id, label
+	pub _options: Vec<(String, String)>, // (option_id, display_label)
 }
 
 pub struct LoadedPlugin {
@@ -131,7 +131,7 @@ pub struct PluginManager {
 	pub config: TomeConfig,
 	pub commands: HashMap<String, PluginCommand>,
 	pub panels: HashMap<u64, ChatPanelState>,
-	pub panel_owners: HashMap<u64, String>, // panel_id -> plugin_id
+	pub panel_owners: HashMap<u64, String>, // Maps panel_id to owner plugin_id
 	pub logs: HashMap<String, Vec<String>>,
 	next_panel_id: u64,
 	current_namespace: Option<String>,
@@ -396,7 +396,7 @@ impl PluginManager {
 				}
 			}
 
-			// Also handle aliases
+			// Also register command aliases if provided
 			if !spec.aliases.ptr.is_null() && spec.aliases.len > 0 {
 				let aliases =
 					unsafe { std::slice::from_raw_parts(spec.aliases.ptr, spec.aliases.len) };
@@ -476,7 +476,7 @@ pub fn tome_owned_to_string(tos: TomeOwnedStr) -> Option<String> {
 	}
 }
 
-// Host callbacks
+// Host callbacks exported to plugins
 
 pub(crate) extern "C" fn host_log(msg: TomeStr) {
 	let s = tome_str_to_str(&msg).to_string();
@@ -696,7 +696,7 @@ pub(crate) extern "C" fn host_fs_write_text(path: TomeStr, content: TomeStr) -> 
 			let path_buf = PathBuf::from(path_str);
 			let content_str = tome_str_to_str(&content);
 
-			// Simplified check
+			// Check if file path is under the current document's parent directory
 			let allowed = if let Some(current_path) = ed.path.as_ref() {
 				if let Some(parent) = current_path.parent() {
 					path_buf.starts_with(parent)

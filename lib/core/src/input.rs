@@ -628,7 +628,7 @@ impl InputHandler {
 				return lookup_key;
 			}
 
-			// Fallback to lowercase
+			// If uppercase key not found, fallback to lowercase variant
 			return Key {
 				code: KeyCode::Char(c.to_ascii_lowercase()),
 				modifiers: lookup_key.modifiers,

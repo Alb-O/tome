@@ -46,33 +46,26 @@ pub fn calculate_rect(
 	let mut x = anchor_pos.x;
 	let mut y = anchor_pos.y;
 
-	// Adjust x based on horizontal anchor alignment
 	match anchor {
 		Anchor::TopCenter | Anchor::MiddleCenter | Anchor::BottomCenter => {
-			// Center-aligned: offset by half width
 			x = x.saturating_sub(width / 2);
 		}
 		Anchor::TopRight | Anchor::MiddleRight | Anchor::BottomRight => {
-			// Right-aligned: offset by width minus 1
 			x = x.saturating_sub(width.saturating_sub(1));
 		}
 		_ => {}
 	}
 
-	// Adjust y based on vertical anchor alignment
 	match anchor {
 		Anchor::MiddleLeft | Anchor::MiddleCenter | Anchor::MiddleRight => {
-			// Middle-aligned: offset by half height
 			y = y.saturating_sub(height / 2);
 		}
 		Anchor::BottomLeft | Anchor::BottomCenter | Anchor::BottomRight => {
-			// Bottom-aligned: offset by height minus 1
 			y = y.saturating_sub(height.saturating_sub(1));
 		}
 		_ => {}
 	}
 
-	// Apply exterior padding based on anchor position
 	match anchor {
 		Anchor::TopLeft => {
 			x = x.saturating_add(exterior_padding);
@@ -88,9 +81,7 @@ pub fn calculate_rect(
 		Anchor::MiddleLeft => {
 			x = x.saturating_add(exterior_padding);
 		}
-		Anchor::MiddleCenter => {
-			// No padding for center
-		}
+		Anchor::MiddleCenter => {}
 		Anchor::MiddleRight => {
 			x = x.saturating_sub(exterior_padding);
 		}
@@ -107,11 +98,9 @@ pub fn calculate_rect(
 		}
 	}
 
-	// Clamp dimensions to frame size
 	let clamped_width = width.min(frame_area.width);
 	let clamped_height = height.min(frame_area.height);
 
-	// Clamp position to frame bounds
 	let final_x = x
 		.max(frame_area.x)
 		.min(frame_area.right().saturating_sub(clamped_width));
@@ -120,7 +109,6 @@ pub fn calculate_rect(
 		.max(frame_area.y)
 		.min(frame_area.bottom().saturating_sub(clamped_height));
 
-	// Ensure we don't go negative (double-check frame bounds)
 	let final_x = final_x.max(frame_area.x);
 	let final_y = final_y.max(frame_area.y);
 

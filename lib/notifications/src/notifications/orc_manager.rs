@@ -119,19 +119,15 @@ impl Notifications {
 	/// let id = manager.add(notif).unwrap();
 	/// ```
 	pub fn add(&mut self, notification: Notification) -> Result<u64, NotificationError> {
-		// Generate ID
 		let id = self.next_id;
 		self.next_id = self.next_id.checked_add(1).unwrap_or(0);
 
 		let anchor = notification.anchor;
 
-		// Check and enforce limits
 		self.enforce_limit(anchor);
 
-		// Create state
 		let state = NotificationState::new(id, notification, &self.defaults);
 
-		// Add to maps
 		self.states.insert(id, state);
 		self.by_anchor.entry(anchor).or_default().push(id);
 
@@ -158,7 +154,6 @@ impl Notifications {
 	/// ```
 	pub fn remove(&mut self, id: u64) -> bool {
 		if let Some(state) = self.states.remove(&id) {
-			// Remove from anchor map
 			let anchor = state.notification.anchor;
 			if let Some(ids) = self.by_anchor.get_mut(&anchor) {
 				ids.retain(|&existing_id| existing_id != id);

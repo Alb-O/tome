@@ -100,30 +100,9 @@ pub(crate) mod shared_utils;
 
 // Re-export public API at crate root for ergonomic imports
 pub use notifications::{
-	// Configuration enums
-	Anchor,
-	Animation,
-	AutoDismiss,
-	Level,
-	// Core types
-	Notification,
-	NotificationBuilder,
-	// Error type
-	NotificationError,
-
-	Notifications,
-
-	Overflow,
-	SizeConstraint,
-	SlideDirection,
-	Timing,
-	// Layout utilities (for custom positioning)
-	calculate_anchor_position,
-	calculate_rect,
-	calculate_size,
-
-	// Code generation utility
-	generate_code,
+	Anchor, Animation, AutoDismiss, Level, Notification, NotificationBuilder, NotificationError,
+	Notifications, Overflow, SizeConstraint, SlideDirection, Timing, calculate_anchor_position,
+	calculate_rect, calculate_size, generate_code,
 };
 // Re-export ratatui Position for custom positioning
 pub use ratatui::layout::Position;

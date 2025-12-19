@@ -66,7 +66,6 @@ impl Editor {
 			let pattern = movement::escape_pattern(&text);
 			self.input.set_last_search(pattern.clone(), false);
 			self.show_message(format!("Search: {}", text));
-			// Go to next match
 			match movement::find_next(self.doc.slice(..), &pattern, to) {
 				Ok(Some(range)) => {
 					self.selection = Selection::single(range.from(), range.to());

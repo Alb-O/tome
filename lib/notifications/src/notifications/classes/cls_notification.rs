@@ -476,7 +476,6 @@ impl NotificationBuilder {
 	///
 	/// Returns error if content exceeds `MAX_CONTENT_CHARS` (1000) characters.
 	pub fn build(self) -> Result<Notification, NotificationError> {
-		// Validate content size
 		let content_str = self.notification.content.to_string();
 		let char_count = content_str.chars().count();
 
@@ -762,7 +761,6 @@ mod tests {
 			.build()
 			.unwrap();
 
-		// Verify all fields
 		assert_eq!(notification.content.to_string(), "Full config test");
 		assert_eq!(notification.title.unwrap().to_string(), "Test Title");
 		assert_eq!(notification.level, Some(Level::Warn));

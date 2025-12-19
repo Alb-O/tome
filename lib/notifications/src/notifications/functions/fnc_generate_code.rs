@@ -39,7 +39,6 @@ pub fn generate_code(notification: &Notification) -> String {
 	let content_str = escape_string(&notification.content().to_string());
 	lines.push(format!("Notification::builder(\"{}\")", content_str));
 
-	// Title (no default - None)
 	if let Some(title) = notification.title() {
 		let title_str = escape_string(&title.to_string());
 		lines.push(format!("    .title(\"{}\")", title_str));
@@ -118,7 +117,6 @@ pub fn generate_code(notification: &Notification) -> String {
 		));
 	}
 
-	// Margin - default is 0
 	if notification.exterior_margin() != defaults.exterior_margin {
 		lines.push(format!("    .margin({})", notification.exterior_margin()));
 	}
@@ -151,7 +149,6 @@ pub fn generate_code(notification: &Notification) -> String {
 		lines.push(format!("    .fade({})", notification.fade_effect()));
 	}
 
-	// End with build()
 	lines.push("    .build()".to_string());
 
 	lines.join("\n")

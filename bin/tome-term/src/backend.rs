@@ -195,7 +195,6 @@ impl<T: Terminal> Backend for TerminaBackend<T> {
 	}
 
 	fn scroll_region_up(&mut self, _region: std::ops::Range<u16>, _amount: u16) -> io::Result<()> {
-		// Not implemented for now
 		Ok(())
 	}
 
@@ -204,7 +203,6 @@ impl<T: Terminal> Backend for TerminaBackend<T> {
 		_region: std::ops::Range<u16>,
 		_amount: u16,
 	) -> io::Result<()> {
-		// Not implemented for now
 		Ok(())
 	}
 

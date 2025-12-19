@@ -24,9 +24,8 @@ pub fn tome_api(attr: TokenStream, item: TokenStream) -> TokenStream {
             let sig = &method.sig;
             let name = &sig.ident;
 
-            // Extract argument names and types
             let inputs = &sig.inputs;
-            let args: Vec<_> = inputs.iter().skip(1).filter_map(|arg| { // skip self
+            let args: Vec<_> = inputs.iter().skip(1).filter_map(|arg| {
                 if let FnArg::Typed(pat) = arg {
                     Some((&pat.pat, &pat.ty))
                 } else {

@@ -2,12 +2,10 @@ use ratatui::style::{Color, Style};
 
 use crate::notifications::types::Level;
 
-// Default styles
 const DEFAULT_BLOCK_STYLE: Style = Style::new();
 const DEFAULT_TITLE_STYLE: Style = Style::new();
 const DEFAULT_BORDER_STYLE: Style = Style::new().fg(Color::DarkGray);
 
-// Level-based border styles
 const INFO_BORDER_STYLE: Style = Style::new().fg(Color::Green);
 const WARN_BORDER_STYLE: Style = Style::new().fg(Color::Yellow);
 const ERROR_BORDER_STYLE: Style = Style::new().fg(Color::Red);
@@ -44,7 +42,6 @@ pub fn resolve_styles(
 	let mut final_border_style = DEFAULT_BORDER_STYLE;
 	let mut final_title_style = DEFAULT_TITLE_STYLE;
 
-	// Apply level-based styling
 	if let Some(lvl) = level {
 		let level_border_style = match lvl {
 			Level::Info => INFO_BORDER_STYLE,
@@ -57,7 +54,6 @@ pub fn resolve_styles(
 		final_title_style = final_title_style.patch(level_border_style);
 	}
 
-	// Apply custom block style
 	if let Some(bs) = block_style {
 		final_block_style = bs;
 	}

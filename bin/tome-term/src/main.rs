@@ -170,7 +170,7 @@ fn handle_plugin_command(cmd: PluginCommands) -> io::Result<()> {
 					)));
 				}
 
-				// Copy the whole directory
+				// Copy the entire plugin directory recursively
 				copy_dir(&path, &plugin_dir)?;
 				println!("Installed plugin: {}", manifest.id);
 

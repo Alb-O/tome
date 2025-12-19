@@ -78,7 +78,7 @@ pub fn run_editor(
 				|| editor.needs_redraw
 			{
 				editor.needs_redraw = false;
-				Some(Duration::from_millis(16)) // ~60fps
+				Some(Duration::from_millis(16))
 			} else {
 				Some(Duration::from_millis(50))
 			};

@@ -113,7 +113,6 @@ pub fn render_notifications<T: RenderableNotification>(
 					continue;
 				}
 
-				// Resolve styles
 				let (base_block_style, base_border_style, base_title_style) = resolve_styles(
 					state.level(),
 					state.block_style(),
@@ -121,7 +120,6 @@ pub fn render_notifications<T: RenderableNotification>(
 					state.title_style(),
 				);
 
-				// Apply fade effect if enabled
 				let (final_block_style, final_border_style, final_title_style, final_content_style) =
 					apply_fade_if_needed(
 						state,
@@ -130,7 +128,6 @@ pub fn render_notifications<T: RenderableNotification>(
 						base_title_style,
 					);
 
-				// Build the block
 				let mut block = Block::default()
 					.style(final_block_style)
 					.borders(Borders::ALL)
@@ -138,7 +135,6 @@ pub fn render_notifications<T: RenderableNotification>(
 					.border_style(final_border_style)
 					.padding(state.padding());
 
-				// If Padded border, add a colored stripe on the left
 				if state.border_type() == BorderType::Padded {
 					block = block.border_set(ratatui::symbols::border::Set {
 						top_left: "▏",
@@ -148,7 +144,6 @@ pub fn render_notifications<T: RenderableNotification>(
 					});
 				}
 
-				// Add title with icon if present
 				if let Some(mut title_line) = state.title() {
 					if let Some(icon_str) = get_level_icon(state.level()) {
 						let icon_span = Span::styled(icon_str, final_border_style);
@@ -161,17 +156,14 @@ pub fn render_notifications<T: RenderableNotification>(
 					);
 				}
 
-				// Apply block effect from animation
 				let border_set = get_border_set(state.border_type());
 				block = state.apply_animation_block_effect(block, frame_area, &border_set);
 
-				// Create the paragraph
 				let paragraph = Paragraph::new(state.content())
 					.wrap(Wrap { trim: true })
 					.style(final_content_style)
 					.block(block);
 
-				// Render: Clear at stacked position, then Paragraph at animated position
 				if stacked.rect.width > 0 && stacked.rect.height > 0 {
 					frame.render_widget(Clear, stacked.rect.intersection(frame_area));
 				}

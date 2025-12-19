@@ -14,7 +14,6 @@ use crate::theme::blend_colors;
 
 impl Editor {
 	pub fn render(&mut self, frame: &mut ratatui::Frame) {
-		// Update notifications
 		let now = SystemTime::now();
 		let delta = now
 			.duration_since(self.last_tick)
@@ -22,18 +21,14 @@ impl Editor {
 		self.last_tick = now;
 		self.notifications.tick(delta);
 
-		// Always render block cursors (primary and secondary).
 		let use_block_cursor = true;
 
 		let area = frame.area();
-		// Cache last known terminal size for input handling (e.g., mouse hit-testing)
 		self.window_width = Some(area.width);
 		self.window_height = Some(area.height);
 
-		// Clear the screen to remove artifacts (e.g. terminal ghosts)
 		frame.render_widget(Clear, area);
 
-		// Set background color for the whole screen
 		let bg_block = Block::default().style(Style::default().bg(self.theme.colors.ui.bg));
 		frame.render_widget(bg_block, area);
 
@@ -43,9 +38,9 @@ impl Editor {
 		let chunks = Layout::default()
 			.direction(Direction::Vertical)
 			.constraints([
-				Constraint::Min(1),    // Main doc area (potentially split with terminal)
-				Constraint::Length(1), // Status
-				Constraint::Length(message_height), // Message/Command line
+				Constraint::Min(1),
+				Constraint::Length(1),
+				Constraint::Length(message_height),
 			])
 			.split(area);
 
@@ -59,17 +54,13 @@ impl Editor {
 			(chunks[0], None)
 		};
 
-		// Render main document
-		// When scratch is focused, we don't draw cursor on main doc
 		self.ensure_cursor_visible(doc_area);
 		let main_result =
 			self.render_document_with_cursor(doc_area, use_block_cursor && !self.terminal_focused);
 		frame.render_widget(main_result.widget, doc_area);
 
-		// Render Terminal
 		if let Some(term_area) = terminal_area {
 			if let Some(term) = &mut self.terminal {
-				// Resize if needed
 				let (rows, cols) = term.parser.screen().size();
 				if rows != term_area.height || cols != term_area.width {
 					let _ = term.resize(term_area.width, term_area.height);
@@ -121,10 +112,8 @@ impl Editor {
 			frame.render_widget(self.render_message_line(), chunks[2]);
 		}
 
-		// Render notifications on top
 		self.notifications.render(frame, frame.area());
 
-		// Render completion menu
 		if self.completions.active {
 			let max_label_len = self
 				.completions

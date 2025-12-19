@@ -38,10 +38,8 @@ pub(crate) fn is_word_char(c: char) -> bool {
 /// If `extend` is true, this performs a "selection extension": the anchor remains fixed, and the head moves to `new_head`.
 pub(crate) fn make_range(range: Range, new_head: usize, extend: bool) -> Range {
 	if extend {
-		// Extend: keep old anchor
 		Range::new(range.anchor, new_head)
 	} else {
-		// Move: collapse to new position (cursor becomes point at new head)
 		Range::point(new_head)
 	}
 }

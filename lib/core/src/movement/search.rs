@@ -123,7 +123,6 @@ mod tests {
 		assert_eq!(m.from(), 12);
 		assert_eq!(m.to(), 17);
 
-		// Wrap around
 		let m = find_next(slice, "hello", 13).unwrap().unwrap();
 		assert_eq!(m.from(), 0);
 	}
@@ -139,7 +138,6 @@ mod tests {
 		let m = find_prev(slice, "hello", 12).unwrap().unwrap();
 		assert_eq!(m.from(), 0);
 
-		// Wrap around
 		let m = find_prev(slice, "hello", 0).unwrap().unwrap();
 		assert_eq!(m.from(), 12);
 	}

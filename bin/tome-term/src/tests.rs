@@ -886,8 +886,7 @@ mod suite {
 		// Toggle terminal off
 		editor.handle_key(KeyEvent::new(KeyCode::Char('t'), Modifiers::CONTROL)); // Focused terminal intercepts keys?
 
-		// Wait, if terminal is focused, does it intercept Ctrl+t?
-		// My implementation checks for Ctrl+t BEFORE checking terminal focus in `handle_key_active`.
+		// Ctrl+t is checked before terminal focus in `handle_key_active`.
 
 		assert!(!editor.terminal_open);
 		assert!(!editor.terminal_focused);

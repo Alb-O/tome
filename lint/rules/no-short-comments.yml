@@ -9,6 +9,10 @@ files:
   - plugins/**/*.rs
 ignores:
   - bin/tome-term/src/themes/**/*.rs
+  - lib/ratatui/**/*.rs
+  - bin/tome-term/tests/**/*.rs
+  - bin/tome-term/src/tests.rs
+  - lib/core/benches/**/*.rs
 rule:
   all:
     - kind: line_comment

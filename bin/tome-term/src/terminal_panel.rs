@@ -76,7 +76,6 @@ impl TerminalState {
 					if bytes.windows(da1_query.len()).any(|w| w == da1_query)
 						|| bytes.windows(da1_query_0.len()).any(|w| w == da1_query_0)
 					{
-						// Respond as VT102 (\e[?6c)
 						let _ = self.pty_writer.write_all(b"\x1b[?6c");
 					}
 
@@ -106,9 +105,9 @@ impl TerminalState {
 
 	pub fn is_alive(&mut self) -> bool {
 		match self.child.try_wait() {
-			Ok(Some(_)) => false, // Exited
-			Ok(None) => true,     // Still running
-			Err(_) => false,      // Error presumably means dead or inaccessible
+			Ok(Some(_)) => false,
+			Ok(None) => true,
+			Err(_) => false,
 		}
 	}
 }

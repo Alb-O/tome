@@ -33,7 +33,6 @@ use crate::notifications::types::SizeConstraint;
 /// let (width, height) = calculate_size(&notification, frame_area);
 /// ```
 pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u16) {
-	// 1. Get border dimensions based on border_type
 	let border_v_offset = match notification.border_type {
 		Some(BorderType::Double) => 2,
 		Some(_) => 2,
@@ -45,15 +44,12 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 		None => 0,
 	};
 
-	// 2. Get padding dimensions
 	let h_padding = notification.padding.left + notification.padding.right;
 	let v_padding = notification.padding.top + notification.padding.bottom;
 
-	// 3. Calculate minimum size (at least 3x3)
 	let min_width = (1 + h_padding + border_h_offset).max(3);
 	let min_height = (1 + v_padding + border_v_offset).max(3);
 
-	// 4. Apply max_width constraint (Percentage or Absolute)
 	let max_width_constraint = notification
 		.max_width
 		.map(|c| match c {
@@ -65,7 +61,6 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 		.unwrap_or(frame_area.width)
 		.max(min_width);
 
-	// 5. Calculate intrinsic width from content
 	let content_max_line_width = notification
 		.content
 		.lines
@@ -81,7 +76,6 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 
 	let final_width = intrinsic_width.min(max_width_constraint);
 
-	// 6. Apply max_height constraint
 	let max_height_constraint = notification
 		.max_height
 		.map(|c| match c {
@@ -93,7 +87,6 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 		.unwrap_or(frame_area.height)
 		.max(min_height);
 
-	// 7. Render content to buffer to measure actual height with wrapping
 	let mut temp_block = Block::default();
 	if let Some(border_type) = notification.border_type {
 		temp_block = temp_block.borders(Borders::ALL).border_type(border_type);
@@ -121,7 +114,6 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 		.max()
 		.map_or(0, |row_index| row_index + 1);
 
-	// 8. Return (width, height) tuple
 	let final_height = measured_height.max(min_height).min(max_height_constraint);
 	(final_width, final_height)
 }

@@ -45,7 +45,7 @@ pub struct TomeStrArray {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct TomeBool(pub u8); // 0/1
+pub struct TomeBool(pub u8);
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -66,7 +66,6 @@ pub fn calculate_rect(
 		_ => return full_rect,
 	};
 
-	// Interpolate dimensions
 	let current_width_f32 = lerp(start_width, end_width, progress);
 	let current_height_f32 = lerp(start_height, end_height, progress);
 

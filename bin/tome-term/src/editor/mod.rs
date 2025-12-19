@@ -134,7 +134,6 @@ impl Editor {
 
 			let mut items = CommandSource.complete(&ctx);
 
-			// Add plugin commands
 			for full_name in self.plugins.commands.keys() {
 				if full_name.starts_with(input) {
 					items.push(tome_core::ext::CompletionItem {
@@ -366,7 +365,6 @@ impl Editor {
 			return;
 		}
 
-		// Opening.
 		self.terminal_open = true;
 		if self.terminal.is_some() {
 			self.terminal_focused = true;
@@ -949,8 +947,7 @@ impl Editor {
 		let result = self.input.handle_key(key);
 
 		if let Mode::Command { .. } = self.mode() {
-			// Don't update completions if we just handled Tab/BackTab (we already returned false)
-			// But wait, if any other key was pressed, we should update.
+			// Update completions for keys other than Tab/BackTab (which return false).
 			self.update_completions();
 		} else {
 			self.completions.active = false;
@@ -1069,8 +1066,8 @@ impl Editor {
 
 		// Check terminal panel first (70/30 split when open)
 		if self.terminal_open {
-			// Terminal takes bottom 30% of main area (before status/message lines)
-			let main_area_height = height.saturating_sub(2); // -2 for status and message
+			// Terminal takes bottom 30% of main area, leaving 2 rows for status and message
+			let main_area_height = height.saturating_sub(2);
 			let doc_height = (main_area_height * 70) / 100;
 			let term_start = doc_height;
 			let term_end = main_area_height;
