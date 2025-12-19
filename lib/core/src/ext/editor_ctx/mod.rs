@@ -64,10 +64,6 @@ impl<'a> EditorContext<'a> {
 		self.inner.show_message(msg);
 	}
 
-	pub fn scratch(&mut self) -> Option<&mut dyn ScratchAccess> {
-		self.inner.scratch()
-	}
-
 	pub fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		self.inner.search()
 	}
@@ -89,11 +85,6 @@ impl<'a> EditorContext<'a> {
 pub trait EditorCapabilities:
 	CursorAccess + SelectionAccess + TextAccess + ModeAccess + MessageAccess
 {
-	/// Access to scratch buffer operations (optional).
-	fn scratch(&mut self) -> Option<&mut dyn ScratchAccess> {
-		None
-	}
-
 	/// Access to search operations (optional).
 	fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		None

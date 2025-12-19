@@ -5,6 +5,5 @@
 mod core;
 mod edit;
 mod mode;
-mod scratch;
 mod search;
 mod unimplemented;

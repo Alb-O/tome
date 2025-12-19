@@ -197,7 +197,10 @@ impl PluginManager {
 			} else if let Some(lib_name) = &entry.manifest.library_path {
 				entry.path.join(lib_name)
 			} else {
-				return Err(format!("Plugin {} has no library_path or dev_library_path", id));
+				return Err(format!(
+					"Plugin {} has no library_path or dev_library_path",
+					id
+				));
 			}
 		};
 
@@ -206,7 +209,8 @@ impl PluginManager {
 		}
 
 		unsafe {
-			let lib = Library::new(&lib_path).map_err(|e| format!("Failed to load library: {}", e))?;
+			let lib =
+				Library::new(&lib_path).map_err(|e| format!("Failed to load library: {}", e))?;
 			let entry_point: Symbol<TomePluginEntryV2> = lib
 				.get(b"tome_plugin_entry_v2")
 				.map_err(|e| format!("Failed to find entry point: {}", e))?;
@@ -214,7 +218,10 @@ impl PluginManager {
 			let mut guest = std::mem::MaybeUninit::<TomeGuestV2>::uninit();
 			let status = entry_point(&HOST_V2, guest.as_mut_ptr());
 			if status != TomeStatus::Ok {
-				return Err(format!("Plugin entry point failed with status {:?}", status));
+				return Err(format!(
+					"Plugin entry point failed with status {:?}",
+					status
+				));
 			}
 			let guest = guest.assume_init();
 
@@ -234,7 +241,10 @@ impl PluginManager {
 				let _guard = PluginContextGuard::new(mgr_ptr, ed_ptr, id);
 				let status = init(&HOST_V2);
 				if status != TomeStatus::Ok {
-					return Err(format!("Plugin {} init failed with status {:?}", id, status));
+					return Err(format!(
+						"Plugin {} init failed with status {:?}",
+						id, status
+					));
 				}
 			}
 
@@ -263,7 +273,6 @@ impl PluginManager {
 			std::env::var("TOME_PLUGIN_DIR").ok().map(PathBuf::from),
 			get_plugins_dir(),
 		];
-
 
 		for dir in dirs.into_iter().flatten() {
 			if !dir.exists() {
@@ -307,10 +316,11 @@ impl PluginManager {
 	pub fn save_config(&mut self) {
 		if let Some(dir) = get_config_dir() {
 			if !dir.exists()
-				&& let Err(e) = std::fs::create_dir_all(&dir) {
-					eprintln!("Failed to create config directory {:?}: {}", dir, e);
-					return;
-				}
+				&& let Err(e) = std::fs::create_dir_all(&dir)
+			{
+				eprintln!("Failed to create config directory {:?}: {}", dir, e);
+				return;
+			}
 			let path = dir.join("config.toml");
 			match toml::to_string(&self.config) {
 				Ok(content) => {
@@ -605,16 +615,10 @@ pub(crate) extern "C" fn host_get_current_path(out: *mut TomeOwnedStr) -> TomeSt
 		if let Some(ed_ptr) = *ctx.borrow() {
 			let ed = unsafe { &*ed_ptr };
 
-			// The editor swaps `path` and `scratch.path` while executing in scratch context.
-			// Prefer the "real" file path when possible.
-			let path = if ed.in_scratch_context() {
-				ed.scratch.path.as_ref().or(ed.path.as_ref())
-			} else {
-				ed.path.as_ref().or(ed.scratch.path.as_ref())
-			};
+			let path = ed.path.as_ref();
 
 			if let Some(path) = path {
-				let s = path.to_string_lossy().to_string();
+				let s: String = path.to_string_lossy().to_string();
 				unsafe { *out = string_to_tome_owned(s) };
 				TomeStatus::Ok
 			} else {

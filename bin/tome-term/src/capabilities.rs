@@ -2,8 +2,8 @@
 
 use tome_core::ext::EditAction;
 use tome_core::ext::editor_ctx::{
-	CursorAccess, EditAccess, EditorCapabilities, MessageAccess, ModeAccess, ScratchAccess,
-	SearchAccess, SelectionAccess, SelectionOpsAccess, TextAccess, UndoAccess,
+	CursorAccess, EditAccess, EditorCapabilities, MessageAccess, ModeAccess, SearchAccess,
+	SelectionAccess, SelectionOpsAccess, TextAccess, UndoAccess,
 };
 use tome_core::{Mode, RopeSlice, Selection};
 
@@ -56,32 +56,6 @@ impl MessageAccess for Editor {
 
 	fn clear_message(&mut self) {
 		self.message = None;
-	}
-}
-
-impl ScratchAccess for Editor {
-	fn open(&mut self, focus: bool) {
-		self.do_open_scratch(focus);
-	}
-
-	fn close(&mut self) {
-		self.do_close_scratch();
-	}
-
-	fn toggle(&mut self) {
-		self.do_toggle_scratch();
-	}
-
-	fn execute(&mut self) -> bool {
-		self.do_execute_scratch()
-	}
-
-	fn is_open(&self) -> bool {
-		self.scratch_open
-	}
-
-	fn is_focused(&self) -> bool {
-		self.scratch_focused
 	}
 }
 
@@ -156,10 +130,6 @@ impl SelectionOpsAccess for Editor {
 }
 
 impl EditorCapabilities for Editor {
-	fn scratch(&mut self) -> Option<&mut dyn ScratchAccess> {
-		Some(self)
-	}
-
 	fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		Some(self)
 	}

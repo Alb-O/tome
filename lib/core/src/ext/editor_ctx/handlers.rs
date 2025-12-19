@@ -75,10 +75,6 @@ result_slices!(
 	RESULT_TABS_TO_SPACES_HANDLERS,
 	RESULT_SPACES_TO_TABS_HANDLERS,
 	RESULT_TRIM_SELECTIONS_HANDLERS,
-	RESULT_OPEN_SCRATCH_HANDLERS,
-	RESULT_CLOSE_SCRATCH_HANDLERS,
-	RESULT_TOGGLE_SCRATCH_HANDLERS,
-	RESULT_EXECUTE_SCRATCH_HANDLERS,
 );
 
 fn run_handlers(
@@ -183,18 +179,6 @@ pub fn dispatch_result(result: &ActionResult, ctx: &mut EditorContext, extend: b
 		}
 		ActionResult::TrimSelections => {
 			run_handlers(&RESULT_TRIM_SELECTIONS_HANDLERS, result, ctx, extend)
-		}
-		ActionResult::OpenScratch { .. } => {
-			run_handlers(&RESULT_OPEN_SCRATCH_HANDLERS, result, ctx, extend)
-		}
-		ActionResult::CloseScratch => {
-			run_handlers(&RESULT_CLOSE_SCRATCH_HANDLERS, result, ctx, extend)
-		}
-		ActionResult::ToggleScratch => {
-			run_handlers(&RESULT_TOGGLE_SCRATCH_HANDLERS, result, ctx, extend)
-		}
-		ActionResult::ExecuteScratch => {
-			run_handlers(&RESULT_EXECUTE_SCRATCH_HANDLERS, result, ctx, extend)
 		}
 	}
 }

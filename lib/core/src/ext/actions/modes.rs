@@ -38,7 +38,7 @@ static ACTION_INSERT_MODE: ActionDef = ActionDef {
 };
 
 fn action_command_mode(_ctx: &ActionContext) -> ActionResult {
-	ActionResult::ToggleScratch
+	ActionResult::ModeChange(ActionMode::Command)
 }
 
 #[distributed_slice(ACTIONS)]

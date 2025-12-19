@@ -62,10 +62,8 @@ impl Editor {
 		// Render main document
 		// When scratch is focused, we don't draw cursor on main doc
 		self.ensure_cursor_visible(doc_area);
-		let main_result = self.render_document_with_cursor(
-			doc_area,
-			use_block_cursor && !self.scratch_focused && !self.terminal_focused,
-		);
+		let main_result =
+			self.render_document_with_cursor(doc_area, use_block_cursor && !self.terminal_focused);
 		frame.render_widget(main_result.widget, doc_area);
 
 		// Render Terminal
@@ -113,14 +111,7 @@ impl Editor {
 
 		// Render status line content
 		// We render status line based on which buffer is focused
-		if self.scratch_focused {
-			self.enter_scratch_context();
-			let status = self.render_status_line();
-			frame.render_widget(status, chunks[1]);
-			self.leave_scratch_context();
-		} else {
-			frame.render_widget(self.render_status_line(), chunks[1]);
-		}
+		frame.render_widget(self.render_status_line(), chunks[1]);
 
 		// Render message line if needed
 		if has_command_line {
@@ -130,51 +121,31 @@ impl Editor {
 			frame.render_widget(self.render_message_line(), chunks[2]);
 		}
 
-		// Render Scratch Popup if open
-		if self.scratch_open {
-			// Command palette layout: Bottom docked (above status bar), full width, no borders
-			let popup_height = 12;
-			let area = frame.area();
-
-			// Layout:
-			// - Main Doc
-			// - Popup (if open)
-			// - Status Line
-			// - Message Line
-
-			let popup_area = Rect {
-				x: area.x,
-				y: area.height.saturating_sub(popup_height + 2), // +2 for status and message lines
-				width: area.width,
-				height: popup_height.min(area.height.saturating_sub(2)),
-			};
-
-			frame.render_widget(Clear, popup_area);
-
-			let block = Block::default().style(
-				Style::default()
-					.bg(self.theme.colors.popup.bg)
-					.fg(self.theme.colors.popup.fg),
-			);
-
-			let inner_area = block.inner(popup_area);
-			frame.render_widget(block, popup_area);
-
-			self.enter_scratch_context();
-			// Ensure cursor visible in small area
-			self.ensure_cursor_visible(inner_area);
-			let scratch_use_block = !matches!(self.mode(), Mode::Insert);
-			let scratch_result = self.render_document_with_cursor(inner_area, scratch_use_block);
-			frame.render_widget(scratch_result.widget, inner_area);
-
-			self.leave_scratch_context();
-		}
-
-		// Render Plugin Panels
-		self.render_plugin_panels(frame);
-
 		// Render notifications on top
 		self.notifications.render(frame, frame.area());
+
+		// Render completion menu
+		if self.completions.active {
+			let max_label_len = self
+				.completions
+				.items
+				.iter()
+				.map(|it| it.label.len())
+				.max()
+				.unwrap_or(0);
+			// 1 (left border) + 3 (icon) + max_label_len + 6 (kind label + padding)
+			let menu_width = (max_label_len + 10) as u16;
+			let menu_height = (self.completions.items.len() as u16).min(10);
+
+			let menu_area = Rect {
+				x: chunks[2].x,
+				y: chunks[2].y.saturating_sub(menu_height),
+				width: menu_width.min(chunks[2].width),
+				height: menu_height,
+			};
+			frame.render_widget(Clear, menu_area);
+			frame.render_widget(self.render_completion_menu(menu_area), menu_area);
+		}
 	}
 
 	pub fn ensure_cursor_visible(&mut self, area: Rect) {
@@ -344,11 +315,7 @@ impl Editor {
 				let gutter_style = if is_first_segment {
 					Style::default().fg(self.theme.colors.ui.gutter_fg)
 				} else {
-					let bg_color = if self.in_scratch_context() {
-						self.theme.colors.popup.bg
-					} else {
-						self.theme.colors.ui.bg
-					};
+					let bg_color = self.theme.colors.ui.bg;
 					let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
 					Style::default().fg(dim_color)
 				};
@@ -389,14 +356,12 @@ impl Editor {
 
 				if !is_last_segment && seg_char_count < text_width {
 					let fill_count = text_width - seg_char_count;
-					let bg_color = if self.in_scratch_context() {
-						self.theme.colors.popup.bg
-					} else {
-						self.theme.colors.ui.bg
-					};
+					let bg_color = self.theme.colors.ui.bg;
 					let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
-					let fill_style = Style::default().fg(dim_color);
-					spans.push(Span::styled("·".repeat(fill_count), fill_style));
+					spans.push(Span::styled(
+						" ".repeat(fill_count),
+						Style::default().fg(dim_color),
+					));
 				}
 
 				if is_last_segment {
@@ -476,14 +441,12 @@ impl Editor {
 
 		while output_lines.len() < viewport_height {
 			let line_num_str = format!("{:>width$} ", "~", width = gutter_width as usize - 1);
-			let bg_color = if self.in_scratch_context() {
-				self.theme.colors.popup.bg
-			} else {
-				self.theme.colors.ui.bg
-			};
+			let bg_color = self.theme.colors.ui.bg;
 			let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
-			let gutter_style = Style::default().fg(dim_color);
-			output_lines.push(Line::from(vec![Span::styled(line_num_str, gutter_style)]));
+			output_lines.push(Line::from(vec![Span::styled(
+				line_num_str,
+				Style::default().fg(dim_color),
+			)]));
 		}
 
 		RenderResult {

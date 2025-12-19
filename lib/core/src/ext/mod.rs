@@ -34,6 +34,8 @@ mod actions;
 #[cfg(feature = "host")]
 mod commands;
 #[cfg(feature = "host")]
+mod completion;
+#[cfg(feature = "host")]
 pub mod editor_ctx;
 #[cfg(feature = "host")]
 mod filetypes;
@@ -59,10 +61,14 @@ pub use actions::{
 	VisualDirection, execute_action, find_action,
 };
 #[cfg(feature = "host")]
+pub use completion::{
+	CommandSource, CompletionContext, CompletionItem, CompletionKind, CompletionSource,
+};
+#[cfg(feature = "host")]
 pub use editor_ctx::{
 	CursorAccess, EditAccess, EditorCapabilities, EditorContext, HandleOutcome, JumpAccess,
-	MacroAccess, MessageAccess, ModeAccess, ResultHandler, ScratchAccess, SearchAccess,
-	SelectionAccess, SelectionOpsAccess, TextAccess, TransformAccess, UndoAccess, dispatch_result,
+	MacroAccess, MessageAccess, ModeAccess, ResultHandler, SearchAccess, SelectionAccess,
+	SelectionOpsAccess, TextAccess, TransformAccess, UndoAccess, dispatch_result,
 };
 #[cfg(feature = "host")]
 pub use hooks::{

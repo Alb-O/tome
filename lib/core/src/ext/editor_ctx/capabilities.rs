@@ -36,16 +36,6 @@ pub trait MessageAccess {
 	fn clear_message(&mut self);
 }
 
-/// Scratch buffer operations.
-pub trait ScratchAccess {
-	fn open(&mut self, focus: bool);
-	fn close(&mut self);
-	fn toggle(&mut self);
-	fn execute(&mut self) -> bool;
-	fn is_open(&self) -> bool;
-	fn is_focused(&self) -> bool;
-}
-
 /// Search operations.
 pub trait SearchAccess {
 	fn search_next(&mut self, add_selection: bool, extend: bool) -> bool;

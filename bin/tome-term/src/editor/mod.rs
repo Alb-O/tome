@@ -3,11 +3,11 @@ mod navigation;
 mod search;
 pub mod types;
 
+use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, TryRecvError};
 use std::time::Duration;
-use std::{fs, mem};
 
 use ratatui_notifications::{
 	Anchor, Animation, Level, Notification, Notifications, Overflow, SizeConstraint, Timing,
@@ -16,11 +16,10 @@ use tome_cabi_types::{TomeCommandContextV1, TomeStatus, TomeStr};
 use tome_core::ext::{EditorOps, HookContext, emit_hook};
 use tome_core::key::{KeyCode, SpecialKey};
 use tome_core::range::Direction as MoveDir;
-use tome_core::{
-	InputHandler, Key, KeyResult, Mode, MouseEvent, Rope, Selection, Transaction, ext, movement,
-};
-pub use types::{HistoryEntry, Message, MessageKind, Registers, ScratchState};
+use tome_core::{InputHandler, Key, KeyResult, Mode, Rope, Selection, Transaction, ext, movement};
+pub use types::{HistoryEntry, Message, MessageKind, Registers};
 
+use crate::editor::types::CompletionState;
 use crate::plugin::PluginManager;
 use crate::plugin::manager::HOST_V2;
 use crate::terminal_panel::TerminalState;
@@ -40,10 +39,6 @@ pub struct Editor {
 	pub undo_stack: Vec<HistoryEntry>,
 	pub redo_stack: Vec<HistoryEntry>,
 	pub text_width: usize,
-	pub scratch: ScratchState,
-	pub scratch_open: bool,
-	pub scratch_keep_open: bool,
-	pub scratch_focused: bool,
 
 	pub terminal: Option<TerminalState>,
 	terminal_prewarm: Option<Receiver<Result<TerminalState, String>>>,
@@ -52,7 +47,6 @@ pub struct Editor {
 	pub terminal_focused: bool,
 	terminal_focus_pending: bool,
 
-	in_scratch_context: bool,
 	pub file_type: Option<String>,
 	pub theme: &'static Theme,
 	pub window_width: Option<u16>,
@@ -64,6 +58,7 @@ pub struct Editor {
 	pub notifications: Notifications,
 	pub last_tick: std::time::SystemTime,
 	pub ipc: Option<crate::ipc::IpcServer>,
+	pub completions: CompletionState,
 }
 
 impl Editor {
@@ -108,7 +103,7 @@ impl Editor {
 
 		let style = ratatui::style::Style::default()
 			.bg(self.theme.colors.popup.bg)
-			.fg(self.theme.colors.popup.fg);
+			.fg(self.theme.colors.status.error_fg);
 
 		if let Ok(notif) = Notification::new(text)
 			.level(Level::Error)
@@ -124,6 +119,50 @@ impl Editor {
 			.build()
 		{
 			let _ = self.notifications.add(notif);
+		}
+	}
+
+	pub fn update_completions(&mut self) {
+		use tome_core::ext::{CommandSource, CompletionContext, CompletionSource};
+
+		if let Some((prompt, input)) = self.input.command_line() {
+			let ctx = CompletionContext {
+				input: input.to_string(),
+				cursor: input.len(),
+				prompt,
+			};
+
+			let mut items = CommandSource.complete(&ctx);
+
+			// Add plugin commands
+			for full_name in self.plugins.commands.keys() {
+				if full_name.starts_with(input) {
+					items.push(tome_core::ext::CompletionItem {
+						label: full_name.clone(),
+						insert_text: full_name.clone(),
+						detail: None,
+						filter_text: None,
+						kind: tome_core::ext::CompletionKind::Plugin,
+					});
+				}
+			}
+
+			// Deduplicate by label (native commands might be shadowed by plugin names if they were to overlap, but they don't yet)
+			items.sort_by(|a, b| a.label.cmp(&b.label));
+			items.dedup_by(|a, b| a.label == b.label);
+
+			self.completions.items = items;
+			self.completions.active = !self.completions.items.is_empty();
+			// Keep selection if still valid, otherwise reset
+			if let Some(idx) = self.completions.selected_idx {
+				if idx >= self.completions.items.len() {
+					self.completions.selected_idx = None;
+				}
+			}
+		} else {
+			self.completions.active = false;
+			self.completions.items.clear();
+			self.completions.selected_idx = None;
 		}
 	}
 
@@ -224,17 +263,12 @@ impl Editor {
 			undo_stack: Vec::new(),
 			redo_stack: Vec::new(),
 			text_width: 80,
-			scratch: ScratchState::default(),
-			scratch_open: false,
-			scratch_keep_open: true,
-			scratch_focused: false,
 			terminal: None,
 			terminal_prewarm: None,
 			terminal_input_buffer: Vec::new(),
 			terminal_open: false,
 			terminal_focused: false,
 			terminal_focus_pending: false,
-			in_scratch_context: false,
 			file_type: file_type.map(|s| s.to_string()),
 			theme: &crate::themes::solarized::SOLARIZED_DARK,
 			window_width: None,
@@ -248,104 +282,16 @@ impl Editor {
 				.overflow(Overflow::DiscardOldest),
 			last_tick: std::time::SystemTime::now(),
 			ipc: crate::ipc::IpcServer::start().ok(),
+			completions: CompletionState::default(),
 		}
 	}
 
 	pub fn mode(&self) -> Mode {
-		if self.in_scratch_context {
-			return self.input.mode();
-		}
-		if self.scratch_focused {
-			return self.scratch.input.mode();
-		}
 		self.input.mode()
 	}
 
-	pub(crate) fn in_scratch_context(&self) -> bool {
-		self.in_scratch_context
-	}
-
 	pub fn mode_name(&self) -> &'static str {
-		if self.in_scratch_context {
-			return self.input.mode_name();
-		}
-		if self.scratch_focused {
-			return self.scratch.input.mode_name();
-		}
 		self.input.mode_name()
-	}
-
-	pub(crate) fn enter_scratch_context(&mut self) {
-		if self.in_scratch_context {
-			return;
-		}
-		self.in_scratch_context = true;
-		mem::swap(&mut self.doc, &mut self.scratch.doc);
-		mem::swap(&mut self.cursor, &mut self.scratch.cursor);
-		mem::swap(&mut self.selection, &mut self.scratch.selection);
-		mem::swap(&mut self.input, &mut self.scratch.input);
-		mem::swap(&mut self.path, &mut self.scratch.path);
-		mem::swap(&mut self.modified, &mut self.scratch.modified);
-		mem::swap(&mut self.scroll_line, &mut self.scratch.scroll_line);
-		mem::swap(&mut self.scroll_segment, &mut self.scratch.scroll_segment);
-		mem::swap(&mut self.undo_stack, &mut self.scratch.undo_stack);
-		mem::swap(&mut self.redo_stack, &mut self.scratch.redo_stack);
-		mem::swap(&mut self.text_width, &mut self.scratch.text_width);
-		mem::swap(
-			&mut self.insert_undo_active,
-			&mut self.scratch.insert_undo_active,
-		);
-	}
-
-	pub(crate) fn leave_scratch_context(&mut self) {
-		if !self.in_scratch_context {
-			return;
-		}
-		self.in_scratch_context = false;
-		mem::swap(&mut self.doc, &mut self.scratch.doc);
-		mem::swap(&mut self.cursor, &mut self.scratch.cursor);
-		mem::swap(&mut self.selection, &mut self.scratch.selection);
-		mem::swap(&mut self.input, &mut self.scratch.input);
-		mem::swap(&mut self.path, &mut self.scratch.path);
-		mem::swap(&mut self.modified, &mut self.scratch.modified);
-		mem::swap(&mut self.scroll_line, &mut self.scratch.scroll_line);
-		mem::swap(&mut self.scroll_segment, &mut self.scratch.scroll_segment);
-		mem::swap(&mut self.undo_stack, &mut self.scratch.undo_stack);
-		mem::swap(&mut self.redo_stack, &mut self.scratch.redo_stack);
-		mem::swap(&mut self.text_width, &mut self.scratch.text_width);
-		mem::swap(
-			&mut self.insert_undo_active,
-			&mut self.scratch.insert_undo_active,
-		);
-	}
-
-	pub(crate) fn with_scratch_context<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
-		self.enter_scratch_context();
-		let result = f(self);
-		self.leave_scratch_context();
-		result
-	}
-
-	pub(crate) fn do_open_scratch(&mut self, focus: bool) {
-		self.scratch_open = true;
-		if focus {
-			self.scratch_focused = true;
-			self.with_scratch_context(|ed| {
-				if ed.doc.len_chars() == 0 {
-					ed.cursor = 0;
-					ed.selection = Selection::point(0);
-				}
-				ed.input.set_mode(Mode::Insert);
-			});
-		}
-	}
-
-	pub(crate) fn do_close_scratch(&mut self) {
-		if self.in_scratch_context {
-			self.leave_scratch_context();
-		}
-		self.scratch_open = false;
-		self.scratch_focused = false;
 	}
 
 	pub(crate) fn start_terminal_prewarm(&mut self) {
@@ -409,17 +355,9 @@ impl Editor {
 	}
 
 	pub(crate) fn do_toggle_terminal(&mut self) {
-		// Always poll in case the prewarm completed since the last frame.
-		self.poll_terminal_prewarm();
-
 		if self.terminal_open {
 			if self.terminal_focused {
-				self.terminal_open = false;
 				self.terminal_focused = false;
-				self.terminal_focus_pending = false;
-				self.terminal_input_buffer.clear();
-			} else if self.terminal.is_some() {
-				self.terminal_focused = true;
 				self.terminal_focus_pending = false;
 			} else {
 				self.start_terminal_prewarm();
@@ -437,16 +375,6 @@ impl Editor {
 			self.start_terminal_prewarm();
 			self.terminal_focused = true;
 			self.terminal_focus_pending = true;
-		}
-	}
-
-	pub(crate) fn do_toggle_scratch(&mut self) {
-		if !self.scratch_open {
-			self.do_open_scratch(true);
-		} else if self.scratch_focused {
-			self.do_close_scratch();
-		} else {
-			self.scratch_focused = true;
 		}
 	}
 
@@ -677,46 +605,6 @@ impl Editor {
 		}
 	}
 
-	pub(crate) fn do_execute_scratch(&mut self) -> bool {
-		if !self.scratch_open {
-			self.show_error("Scratch is not open");
-			return false;
-		}
-
-		let text = self.with_scratch_context(|ed| ed.doc.slice(..).to_string());
-		let flattened = text
-			.lines()
-			.map(str::trim_end)
-			.filter(|l| !l.is_empty())
-			.collect::<Vec<_>>()
-			.join(" ");
-
-		let trimmed = flattened.trim();
-		if trimmed.is_empty() {
-			self.show_error("Scratch buffer is empty");
-			return false;
-		}
-
-		let command = if let Some(stripped) = trimmed.strip_prefix(':') {
-			stripped.trim_start()
-		} else {
-			trimmed
-		};
-
-		// Alias 'exit' to 'quit' if needed, or just rely on execute_command_line
-		if command == "exit" {
-			return true;
-		}
-
-		let result = self.execute_command_line(command);
-
-		if !self.scratch_keep_open {
-			self.do_close_scratch();
-		}
-
-		result
-	}
-
 	fn push_undo_snapshot(&mut self) {
 		self.undo_stack.push(HistoryEntry {
 			doc: self.doc.clone(),
@@ -865,13 +753,7 @@ impl Editor {
 	pub fn handle_key(&mut self, key: termina::event::KeyEvent) -> bool {
 		use termina::event::{KeyCode as TmKeyCode, Modifiers as TmModifiers};
 
-		// Toggle terminal with Ctrl+` (or similar, but let's just use a command for now,
-		// wait, I can bind a key here or rely on command.
-		// Let's add a check for a specific toggle key globally or just handle focus)
-		// Actually, keybinding system in tome-core handles global keys.
-		// But if terminal is focused, we swallow keys.
-		// We need a way to toggle terminal even if focused.
-		// Let's say Ctrl+t toggles terminal for now (hardcoded)
+		// Toggle terminal with Ctrl+t
 		if matches!(key.code, TmKeyCode::Char('t')) && key.modifiers.contains(TmModifiers::CONTROL)
 		{
 			self.do_toggle_terminal();
@@ -1022,20 +904,6 @@ impl Editor {
 			return false;
 		}
 
-		if self.scratch_open && self.scratch_focused {
-			// Many terminals send Ctrl+Enter as byte 0x0A (Line Feed = Ctrl+J).
-			// Termina parses this as Char('j') with CONTROL modifier.
-			// We accept all three variants: Enter, '\n', and 'j' with Ctrl.
-			let raw_ctrl_enter = matches!(
-				key.code,
-				TmKeyCode::Enter | TmKeyCode::Char('\n') | TmKeyCode::Char('j')
-			) && key.modifiers.contains(TmModifiers::CONTROL);
-
-			if raw_ctrl_enter {
-				return self.with_scratch_context(|ed| ed.do_execute_scratch());
-			}
-			return self.with_scratch_context(|ed| ed.handle_key_active(key));
-		}
 		self.handle_key_active(key)
 	}
 
@@ -1044,46 +912,49 @@ impl Editor {
 
 		let old_mode = self.mode();
 		let key: Key = key.into();
-		let in_scratch = self.in_scratch_context;
-		if self.scratch_open && self.scratch_focused {
-			if matches!(key.code, KeyCode::Special(SpecialKey::Escape)) {
-				if matches!(self.mode(), Mode::Insert) {
-					self.input.set_mode(Mode::Normal);
-				} else {
-					self.do_close_scratch();
-				}
-				return false;
-			}
-			let is_enter = matches!(key.code, KeyCode::Special(SpecialKey::Enter))
-				|| matches!(key.code, KeyCode::Char('\n'));
-			if is_enter && (key.modifiers.ctrl || matches!(self.mode(), Mode::Normal)) {
-				return self.do_execute_scratch();
-			}
-		}
 
-		if in_scratch
-			&& matches!(self.mode(), Mode::Insert)
-			&& !key.modifiers.alt
-			&& !key.modifiers.ctrl
-		{
-			match key.code {
-				KeyCode::Char(c) => {
-					self.insert_text(&c.to_string());
-					return false;
+		if let Mode::Command { .. } = self.mode() {
+			if self.completions.active {
+				match key.code {
+					KeyCode::Special(SpecialKey::Tab) => {
+						let len = self.completions.items.len();
+						if len > 0 {
+							let new_idx = if key.modifiers.shift {
+								match self.completions.selected_idx {
+									Some(idx) => (idx + len - 1) % len,
+									None => len - 1,
+								}
+							} else {
+								match self.completions.selected_idx {
+									Some(idx) => (idx + 1) % len,
+									None => 0,
+								}
+							};
+							self.completions.selected_idx = Some(new_idx);
+							let item = self.completions.items[new_idx].clone();
+							if let Mode::Command { prompt, .. } = self.input.mode() {
+								self.input.set_mode(Mode::Command {
+									prompt,
+									input: item.insert_text,
+								});
+							}
+							return false;
+						}
+					}
+					_ => {}
 				}
-				KeyCode::Special(SpecialKey::Enter) => {
-					self.insert_text("\n");
-					return false;
-				}
-				KeyCode::Special(SpecialKey::Tab) => {
-					self.insert_text("\t");
-					return false;
-				}
-				_ => {}
 			}
 		}
 
 		let result = self.input.handle_key(key);
+
+		if let Mode::Command { .. } = self.mode() {
+			// Don't update completions if we just handled Tab/BackTab (we already returned false)
+			// But wait, if any other key was pressed, we should update.
+			self.update_completions();
+		} else {
+			self.completions.active = false;
+		}
 
 		match result {
 			KeyResult::Action {
@@ -1218,82 +1089,11 @@ impl Editor {
 			}
 		}
 
-		if self.scratch_open {
-			let popup_height = 12;
-			let popup_y = height.saturating_sub(popup_height + 2); // +2 for status and message
-			let popup_end = height.saturating_sub(2);
-
-			// Check if click is inside popup area
-			if mouse.row >= popup_y && mouse.row < popup_end {
-				// If inside, we handle it in scratchpad
-
-				// First ensure it is focused if it wasn't (e.g. click to focus)
-				if !self.scratch_focused {
-					self.scratch_focused = true;
-				}
-
-				// Adjust mouse coordinates to be relative to the popup
-				let mut adj_mouse = mouse;
-				adj_mouse.row = mouse.row.saturating_sub(popup_y);
-
-				return self.with_scratch_context(|ed| ed.handle_mouse_active(adj_mouse));
-			} else {
-				// Click was outside
-				// If it's a click (Press), close the popup
-				if matches!(mouse.kind, termina::event::MouseEventKind::Down(_)) {
-					self.do_close_scratch();
-					// Fall through to process click in main editor
-				}
-			}
-		}
-
 		self.handle_mouse_active(mouse)
 	}
 
-	pub fn handle_paste(&mut self, content: String) {
-		// Route paste to focused terminal first
-		if self.terminal_open && self.terminal_focused {
-			if let Some(term) = &mut self.terminal {
-				let _ = term.write_key(content.as_bytes());
-			} else {
-				// Terminal is still starting: buffer the paste
-				self.terminal_input_buffer
-					.extend_from_slice(content.as_bytes());
-			}
-			return;
-		}
-
-		if self.scratch_open && self.scratch_focused {
-			self.with_scratch_context(|ed| ed.insert_text(&content));
-			return;
-		}
-
-		if matches!(self.mode(), Mode::Insert) {
-			self.insert_text(&content);
-		} else {
-			self.show_error("Paste ignored outside insert mode");
-		}
-	}
-
-	pub fn handle_window_resize(&mut self, width: u16, height: u16) {
-		self.window_width = Some(width);
-		self.window_height = Some(height);
-		emit_hook(&HookContext::WindowResize { width, height });
-	}
-
-	pub fn handle_focus_in(&mut self) {
-		emit_hook(&HookContext::FocusGained);
-	}
-
-	pub fn handle_focus_out(&mut self) {
-		emit_hook(&HookContext::FocusLost);
-	}
-
 	fn handle_mouse_active(&mut self, mouse: termina::event::MouseEvent) -> bool {
-		self.message = None;
-		let event: MouseEvent = mouse.into();
-		let result = self.input.handle_mouse(event);
-
+		let result = self.input.handle_mouse(mouse.into());
 		match result {
 			KeyResult::MouseClick { row, col, extend } => {
 				self.handle_mouse_click(row, col, extend);
@@ -1307,7 +1107,6 @@ impl Editor {
 				self.handle_mouse_scroll(direction, count);
 				false
 			}
-			KeyResult::Consumed => false,
 			_ => false,
 		}
 	}
@@ -1399,6 +1198,32 @@ impl Editor {
 	fn apply_action_result(&mut self, result: ext::ActionResult, extend: bool) -> bool {
 		let mut ctx = ext::EditorContext::new(self);
 		ext::dispatch_result(&result, &mut ctx, extend)
+	}
+
+	pub fn handle_window_resize(&mut self, width: u16, height: u16) {
+		self.window_width = Some(width);
+		self.window_height = Some(height);
+		self.text_width = width.saturating_sub(self.gutter_width()) as usize;
+		self.needs_redraw = true;
+	}
+
+	pub fn handle_focus_in(&mut self) {
+		self.needs_redraw = true;
+	}
+
+	pub fn handle_focus_out(&mut self) {
+		self.needs_redraw = true;
+	}
+
+	pub fn handle_paste(&mut self, content: String) {
+		if self.terminal_open && self.terminal_focused {
+			if let Some(term) = &mut self.terminal {
+				let _ = term.write_key(content.as_bytes());
+			}
+			return;
+		}
+
+		self.insert_text(&content);
 	}
 }
 
@@ -1537,11 +1362,8 @@ impl ext::EditorOps for Editor {
 				let id = args[1];
 				let logs = self.plugins.logs.get(id).cloned().unwrap_or_default();
 				let content = logs.join("\n");
-				self.enter_scratch_context();
 				self.doc = Rope::from(content.as_str());
 				self.path = Some(std::path::PathBuf::from(format!("plugin-logs-{}", id)));
-				self.scratch_open = true;
-				self.scratch_focused = true;
 				Ok(())
 			}
 			_ => Err(format!("Unknown plugin command: {}", args[0])),
