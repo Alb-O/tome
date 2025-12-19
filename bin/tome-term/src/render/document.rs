@@ -39,8 +39,8 @@ impl Editor {
 			.direction(Direction::Vertical)
 			.constraints([
 				Constraint::Min(1),
-				Constraint::Length(1),
 				Constraint::Length(message_height),
+				Constraint::Length(1),
 			])
 			.split(area);
 
@@ -96,21 +96,21 @@ impl Editor {
 			}
 		}
 
-		// Render status line background (matches popup background)
-		let status_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
-		frame.render_widget(status_bg, chunks[1]);
-
-		// Render status line content
-		// We render status line based on which buffer is focused
-		frame.render_widget(self.render_status_line(), chunks[1]);
-
-		// Render message line if needed
+		// Render message line if needed (above status line)
 		if has_command_line {
 			let message_bg =
 				Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
-			frame.render_widget(message_bg, chunks[2]);
-			frame.render_widget(self.render_message_line(), chunks[2]);
+			frame.render_widget(message_bg, chunks[1]);
+			frame.render_widget(self.render_message_line(), chunks[1]);
 		}
+
+		// Render status line background (matches popup background) - always at bottom
+		let status_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
+		frame.render_widget(status_bg, chunks[2]);
+
+		// Render status line content
+		// We render status line based on which buffer is focused
+		frame.render_widget(self.render_status_line(), chunks[2]);
 
 		self.notifications.render(frame, frame.area());
 
@@ -126,10 +126,12 @@ impl Editor {
 			let menu_width = (max_label_len + 10) as u16;
 			let menu_height = (self.completions.items.len() as u16).min(10);
 
+			// Position menu above the message/command line (chunks[1])
+			// This ensures it appears above both the command line and status line
 			let menu_area = Rect {
-				x: chunks[2].x,
-				y: chunks[2].y.saturating_sub(menu_height),
-				width: menu_width.min(chunks[2].width),
+				x: chunks[1].x,
+				y: chunks[1].y.saturating_sub(menu_height),
+				width: menu_width.min(chunks[1].width),
 				height: menu_height,
 			};
 			frame.render_widget(Clear, menu_area);
