@@ -1,7 +1,5 @@
-use std::path::PathBuf;
-
 use tome_core::ext::CompletionItem;
-use tome_core::{InputHandler, Rope, Selection};
+use tome_core::{Rope, Selection};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MessageKind {

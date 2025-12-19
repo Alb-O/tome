@@ -153,10 +153,10 @@ impl Editor {
 			self.completions.items = items;
 			self.completions.active = !self.completions.items.is_empty();
 			// Keep selection if still valid, otherwise reset
-			if let Some(idx) = self.completions.selected_idx {
-				if idx >= self.completions.items.len() {
-					self.completions.selected_idx = None;
-				}
+			if let Some(idx) = self.completions.selected_idx
+				&& idx >= self.completions.items.len()
+			{
+				self.completions.selected_idx = None;
 			}
 		} else {
 			self.completions.active = false;
@@ -388,8 +388,8 @@ impl Editor {
 			}
 
 			panel.transcript.push(ChatItem {
-				role: TomeChatRole::User,
-				text: text.clone(),
+				_role: TomeChatRole::User,
+				_text: text.clone(),
 			});
 			panel.input = "".into();
 			panel.input_cursor = 0;
@@ -536,8 +536,8 @@ impl Editor {
 					&& let Some(text) = tome_owned_to_string(event.text)
 				{
 					panel.transcript.push(ChatItem {
-						role: event.role,
-						text,
+						_role: event.role,
+						_text: text,
 					});
 				}
 			}
@@ -911,36 +911,32 @@ impl Editor {
 		let old_mode = self.mode();
 		let key: Key = key.into();
 
-		if let Mode::Command { .. } = self.mode() {
-			if self.completions.active {
-				match key.code {
-					KeyCode::Special(SpecialKey::Tab) => {
-						let len = self.completions.items.len();
-						if len > 0 {
-							let new_idx = if key.modifiers.shift {
-								match self.completions.selected_idx {
-									Some(idx) => (idx + len - 1) % len,
-									None => len - 1,
-								}
-							} else {
-								match self.completions.selected_idx {
-									Some(idx) => (idx + 1) % len,
-									None => 0,
-								}
-							};
-							self.completions.selected_idx = Some(new_idx);
-							let item = self.completions.items[new_idx].clone();
-							if let Mode::Command { prompt, .. } = self.input.mode() {
-								self.input.set_mode(Mode::Command {
-									prompt,
-									input: item.insert_text,
-								});
-							}
-							return false;
-						}
+		if let Mode::Command { .. } = self.mode()
+			&& self.completions.active
+			&& let KeyCode::Special(SpecialKey::Tab) = key.code
+		{
+			let len = self.completions.items.len();
+			if len > 0 {
+				let new_idx = if key.modifiers.shift {
+					match self.completions.selected_idx {
+						Some(idx) => (idx + len - 1) % len,
+						None => len - 1,
 					}
-					_ => {}
+				} else {
+					match self.completions.selected_idx {
+						Some(idx) => (idx + 1) % len,
+						None => 0,
+					}
+				};
+				self.completions.selected_idx = Some(new_idx);
+				let item = self.completions.items[new_idx].clone();
+				if let Mode::Command { prompt, .. } = self.input.mode() {
+					self.input.set_mode(Mode::Command {
+						prompt,
+						input: item.insert_text,
+					});
 				}
+				return false;
 			}
 		}
 

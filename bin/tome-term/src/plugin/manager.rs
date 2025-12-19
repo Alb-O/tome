@@ -35,7 +35,7 @@ pub struct PluginManifest {
 pub enum PluginStatus {
 	Installed,
 	Loaded,
-	Failed(String),
+	_Failed(String),
 	Disabled,
 }
 
@@ -570,8 +570,8 @@ pub(crate) extern "C" fn host_panel_append_transcript(
 				&& let Some(panel) = mgr.panels.get_mut(&id)
 			{
 				panel.transcript.push(ChatItem {
-					role,
-					text: tome_str_to_str(&text).to_string(),
+					_role: role,
+					_text: tome_str_to_str(&text).to_string(),
 				});
 			}
 		}
