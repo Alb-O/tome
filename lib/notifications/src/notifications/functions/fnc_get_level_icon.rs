@@ -1,10 +1,10 @@
 use crate::notifications::types::Level;
 
-const ICON_INFO: &str = " ℹ";
-const ICON_WARN: &str = " ⚠";
-const ICON_ERROR: &str = " ✖";
-const ICON_DEBUG: &str = " 🐞";
-const ICON_TRACE: &str = " ⊙";
+const ICON_INFO: &str = "󰋼";
+const ICON_WARN: &str = "󰀪";
+const ICON_ERROR: &str = "󰅚";
+const ICON_DEBUG: &str = "󰃭";
+const ICON_TRACE: &str = "󰗋";
 
 /// Returns the icon string for a given notification level.
 ///
@@ -23,8 +23,8 @@ const ICON_TRACE: &str = " ⊙";
 /// use ratatui_notifications::notifications::functions::fnc_get_level_icon::get_level_icon;
 /// use ratatui_notifications::notifications::types::Level;
 ///
-/// assert_eq!(get_level_icon(Some(Level::Info)), Some(" ℹ"));
-/// assert_eq!(get_level_icon(Some(Level::Error)), Some(" ✖"));
+/// assert_eq!(get_level_icon(Some(Level::Info)), Some("󰋼"));
+/// assert_eq!(get_level_icon(Some(Level::Error)), Some("󰅚"));
 /// assert_eq!(get_level_icon(None), None);
 /// ```
 pub fn get_level_icon(level: Option<Level>) -> Option<&'static str> {
@@ -37,3 +37,4 @@ pub fn get_level_icon(level: Option<Level>) -> Option<&'static str> {
 		None => None,
 	}
 }
+

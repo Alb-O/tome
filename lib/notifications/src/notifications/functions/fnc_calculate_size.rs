@@ -1,37 +1,17 @@
 use ratatui::buffer::{Buffer, Cell};
 use ratatui::prelude::*;
 use ratatui::widgets::paragraph::Wrap;
-use ratatui::widgets::{Block, BorderType, Borders, Paragraph, Widget};
+use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
 
 use crate::notifications::classes::Notification;
 use crate::notifications::types::SizeConstraint;
+use crate::notifications::ui::chrome::{gutter_layout, padding_with_gutter};
 
 /// Calculates the size of a notification based on its content and constraints.
 ///
 /// This function determines the width and height needed to display a notification,
-/// taking into account borders, padding, content wrapping, and size constraints.
-///
-/// # Arguments
-///
-/// * `notification` - The notification to calculate size for
-/// * `frame_area` - The available frame area (used for percentage constraints)
-///
-/// # Returns
-///
-/// A tuple `(width, height)` representing the calculated notification dimensions
-///
-/// # Examples
-///
-/// ```ignore
-/// // Internal function - use through Notifications manager
-/// use ratatui::prelude::*;
-/// use ratatui_notifications::notifications::classes::Notification;
-/// use ratatui_notifications::notifications::functions::fnc_calculate_size::calculate_size;
-///
-/// let notification = Notification::default();
-/// let frame_area = Rect::new(0, 0, 100, 50);
-/// let (width, height) = calculate_size(&notification, frame_area);
-/// ```
+/// taking into account borders, padding, gutter/icon column, content wrapping, and
+/// size constraints.
 pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u16) {
 	let border_v_offset = match notification.border_type {
 		Some(BorderType::Double) => 2,
@@ -44,11 +24,14 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 		None => 0,
 	};
 
-	let h_padding = notification.padding.left + notification.padding.right;
-	let v_padding = notification.padding.top + notification.padding.bottom;
+	let gutter = gutter_layout(notification.level);
+	let effective_padding = padding_with_gutter(notification.padding, gutter);
 
-	let min_width = (1 + h_padding + border_h_offset).max(3);
-	let min_height = (1 + v_padding + border_v_offset).max(3);
+	let body_h_padding = effective_padding.left + effective_padding.right;
+	let body_v_padding = effective_padding.top + effective_padding.bottom;
+
+	let min_width = (1 + body_h_padding + border_h_offset).max(3);
+	let min_height = (1 + body_v_padding + border_v_offset).max(3);
 
 	let max_width_constraint = notification
 		.max_width
@@ -70,10 +53,12 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 		.unwrap_or(0) as u16;
 
 	let title_width = notification.title.as_ref().map_or(0, |t: &Line| t.width()) as u16;
+	let title_padding = notification.padding.left + notification.padding.right;
 
-	let intrinsic_width =
-		(content_max_line_width.max(title_width) + border_h_offset + h_padding).max(min_width);
+	let width_for_body = (content_max_line_width + border_h_offset + body_h_padding).max(min_width);
+	let width_for_title = (title_width + border_h_offset + title_padding).max(min_width);
 
+	let intrinsic_width = width_for_body.max(width_for_title);
 	let final_width = intrinsic_width.min(max_width_constraint);
 
 	let max_height_constraint = notification
@@ -94,7 +79,8 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 	if let Some(title) = &notification.title {
 		temp_block = temp_block.title(title.clone());
 	}
-	temp_block = temp_block.padding(notification.padding);
+	// Account for the gutter/icon column by treating it as extra left padding.
+	temp_block = temp_block.padding(effective_padding);
 
 	let temp_paragraph = Paragraph::new(notification.content.clone())
 		.wrap(Wrap { trim: true })
@@ -116,4 +102,45 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 
 	let final_height = measured_height.max(min_height).min(max_height_constraint);
 	(final_width, final_height)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::notifications::types::{Level, SizeConstraint};
+
+	#[test]
+	fn calculate_size_includes_gutter_width_when_icon_present() {
+		let frame_area = Rect::new(0, 0, 120, 40);
+
+		let mut without_icon = Notification::default();
+		without_icon.level = None;
+		without_icon.content = Text::raw("1234567890");
+		without_icon.max_width = Some(SizeConstraint::Absolute(120));
+
+		let mut with_icon = without_icon.clone();
+		with_icon.level = Some(Level::Info);
+
+		let (w0, _) = calculate_size(&without_icon, frame_area);
+		let (w1, _) = calculate_size(&with_icon, frame_area);
+
+		assert!(w1 > w0, "expected icon gutter to increase width");
+	}
+
+	#[test]
+	fn calculate_size_wraps_content_with_gutter() {
+		let frame_area = Rect::new(0, 0, 120, 40);
+
+		let mut n = Notification::default();
+		n.level = Some(Level::Info);
+		// Include whitespace so ratatui wrap can break lines.
+		// Use enough words to require >1 wrapped row even with min height.
+		n.content = Text::raw("abcde fghij klmno");
+		// Force a width where the gutter meaningfully reduces content width.
+		n.max_width = Some(SizeConstraint::Absolute(12));
+		n.max_height = Some(SizeConstraint::Absolute(40));
+
+		let (_, h) = calculate_size(&n, frame_area);
+		assert!(h > 3, "expected wrapping to increase height");
+	}
 }

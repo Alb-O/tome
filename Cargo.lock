@@ -1921,6 +1921,7 @@ dependencies = [
  "log",
  "ratatui 0.30.0-hackable",
  "thiserror 2.0.17",
+ "unicode-width 0.2.0",
 ]
 
 [[package]]

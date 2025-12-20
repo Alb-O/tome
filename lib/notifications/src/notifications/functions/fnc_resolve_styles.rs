@@ -1,9 +1,9 @@
-use ratatui::style::{Color, Style};
+use ratatui::style::{Color, Modifier, Style};
 
 use crate::notifications::types::Level;
 
 const DEFAULT_BLOCK_STYLE: Style = Style::new();
-const DEFAULT_TITLE_STYLE: Style = Style::new();
+const DEFAULT_TITLE_STYLE: Style = Style::new().add_modifier(Modifier::BOLD);
 const DEFAULT_BORDER_STYLE: Style = Style::new().fg(Color::DarkGray);
 
 const INFO_BORDER_STYLE: Style = Style::new().fg(Color::Green);

@@ -193,7 +193,7 @@ impl Panel for TerminalPanel {
 				// Terminal mouse support is not implemented yet; swallow clicks.
 				EventResult::consumed()
 			}
-			UiEvent::Resize { .. } => EventResult::not_consumed(),
+			UiEvent::Resize => EventResult::not_consumed(),
 		}
 	}
 

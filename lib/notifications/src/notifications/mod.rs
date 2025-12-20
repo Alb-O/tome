@@ -4,6 +4,7 @@ pub mod orc_manager;
 pub mod orc_render;
 pub mod orc_stacking;
 pub mod types;
+pub mod ui;
 
 // Re-export main types for convenient access
 pub use classes::{Notification, NotificationBuilder};

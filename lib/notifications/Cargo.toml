@@ -14,3 +14,4 @@ crossterm = "0.29.0"
 log = "0.4"
 ratatui = { workspace = true, features = ["crossterm"] }
 thiserror = "2.0.12"
+unicode-width = { workspace = true }

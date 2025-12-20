@@ -3,15 +3,15 @@ use std::collections::HashMap;
 use ratatui::layout::Alignment;
 use ratatui::prelude::*;
 use ratatui::symbols::border;
-use ratatui::text::{Line, Span};
 use ratatui::widgets::block::Padding;
-use ratatui::widgets::paragraph::Wrap;
-use ratatui::widgets::{Block, BorderType, Borders, Clear, Paragraph};
+use ratatui::widgets::{Block, BorderType, Borders, Clear};
 
 use crate::notifications::functions::fnc_get_level_icon::get_level_icon;
 use crate::notifications::functions::fnc_resolve_styles::resolve_styles;
 use crate::notifications::orc_stacking::calculate_stacking_positions;
 use crate::notifications::types::{Anchor, AnimationPhase, Level};
+use crate::notifications::ui::chrome::{gutter_layout, split_inner};
+use crate::notifications::ui::slices::{body, icon_gutter};
 
 /// Trait for renderable notification state.
 ///
@@ -65,19 +65,8 @@ pub trait RenderableNotification:
 ///    - Gets animation handler and calculates current rect
 ///    - Resolves styles
 ///    - Applies fade effect if enabled
-///    - Builds Block with border, title, icon
-///    - Renders Clear at stacked position, then Paragraph at animated position
-///
-/// # Arguments
-///
-/// * `notifications` - Mutable HashMap of all notification states
-/// * `notifications_by_anchor` - Mapping of anchors to notification IDs
-/// * `frame` - The frame to render to
-/// * `max_concurrent` - Optional limit on concurrent visible notifications
-///
-/// # Type Parameters
-///
-/// * `T` - Any type implementing RenderableNotification trait
+///    - Builds Block (borders, title)
+///    - Renders Clear at stacked position, then content slices at animated position
 pub fn render_notifications<T: RenderableNotification>(
 	notifications: &mut HashMap<u64, T>,
 	notifications_by_anchor: &HashMap<Anchor, Vec<u64>>,
@@ -92,7 +81,6 @@ pub fn render_notifications<T: RenderableNotification>(
 			continue;
 		}
 
-		// Calculate stacking positions for this anchor
 		let stacked_notifications = calculate_stacking_positions(
 			notifications,
 			*anchor,
@@ -101,15 +89,11 @@ pub fn render_notifications<T: RenderableNotification>(
 			max_concurrent,
 		);
 
-		// Render each stacked notification
 		for stacked in stacked_notifications {
 			if let Some(state) = notifications.get_mut(&stacked.id) {
-				// Update the state's full_rect with stacked position
 				state.set_full_rect(stacked.rect);
 
-				// Calculate current rect using animation
 				let current_rect = state.calculate_animation_rect(frame_area);
-
 				if current_rect.width == 0 || current_rect.height == 0 {
 					continue;
 				}
@@ -122,12 +106,7 @@ pub fn render_notifications<T: RenderableNotification>(
 				);
 
 				let (final_block_style, final_border_style, final_title_style, final_content_style) =
-					apply_fade_if_needed(
-						state,
-						base_block_style,
-						base_border_style,
-						base_title_style,
-					);
+					apply_fade_if_needed(state, base_block_style, base_border_style, base_title_style);
 
 				let mut block = Block::default()
 					.style(final_block_style)
@@ -145,13 +124,10 @@ pub fn render_notifications<T: RenderableNotification>(
 					});
 				}
 
-				if let Some(mut title_line) = state.title() {
-					if let Some(icon_str) = get_level_icon(state.level()) {
-						let icon_span = Span::styled(icon_str, final_border_style);
-						title_line.spans.insert(0, icon_span);
-					}
+				if let Some(title_line) = state.title() {
 					block = block.title(
 						title_line
+							.clone()
 							.alignment(Alignment::Center)
 							.style(final_title_style),
 					);
@@ -160,15 +136,31 @@ pub fn render_notifications<T: RenderableNotification>(
 				let border_set = get_border_set(state.border_type());
 				block = state.apply_animation_block_effect(block, frame_area, &border_set);
 
-				let paragraph = Paragraph::new(state.content())
-					.wrap(Wrap { trim: true })
-					.style(final_content_style)
-					.block(block);
-
 				if stacked.rect.width > 0 && stacked.rect.height > 0 {
 					frame.render_widget(Clear, stacked.rect.intersection(frame_area));
 				}
-				frame.render_widget(paragraph, current_rect);
+
+				let inner_area = block.inner(current_rect);
+				frame.render_widget(block, current_rect);
+
+				let gutter = gutter_layout(state.level());
+				if let (Some(g), Some(icon)) = (gutter, get_level_icon(state.level())) {
+					let (gutter_area, content_area) = split_inner(inner_area, g);
+					if gutter_area.width > 0 && content_area.width > 0 {
+						icon_gutter::render_icon_gutter(
+							frame,
+							gutter_area,
+							g,
+							icon,
+							final_border_style,
+						);
+						body::render_body(frame, content_area, state.content(), final_content_style);
+					} else {
+						body::render_body(frame, inner_area, state.content(), final_content_style);
+					}
+				} else {
+					body::render_body(frame, inner_area, state.content(), final_content_style);
+				}
 			}
 		}
 	}
@@ -197,14 +189,11 @@ fn apply_fade_if_needed<T: RenderableNotification>(
 
 	if apply_fade && (is_in_anim_phase || is_dwelling) {
 		let phase = state.current_phase();
-		// For dwelling phase, use progress=1.0 to get the final interpolated color
-		// This prevents a jarring discontinuity when transitioning from FadingIn to Dwelling
 		let progress = if is_dwelling {
 			1.0
 		} else {
 			state.animation_progress()
 		};
-		// Use FadingIn phase for dwelling to get the "fully visible" colors
 		let effective_phase = if is_dwelling {
 			AnimationPhase::FadingIn
 		} else {
@@ -230,12 +219,7 @@ fn apply_fade_if_needed<T: RenderableNotification>(
 			base_block_style.patch(content_fade_override),
 		)
 	} else {
-		(
-			base_block_style,
-			base_border_style,
-			base_title_style,
-			base_block_style,
-		)
+		(base_block_style, base_border_style, base_title_style, base_block_style)
 	}
 }
 
