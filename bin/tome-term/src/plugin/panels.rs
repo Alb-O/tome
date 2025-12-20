@@ -3,10 +3,7 @@ use tome_core::Rope;
 
 #[derive(Debug)]
 pub struct ChatPanelState {
-	pub id: u64,
-	pub _title: String,
-	pub open: bool,
-	pub focused: bool,
+	pub title: String,
 	pub input: Rope,
 	pub input_cursor: usize,
 	pub transcript: Vec<ChatItem>,
@@ -19,12 +16,9 @@ pub struct ChatItem {
 }
 
 impl ChatPanelState {
-	pub fn new(id: u64, title: String) -> Self {
+	pub fn new(title: String) -> Self {
 		Self {
-			id,
-			_title: title,
-			open: false,
-			focused: false,
+			title,
 			input: Rope::from(""),
 			input_cursor: 0,
 			transcript: Vec::new(),

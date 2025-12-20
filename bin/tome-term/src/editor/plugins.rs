@@ -175,6 +175,7 @@ impl Editor {
 						_role: event.role,
 						_text: text,
 					});
+					self.request_redraw();
 				}
 			}
 			TomePluginEventKind::PanelSetOpen => {
@@ -184,9 +185,11 @@ impl Editor {
 					.get(&event.panel_id)
 					.map(|s| s.as_str())
 					== Some(plugin_id)
-					&& let Some(panel) = self.plugins.panels.get_mut(&event.panel_id)
+					&& self.plugins.panels.contains_key(&event.panel_id)
+					&& let Some(ui_id) = self.plugins.panel_ui_ids.get(&event.panel_id).cloned()
 				{
-					panel.open = event.bool_val.0 != 0;
+					self.ui.set_open(&ui_id, event.bool_val.0 != 0);
+					self.request_redraw();
 				}
 			}
 			TomePluginEventKind::ShowMessage => {

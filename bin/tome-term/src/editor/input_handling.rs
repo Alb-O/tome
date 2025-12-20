@@ -4,116 +4,26 @@ use crate::editor::Editor;
 
 impl Editor {
 	pub fn handle_key(&mut self, key: termina::event::KeyEvent) -> bool {
-		use termina::event::{KeyCode as TmKeyCode, Modifiers as TmModifiers};
-
-		// Toggle terminal with Ctrl+t
-		if matches!(key.code, TmKeyCode::Char('t')) && key.modifiers.contains(TmModifiers::CONTROL)
-		{
-			self.do_toggle_terminal();
-			return false;
-		}
-
-		if self.plugins.plugins_open && self.plugins.plugins_focused {
-			match key.code {
-				TmKeyCode::Char('j') | TmKeyCode::Down => {
-					let num_entries = self.plugins.entries.len();
-					if num_entries > 0 {
-						self.plugins.plugins_selected_idx =
-							(self.plugins.plugins_selected_idx + 1) % num_entries;
-					}
-				}
-				TmKeyCode::Char('k') | TmKeyCode::Up => {
-					let num_entries = self.plugins.entries.len();
-					if num_entries > 0 {
-						self.plugins.plugins_selected_idx = self
-							.plugins
-							.plugins_selected_idx
-							.checked_sub(1)
-							.unwrap_or(num_entries - 1);
-					}
-				}
-				TmKeyCode::Char(' ') | TmKeyCode::Enter => {
-					let mut sorted_ids: Vec<_> = self.plugins.entries.keys().cloned().collect();
-					sorted_ids.sort();
-					if let Some(id) = sorted_ids.get(self.plugins.plugins_selected_idx) {
-						let id = id.clone();
-						let enabled = self.plugins.config.plugins.enabled.contains(&id);
-						if enabled {
-							let _ = self.plugin_command(&["disable", &id]);
-						} else {
-							let _ = self.plugin_command(&["enable", &id]);
-						}
-					}
-				}
-				TmKeyCode::Char('r') => {
-					let mut sorted_ids: Vec<_> = self.plugins.entries.keys().cloned().collect();
-					sorted_ids.sort();
-					if let Some(id) = sorted_ids.get(self.plugins.plugins_selected_idx) {
-						let id = id.clone();
-						let _ = self.plugin_command(&["reload", &id]);
-					}
-				}
-				TmKeyCode::Escape | TmKeyCode::Char('q') => {
-					self.plugins.plugins_open = false;
-					self.plugins.plugins_focused = false;
-				}
-				_ => {}
+		// UI global bindings (panels, focus, etc.)
+		if self.ui.handle_global_key(&key) {
+			if self.ui.take_wants_redraw() {
+				self.needs_redraw = true;
 			}
 			return false;
 		}
 
-		if self.handle_terminal_key(&key) {
-			return false;
-		}
 
-		// Check plugin panels
-		let mut panel_id_to_submit = None;
-		let mut panel_handled = false;
-		for panel in self.plugins.panels.values_mut() {
-			if panel.open && panel.focused {
-				let raw_ctrl_enter = matches!(
-					key.code,
-					TmKeyCode::Enter | TmKeyCode::Char('\n') | TmKeyCode::Char('j')
-				) && key.modifiers.contains(TmModifiers::CONTROL);
-
-				if raw_ctrl_enter {
-					panel_id_to_submit = Some(panel.id);
-				} else {
-					match key.code {
-						TmKeyCode::Char(c) => {
-							panel.input.insert(panel.input_cursor, &c.to_string());
-							panel.input_cursor += 1;
-						}
-						TmKeyCode::Backspace => {
-							if panel.input_cursor > 0 {
-								panel
-									.input
-									.remove(panel.input_cursor - 1..panel.input_cursor);
-								panel.input_cursor -= 1;
-							}
-						}
-						TmKeyCode::Enter => {
-							panel.input.insert(panel.input_cursor, "\n");
-							panel.input_cursor += 1;
-						}
-						TmKeyCode::Escape => {
-							panel.focused = false;
-						}
-						_ => {}
-					}
-				}
-				panel_handled = true;
-				break;
+		// Focused panel input
+		if self.ui.focused_panel_id().is_some() {
+			let mut ui = std::mem::take(&mut self.ui);
+			let _ = ui.handle_focused_key(self, key);
+			if ui.take_wants_redraw() {
+				self.needs_redraw = true;
 			}
+			self.ui = ui;
+			return false;
 		}
 
-		if let Some(panel_id) = panel_id_to_submit {
-			self.submit_plugin_panel(panel_id);
-			return false;
-		}
-		if panel_handled {
-			return false;
-		}
 
 		self.handle_key_active(key)
 	}
@@ -273,9 +183,32 @@ impl Editor {
 	}
 
 	pub fn handle_mouse(&mut self, mouse: termina::event::MouseEvent) -> bool {
-		if self.handle_terminal_mouse(&mouse) {
+		let width = self.window_width.unwrap_or(80);
+		let height = self.window_height.unwrap_or(24);
+		let has_command_line = self.input.command_line().is_some();
+		let message_height = if has_command_line { 1 } else { 0 };
+		let main_height = height.saturating_sub(message_height + 1);
+		let main_area = ratatui::layout::Rect {
+			x: 0,
+			y: 0,
+			width,
+			height: main_height,
+		};
+
+		let mut ui = std::mem::take(&mut self.ui);
+		let layout = ui.compute_layout(main_area);
+
+		if ui.handle_mouse(self, mouse, &layout) {
+			if ui.take_wants_redraw() {
+				self.needs_redraw = true;
+			}
+			self.ui = ui;
 			return false;
 		}
+		if ui.take_wants_redraw() {
+			self.needs_redraw = true;
+		}
+		self.ui = ui;
 
 		self.handle_mouse_active(mouse)
 	}

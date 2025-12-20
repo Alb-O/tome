@@ -26,8 +26,8 @@ pub fn run_editor(
 	let backend = TerminaBackend::new(terminal);
 	let mut terminal = Terminal::new(backend)?;
 
-	// Pre-warm an embedded shell in the background so opening the terminal panel is instant.
-	editor.start_terminal_prewarm();
+	// Start UI panels (includes terminal prewarm).
+	editor.ui_startup();
 	editor.autoload_plugins();
 
 	if let Some(cmd) = startup_ex.as_deref() {
@@ -41,29 +41,17 @@ pub fn run_editor(
 
 	let result = (|| {
 		loop {
-			editor.poll_terminal_prewarm();
+			editor.ui_tick();
 			editor.poll_plugins();
-
-			let mut terminal_exited = false;
-			if let Some(term) = &mut editor.terminal {
-				term.update();
-				if !term.is_alive() {
-					terminal_exited = true;
-				}
-			}
-			if terminal_exited {
-				editor.on_terminal_exit();
-			}
 
 			terminal.draw(|frame| editor.render(frame))?;
 
 			// Set terminal cursor style based on mode.
-			// When the embedded terminal is focused, prefer the user's terminal default.
-			let cursor_style = if editor.terminal_focused {
-				termina::style::CursorStyle::Default
-			} else {
-				cursor_style_for_mode(editor.mode())
-			};
+			// When a focused panel requests a cursor style, prefer it.
+			let cursor_style = editor
+				.ui
+				.cursor_style()
+				.unwrap_or_else(|| cursor_style_for_mode(editor.mode()));
 			write!(
 				terminal.backend_mut().terminal_mut(),
 				"{}",
@@ -73,8 +61,7 @@ pub fn run_editor(
 
 			let mut filter = |e: &Event| !e.is_escape();
 			let timeout = if matches!(editor.mode(), tome_core::Mode::Insert)
-				|| editor.terminal_open
-				|| editor.plugins.panels.values().any(|p| p.open)
+				|| editor.any_panel_open()
 				|| editor.needs_redraw
 			{
 				editor.needs_redraw = false;

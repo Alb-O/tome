@@ -129,14 +129,11 @@ pub struct PluginManager {
 	pub commands: HashMap<String, PluginCommand>,
 	pub panels: HashMap<u64, ChatPanelState>,
 	pub panel_owners: HashMap<u64, String>, // Maps panel_id to owner plugin_id
+	pub panel_ui_ids: HashMap<u64, String>, // Maps panel_id to ui panel id
 	pub logs: HashMap<String, Vec<String>>,
 	next_panel_id: u64,
 	current_namespace: Option<String>,
 	pub(crate) current_plugin_id: Option<String>,
-
-	pub plugins_open: bool,
-	pub plugins_focused: bool,
-	pub plugins_selected_idx: usize,
 }
 
 pub fn get_config_dir() -> Option<PathBuf> {
@@ -181,13 +178,11 @@ impl PluginManager {
 			commands: HashMap::new(),
 			panels: HashMap::new(),
 			panel_owners: HashMap::new(),
+			panel_ui_ids: HashMap::new(),
 			logs: HashMap::new(),
 			next_panel_id: 1,
 			current_namespace: None,
 			current_plugin_id: None,
-			plugins_open: false,
-			plugins_focused: false,
-			plugins_selected_idx: 0,
 		}
 	}
 
@@ -510,7 +505,21 @@ pub(crate) extern "C" fn host_panel_create(kind: TomePanelKind, title: TomeStr) 
 			let title_str = tome_str_to_str(&title).to_string();
 			match kind {
 				TomePanelKind::Chat => {
-					mgr.panels.insert(id, ChatPanelState::new(id, title_str));
+					mgr.panels
+						.insert(id, ChatPanelState::new(title_str.clone()));
+
+					let ui_id = crate::ui::panels::chat::chat_panel_ui_id(id);
+					mgr.panel_ui_ids.insert(id, ui_id.clone());
+
+					ACTIVE_EDITOR.with(|ed_ctx: &RefCell<Option<*mut Editor>>| {
+						if let Some(ed_ptr) = *ed_ctx.borrow() {
+							let ed = unsafe { &mut *ed_ptr };
+							ed.ui.register_panel(Box::new(
+								crate::ui::panels::chat::PluginChatPanel::new(id, title_str),
+							));
+							ed.request_redraw();
+						}
+					});
 				}
 			}
 			id
@@ -525,16 +534,16 @@ pub(crate) extern "C" fn host_panel_set_open(id: TomePanelId, open: TomeBool) {
 		if let Some(mgr_ptr) = *ctx.borrow() {
 			let mgr = unsafe { &mut *mgr_ptr };
 			if mgr.panel_owners.get(&id) == mgr.current_plugin_id.as_ref()
-				&& let Some(panel) = mgr.panels.get_mut(&id)
+				&& mgr.panels.contains_key(&id)
+				&& let Some(ui_id) = mgr.panel_ui_ids.get(&id).cloned()
 			{
-				panel.open = open.0 != 0;
-				if panel.open {
-					for (pid, p) in &mut mgr.panels {
-						if *pid != id {
-							p.open = false;
-						}
+				ACTIVE_EDITOR.with(|ed_ctx: &RefCell<Option<*mut Editor>>| {
+					if let Some(ed_ptr) = *ed_ctx.borrow() {
+						let ed = unsafe { &mut *ed_ptr };
+						ed.ui.set_open(&ui_id, open.0 != 0);
+						ed.request_redraw();
 					}
-				}
+				});
 			}
 		}
 	})
@@ -545,16 +554,25 @@ pub(crate) extern "C" fn host_panel_set_focused(id: TomePanelId, focused: TomeBo
 		if let Some(mgr_ptr) = *ctx.borrow() {
 			let mgr = unsafe { &mut *mgr_ptr };
 			if mgr.panel_owners.get(&id) == mgr.current_plugin_id.as_ref()
-				&& let Some(panel) = mgr.panels.get_mut(&id)
+				&& mgr.panels.contains_key(&id)
+				&& let Some(ui_id) = mgr.panel_ui_ids.get(&id).cloned()
 			{
-				panel.focused = focused.0 != 0;
-				if panel.focused {
-					for (pid, p) in &mut mgr.panels {
-						if *pid != id {
-							p.focused = false;
+				ACTIVE_EDITOR.with(|ed_ctx: &RefCell<Option<*mut Editor>>| {
+					if let Some(ed_ptr) = *ed_ctx.borrow() {
+						let ed = unsafe { &mut *ed_ptr };
+						if focused.0 != 0 {
+							ed.ui.set_open(&ui_id, true);
+							ed.ui.apply_requests(vec![crate::ui::UiRequest::Focus(
+								crate::ui::FocusTarget::panel(ui_id.clone()),
+							)]);
+						} else if ed.ui.is_panel_focused(&ui_id) {
+							ed.ui.apply_requests(vec![crate::ui::UiRequest::Focus(
+								crate::ui::FocusTarget::editor(),
+							)]);
 						}
+						ed.request_redraw();
 					}
-				}
+				});
 			}
 		}
 	})
@@ -574,6 +592,12 @@ pub(crate) extern "C" fn host_panel_append_transcript(
 				panel.transcript.push(ChatItem {
 					_role: role,
 					_text: tome_str_to_str(&text).to_string(),
+				});
+				ACTIVE_EDITOR.with(|ed_ctx: &RefCell<Option<*mut Editor>>| {
+					if let Some(ed_ptr) = *ed_ctx.borrow() {
+						let ed = unsafe { &mut *ed_ptr };
+						ed.request_redraw();
+					}
 				});
 			}
 		}

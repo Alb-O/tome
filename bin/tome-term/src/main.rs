@@ -9,6 +9,7 @@ mod render;
 mod styles;
 mod terminal;
 pub mod terminal_panel;
+mod ui;
 #[cfg(test)]
 mod tests;
 pub mod theme;
@@ -41,7 +42,7 @@ fn main() -> io::Result<()> {
 
 	if cli.quit_after_ex {
 		if let Some(cmd) = cli.ex.as_deref() {
-			editor.start_terminal_prewarm();
+			editor.ui_startup();
 			editor.autoload_plugins();
 			editor.execute_ex_command(cmd);
 

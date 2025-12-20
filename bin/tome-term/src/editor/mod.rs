@@ -6,13 +6,11 @@ mod messaging;
 mod navigation;
 mod plugins;
 mod search;
-mod terminal;
 pub mod types;
 
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
-use std::sync::mpsc::Receiver;
 
 use ratatui_notifications::{Notifications, Overflow};
 use tome_core::ext::{HookContext, emit_hook};
@@ -22,8 +20,8 @@ pub use types::{HistoryEntry, Message, MessageKind, Registers};
 
 use crate::editor::types::CompletionState;
 use crate::plugin::PluginManager;
-use crate::terminal_panel::TerminalState;
 use crate::theme::Theme;
+use crate::ui::UiManager;
 
 pub struct Editor {
 	pub doc: Rope,
@@ -40,18 +38,13 @@ pub struct Editor {
 	pub redo_stack: Vec<HistoryEntry>,
 	pub text_width: usize,
 
-	pub terminal: Option<TerminalState>,
-	pub(crate) terminal_prewarm: Option<Receiver<Result<TerminalState, crate::terminal_panel::TerminalError>>>,
-	pub(crate) terminal_input_buffer: Vec<u8>,
-	pub terminal_open: bool,
-	pub terminal_focused: bool,
-	pub(crate) terminal_focus_pending: bool,
 
 	pub file_type: Option<String>,
 	pub theme: &'static Theme,
 	pub window_width: Option<u16>,
 	pub window_height: Option<u16>,
 	pub plugins: PluginManager,
+	pub ui: UiManager,
 	pub needs_redraw: bool,
 	pub(crate) insert_undo_active: bool,
 	pub(crate) pending_permissions: Vec<crate::plugin::manager::PendingPermission>,
@@ -107,17 +100,17 @@ impl Editor {
 			undo_stack: Vec::new(),
 			redo_stack: Vec::new(),
 			text_width: 80,
-			terminal: None,
-			terminal_prewarm: None,
-			terminal_input_buffer: Vec::new(),
-			terminal_open: false,
-			terminal_focused: false,
-			terminal_focus_pending: false,
 			file_type: file_type.map(|s| s.to_string()),
 			theme: &crate::themes::solarized::SOLARIZED_DARK,
 			window_width: None,
 			window_height: None,
 			plugins: PluginManager::new(),
+			ui: {
+				let mut ui = UiManager::new();
+				ui.register_panel(Box::new(crate::ui::panels::terminal::TerminalPanel::new()));
+				ui.register_panel(Box::new(crate::ui::panels::plugins::PluginsPanel::new()));
+				ui
+			},
 			needs_redraw: false,
 			insert_undo_active: false,
 			pending_permissions: Vec::new(),
@@ -136,6 +129,26 @@ impl Editor {
 
 	pub fn mode_name(&self) -> &'static str {
 		self.input.mode_name()
+	}
+
+	pub fn ui_startup(&mut self) {
+		let mut ui = std::mem::take(&mut self.ui);
+		ui.startup();
+		self.ui = ui;
+		self.needs_redraw = true;
+	}
+
+	pub fn ui_tick(&mut self) {
+		let mut ui = std::mem::take(&mut self.ui);
+		ui.tick(self);
+		if ui.take_wants_redraw() {
+			self.needs_redraw = true;
+		}
+		self.ui = ui;
+	}
+
+	pub fn any_panel_open(&self) -> bool {
+		self.ui.any_panel_open()
 	}
 
 	pub fn insert_text(&mut self, text: &str) {
@@ -235,6 +248,12 @@ impl Editor {
 		self.window_width = Some(width);
 		self.window_height = Some(height);
 		self.text_width = width.saturating_sub(self.gutter_width()) as usize;
+		let mut ui = std::mem::take(&mut self.ui);
+		ui.notify_resize(self, width, height);
+		if ui.take_wants_redraw() {
+			self.needs_redraw = true;
+		}
+		self.ui = ui;
 		self.needs_redraw = true;
 	}
 
@@ -247,10 +266,15 @@ impl Editor {
 	}
 
 	pub fn handle_paste(&mut self, content: String) {
-		if self.terminal_open && self.terminal_focused {
-			if let Some(term) = &mut self.terminal {
-				let _ = term.write_key(content.as_bytes());
-			}
+		let mut ui = std::mem::take(&mut self.ui);
+		let handled = ui.handle_paste(self, content.clone());
+		if ui.take_wants_redraw() {
+			self.needs_redraw = true;
+		}
+		self.ui = ui;
+
+		if handled {
+			self.needs_redraw = true;
 			return;
 		}
 
@@ -322,8 +346,8 @@ impl Editor {
 
 	pub fn plugin_command(&mut self, args: &[&str]) -> Result<(), tome_core::ext::CommandError> {
 		if args.is_empty() {
-			self.plugins.plugins_open = !self.plugins.plugins_open;
-			self.plugins.plugins_focused = self.plugins.plugins_open;
+			self.ui.toggle_panel(crate::ui::panels::plugins::PLUGINS_PANEL_ID);
+			self.needs_redraw = true;
 			return Ok(());
 		}
 

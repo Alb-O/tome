@@ -1,14 +1,13 @@
 use std::collections::HashSet;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use ratatui::layout::{Constraint, Direction, Layout, Position, Rect};
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
 use tome_core::Mode;
 use tome_core::range::CharIdx;
 
-use super::terminal::ThemedVt100Terminal;
 use super::types::{RenderResult, WrapSegment};
 use crate::editor::Editor;
 use crate::theme::blend_colors;
@@ -45,57 +44,23 @@ impl Editor {
 			])
 			.split(area);
 
-		let (doc_area, terminal_area) = if self.terminal_open {
-			let sub = Layout::default()
-				.direction(Direction::Vertical)
-				.constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
-				.split(chunks[0]);
-			(sub[0], Some(sub[1]))
-		} else {
-			(chunks[0], None)
-		};
+		let mut ui = std::mem::take(&mut self.ui);
+		let dock_layout = ui.compute_layout(chunks[0]);
+		let doc_area = dock_layout.doc_area;
 
 		self.ensure_cursor_visible(doc_area);
+		let doc_focused = ui.focus.focused().is_editor();
 		let main_result =
-			self.render_document_with_cursor(doc_area, use_block_cursor && !self.terminal_focused);
+			self.render_document_with_cursor(doc_area, use_block_cursor && doc_focused);
 		frame.render_widget(main_result.widget, doc_area);
 
-		if let Some(term_area) = terminal_area {
-			if let Some(term) = &mut self.terminal {
-				let (rows, cols) = term.screen().size();
-				if rows != term_area.height || cols != term_area.width {
-					let _ = term.resize(term_area.width, term_area.height);
-				}
-
-				let screen = term.screen();
-
-				let base_style =
-					Style::default()
-						.bg(self.theme.colors.popup.bg)
-						.fg(self.theme.colors.popup.fg);
-
-				let term_widget = ThemedVt100Terminal::new(screen, base_style);
-				frame.render_widget(term_widget, term_area);
-
-				// Use the real terminal cursor (so the emulator draws it with the user's preferred shape).
-				if self.terminal_focused && !screen.hide_cursor() {
-					let (cur_row, cur_col) = screen.cursor_position();
-					if cur_row < term_area.height && cur_col < term_area.width {
-						frame.set_cursor_position(Position {
-							x: term_area.x + cur_col,
-							y: term_area.y + cur_row,
-						});
-					}
-				}
-			} else {
-				// Terminal is starting: just paint the panel background.
-				let style =
-					Style::default()
-						.bg(self.theme.colors.popup.bg)
-						.fg(self.theme.colors.popup.fg);
-				frame.render_widget(Block::default().style(style), term_area);
-			}
+		if let Some(cursor_pos) = ui.render_panels(self, frame, &dock_layout, self.theme) {
+			frame.set_cursor_position(cursor_pos);
 		}
+		if ui.take_wants_redraw() {
+			self.needs_redraw = true;
+		}
+		self.ui = ui;
 
 		// Render message line if needed (above status line)
 		if has_command_line {

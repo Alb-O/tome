@@ -6,40 +6,11 @@ mod suite {
 	use ratatui::Terminal;
 	use ratatui::backend::TestBackend;
 	use termina::event::{KeyCode, KeyEvent, Modifiers};
-	use tome_core::ext::EditorOps;
-	use tome_core::{Mode, Rope, Selection};
+	use tome_core::{Mode, Selection};
 
 	use crate::editor::Editor;
 	use crate::theme::{CMD_THEME, THEMES, get_theme};
 
-	#[derive(Debug, Clone)]
-	struct KeyStep {
-		desc: &'static str,
-		key: KeyEvent,
-	}
-
-	fn run_key_sequence(editor: &mut Editor, steps: &[KeyStep]) -> Vec<String> {
-		let mut snapshots = Vec::new();
-		for step in steps {
-			editor.handle_key(step.key);
-			let ranges: Vec<(usize, usize)> = editor
-				.selection
-				.ranges()
-				.iter()
-				.map(|r| (r.min(), r.max()))
-				.collect();
-
-			snapshots.push(format!(
-				"{} -> cursor:{} line:{} sel:{:?} doc:{:?}",
-				step.desc,
-				editor.cursor,
-				editor.cursor_line(),
-				ranges,
-				editor.doc.to_string()
-			));
-		}
-		snapshots
-	}
 
 	use tome_core::ext::{CommandContext, CommandOutcome};
 
@@ -371,8 +342,16 @@ mod suite {
 			"when terminal is closed, document should reach the last row"
 		);
 
-		editor.do_toggle_terminal();
-		assert!(editor.terminal_open, "Ctrl+t should open terminal panel");
+		editor
+			.ui
+			.toggle_panel(crate::ui::panels::terminal::TERMINAL_PANEL_ID);
+		assert!(
+			editor
+				.ui
+				.dock
+				.is_open(crate::ui::panels::terminal::TERMINAL_PANEL_ID),
+			"Ctrl+t should open terminal panel"
+		);
 		terminal.draw(|frame| editor.render(frame)).unwrap();
 		let buffer = terminal.backend().buffer();
 		assert_ne!(
@@ -381,8 +360,16 @@ mod suite {
 			"when terminal is open, document height should shrink"
 		);
 
-		editor.do_toggle_terminal();
-		assert!(!editor.terminal_open, "Ctrl+t should close terminal panel");
+		editor
+			.ui
+			.toggle_panel(crate::ui::panels::terminal::TERMINAL_PANEL_ID);
+		assert!(
+			!editor
+				.ui
+				.dock
+				.is_open(crate::ui::panels::terminal::TERMINAL_PANEL_ID),
+			"Ctrl+t should close terminal panel"
+		);
 		terminal.draw(|frame| editor.render(frame)).unwrap();
 		let buffer = terminal.backend().buffer();
 		assert_eq!(
