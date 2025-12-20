@@ -78,7 +78,11 @@ impl Editor {
 		// We render status line based on which buffer is focused
 		frame.render_widget(self.render_status_line(), chunks[2]);
 
-		self.notifications.render(frame, frame.area());
+		// Render notifications within the document area with a bottom margin
+		// This ensures they avoid all non-document UI and aren't flush with the bottom bar
+		let mut notifications_area = doc_area;
+		notifications_area.height = notifications_area.height.saturating_sub(1);
+		self.notifications.render(frame, notifications_area);
 
 		if self.completions.active {
 			let max_label_len = self

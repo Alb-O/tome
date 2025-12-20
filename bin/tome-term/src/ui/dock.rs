@@ -11,17 +11,15 @@ pub enum DockSlot {
 	Overlay,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SizeSpec {
 	Percent(u16),
-	Fixed(u16),
 }
 
 impl SizeSpec {
 	fn to_constraint(self) -> Constraint {
 		match self {
 			SizeSpec::Percent(p) => Constraint::Percentage(p),
-			SizeSpec::Fixed(n) => Constraint::Length(n),
 		}
 	}
 }
@@ -40,10 +38,6 @@ impl DockSlotState {
 			open: Vec::new(),
 			active: None,
 		}
-	}
-
-	pub fn is_active(&self, id: &str) -> bool {
-		self.active.as_deref() == Some(id)
 	}
 }
 

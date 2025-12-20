@@ -17,7 +17,6 @@ pub const TERMINAL_PANEL_ID: &str = "terminal";
 
 pub struct TerminalPanel {
 	id: String,
-	title: String,
 	terminal: Option<TerminalState>,
 	prewarm: Option<Receiver<Result<TerminalState, TerminalError>>>,
 	input_buffer: Vec<u8>,
@@ -27,7 +26,6 @@ impl TerminalPanel {
 	pub fn new() -> Self {
 		Self {
 			id: TERMINAL_PANEL_ID.to_string(),
-			title: "Terminal".to_string(),
 			terminal: None,
 			prewarm: None,
 			input_buffer: Vec::new(),
@@ -118,10 +116,6 @@ impl Panel for TerminalPanel {
 		&self.id
 	}
 
-	fn title(&self) -> &str {
-		&self.title
-	}
-
 	fn default_slot(&self) -> DockSlot {
 		DockSlot::Bottom
 	}
@@ -200,7 +194,6 @@ impl Panel for TerminalPanel {
 				EventResult::consumed()
 			}
 			UiEvent::Resize { .. } => EventResult::not_consumed(),
-			UiEvent::FocusChanged { .. } => EventResult::not_consumed(),
 		}
 	}
 

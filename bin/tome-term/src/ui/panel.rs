@@ -11,18 +11,16 @@ use super::keymap::KeybindingRegistry;
 #[derive(Debug, Clone)]
 pub enum UiEvent {
 	Tick,
-	Resize { width: u16, height: u16 },
+	Resize,
 	Key(KeyEvent),
 	Mouse(MouseEvent),
 	Paste(String),
-	FocusChanged { focused: bool },
 }
 
 #[derive(Debug, Clone)]
 pub enum UiRequest {
 	Redraw,
 	Focus(super::FocusTarget),
-	OpenPanel(String),
 	ClosePanel(String),
 	TogglePanel(String),
 }
@@ -66,7 +64,6 @@ pub struct PanelInitContext<'a> {
 
 pub trait Panel {
 	fn id(&self) -> &str;
-	fn title(&self) -> &str;
 	fn default_slot(&self) -> DockSlot;
 
 	fn on_register(&mut self, _ctx: PanelInitContext<'_>) {}

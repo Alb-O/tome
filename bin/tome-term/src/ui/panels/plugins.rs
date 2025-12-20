@@ -32,10 +32,6 @@ impl Panel for PluginsPanel {
 		PLUGINS_PANEL_ID
 	}
 
-	fn title(&self) -> &str {
-		"Plugins"
-	}
-
 	fn default_slot(&self) -> DockSlot {
 		DockSlot::Left
 	}

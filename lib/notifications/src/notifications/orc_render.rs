@@ -82,9 +82,10 @@ pub fn render_notifications<T: RenderableNotification>(
 	notifications: &mut HashMap<u64, T>,
 	notifications_by_anchor: &HashMap<Anchor, Vec<u64>>,
 	frame: &mut Frame<'_>,
+	area: Rect,
 	max_concurrent: Option<usize>,
 ) {
-	let frame_area = frame.area();
+	let frame_area = area;
 
 	for (anchor, ids_at_anchor) in notifications_by_anchor.iter() {
 		if ids_at_anchor.is_empty() {

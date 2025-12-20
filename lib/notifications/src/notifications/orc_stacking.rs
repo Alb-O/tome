@@ -131,6 +131,7 @@ pub fn calculate_stacking_positions<T: StackableNotification>(
 		} else {
 			0
 		};
+		let offset = accumulated_height.saturating_add(spacing);
 		let needed_height = height.saturating_add(spacing);
 
 		if accumulated_height.saturating_add(needed_height) <= available_height {
@@ -150,9 +151,9 @@ pub fn calculate_stacking_positions<T: StackableNotification>(
 				// For bottom anchors: newer (later) items stack upward (subtract from base Y)
 				// For top anchors: newer (later) items stack downward (add to base Y)
 				let stacked_y = if is_stacking_up {
-					base_full_rect.y.saturating_sub(accumulated_height)
+					base_full_rect.y.saturating_sub(offset)
 				} else {
-					base_full_rect.y.saturating_add(accumulated_height)
+					base_full_rect.y.saturating_add(offset)
 				};
 
 				// Create the final Rect for this notification
@@ -183,4 +184,131 @@ pub fn calculate_stacking_positions<T: StackableNotification>(
 	}
 
 	result_list
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	struct TestNotification {
+		id: u64,
+		height: u16,
+		created_at: Instant,
+	}
+
+	impl StackableNotification for TestNotification {
+		fn id(&self) -> u64 {
+			self.id
+		}
+		fn current_phase(&self) -> AnimationPhase {
+			AnimationPhase::Dwelling
+		}
+		fn created_at(&self) -> Instant {
+			self.created_at
+		}
+		fn full_rect(&self) -> Rect {
+			Rect::default()
+		}
+		fn exterior_padding(&self) -> u16 {
+			0
+		}
+		fn calculate_content_size(&self, _frame_area: Rect) -> (u16, u16) {
+			(10, self.height)
+		}
+	}
+
+	#[test]
+	fn test_stacking_gap_between_first_two() {
+		let frame_area = Rect::new(0, 0, 100, 50);
+		let mut notifications = HashMap::new();
+		let now = Instant::now();
+
+		// Notif 0 (oldest)
+		notifications.insert(
+			0,
+			TestNotification {
+				id: 0,
+				height: 3,
+				created_at: now,
+			},
+		);
+		// Notif 1 (newer)
+		notifications.insert(
+			1,
+			TestNotification {
+				id: 1,
+				height: 3,
+				created_at: now + std::time::Duration::from_millis(10),
+			},
+		);
+
+		let ids = vec![0, 1];
+		let stacked = calculate_stacking_positions(
+			&notifications,
+			Anchor::BottomRight,
+			&ids,
+			frame_area,
+			None,
+		);
+
+		assert_eq!(stacked.len(), 2);
+
+		// In BottomRight, newest (id: 1) is at the bottom.
+		// anchor_pos.y is 49.
+		// Notif 1 (height 3): base_y = 49 - (3-1) = 47.
+		assert_eq!(stacked[0].id, 1);
+		assert_eq!(stacked[0].rect.y, 47);
+
+		// Notif 0 (second newest): base_y = 47.
+		// With fix, it should be at 47 - (3 + 1) = 43.
+		assert_eq!(stacked[1].id, 0);
+		assert_eq!(stacked[1].rect.y, 43);
+
+		// Verify gap: Notif 0 ends at 43+3=46. Notif 1 starts at 47. Gap at line 46.
+		assert_eq!(stacked[1].rect.bottom(), 46);
+		assert_eq!(stacked[0].rect.y, 47);
+	}
+
+	#[test]
+	fn test_stacking_gap_consistent_for_three() {
+		let frame_area = Rect::new(0, 0, 100, 50);
+		let mut notifications = HashMap::new();
+		let now = Instant::now();
+
+		for i in 0..3 {
+			notifications.insert(
+				i,
+				TestNotification {
+					id: i,
+					height: 2,
+					created_at: now + std::time::Duration::from_millis(i * 10),
+				},
+			);
+		}
+
+		let ids = vec![0, 1, 2];
+		let stacked = calculate_stacking_positions(
+			&notifications,
+			Anchor::BottomRight,
+			&ids,
+			frame_area,
+			None,
+		);
+
+		assert_eq!(stacked.len(), 3);
+
+		// Newest (id: 2) at bottom
+		assert_eq!(stacked[0].id, 2);
+		assert_eq!(stacked[0].rect.y, 48); // 49 - (2-1) = 48. Rect: 48, 49.
+
+		// Next (id: 1) above it
+		assert_eq!(stacked[1].id, 1);
+		assert_eq!(stacked[1].rect.y, 48 - (2 + 1)); // 45. Rect: 45, 46. (Gap at 47)
+		assert_eq!(stacked[1].rect.y, 45);
+
+		// Oldest (id: 0) above it
+		assert_eq!(stacked[2].id, 0);
+		assert_eq!(stacked[2].rect.y, 45 - (2 + 1)); // 42. Rect: 42, 43. (Gap at 44)
+		assert_eq!(stacked[2].rect.y, 42);
+	}
 }

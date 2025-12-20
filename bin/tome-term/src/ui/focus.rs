@@ -1,7 +1,6 @@
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FocusTargetKind {
 	Editor,
-	CommandLine,
 	Panel(String),
 }
 
@@ -13,16 +12,12 @@ impl FocusTarget {
 		Self(FocusTargetKind::Editor)
 	}
 
-	pub fn command_line() -> Self {
-		Self(FocusTargetKind::CommandLine)
-	}
-
 	pub fn panel(id: impl Into<String>) -> Self {
 		Self(FocusTargetKind::Panel(id.into()))
 	}
 
 	pub fn is_editor(&self) -> bool {
-		matches!(self.0, FocusTargetKind::Editor | FocusTargetKind::CommandLine)
+		matches!(self.0, FocusTargetKind::Editor)
 	}
 
 	pub fn panel_id(&self) -> Option<&str> {

@@ -16,15 +16,13 @@ pub fn chat_panel_ui_id(panel_id: u64) -> String {
 pub struct PluginChatPanel {
 	panel_id: u64,
 	ui_id: String,
-	title: String,
 }
 
 impl PluginChatPanel {
-	pub fn new(panel_id: u64, title: String) -> Self {
+	pub fn new(panel_id: u64, _title: String) -> Self {
 		Self {
 			panel_id,
 			ui_id: chat_panel_ui_id(panel_id),
-			title,
 		}
 	}
 
@@ -42,10 +40,6 @@ impl PluginChatPanel {
 impl Panel for PluginChatPanel {
 	fn id(&self) -> &str {
 		&self.ui_id
-	}
-
-	fn title(&self) -> &str {
-		&self.title
 	}
 
 	fn default_slot(&self) -> DockSlot {
@@ -75,9 +69,9 @@ impl Panel for PluginChatPanel {
 				}
 
 				if key.code == TmKeyCode::Escape {
-    						return EventResult::consumed()
-    							.with_request(UiRequest::Focus(FocusTarget::editor()));
-    					}
+					return EventResult::consumed()
+						.with_request(UiRequest::Focus(FocusTarget::editor()));
+				}
 
 				let Some(panel) = editor.plugins.panels.get_mut(&self.panel_id) else {
 					return EventResult::consumed();

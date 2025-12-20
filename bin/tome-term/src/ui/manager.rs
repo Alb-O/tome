@@ -48,16 +48,8 @@ impl UiManager {
 		}
 	}
 
-	pub fn has_panel(&self, id: &str) -> bool {
-		self.panels.contains_key(id)
-	}
-
 	pub fn any_panel_open(&self) -> bool {
 		self.dock.any_open()
-	}
-
-	pub fn wants_redraw(&self) -> bool {
-		self.wants_redraw
 	}
 
 	pub fn take_wants_redraw(&mut self) -> bool {
@@ -175,15 +167,15 @@ impl UiManager {
 	pub fn notify_resize(
 		&mut self,
 		editor: &mut crate::editor::Editor,
-		width: u16,
-		height: u16,
+		_width: u16,
+		_height: u16,
 	) {
 		let ids: Vec<String> = self.panels.keys().cloned().collect();
 		let mut requests = Vec::new();
 		for id in ids {
 			let focused = self.is_panel_focused(&id);
 			if let Some(panel) = self.panels.get_mut(&id) {
-				let res = panel.handle_event(UiEvent::Resize { width, height }, editor, focused);
+				let res = panel.handle_event(UiEvent::Resize, editor, focused);
 				requests.extend(res.requests);
 			}
 		}
@@ -236,7 +228,6 @@ impl UiManager {
 						self.wants_redraw = true;
 					}
 				}
-				UiRequest::OpenPanel(id) => self.set_open(&id, true),
 				UiRequest::ClosePanel(id) => self.set_open(&id, false),
 				UiRequest::TogglePanel(id) => self.toggle_panel(&id),
 			}

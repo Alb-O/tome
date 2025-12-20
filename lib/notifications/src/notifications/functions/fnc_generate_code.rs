@@ -23,7 +23,7 @@ use crate::notifications::types::{AutoDismiss, SizeConstraint, Timing};
 /// ```no_run
 /// use ratatui_notifications::{Notification, generate_code, Level};
 ///
-/// let notif = Notification::new("Hello!")
+/// let notif = Notification::builder("Hello!")
 ///     .level(Level::Error)
 ///     .build()
 ///     .unwrap();

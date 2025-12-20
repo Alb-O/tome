@@ -242,11 +242,12 @@ impl Notifications {
 	///     manager.render(frame, frame.area());
 	/// }).unwrap();
 	/// ```
-	pub fn render(&mut self, frame: &mut Frame<'_>, _area: Rect) {
+	pub fn render(&mut self, frame: &mut Frame<'_>, area: Rect) {
 		render_notifications(
 			&mut self.states,
 			&self.by_anchor,
 			frame,
+			area,
 			self.max_concurrent,
 		);
 	}

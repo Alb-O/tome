@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use termina::event::KeyEvent;
-use tome_core::{Key, KeyCode, Modifiers, SpecialKey};
+use tome_core::{Key, KeyCode, Modifiers};
 
 use super::UiRequest;
 
@@ -9,30 +9,11 @@ use super::UiRequest;
 pub struct UiKeyChord(pub Key);
 
 impl UiKeyChord {
-	pub const fn new(key: Key) -> Self {
-		Self(key)
-	}
-
 	pub const fn ctrl_char(c: char) -> Self {
 		Self(Key {
 			code: KeyCode::Char(c),
 			modifiers: Modifiers::CTRL,
 		})
-	}
-
-	pub const fn alt_char(c: char) -> Self {
-		Self(Key {
-			code: KeyCode::Char(c),
-			modifiers: Modifiers::ALT,
-		})
-	}
-
-	pub const fn char(c: char) -> Self {
-		Self(Key::char(c))
-	}
-
-	pub const fn special(key: SpecialKey) -> Self {
-		Self(Key::special(key))
 	}
 }
 
@@ -46,7 +27,6 @@ impl From<&KeyEvent> for UiKeyChord {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BindingScope {
 	Global,
-	WhenFocused(super::FocusTarget),
 }
 
 #[derive(Debug, Clone)]
