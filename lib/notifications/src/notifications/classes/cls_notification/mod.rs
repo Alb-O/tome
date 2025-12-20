@@ -130,7 +130,7 @@ impl Default for Notification {
 			slide_out_timing: Timing::default(),
 			auto_dismiss: AutoDismiss::default(),
 			max_width: Some(SizeConstraint::Percentage(0.4)),
-			max_height: Some(SizeConstraint::Percentage(0.2)),
+			max_height: Some(SizeConstraint::Percentage(0.4)),
 			padding: Padding::horizontal(1),
 			exterior_margin: 0,
 			block_style: None,

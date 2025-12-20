@@ -95,7 +95,7 @@ pub fn generate_code(notification: &Notification) -> String {
 		));
 	}
 
-	// MaxSize - default is Percentage(0.4), Percentage(0.2)
+	// MaxSize - default is Percentage(0.4), Percentage(0.4)
 	let size_changed = notification.max_width() != defaults.max_width
 		|| notification.max_height() != defaults.max_height;
 

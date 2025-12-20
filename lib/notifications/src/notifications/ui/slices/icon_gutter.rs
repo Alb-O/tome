@@ -1,4 +1,4 @@
-use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
+use ratatui::layout::{Alignment, Rect};
 use ratatui::prelude::*;
 use ratatui::widgets::Paragraph;
 
@@ -15,17 +15,13 @@ pub fn render_icon_gutter(
 		return;
 	}
 
-	// Vertically center the icon within the gutter column.
-	let icon_v_chunks = Layout::default()
-		.direction(Direction::Vertical)
-		.constraints([
-			Constraint::Fill(1),
-			Constraint::Length(1),
-			Constraint::Fill(1),
-		])
-		.split(area);
-
-	let mut icon_area = icon_v_chunks[1];
+	// Prefer a consistent top-aligned icon (avoids visual "jumps" when content wraps).
+	let mut icon_area = Rect {
+		x: area.x,
+		y: area.y,
+		width: area.width,
+		height: 1,
+	};
 	icon_area.x = icon_area.x.saturating_add(gutter.left_pad);
 	icon_area.width = icon_area.width.saturating_sub(gutter.left_pad);
 

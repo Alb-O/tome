@@ -35,7 +35,7 @@ mod tests {
 		);
 		assert_eq!(
 			notification.max_height,
-			Some(SizeConstraint::Percentage(0.2))
+			Some(SizeConstraint::Percentage(0.4))
 		);
 		assert_eq!(notification.border_type, Some(BorderType::Padded));
 		assert_eq!(notification.padding, Padding::horizontal(1));
