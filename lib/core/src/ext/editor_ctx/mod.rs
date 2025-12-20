@@ -66,7 +66,9 @@ impl<'a> EditorContext<'a> {
 	pub fn require_search(&mut self) -> Result<&mut dyn SearchAccess, crate::ext::CommandError> {
 		self.inner
 			.search()
-			.ok_or(crate::ext::CommandError::MissingCapability("search"))
+			.ok_or(crate::ext::CommandError::MissingCapability(
+				crate::ext::Capability::Search,
+			))
 	}
 
 	pub fn undo(&mut self) -> Option<&mut dyn UndoAccess> {
@@ -76,7 +78,9 @@ impl<'a> EditorContext<'a> {
 	pub fn require_undo(&mut self) -> Result<&mut dyn UndoAccess, crate::ext::CommandError> {
 		self.inner
 			.undo()
-			.ok_or(crate::ext::CommandError::MissingCapability("undo"))
+			.ok_or(crate::ext::CommandError::MissingCapability(
+				crate::ext::Capability::Undo,
+			))
 	}
 
 	pub fn edit(&mut self) -> Option<&mut dyn EditAccess> {
@@ -86,7 +90,9 @@ impl<'a> EditorContext<'a> {
 	pub fn require_edit(&mut self) -> Result<&mut dyn EditAccess, crate::ext::CommandError> {
 		self.inner
 			.edit()
-			.ok_or(crate::ext::CommandError::MissingCapability("edit"))
+			.ok_or(crate::ext::CommandError::MissingCapability(
+				crate::ext::Capability::Edit,
+			))
 	}
 
 	pub fn selection_ops(&mut self) -> Option<&mut dyn SelectionOpsAccess> {
@@ -98,7 +104,9 @@ impl<'a> EditorContext<'a> {
 	) -> Result<&mut dyn SelectionOpsAccess, crate::ext::CommandError> {
 		self.inner
 			.selection_ops()
-			.ok_or(crate::ext::CommandError::MissingCapability("selection_ops"))
+			.ok_or(crate::ext::CommandError::MissingCapability(
+				crate::ext::Capability::SelectionOps,
+			))
 	}
 
 	pub fn check_capability(&mut self, cap: crate::ext::Capability) -> bool {
@@ -121,9 +129,7 @@ impl<'a> EditorContext<'a> {
 	) -> Result<(), crate::ext::CommandError> {
 		for &cap in caps {
 			if !self.check_capability(cap) {
-				return Err(crate::ext::CommandError::MissingCapability(Box::leak(
-					format!("{:?}", cap).into_boxed_str(),
-				)));
+				return Err(crate::ext::CommandError::MissingCapability(cap));
 			}
 		}
 		Ok(())

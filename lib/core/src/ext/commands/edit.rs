@@ -1,7 +1,7 @@
 use crate::command;
 use crate::ext::{CommandContext, CommandError, CommandOutcome};
 
-command!(edit, &["e"], "Edit a file", handler: cmd_edit);
+command!(edit, { aliases: &["e"], description: "Edit a file" }, handler: cmd_edit);
 
 fn cmd_edit(ctx: &mut CommandContext) -> Result<CommandOutcome, CommandError> {
 	if ctx.args.is_empty() {

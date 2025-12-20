@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::command;
 use crate::ext::{CommandContext, CommandError, CommandOutcome};
 
-command!(write, &["w"], "Write buffer to file", handler: cmd_write);
+command!(write, { aliases: &["w"], description: "Write buffer to file" }, handler: cmd_write);
 
 fn cmd_write(ctx: &mut CommandContext) -> Result<CommandOutcome, CommandError> {
 	if let Some(&filename) = ctx.args.first() {
@@ -14,7 +14,7 @@ fn cmd_write(ctx: &mut CommandContext) -> Result<CommandOutcome, CommandError> {
 	Ok(CommandOutcome::Ok)
 }
 
-command!(wq, &["x"], "Write and quit", handler: cmd_write_quit);
+command!(wq, { aliases: &["x"], description: "Write and quit" }, handler: cmd_write_quit);
 
 fn cmd_write_quit(ctx: &mut CommandContext) -> Result<CommandOutcome, CommandError> {
 	if let Some(&filename) = ctx.args.first() {

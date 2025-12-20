@@ -5,7 +5,7 @@ use crate::{action, movement};
 
 action!(
 	find_char,
-	"Select to next occurrence of character (inclusive)",
+	{ description: "Select to next occurrence of character (inclusive)" },
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();
@@ -23,7 +23,7 @@ action!(
 
 action!(
 	find_char_to,
-	"Select to next occurrence of character (exclusive)",
+	{ description: "Select to next occurrence of character (exclusive)" },
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();
@@ -41,7 +41,7 @@ action!(
 
 action!(
 	find_char_reverse,
-	"Select to previous occurrence of character (inclusive)",
+	{ description: "Select to previous occurrence of character (inclusive)" },
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();
@@ -59,7 +59,7 @@ action!(
 
 action!(
 	find_char_to_reverse,
-	"Select to previous occurrence of character (exclusive)",
+	{ description: "Select to previous occurrence of character (exclusive)" },
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();

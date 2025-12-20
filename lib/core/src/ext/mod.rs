@@ -60,6 +60,29 @@ pub enum Capability {
 	Transform,
 }
 
+/// # Precedence Rules
+///
+/// When multiple extensions register with the same name, alias, or trigger,
+/// the following rules determine the "winner" that will be indexed:
+///
+/// 1. **Priority**: Higher `priority` values always win.
+/// 2. **ID Tie-break**: If priorities are equal, the one with the alphabetically
+///    smaller `id` wins (e.g., `tome-core::quit` wins over `user-plugin::quit`).
+///
+/// Collisions are recorded in the registry and can be inspected via `:ext diag`
+/// or `:ext doctor`. In debug builds, collisions are logged as errors.
+///
+/// # Registry Types
+///
+/// | Registry | Key Type | Winner Selection | Collisions |
+/// |----------|----------|------------------|------------|
+/// | Commands | Name/Alias | Priority > ID | Warned |
+/// | Actions  | Name | Priority > ID | Warned |
+/// | Motions  | Name | Priority > ID | Warned |
+/// | Text Objects | Trigger/Name | Priority > ID | Warned |
+/// | Hooks | Event | All handlers run (sorted by priority) | N/A |
+/// | File Types | Extension/Filename | Priority > ID | Warned |
+///
 #[cfg(feature = "host")]
 mod actions;
 #[cfg(feature = "host")]
@@ -93,7 +116,7 @@ pub mod statusline;
 pub use actions::{
 	ACTIONS, ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult,
 	EditAction, ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount, ScrollDir,
-	VisualDirection, execute_action, find_action,
+	VisualDirection, execute_action,
 };
 #[cfg(feature = "host")]
 pub use completion::{
@@ -126,6 +149,26 @@ pub use statusline::{
 	StatuslineSegmentDef, all_segments, find_segment, render_position, segments_for_position,
 };
 
+#[cfg(feature = "host")]
+impl std::fmt::Display for Capability {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Text => write!(f, "text"),
+			Self::Cursor => write!(f, "cursor"),
+			Self::Selection => write!(f, "selection"),
+			Self::Mode => write!(f, "mode"),
+			Self::Messaging => write!(f, "messaging"),
+			Self::Edit => write!(f, "edit"),
+			Self::Search => write!(f, "search"),
+			Self::Undo => write!(f, "undo"),
+			Self::SelectionOps => write!(f, "selection_ops"),
+			Self::Jump => write!(f, "jump"),
+			Self::Macro => write!(f, "macro"),
+			Self::Transform => write!(f, "transform"),
+		}
+	}
+}
+
 /// Result type for command execution.
 #[cfg(feature = "host")]
 pub type CommandResult = Result<(), CommandError>;
@@ -151,7 +194,7 @@ pub enum CommandError {
 	NotFound(String),
 	/// Missing capability required for this operation.
 	#[error("missing capability: {0}")]
-	MissingCapability(&'static str),
+	MissingCapability(Capability),
 	/// Operation not supported by this editor implementation.
 	#[error("unsupported operation: {0}")]
 	Unsupported(&'static str),
@@ -416,21 +459,10 @@ pub static FILE_TYPES: [FileTypeDef];
 
 /// Look up a command by name or alias.
 #[cfg(feature = "host")]
-pub use index::find_command;
-
-/// Look up a motion by name.
-#[cfg(feature = "host")]
-pub fn find_motion(name: &str) -> Option<&'static MotionDef> {
-	MOTIONS.iter().find(|m| m.name == name)
-}
-
-/// Look up a text object by trigger character.
-#[cfg(feature = "host")]
-pub fn find_text_object(trigger: char) -> Option<&'static TextObjectDef> {
-	TEXT_OBJECTS
-		.iter()
-		.find(|obj| obj.trigger == trigger || obj.alt_triggers.contains(&trigger))
-}
+pub use index::{
+	find_action, find_command, find_motion, find_text_object_by_name, find_text_object_by_trigger,
+	get_registry,
+};
 
 /// Detect file type from filename.
 #[cfg(feature = "host")]
@@ -479,29 +511,30 @@ mod tests {
 
 	#[test]
 	fn test_find_text_object() {
-		let word = find_text_object('w').expect("word object should exist");
+		let word = find_text_object_by_trigger('w').expect("word object should exist");
 		assert_eq!(word.name, "word");
 
-		let parens = find_text_object('(').expect("parens object should exist via alt trigger");
+		let parens =
+			find_text_object_by_trigger('(').expect("parens object should exist via alt trigger");
 		assert_eq!(parens.name, "parentheses");
 
-		let parens2 =
-			find_text_object('b').expect("parens object should exist via primary trigger");
+		let parens2 = find_text_object_by_trigger('b')
+			.expect("parens object should exist via primary trigger");
 		assert_eq!(parens2.name, "parentheses");
 	}
 
 	#[test]
 	fn test_new_text_objects() {
-		let line = find_text_object('x').expect("line object should exist");
+		let line = find_text_object_by_trigger('x').expect("line object should exist");
 		assert_eq!(line.name, "line");
 
-		let para = find_text_object('p').expect("paragraph object should exist");
+		let para = find_text_object_by_trigger('p').expect("paragraph object should exist");
 		assert_eq!(para.name, "paragraph");
 
-		let arg = find_text_object('c').expect("argument object should exist");
+		let arg = find_text_object_by_trigger('c').expect("argument object should exist");
 		assert_eq!(arg.name, "argument");
 
-		let num = find_text_object('n').expect("number object should exist");
+		let num = find_text_object_by_trigger('n').expect("number object should exist");
 		assert_eq!(num.name, "number");
 	}
 

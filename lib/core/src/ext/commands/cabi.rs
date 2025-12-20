@@ -1,7 +1,7 @@
 use crate::command;
 use crate::ext::{CommandContext, CommandError, CommandOutcome};
 
-command!(permit, &[], "Respond to a plugin permission request (:permit <id> <option>)", handler: cmd_permit);
+command!(permit, { aliases: &[], description: "Respond to a plugin permission request (:permit <id> <option>)" }, handler: cmd_permit);
 
 fn cmd_permit(ctx: &mut CommandContext) -> Result<CommandOutcome, CommandError> {
 	let Some(&id_str) = ctx.args.first() else {

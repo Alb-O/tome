@@ -13,7 +13,7 @@ macro_rules! filetype {
             #[allow(non_upper_case_globals)]
             #[linkme::distributed_slice($crate::ext::FILE_TYPES)]
             static [<FT_ $name>]: $crate::ext::FileTypeDef = $crate::ext::FileTypeDef {
-                id: stringify!($name),
+                id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
                 name: stringify!($name),
                 extensions: $ext,
                 filenames: $crate::filetype!(@opt_field $($fnames)?),
@@ -35,7 +35,7 @@ macro_rules! option {
 			#[allow(non_upper_case_globals)]
 			#[linkme::distributed_slice($crate::ext::options::OPTIONS)]
 			static [<OPT_ $name>]: $crate::ext::options::OptionDef = $crate::ext::options::OptionDef {
-				id: stringify!($name),
+				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
 				name: stringify!($name),
 				description: $desc,
 				value_type: $crate::ext::options::OptionType::$type,
@@ -50,93 +50,102 @@ macro_rules! option {
 /// Define a command and register it in the COMMANDS slice.
 #[macro_export]
 macro_rules! command {
-	($name:ident, $aliases:expr, $desc:expr, handler: $handler:expr) => {
-		$crate::command!($name, $aliases, $desc, handler: $handler, priority: 0, caps: &[]);
-	};
-	($name:ident, $aliases:expr, $desc:expr, handler: $handler:expr, priority: $priority:expr, caps: $caps:expr) => {
+	($name:ident, {
+		$(aliases: $aliases:expr,)?
+		description: $desc:expr
+		$(, priority: $priority:expr)?
+		$(, caps: $caps:expr)?
+		$(, flags: $flags:expr)?
+		$(, source: $source:expr)?
+		$(,)?
+	}, handler: $handler:expr) => {
 		paste::paste! {
-            #[allow(non_upper_case_globals)]
+			#[allow(non_upper_case_globals)]
 			#[linkme::distributed_slice($crate::ext::COMMANDS)]
 			static [<CMD_ $name>]: $crate::ext::CommandDef = $crate::ext::CommandDef {
-				id: stringify!($name),
+				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
 				name: stringify!($name),
-				aliases: $aliases,
+				aliases: $crate::command!(@opt $({$aliases})?, &[]),
 				description: $desc,
 				handler: $handler,
 				user_data: None,
-				priority: $priority,
-				source: $crate::ext::ExtensionSource::Crate(env!("CARGO_PKG_NAME")),
-				required_caps: $caps,
-				flags: $crate::ext::flags::NONE,
+				priority: $crate::command!(@opt $({$priority})?, 0),
+				source: $crate::command!(@opt $({$source})?, $crate::ext::ExtensionSource::Crate(env!("CARGO_PKG_NAME"))),
+				required_caps: $crate::command!(@opt $({$caps})?, &[]),
+				flags: $crate::command!(@opt $({$flags})?, $crate::ext::flags::NONE),
 			};
 		}
 	};
+	(@opt {$val:expr}, $default:expr) => { $val };
+	(@opt , $default:expr) => { $default };
 }
 
 /// Define an action and register it in the ACTIONS slice.
 #[macro_export]
 macro_rules! action {
-    ($name:ident, $desc:expr, |$ctx:ident| $body:expr) => {
-        $crate::action!($name, $desc, |$ctx| $body, priority: 0, caps: &[]);
-    };
-    ($name:ident, $desc:expr, |$ctx:ident| $body:expr, priority: $priority:expr, caps: $caps:expr) => {
-        paste::paste! {
-            fn [<handler_ $name>]($ctx: &$crate::ext::actions::ActionContext) -> $crate::ext::actions::ActionResult {
-                $body
-            }
-
-            #[allow(non_upper_case_globals)]
-            #[linkme::distributed_slice($crate::ext::actions::ACTIONS)]
-            static [<ACTION_ $name>]: $crate::ext::actions::ActionDef = $crate::ext::actions::ActionDef {
-                id: stringify!($name),
-                name: stringify!($name),
-                description: $desc,
-                handler: [<handler_ $name>],
-                priority: $priority,
-                source: $crate::ext::ExtensionSource::Crate(env!("CARGO_PKG_NAME")),
-                required_caps: $caps,
-                flags: $crate::ext::flags::NONE,
-            };
-        }
-    };
-    ($name:ident, $desc:expr, $result:expr) => {
-        $crate::action!($name, $desc, $result, priority: 0, caps: &[]);
-    };
-    ($name:ident, $desc:expr, $result:expr, priority: $priority:expr, caps: $caps:expr) => {
-        paste::paste! {
-            #[allow(non_upper_case_globals)]
-            #[linkme::distributed_slice($crate::ext::actions::ACTIONS)]
-            static [<ACTION_ $name>]: $crate::ext::actions::ActionDef = $crate::ext::actions::ActionDef {
-                id: stringify!($name),
-                name: stringify!($name),
-                description: $desc,
-                handler: |_ctx| $result,
-                priority: $priority,
-                source: $crate::ext::ExtensionSource::Crate(env!("CARGO_PKG_NAME")),
-                required_caps: $caps,
-                flags: $crate::ext::flags::NONE,
-            };
-        }
-    };
-    ($name:ident, $desc:expr, handler: $handler:expr) => {
-        $crate::action!($name, $desc, handler: $handler, priority: 0, caps: &[]);
-    };
-    ($name:ident, $desc:expr, handler: $handler:expr, priority: $priority:expr, caps: $caps:expr) => {
-        paste::paste! {
-            #[allow(non_upper_case_globals)]
-            #[linkme::distributed_slice($crate::ext::actions::ACTIONS)]
-            static [<ACTION_ $name>]: $crate::ext::actions::ActionDef = $crate::ext::actions::ActionDef {
-                id: stringify!($name),
-                name: stringify!($name),
-                description: $desc,
-                handler: $handler,
-                priority: $priority,
-                source: $crate::ext::ExtensionSource::Crate(env!("CARGO_PKG_NAME")),
-                required_caps: $caps,
-                flags: $crate::ext::flags::NONE,
-            };
-        }
-    };
+	($name:ident, {
+		description: $desc:expr
+		$(, priority: $priority:expr)?
+		$(, caps: $caps:expr)?
+		$(, flags: $flags:expr)?
+		$(, source: $source:expr)?
+		$(,)?
+	}, handler: $handler:expr) => {
+		paste::paste! {
+			#[allow(non_upper_case_globals)]
+			#[linkme::distributed_slice($crate::ext::actions::ACTIONS)]
+			static [<ACTION_ $name>]: $crate::ext::actions::ActionDef = $crate::ext::actions::ActionDef {
+				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
+				name: stringify!($name),
+				description: $desc,
+				handler: $handler,
+				priority: $crate::action!(@opt $({$priority})?, 0),
+				source: $crate::action!(@opt $({$source})?, $crate::ext::ExtensionSource::Crate(env!("CARGO_PKG_NAME"))),
+				required_caps: $crate::action!(@opt $({$caps})?, &[]),
+				flags: $crate::action!(@opt $({$flags})?, $crate::ext::flags::NONE),
+			};
+		}
+	};
+	($name:ident, {
+		description: $desc:expr
+		$(, priority: $priority:expr)?
+		$(, caps: $caps:expr)?
+		$(, flags: $flags:expr)?
+		$(, source: $source:expr)?
+		$(,)?
+	}, |$ctx:ident| $body:expr) => {
+		paste::paste! {
+			#[allow(unused_variables)]
+			fn [<handler_ $name>]($ctx: &$crate::ext::actions::ActionContext) -> $crate::ext::actions::ActionResult {
+				$body
+			}
+			$crate::action!($name, {
+				description: $desc,
+				priority: $crate::action!(@opt $({$priority})?, 0),
+				caps: $crate::action!(@opt $({$caps})?, &[]),
+				flags: $crate::action!(@opt $({$flags})?, $crate::ext::flags::NONE),
+				source: $crate::action!(@opt $({$source})?, $crate::ext::ExtensionSource::Crate(env!("CARGO_PKG_NAME"))),
+			}, handler: [<handler_ $name>]);
+		}
+	};
+	($name:ident, {
+		description: $desc:expr
+		$(, priority: $priority:expr)?
+		$(, caps: $caps:expr)?
+		$(, flags: $flags:expr)?
+		$(, source: $source:expr)?
+		$(,)?
+	}, result: $result:expr) => {
+		$crate::action!($name, {
+			description: $desc,
+			priority: $crate::action!(@opt $({$priority})?, 0),
+			caps: $crate::action!(@opt $({$caps})?, &[]),
+			flags: $crate::action!(@opt $({$flags})?, $crate::ext::flags::NONE),
+			source: $crate::action!(@opt $({$source})?, $crate::ext::ExtensionSource::Crate(env!("CARGO_PKG_NAME"))),
+		}, handler: |_ctx| $result);
+	};
+	(@opt {$val:expr}, $default:expr) => { $val };
+	(@opt , $default:expr) => { $default };
 }
 
 /// Define a hook and register it in the HOOKS slice.
@@ -151,7 +160,7 @@ macro_rules! hook {
 			#[allow(non_upper_case_globals)]
 			#[linkme::distributed_slice($crate::ext::hooks::HOOKS)]
 			static [<HOOK_ $name>]: $crate::ext::hooks::HookDef = $crate::ext::hooks::HookDef {
-				id: stringify!($name),
+				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
 				name: stringify!($name),
 				event: $crate::ext::hooks::HookEvent::$event,
 				description: $desc,
@@ -174,7 +183,7 @@ macro_rules! text_object {
 			#[allow(non_upper_case_globals)]
 			#[linkme::distributed_slice($crate::ext::TEXT_OBJECTS)]
 			static [<OBJ_ $name>]: $crate::ext::TextObjectDef = $crate::ext::TextObjectDef {
-				id: stringify!($name),
+				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
 				name: stringify!($name),
 				trigger: $trigger,
 				alt_triggers: $alt_triggers,
@@ -194,6 +203,7 @@ macro_rules! text_object {
 macro_rules! motion {
 	($name:ident, $desc:expr, |$text:ident, $range:ident, $count:ident, $extend:ident| $body:expr) => {
 		paste::paste! {
+			#[allow(unused_variables)]
 			fn [<motion_handler_ $name>](
 				$text: ropey::RopeSlice,
 				$range: $crate::range::Range,
@@ -206,7 +216,7 @@ macro_rules! motion {
 			#[allow(non_upper_case_globals)]
 			#[linkme::distributed_slice($crate::ext::MOTIONS)]
 			static [<MOTION_ $name>]: $crate::ext::MotionDef = $crate::ext::MotionDef {
-				id: stringify!($name),
+				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
 				name: stringify!($name),
 				description: $desc,
 				handler: [<motion_handler_ $name>],

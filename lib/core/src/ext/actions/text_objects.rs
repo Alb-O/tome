@@ -1,7 +1,7 @@
 //! Text object selection actions.
 
 use crate::ext::actions::{ActionResult, ObjectSelectionKind, PendingAction, PendingKind};
-use crate::ext::{TextObjectDef, find_text_object};
+use crate::ext::{TextObjectDef, find_text_object_by_trigger};
 use crate::range::Range;
 
 fn select_object_with_trigger(
@@ -20,7 +20,7 @@ fn select_object_with_trigger(
 		});
 	};
 
-	let Some(obj) = find_text_object(trigger) else {
+	let Some(obj) = find_text_object_by_trigger(trigger) else {
 		return ActionResult::Error(format!("Unknown text object: {}", trigger));
 	};
 
@@ -57,15 +57,15 @@ fn select_to_boundary(
 
 use crate::action;
 
-action!(select_object_inner, "Select inner text object", |ctx| {
+action!(select_object_inner, { description: "Select inner text object" }, |ctx| {
 	select_object_with_trigger(ctx, ObjectSelectionKind::Inner)
 });
-action!(select_object_around, "Select around text object", |ctx| {
+action!(select_object_around, { description: "Select around text object" }, |ctx| {
 	select_object_with_trigger(ctx, ObjectSelectionKind::Around)
 });
-action!(select_object_to_start, "Select to object start", |ctx| {
+action!(select_object_to_start, { description: "Select to object start" }, |ctx| {
 	select_object_with_trigger(ctx, ObjectSelectionKind::ToStart)
 });
-action!(select_object_to_end, "Select to object end", |ctx| {
+action!(select_object_to_end, { description: "Select to object end" }, |ctx| {
 	select_object_with_trigger(ctx, ObjectSelectionKind::ToEnd)
 });

@@ -5,26 +5,26 @@ use crate::ext::actions::{ActionMode, ActionResult};
 
 action!(
 	select_regex,
-	"Select regex matches within selection",
-	ActionResult::ModeChange(ActionMode::SelectRegex)
+	{ description: "Select regex matches within selection" },
+	result: ActionResult::ModeChange(ActionMode::SelectRegex)
 );
 action!(
 	split_regex,
-	"Split selection on regex matches",
-	ActionResult::ModeChange(ActionMode::SplitRegex)
+	{ description: "Split selection on regex matches" },
+	result: ActionResult::ModeChange(ActionMode::SplitRegex)
 );
 action!(
 	split_lines,
-	"Split selection into lines",
-	ActionResult::SplitLines
+	{ description: "Split selection into lines" },
+	result: ActionResult::SplitLines
 );
 action!(
 	keep_matching,
-	"Keep selections matching regex",
-	ActionResult::ModeChange(ActionMode::KeepMatching)
+	{ description: "Keep selections matching regex" },
+	result: ActionResult::ModeChange(ActionMode::KeepMatching)
 );
 action!(
 	keep_not_matching,
-	"Keep selections not matching regex",
-	ActionResult::ModeChange(ActionMode::KeepNotMatching)
+	{ description: "Keep selections not matching regex" },
+	result: ActionResult::ModeChange(ActionMode::KeepNotMatching)
 );

@@ -6,11 +6,11 @@ use crate::ext::find_motion;
 
 action!(
 	insert_before,
-	"Insert before cursor",
-	ActionResult::ModeChange(ActionMode::Insert)
+	{ description: "Insert before cursor" },
+	result: ActionResult::ModeChange(ActionMode::Insert)
 );
 
-action!(insert_after, "Insert after cursor", handler: insert_after);
+action!(insert_after, { description: "Insert after cursor" }, handler: insert_after);
 
 fn insert_after(ctx: &ActionContext) -> ActionResult {
 	let motion = match find_motion("move_right") {
@@ -26,7 +26,7 @@ fn insert_after(ctx: &ActionContext) -> ActionResult {
 	ActionResult::InsertWithMotion(new_selection)
 }
 
-action!(insert_line_start, "Insert at line start (first non-blank)", handler: insert_line_start);
+action!(insert_line_start, { description: "Insert at line start (first non-blank)" }, handler: insert_line_start);
 
 fn insert_line_start(ctx: &ActionContext) -> ActionResult {
 	let motion = match find_motion("move_first_nonblank") {
@@ -42,7 +42,7 @@ fn insert_line_start(ctx: &ActionContext) -> ActionResult {
 	ActionResult::InsertWithMotion(new_selection)
 }
 
-action!(insert_line_end, "Insert at line end", handler: insert_line_end);
+action!(insert_line_end, { description: "Insert at line end" }, handler: insert_line_end);
 
 fn insert_line_end(ctx: &ActionContext) -> ActionResult {
 	let motion = match find_motion("move_line_end") {

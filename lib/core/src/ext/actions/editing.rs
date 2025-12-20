@@ -10,7 +10,7 @@ macro_rules! edit_action {
 	($static_name:ident, $action_name:expr, $description:expr, $edit:expr) => {
 		#[distributed_slice(ACTIONS)]
 		static $static_name: ActionDef = ActionDef {
-			id: $action_name,
+			id: concat!(env!("CARGO_PKG_NAME"), "::", $action_name),
 			name: $action_name,
 			description: $description,
 			handler: |_ctx| ActionResult::Edit($edit),
@@ -132,7 +132,7 @@ use crate::action;
 
 action!(
 	replace_char,
-	"Replace selection with character",
+	{ description: "Replace selection with character" },
 	|ctx| match ctx.args.char {
 		Some(ch) => ActionResult::Edit(EditAction::ReplaceWithChar { ch }),
 		None => ActionResult::Pending(PendingAction {

@@ -5,7 +5,7 @@ use crate::ext::actions::{ActionContext, ActionResult};
 use crate::range::Range;
 use crate::selection::Selection;
 
-action!(collapse_selection, "Collapse selection to cursor", handler: collapse_selection);
+action!(collapse_selection, { description: "Collapse selection to cursor" }, handler: collapse_selection);
 
 fn collapse_selection(ctx: &ActionContext) -> ActionResult {
 	let mut new_sel = ctx.selection.clone();
@@ -15,7 +15,7 @@ fn collapse_selection(ctx: &ActionContext) -> ActionResult {
 	ActionResult::Motion(new_sel)
 }
 
-action!(flip_selection, "Flip selection direction", handler: flip_selection);
+action!(flip_selection, { description: "Flip selection direction" }, handler: flip_selection);
 
 fn flip_selection(ctx: &ActionContext) -> ActionResult {
 	let mut new_sel = ctx.selection.clone();
@@ -25,7 +25,7 @@ fn flip_selection(ctx: &ActionContext) -> ActionResult {
 	ActionResult::Motion(new_sel)
 }
 
-action!(ensure_forward, "Ensure selection is forward", handler: ensure_forward);
+action!(ensure_forward, { description: "Ensure selection is forward" }, handler: ensure_forward);
 
 fn ensure_forward(ctx: &ActionContext) -> ActionResult {
 	let mut new_sel = ctx.selection.clone();
@@ -37,7 +37,7 @@ fn ensure_forward(ctx: &ActionContext) -> ActionResult {
 	ActionResult::Motion(new_sel)
 }
 
-action!(select_line, "Select current line", handler: select_line);
+action!(select_line, { description: "Select current line" }, handler: select_line);
 
 fn select_line(ctx: &ActionContext) -> ActionResult {
 	let mut new_sel = ctx.selection.clone();
@@ -55,12 +55,12 @@ fn select_line(ctx: &ActionContext) -> ActionResult {
 	ActionResult::Motion(new_sel)
 }
 
-action!(select_all, "Select all text", |ctx| {
+action!(select_all, { description: "Select all text" }, |ctx| {
 	let end = ctx.text.len_chars();
 	ActionResult::Motion(Selection::single(0, end))
 });
 
-action!(expand_to_line, "Expand selection to cover full lines", handler: expand_to_line);
+action!(expand_to_line, { description: "Expand selection to cover full lines" }, handler: expand_to_line);
 
 fn expand_to_line(ctx: &ActionContext) -> ActionResult {
 	let mut new_sel = ctx.selection.clone();
@@ -77,7 +77,7 @@ fn expand_to_line(ctx: &ActionContext) -> ActionResult {
 	ActionResult::Motion(new_sel)
 }
 
-action!(trim_selection, "Trim whitespace from selection", handler: trim_selection);
+action!(trim_selection, { description: "Trim whitespace from selection" }, handler: trim_selection);
 
 fn trim_selection(ctx: &ActionContext) -> ActionResult {
 	let mut new_sel = ctx.selection.clone();
@@ -104,7 +104,7 @@ fn trim_selection(ctx: &ActionContext) -> ActionResult {
 	ActionResult::Motion(new_sel)
 }
 
-action!(split_selection_on_newline, "Split multi-line selections into one per line", handler: split_selection_on_newline);
+action!(split_selection_on_newline, { description: "Split multi-line selections into one per line" }, handler: split_selection_on_newline);
 
 fn split_selection_on_newline(ctx: &ActionContext) -> ActionResult {
 	let mut new_ranges = Vec::new();
@@ -136,13 +136,13 @@ fn split_selection_on_newline(ctx: &ActionContext) -> ActionResult {
 	ActionResult::Motion(Selection::new(primary, new_ranges.into_iter().skip(1)))
 }
 
-action!(merge_overlapping, "Merge overlapping selections", |ctx| {
+action!(merge_overlapping, { description: "Merge overlapping selections" }, |ctx| {
 	let mut sel = ctx.selection.clone();
 	sel.merge_overlaps_and_adjacent();
 	ActionResult::Motion(sel)
 });
 
-action!(remove_primary_selection, "Remove the primary selection", handler: remove_primary_selection);
+action!(remove_primary_selection, { description: "Remove the primary selection" }, handler: remove_primary_selection);
 
 fn remove_primary_selection(ctx: &ActionContext) -> ActionResult {
 	if ctx.selection.len() <= 1 {
@@ -155,7 +155,7 @@ fn remove_primary_selection(ctx: &ActionContext) -> ActionResult {
 
 action!(
 	remove_selections_except_primary,
-	"Remove all selections except the primary one",
+	{ description: "Remove all selections except the primary one" },
 	|ctx| {
 		ActionResult::Motion(Selection::single(
 			ctx.selection.primary().anchor,
@@ -164,7 +164,7 @@ action!(
 	}
 );
 
-action!(add_cursor_above, "Add a cursor on the line above", handler: add_cursor_above);
+action!(add_cursor_above, { description: "Add a cursor on the line above" }, handler: add_cursor_above);
 
 fn add_cursor_above(ctx: &ActionContext) -> ActionResult {
 	let mut new_sel = ctx.selection.clone();
@@ -181,7 +181,7 @@ fn add_cursor_above(ctx: &ActionContext) -> ActionResult {
 	ActionResult::Motion(new_sel)
 }
 
-action!(add_cursor_below, "Add a cursor on the line below", handler: add_cursor_below);
+action!(add_cursor_below, { description: "Add a cursor on the line below" }, handler: add_cursor_below);
 
 fn add_cursor_below(ctx: &ActionContext) -> ActionResult {
 	let mut new_sel = ctx.selection.clone();
@@ -204,7 +204,7 @@ fn add_cursor_below(ctx: &ActionContext) -> ActionResult {
 
 action!(
 	rotate_selections_forward,
-	"Rotate selections forward",
+	{ description: "Rotate selections forward" },
 	|ctx| {
 		let mut new_sel = ctx.selection.clone();
 		new_sel.rotate_forward();
@@ -214,7 +214,7 @@ action!(
 
 action!(
 	rotate_selections_backward,
-	"Rotate selections backward",
+	{ description: "Rotate selections backward" },
 	|ctx| {
 		let mut new_sel = ctx.selection.clone();
 		new_sel.rotate_backward();
