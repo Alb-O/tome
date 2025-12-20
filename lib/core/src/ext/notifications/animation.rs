@@ -2,7 +2,7 @@ use ratatui::prelude::*;
 use ratatui::symbols::border;
 use ratatui::widgets::Block;
 
-use crate::ext::notifications::types::{Anchor, AnimationPhase, SlideDirection};
+use crate::ext::notifications::types::{Anchor, AnimationPhase, SlideDirection, SlideParams};
 use crate::ext::notifications::utils::{color_to_rgb, ease_in_quad, ease_out_quad, lerp};
 
 // Minimum dimensions for expand/collapse animation
@@ -154,34 +154,25 @@ impl FadeHandler {
 	}
 }
 
-pub fn slide_calculate_rect(
-	full_rect: Rect,
-	frame_area: Rect,
-	progress: f32,
-	phase: AnimationPhase,
-	anchor: Anchor,
-	slide_direction: SlideDirection,
-	custom_slide_in_start_pos: Option<(f32, f32)>,
-	custom_slide_out_end_pos: Option<(f32, f32)>,
-) -> Rect {
-	let progress = progress.clamp(0.0, 1.0);
+pub fn slide_calculate_rect(params: SlideParams) -> Rect {
+	let progress = params.progress.clamp(0.0, 1.0);
 
-	let (start_x_f32, start_y_f32, end_x_f32, end_y_f32) = match phase {
+	let (start_x_f32, start_y_f32, end_x_f32, end_y_f32) = match params.phase {
 		AnimationPhase::SlidingIn => {
-			let (sx, sy) = custom_slide_in_start_pos.unwrap_or_else(|| {
-				let dir = resolve_slide_direction(slide_direction, anchor);
-				slide_offscreen_position(anchor, dir, full_rect, frame_area)
+			let (sx, sy) = params.custom_slide_in_start_pos.unwrap_or_else(|| {
+				let dir = resolve_slide_direction(params.slide_direction, params.anchor);
+				slide_offscreen_position(params.anchor, dir, params.full_rect, params.frame_area)
 			});
-			(sx, sy, full_rect.x as f32, full_rect.y as f32)
+			(sx, sy, params.full_rect.x as f32, params.full_rect.y as f32)
 		}
 		AnimationPhase::SlidingOut => {
-			let (ex, ey) = custom_slide_out_end_pos.unwrap_or_else(|| {
-				let dir = resolve_slide_direction(slide_direction, anchor);
-				slide_offscreen_position(anchor, dir, full_rect, frame_area)
+			let (ex, ey) = params.custom_slide_out_end_pos.unwrap_or_else(|| {
+				let dir = resolve_slide_direction(params.slide_direction, params.anchor);
+				slide_offscreen_position(params.anchor, dir, params.full_rect, params.frame_area)
 			});
-			(full_rect.x as f32, full_rect.y as f32, ex, ey)
+			(params.full_rect.x as f32, params.full_rect.y as f32, ex, ey)
 		}
-		_ => return full_rect,
+		_ => return params.full_rect,
 	};
 
 	let current_x_f32 = lerp(start_x_f32, end_x_f32, progress);
@@ -189,12 +180,12 @@ pub fn slide_calculate_rect(
 
 	let anim_x1 = current_x_f32;
 	let anim_y1 = current_y_f32;
-	let anim_x2 = current_x_f32 + full_rect.width as f32;
-	let anim_y2 = current_y_f32 + full_rect.height as f32;
-	let frame_x1 = frame_area.x as f32;
-	let frame_y1 = frame_area.y as f32;
-	let frame_x2 = frame_area.right() as f32;
-	let frame_y2 = frame_area.bottom() as f32;
+	let anim_x2 = current_x_f32 + params.full_rect.width as f32;
+	let anim_y2 = current_y_f32 + params.full_rect.height as f32;
+	let frame_x1 = params.frame_area.x as f32;
+	let frame_y1 = params.frame_area.y as f32;
+	let frame_x2 = params.frame_area.right() as f32;
+	let frame_y2 = params.frame_area.bottom() as f32;
 	let intersect_x1 = anim_x1.max(frame_x1);
 	let intersect_y1 = anim_y1.max(frame_y1);
 	let intersect_x2 = anim_x2.min(frame_x2);
@@ -210,8 +201,8 @@ pub fn slide_calculate_rect(
 	let final_rect = Rect {
 		x: final_x,
 		y: final_y,
-		width: final_width.min(frame_area.width.saturating_sub(final_x)),
-		height: final_height.min(frame_area.height.saturating_sub(final_y)),
+		width: final_width.min(params.frame_area.width.saturating_sub(final_x)),
+		height: final_height.min(params.frame_area.height.saturating_sub(final_y)),
 	};
 
 	if final_rect.width > 0 && final_rect.height > 0 {
@@ -277,46 +268,49 @@ pub fn slide_offscreen_position(
 
 pub fn slide_apply_border_effect<'a>(
 	block: Block<'a>,
-	anchor: Anchor,
-	slide_direction_cfg: SlideDirection,
-	progress: f32,
-	phase: AnimationPhase,
-	full_rect: Rect,
-	custom_slide_in_start_pos: Option<(f32, f32)>,
-	custom_slide_out_end_pos: Option<(f32, f32)>,
-	frame_area: Rect,
+	params: SlideParams,
 	base_set: &border::Set<'a>,
 ) -> Block<'a> {
 	const PROGRESS_OFFSET: f32 = 0.0;
 
-	if full_rect.width == 0 || full_rect.height == 0 {
+	if params.full_rect.width == 0 || params.full_rect.height == 0 {
 		return block;
 	}
 
-	let slide_direction = resolve_slide_direction(slide_direction_cfg, anchor);
+	let slide_direction = resolve_slide_direction(params.slide_direction, params.anchor);
 
-	let (actual_start_x, actual_start_y, actual_end_x, actual_end_y) = match phase {
+	let (actual_start_x, actual_start_y, actual_end_x, actual_end_y) = match params.phase {
 		AnimationPhase::SlidingIn => {
-			let (sx, sy) = custom_slide_in_start_pos.unwrap_or_else(|| {
-				slide_offscreen_position(anchor, slide_direction, full_rect, frame_area)
+			let (sx, sy) = params.custom_slide_in_start_pos.unwrap_or_else(|| {
+				slide_offscreen_position(
+					params.anchor,
+					slide_direction,
+					params.full_rect,
+					params.frame_area,
+				)
 			});
-			(sx, sy, full_rect.x as f32, full_rect.y as f32)
+			(sx, sy, params.full_rect.x as f32, params.full_rect.y as f32)
 		}
 		AnimationPhase::SlidingOut => {
-			let (ex, ey) = custom_slide_out_end_pos.unwrap_or_else(|| {
-				slide_offscreen_position(anchor, slide_direction, full_rect, frame_area)
+			let (ex, ey) = params.custom_slide_out_end_pos.unwrap_or_else(|| {
+				slide_offscreen_position(
+					params.anchor,
+					slide_direction,
+					params.full_rect,
+					params.frame_area,
+				)
 			});
-			(full_rect.x as f32, full_rect.y as f32, ex, ey)
+			(params.full_rect.x as f32, params.full_rect.y as f32, ex, ey)
 		}
 		_ => return block,
 	};
 
-	let frame_x1 = frame_area.x as f32;
-	let frame_y1 = frame_area.y as f32;
-	let frame_x2 = frame_area.right() as f32;
-	let frame_y2 = frame_area.bottom() as f32;
-	let width = full_rect.width as f32;
-	let height = full_rect.height as f32;
+	let frame_x1 = params.frame_area.x as f32;
+	let frame_y1 = params.frame_area.y as f32;
+	let frame_x2 = params.frame_area.right() as f32;
+	let frame_y2 = params.frame_area.bottom() as f32;
+	let width = params.full_rect.width as f32;
+	let height = params.full_rect.height as f32;
 
 	let (trigger_start, trigger_end) = match slide_direction {
 		SlideDirection::FromRight => {
@@ -420,9 +414,9 @@ pub fn slide_apply_border_effect<'a>(
 		SlideDirection::Default => (2.0, 0.0),
 	};
 
-	let apply_effect = match phase {
-		AnimationPhase::SlidingIn => progress < trigger_end - PROGRESS_OFFSET,
-		AnimationPhase::SlidingOut => progress >= trigger_start - PROGRESS_OFFSET,
+	let apply_effect = match params.phase {
+		AnimationPhase::SlidingIn => params.progress < trigger_end - PROGRESS_OFFSET,
+		AnimationPhase::SlidingOut => params.progress >= trigger_start - PROGRESS_OFFSET,
 		_ => false,
 	};
 

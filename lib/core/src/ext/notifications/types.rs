@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use ratatui::layout::Rect;
 use thiserror::Error;
 
 /// Screen position from which notifications expand.
@@ -122,6 +123,19 @@ pub enum Timing {
 	/// Automatically calculated duration.
 	#[default]
 	Auto,
+}
+
+/// Parameters for sliding animations.
+#[derive(Debug, Clone, Copy)]
+pub struct SlideParams {
+	pub full_rect: Rect,
+	pub frame_area: Rect,
+	pub progress: f32,
+	pub phase: AnimationPhase,
+	pub anchor: Anchor,
+	pub slide_direction: SlideDirection,
+	pub custom_slide_in_start_pos: Option<(f32, f32)>,
+	pub custom_slide_out_end_pos: Option<(f32, f32)>,
 }
 
 /// Errors specific to the notification system.

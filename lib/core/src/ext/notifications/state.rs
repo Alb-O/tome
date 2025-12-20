@@ -9,7 +9,9 @@ use crate::ext::notifications::animation::{
 	slide_calculate_rect,
 };
 use crate::ext::notifications::notification::{Notification, calculate_size};
-use crate::ext::notifications::types::{Animation, AnimationPhase, AutoDismiss, Level, Timing};
+use crate::ext::notifications::types::{
+	Animation, AnimationPhase, AutoDismiss, Level, SlideParams, Timing,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ManagerDefaults {
@@ -209,16 +211,16 @@ impl crate::ext::notifications::render::RenderableNotification for NotificationS
 	}
 	fn calculate_animation_rect(&self, frame_area: Rect) -> Rect {
 		match self.notification.animation {
-			Animation::Slide => slide_calculate_rect(
-				self.full_rect,
+			Animation::Slide => slide_calculate_rect(SlideParams {
+				full_rect: self.full_rect,
 				frame_area,
-				self.animation_progress,
-				self.current_phase,
-				self.notification.anchor,
-				self.notification.slide_direction,
-				self.custom_entry_pos,
-				self.custom_exit_pos,
-			),
+				progress: self.animation_progress,
+				phase: self.current_phase,
+				anchor: self.notification.anchor,
+				slide_direction: self.notification.slide_direction,
+				custom_slide_in_start_pos: self.custom_entry_pos,
+				custom_slide_out_end_pos: self.custom_exit_pos,
+			}),
 			Animation::ExpandCollapse => expand_calculate_rect(
 				self.full_rect,
 				frame_area,
@@ -242,14 +244,16 @@ impl crate::ext::notifications::render::RenderableNotification for NotificationS
 		match self.notification.animation {
 			Animation::Slide => slide_apply_border_effect(
 				block,
-				self.notification.anchor,
-				self.notification.slide_direction,
-				self.animation_progress,
-				self.current_phase,
-				self.full_rect,
-				self.custom_entry_pos,
-				self.custom_exit_pos,
-				frame_area,
+				SlideParams {
+					full_rect: self.full_rect,
+					frame_area,
+					progress: self.animation_progress,
+					phase: self.current_phase,
+					anchor: self.notification.anchor,
+					slide_direction: self.notification.slide_direction,
+					custom_slide_in_start_pos: self.custom_entry_pos,
+					custom_slide_out_end_pos: self.custom_exit_pos,
+				},
 				base_set,
 			),
 			_ => block,
