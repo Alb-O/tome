@@ -12,7 +12,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-use ratatui_notifications::{Notifications, Overflow};
+use tome_core::ext::notifications::{Notifications, Overflow};
 use tome_core::ext::{HookContext, emit_hook};
 use tome_core::range::CharIdx;
 use tome_core::{InputHandler, Mode, Rope, Selection, Transaction, ext, movement};

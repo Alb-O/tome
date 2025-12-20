@@ -8,4 +8,5 @@ mod cabi;
 mod edit;
 mod help;
 mod quit;
+mod test_notify;
 mod write;

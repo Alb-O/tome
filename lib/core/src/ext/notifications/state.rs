@@ -1,14 +1,15 @@
 use std::time::{Duration, Instant};
 
 use ratatui::prelude::*;
+use ratatui::widgets::{block::Padding, Block, BorderType};
 
-use super::cls_notification::Notification;
-use crate::notifications::types::{AnimationPhase, AutoDismiss, Timing};
+use crate::ext::notifications::animation::{
+	expand_calculate_rect, fade_calculate_rect, slide_apply_border_effect, slide_calculate_rect,
+	FadeHandler,
+};
+use crate::ext::notifications::notification::{calculate_size, Notification};
+use crate::ext::notifications::types::{Animation, AnimationPhase, AutoDismiss, Level, Timing};
 
-/// Manager-level defaults for notification timing.
-///
-/// Provides fallback durations when notifications use `Timing::Auto`
-/// or `AutoDismiss::After(Duration::ZERO)`.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ManagerDefaults {
 	pub default_entry_duration: Duration,
@@ -26,76 +27,36 @@ impl Default for ManagerDefaults {
 	}
 }
 
-/// Internal state for a single notification (pub(crate)).
-///
-/// Tracks animation progress, timing, and lifecycle for a notification
-/// being managed by the AnimatedNotificationManager.
 #[derive(Debug)]
 pub(crate) struct NotificationState {
-	/// Unique identifier for this notification
 	pub(crate) id: u64,
-
-	/// The original notification configuration
 	pub(crate) notification: Notification,
-
-	/// When this notification was created
 	pub(crate) created_at: Instant,
-
-	/// Current animation phase
 	pub(crate) current_phase: AnimationPhase,
-
-	/// Progress through current animation (0.0 to 1.0)
 	pub(crate) animation_progress: f32,
-
-	/// Target position/size (updated by render)
 	pub(crate) full_rect: Rect,
-
-	/// Remaining time until auto-dismiss (if applicable)
 	pub(crate) remaining_display_time: Option<Duration>,
-
-	/// Resolved entry animation duration
 	pub(crate) actual_entry_duration: Duration,
-
-	/// Resolved exit animation duration
 	pub(crate) actual_exit_duration: Duration,
-
-	/// Custom entry position override (for slide animations)
 	pub(crate) custom_entry_pos: Option<(f32, f32)>,
-
-	/// Custom exit position override (for slide animations)
 	pub(crate) custom_exit_pos: Option<(f32, f32)>,
 }
 
 impl NotificationState {
-	/// Creates a new notification state.
-	///
-	/// Resolves all timing durations based on the notification's configuration
-	/// and the manager's defaults.
-	///
-	/// # Arguments
-	/// * `id` - Unique identifier for this notification
-	/// * `notification` - The notification configuration
-	/// * `defaults` - Manager-level default durations
 	pub(crate) fn new(id: u64, notification: Notification, defaults: &ManagerDefaults) -> Self {
-		// Resolve actual durations from Timing enum
 		let actual_entry_duration = match notification.slide_in_timing {
 			Timing::Fixed(d) => d,
 			Timing::Auto => defaults.default_entry_duration,
 		};
-
 		let actual_exit_duration = match notification.slide_out_timing {
 			Timing::Fixed(d) => d,
 			Timing::Auto => defaults.default_exit_duration,
 		};
-
-		// Resolve remaining display time from AutoDismiss
 		let remaining_display_time = match notification.auto_dismiss {
 			AutoDismiss::Never => None,
 			AutoDismiss::After(d) if d > Duration::ZERO => Some(d),
 			AutoDismiss::After(_) => Some(defaults.default_display_time),
 		};
-
-		// Copy custom positions from notification (convert Position to (f32, f32))
 		let custom_entry_pos = notification
 			.custom_entry_position
 			.map(|p| (p.x as f32, p.y as f32));
@@ -118,18 +79,7 @@ impl NotificationState {
 		}
 	}
 
-	/// Updates the notification state based on elapsed time.
-	///
-	/// Advances animation phases and progress based on timing configuration.
-	/// Entry/exit animations use progress-based timing, while dwelling uses
-	/// remaining_display_time countdown.
-	///
-	/// # Arguments
-	/// * `delta` - Time elapsed since last update
 	pub(crate) fn update(&mut self, delta: Duration) {
-		use crate::notifications::types::Animation;
-
-		// Start animation if still pending
 		if self.current_phase == AnimationPhase::Pending {
 			self.current_phase = match self.notification.animation {
 				Animation::Slide => AnimationPhase::SlidingIn,
@@ -139,7 +89,6 @@ impl NotificationState {
 			self.animation_progress = 0.0;
 		}
 
-		// Update animation progress for entry/exit phases (NOT dwelling)
 		let phase_duration = match self.current_phase {
 			AnimationPhase::SlidingIn | AnimationPhase::FadingIn | AnimationPhase::Expanding => {
 				self.actual_entry_duration
@@ -147,7 +96,6 @@ impl NotificationState {
 			AnimationPhase::SlidingOut | AnimationPhase::FadingOut | AnimationPhase::Collapsing => {
 				self.actual_exit_duration
 			}
-			// Dwelling phase uses remaining_display_time, not animation_progress
 			_ => Duration::ZERO,
 		};
 
@@ -167,17 +115,14 @@ impl NotificationState {
 			progress_updated = true;
 		}
 
-		// Handle phase transitions when animation completes
 		if progress_updated && self.animation_progress >= 1.0 {
 			match self.current_phase {
-				// Entry animation complete → Dwelling
 				AnimationPhase::SlidingIn
 				| AnimationPhase::Expanding
 				| AnimationPhase::FadingIn => {
 					self.current_phase = AnimationPhase::Dwelling;
 					self.animation_progress = 0.0;
 				}
-				// Exit animation complete → Finished
 				AnimationPhase::SlidingOut
 				| AnimationPhase::Collapsing
 				| AnimationPhase::FadingOut => {
@@ -187,12 +132,10 @@ impl NotificationState {
 			}
 		}
 
-		// Handle dwelling phase timer (separate from animation progress)
 		if self.current_phase == AnimationPhase::Dwelling {
 			if let Some(remaining) = self.remaining_display_time.as_mut() {
 				*remaining = remaining.saturating_sub(delta);
 				if remaining.is_zero() {
-					// Timer expired, transition to exit animation
 					self.current_phase = match self.notification.animation {
 						Animation::Slide => AnimationPhase::SlidingOut,
 						Animation::ExpandCollapse => AnimationPhase::Collapsing,
@@ -201,191 +144,132 @@ impl NotificationState {
 					self.animation_progress = 0.0;
 				}
 			}
-			// If remaining_display_time is None, notification stays dwelling indefinitely
 		}
 	}
 }
 
-// Implement StackableNotification trait for render orchestrator
-impl crate::notifications::orc_stacking::StackableNotification for NotificationState {
+impl crate::ext::notifications::stacking::StackableNotification for NotificationState {
 	fn id(&self) -> u64 {
 		self.id
 	}
-
 	fn current_phase(&self) -> AnimationPhase {
 		self.current_phase
 	}
-
 	fn created_at(&self) -> Instant {
 		self.created_at
 	}
-
-	fn full_rect(&self) -> ratatui::prelude::Rect {
+	fn full_rect(&self) -> Rect {
 		self.full_rect
 	}
-
 	fn exterior_padding(&self) -> u16 {
 		self.notification.exterior_margin
 	}
-
-	fn calculate_content_size(&self, frame_area: ratatui::prelude::Rect) -> (u16, u16) {
-		crate::notifications::functions::fnc_calculate_size::calculate_size(
-			&self.notification,
-			frame_area,
-		)
+	fn calculate_content_size(&self, frame_area: Rect) -> (u16, u16) {
+		calculate_size(&self.notification, frame_area)
 	}
 }
 
-// Implement RenderableNotification trait for render orchestrator
-impl crate::notifications::orc_render::RenderableNotification for NotificationState {
-	fn level(&self) -> Option<crate::notifications::types::Level> {
+impl crate::ext::notifications::render::RenderableNotification for NotificationState {
+	fn level(&self) -> Option<Level> {
 		self.notification.level
 	}
-
-	fn title(&self) -> Option<ratatui::text::Line<'static>> {
+	fn title(&self) -> Option<Line<'static>> {
 		self.notification.title.clone()
 	}
-
-	fn content(&self) -> ratatui::prelude::Text<'static> {
+	fn content(&self) -> Text<'static> {
 		self.notification.content.clone()
 	}
-
-	fn border_type(&self) -> ratatui::widgets::BorderType {
-		self.notification
-			.border_type
-			.unwrap_or(ratatui::widgets::BorderType::Plain)
+	fn border_type(&self) -> BorderType {
+		self.notification.border_type.unwrap_or(BorderType::Plain)
 	}
-
 	fn fade_effect(&self) -> bool {
 		self.notification.fade_effect
 	}
-
-	fn animation_type(&self) -> crate::notifications::types::Animation {
+	fn animation_type(&self) -> Animation {
 		self.notification.animation
 	}
-
 	fn animation_progress(&self) -> f32 {
 		self.animation_progress
 	}
-
-	fn block_style(&self) -> Option<ratatui::prelude::Style> {
+	fn block_style(&self) -> Option<Style> {
 		self.notification.block_style
 	}
-
-	fn border_style(&self) -> Option<ratatui::prelude::Style> {
+	fn border_style(&self) -> Option<Style> {
 		self.notification.border_style
 	}
-
-	fn title_style(&self) -> Option<ratatui::prelude::Style> {
+	fn title_style(&self) -> Option<Style> {
 		self.notification.title_style
 	}
-
-	fn padding(&self) -> ratatui::widgets::block::Padding {
+	fn padding(&self) -> Padding {
 		self.notification.padding
 	}
-
-	fn set_full_rect(&mut self, rect: ratatui::prelude::Rect) {
+	fn set_full_rect(&mut self, rect: Rect) {
 		self.full_rect = rect;
 	}
-
-	fn calculate_animation_rect(
-		&self,
-		frame_area: ratatui::prelude::Rect,
-	) -> ratatui::prelude::Rect {
-		use crate::notifications::types::Animation;
-
+	fn calculate_animation_rect(&self, frame_area: Rect) -> Rect {
 		match self.notification.animation {
-			Animation::Slide => {
-				crate::notifications::functions::fnc_slide_calculate_rect::slide_calculate_rect(
-					self.full_rect,
-					frame_area,
-					self.animation_progress,
-					self.current_phase,
-					self.notification.anchor,
-					self.notification.slide_direction,
-					self.custom_entry_pos,
-					self.custom_exit_pos,
-				)
-			}
+			Animation::Slide => slide_calculate_rect(
+				self.full_rect,
+				frame_area,
+				self.animation_progress,
+				self.current_phase,
+				self.notification.anchor,
+				self.notification.slide_direction,
+				self.custom_entry_pos,
+				self.custom_exit_pos,
+			),
 			Animation::ExpandCollapse => {
-				crate::notifications::functions::fnc_expand_calculate_rect::calculate_rect(
-					self.full_rect,
-					frame_area,
-					self.current_phase,
-					self.animation_progress,
-				)
+				expand_calculate_rect(self.full_rect, frame_area, self.current_phase, self.animation_progress)
 			}
 			Animation::Fade => {
-				crate::notifications::functions::fnc_fade_calculate_rect::calculate_rect(
-					self.full_rect,
-					frame_area,
-					self.current_phase,
-					self.animation_progress,
-				)
+				fade_calculate_rect(self.full_rect, frame_area, self.current_phase, self.animation_progress)
 			}
 		}
 	}
-
 	fn apply_animation_block_effect<'a>(
 		&self,
-		block: ratatui::widgets::Block<'a>,
-		frame_area: ratatui::prelude::Rect,
+		block: Block<'a>,
+		frame_area: Rect,
 		base_set: &ratatui::symbols::border::Set<'a>,
-	) -> ratatui::widgets::Block<'a> {
-		use crate::notifications::types::Animation;
-
+	) -> Block<'a> {
 		match self.notification.animation {
-            Animation::Slide => {
-                crate::notifications::functions::fnc_slide_apply_border_effect::slide_apply_border_effect(
-                    block,
-                    self.notification.anchor,
-                    self.notification.slide_direction,
-                    self.animation_progress,
-                    self.current_phase,
-                    self.full_rect,
-                    self.custom_entry_pos,
-                    self.custom_exit_pos,
-                    frame_area,
-                    base_set,
-                )
-            }
-            _ => block,
-        }
+			Animation::Slide => slide_apply_border_effect(
+				block,
+				self.notification.anchor,
+				self.notification.slide_direction,
+				self.animation_progress,
+				self.current_phase,
+				self.full_rect,
+				self.custom_entry_pos,
+				self.custom_exit_pos,
+				frame_area,
+				base_set,
+			),
+			_ => block,
+		}
 	}
-
 	fn interpolate_frame_foreground(
 		&self,
-		base_fg: Option<ratatui::prelude::Color>,
+		base_fg: Option<Color>,
 		phase: AnimationPhase,
 		progress: f32,
-	) -> Option<ratatui::prelude::Color> {
-		use crate::notifications::functions::fnc_fade_interpolate_color::FadeHandler;
-		use crate::notifications::types::Animation;
-
+	) -> Option<Color> {
 		match self.notification.animation {
 			Animation::Fade => FadeHandler.interpolate_frame_foreground(base_fg, phase, progress),
-			_ if self.notification.fade_effect => {
-				FadeHandler.interpolate_frame_foreground(base_fg, phase, progress)
-			}
+			_ if self.notification.fade_effect => FadeHandler.interpolate_frame_foreground(base_fg, phase, progress),
 			_ => base_fg,
 		}
 	}
-
 	fn interpolate_content_foreground(
 		&self,
-		base_fg: Option<ratatui::prelude::Color>,
+		base_fg: Option<Color>,
 		phase: AnimationPhase,
 		progress: f32,
-	) -> Option<ratatui::prelude::Color> {
-		use crate::notifications::functions::fnc_fade_interpolate_color::FadeHandler;
-		use crate::notifications::types::Animation;
-
+	) -> Option<Color> {
 		match self.notification.animation {
 			Animation::Fade => FadeHandler.interpolate_content_foreground(base_fg, phase, progress),
-			_ if self.notification.fade_effect => {
-				FadeHandler.interpolate_content_foreground(base_fg, phase, progress)
-			}
-			_ => base_fg.or(Some(ratatui::prelude::Color::White)),
+			_ if self.notification.fade_effect => FadeHandler.interpolate_content_foreground(base_fg, phase, progress),
+			_ => base_fg.or(Some(Color::White)),
 		}
 	}
 }
@@ -393,10 +277,9 @@ impl crate::notifications::orc_render::RenderableNotification for NotificationSt
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::notifications::types::{AutoDismiss, Timing};
+	use crate::ext::notifications::types::{AutoDismiss, Timing};
 
 	fn create_test_notification() -> Notification {
-		// Use Default to create a simple test notification
 		Notification {
 			content: Text::raw("Test notification"),
 			..Default::default()
@@ -485,7 +368,6 @@ mod tests {
 		let state = NotificationState::new(1, notification, &defaults);
 		let after = Instant::now();
 
-		// Timestamp should be between before and after
 		assert!(state.created_at >= before);
 		assert!(state.created_at <= after);
 	}

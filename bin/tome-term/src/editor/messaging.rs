@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use ratatui_notifications::{Anchor, Animation, Level, Notification, SizeConstraint, Timing};
+use tome_core::ext::notifications::{Anchor, Animation, Level, Notification, SizeConstraint, Timing};
 use tome_core::ext::{
 	CommandSource, CompletionContext, CompletionItem, CompletionKind, CompletionSource,
 };
@@ -65,6 +65,37 @@ impl Editor {
 			.style(style)
 			.build()
 		{
+			let _ = self.notifications.add(notif);
+		}
+	}
+
+	pub fn notify(&mut self, type_name: &str, text: impl Into<String>) {
+		use tome_core::ext::notifications::find_notification_type;
+		let text = text.into();
+		let type_def = find_notification_type(type_name);
+
+		let level = type_def.map(|t| t.level).unwrap_or(Level::Info);
+		let auto_dismiss = type_def.and_then(|t| t.auto_dismiss).unwrap_or_default();
+
+		let mut builder = Notification::builder(text)
+			.level(level)
+			.auto_dismiss(auto_dismiss)
+			.animation(Animation::Fade)
+			.anchor(Anchor::BottomRight)
+			.timing(
+				Timing::Fixed(Duration::from_millis(200)),
+				Timing::Auto, // uses auto_dismiss for dwell
+				Timing::Fixed(Duration::from_millis(200)),
+			)
+			.max_size(SizeConstraint::Absolute(40), SizeConstraint::Absolute(5));
+
+		if let Some(t) = type_def {
+			if let Some(style) = t.style {
+				builder = builder.style(style);
+			}
+		}
+
+		if let Ok(notif) = builder.build() {
 			let _ = self.notifications.add(notif);
 		}
 	}

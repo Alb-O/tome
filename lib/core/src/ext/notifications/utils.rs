@@ -1,27 +1,6 @@
 use ratatui::style::Color;
 
 /// Converts a ratatui Color to an RGB tuple.
-///
-/// This function handles common named colors, grayscale values, and RGB colors.
-/// For colors that cannot be converted (like indexed colors or Reset), returns None.
-///
-/// # Arguments
-///
-/// * `color` - The optional Color to convert
-///
-/// # Returns
-///
-/// An optional tuple of (r, g, b) values in the range 0-255, or None if the color
-/// cannot be converted to RGB.
-///
-/// # Examples
-///
-/// ```ignore
-/// // Internal function
-/// use ratatui::style::Color;
-/// let rgb = color_to_rgb(Some(Color::Red));
-/// assert_eq!(rgb, Some((255, 0, 0)));
-/// ```
 #[inline]
 pub fn color_to_rgb(color: Option<Color>) -> Option<(u8, u8, u8)> {
 	match color {
@@ -44,4 +23,22 @@ pub fn color_to_rgb(color: Option<Color>) -> Option<(u8, u8, u8)> {
 		Some(Color::Rgb(r, g, b)) => Some((r, g, b)),
 		_ => None,
 	}
+}
+
+/// Applies quadratic ease-in easing.
+#[inline]
+pub fn ease_in_quad(t: f32) -> f32 {
+	t * t
+}
+
+/// Applies quadratic ease-out easing.
+#[inline]
+pub fn ease_out_quad(t: f32) -> f32 {
+	t * (2.0 - t)
+}
+
+/// Performs linear interpolation between two values.
+#[inline]
+pub fn lerp(start: f32, end: f32, t: f32) -> f32 {
+	start + t * (end - start)
 }

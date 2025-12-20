@@ -31,10 +31,11 @@ pub trait ModeAccess {
 	fn set_mode(&mut self, mode: Mode);
 }
 
-/// Message display.
+/// Message display and notifications.
 pub trait MessageAccess {
 	fn show_message(&mut self, msg: &str);
 	fn show_error(&mut self, msg: &str);
+	fn notify(&mut self, type_name: &str, msg: &str);
 	fn clear_message(&mut self);
 }
 

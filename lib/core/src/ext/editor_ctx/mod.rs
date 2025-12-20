@@ -55,6 +55,10 @@ impl<'a> EditorContext<'a> {
 		self.inner.show_error(msg);
 	}
 
+	pub fn notify(&mut self, type_name: &str, msg: &str) {
+		self.inner.notify(type_name, msg);
+	}
+
 	pub fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		self.inner.search()
 	}

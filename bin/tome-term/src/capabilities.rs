@@ -105,6 +105,10 @@ impl MessageAccess for Editor {
 		self.show_error(msg);
 	}
 
+	fn notify(&mut self, type_name: &str, msg: &str) {
+		self.notify(type_name, msg);
+	}
+
 	fn clear_message(&mut self) {
 		self.message = None;
 	}

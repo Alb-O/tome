@@ -6,26 +6,17 @@ use ratatui::symbols::border;
 use ratatui::widgets::block::Padding;
 use ratatui::widgets::{Block, BorderType, Borders, Clear};
 
-use crate::notifications::functions::fnc_get_level_icon::get_level_icon;
-use crate::notifications::functions::fnc_resolve_styles::resolve_styles;
-use crate::notifications::orc_stacking::calculate_stacking_positions;
-use crate::notifications::types::{Anchor, AnimationPhase, Level};
-use crate::notifications::ui::chrome::{gutter_layout, split_inner};
-use crate::notifications::ui::slices::{body, icon_gutter};
+use crate::ext::notifications::stacking::{calculate_stacking_positions, StackableNotification};
+use crate::ext::notifications::types::{Anchor, AnimationPhase, Level};
+use crate::ext::notifications::ui::{gutter_layout, render_body, render_icon_gutter, resolve_styles, split_inner, get_level_icon};
 
-/// Trait for renderable notification state.
-///
-/// This trait defines the interface for notification states that can be rendered.
-/// It extends StackableNotification with additional rendering requirements.
-pub trait RenderableNotification:
-	crate::notifications::orc_stacking::StackableNotification
-{
+pub trait RenderableNotification: StackableNotification {
 	fn level(&self) -> Option<Level>;
 	fn title(&self) -> Option<Line<'static>>;
 	fn content(&self) -> Text<'static>;
 	fn border_type(&self) -> BorderType;
 	fn fade_effect(&self) -> bool;
-	fn animation_type(&self) -> crate::notifications::types::Animation;
+	fn animation_type(&self) -> crate::ext::notifications::types::Animation;
 	fn animation_progress(&self) -> f32;
 	fn block_style(&self) -> Option<Style>;
 	fn border_style(&self) -> Option<Style>;
@@ -33,7 +24,6 @@ pub trait RenderableNotification:
 	fn padding(&self) -> Padding;
 	fn set_full_rect(&mut self, rect: Rect);
 
-	// Animation handler methods - avoid dyn compatibility issues by including them directly
 	fn calculate_animation_rect(&self, frame_area: Rect) -> Rect;
 	fn apply_animation_block_effect<'a>(
 		&self,
@@ -55,18 +45,6 @@ pub trait RenderableNotification:
 	) -> Option<Color>;
 }
 
-/// Renders all notifications to the frame.
-///
-/// This is the main orchestration function that:
-/// 1. Iterates through each anchor's notifications
-/// 2. Calls calculate_stacking_positions for each anchor
-/// 3. For each stacked notification:
-///    - Updates state.full_rect with stacked position
-///    - Gets animation handler and calculates current rect
-///    - Resolves styles
-///    - Applies fade effect if enabled
-///    - Builds Block (borders, title)
-///    - Renders Clear at stacked position, then content slices at animated position
 pub fn render_notifications<T: RenderableNotification>(
 	notifications: &mut HashMap<u64, T>,
 	notifications_by_anchor: &HashMap<Anchor, Vec<u64>>,
@@ -147,33 +125,32 @@ pub fn render_notifications<T: RenderableNotification>(
 				if let (Some(g), Some(icon)) = (gutter, get_level_icon(state.level())) {
 					let (gutter_area, content_area) = split_inner(inner_area, g);
 					if gutter_area.width > 0 && content_area.width > 0 {
-						icon_gutter::render_icon_gutter(
+						render_icon_gutter(
 							frame,
 							gutter_area,
 							g,
 							icon,
 							final_border_style,
 						);
-						body::render_body(frame, content_area, state.content(), final_content_style);
+						render_body(frame, content_area, state.content(), final_content_style);
 					} else {
-						body::render_body(frame, inner_area, state.content(), final_content_style);
+						render_body(frame, inner_area, state.content(), final_content_style);
 					}
 				} else {
-					body::render_body(frame, inner_area, state.content(), final_content_style);
+					render_body(frame, inner_area, state.content(), final_content_style);
 				}
 			}
 		}
 	}
 }
 
-/// Helper to apply fade effect if needed
 fn apply_fade_if_needed<T: RenderableNotification>(
 	state: &T,
 	base_block_style: Style,
 	base_border_style: Style,
 	base_title_style: Style,
 ) -> (Style, Style, Style, Style) {
-	use crate::notifications::types::Animation;
+	use crate::ext::notifications::types::Animation;
 
 	let apply_fade = state.fade_effect() || matches!(state.animation_type(), Animation::Fade);
 	let is_in_anim_phase = matches!(
@@ -223,7 +200,6 @@ fn apply_fade_if_needed<T: RenderableNotification>(
 	}
 }
 
-/// Helper to get border set from border type
 fn get_border_set(border_type: BorderType) -> border::Set<'static> {
 	match border_type {
 		BorderType::Plain => border::PLAIN,

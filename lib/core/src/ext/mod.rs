@@ -21,6 +21,8 @@ mod keybindings;
 #[cfg(feature = "host")]
 pub mod macros;
 #[cfg(feature = "host")]
+pub mod notifications;
+#[cfg(feature = "host")]
 mod motions;
 #[cfg(feature = "host")]
 mod objects;

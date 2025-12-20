@@ -1,40 +1,35 @@
 use ratatui::layout::{Position, Rect};
 
-use crate::notifications::types::Anchor;
+use crate::ext::notifications::types::Anchor;
+
+/// Calculate the anchor position within a frame area.
+pub fn calculate_anchor_position(anchor: Anchor, frame_area: Rect) -> Position {
+	match anchor {
+		Anchor::TopLeft => Position::new(frame_area.x, frame_area.y),
+		Anchor::TopCenter => Position::new(frame_area.x + frame_area.width / 2, frame_area.y),
+		Anchor::TopRight => Position::new(frame_area.right().saturating_sub(1), frame_area.y),
+		Anchor::MiddleLeft => Position::new(frame_area.x, frame_area.y + frame_area.height / 2),
+		Anchor::MiddleCenter => Position::new(
+			frame_area.x + frame_area.width / 2,
+			frame_area.y + frame_area.height / 2,
+		),
+		Anchor::MiddleRight => Position::new(
+			frame_area.right().saturating_sub(1),
+			frame_area.y + frame_area.height / 2,
+		),
+		Anchor::BottomLeft => Position::new(frame_area.x, frame_area.bottom().saturating_sub(1)),
+		Anchor::BottomCenter => Position::new(
+			frame_area.x + frame_area.width / 2,
+			frame_area.bottom().saturating_sub(1),
+		),
+		Anchor::BottomRight => Position::new(
+			frame_area.right().saturating_sub(1),
+			frame_area.bottom().saturating_sub(1),
+		),
+	}
+}
 
 /// Calculate the final rectangular area for a notification.
-///
-/// Given an anchor point, anchor position, dimensions, frame area, and exterior padding,
-/// this function calculates where the notification rectangle should be placed, accounting for:
-/// - Anchor alignment (TopLeft, Center, BottomRight, etc.)
-/// - Exterior padding (offset from screen edges)
-/// - Frame boundary clamping (ensures rect stays within frame)
-///
-/// # Arguments
-///
-/// * `anchor` - The anchor type (determines alignment behavior)
-/// * `anchor_pos` - The position of the anchor point
-/// * `width` - Desired width of the notification
-/// * `height` - Desired height of the notification
-/// * `frame_area` - The frame/screen area to place the notification within
-/// * `exterior_padding` - Padding from screen edges (in cells)
-///
-/// # Returns
-///
-/// A `Rect` representing the final position and size of the notification, clamped to frame bounds.
-///
-/// # Examples
-///
-/// ```
-/// use ratatui::layout::{Position, Rect};
-/// use ratatui_notifications::notifications::types::Anchor;
-/// use ratatui_notifications::notifications::functions::fnc_calculate_rect::calculate_rect;
-///
-/// let frame = Rect::new(0, 0, 100, 50);
-/// let anchor_pos = Position::new(0, 0);
-/// let rect = calculate_rect(Anchor::TopLeft, anchor_pos, 20, 10, frame, 2);
-/// // Rect will be at (2, 2) with exterior padding of 2
-/// ```
 pub fn calculate_rect(
 	anchor: Anchor,
 	anchor_pos: Position,
@@ -108,9 +103,6 @@ pub fn calculate_rect(
 	let final_y = y
 		.max(frame_area.y)
 		.min(frame_area.bottom().saturating_sub(clamped_height));
-
-	let final_x = final_x.max(frame_area.x);
-	let final_y = final_y.max(frame_area.y);
 
 	Rect::new(final_x, final_y, clamped_width, clamped_height)
 }
