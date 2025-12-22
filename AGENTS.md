@@ -1,6 +1,14 @@
 # Tome
 
-Kakoune-inspired modal text editor in Rust. Workspace crates:
+Kakoune-inspired modal text editor in Rust.
+
+## Design Goals
+
+- **Orthogonal**: No tight coupling between modules, no dependency tangling. Event emitter/reciever pattern, emitters don't know what recievers may exist. Heavily utilize `linkme`'s `distributed_slices` for hiearchically inferred compile-time imports.
+- **Suckless plugin system**: Plugins are written in rust, the same language as the editor's source code, though pluigins do not need to compile/depend directly on it. This is done through C ABI typed schema. The schema should not need to be manually written/kept in sync with the source code (auto-generated types & API).
+- **Heavy proc macro usage**: Keeps repetative data-oriented patterns lean and composable.
+
+## Workspace Crates
 
 - **tome-core**: Core editing primitives and extension system; `host` feature pulls in ropey/regex/termina/linkme for embedded use.
 - **tome-term**: Terminal UI (ratatui) and CLI binary `tome`; houses kitty GUI integration tests.
