@@ -3,7 +3,7 @@ use tome_core::command;
 use tome_core::registry::{CommandContext, CommandError, CommandOutcome};
 
 use crate::agentfs::AgentFsManager;
-use crate::editor::Editor;
+use tome_api::editor::Editor;
 
 command!(agent_connect, {
 	aliases: &["agent.connect", "agent.c"],
