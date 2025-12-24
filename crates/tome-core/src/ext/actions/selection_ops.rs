@@ -49,8 +49,28 @@ fn select_line(ctx: &ActionContext) -> ActionResult {
 		} else {
 			ctx.text.len_chars()
 		};
-		r.anchor = start;
-		r.head = end;
+
+		if ctx.extend {
+			r.head = end;
+		} else {
+			// Check if we are already selecting exactly one or more full lines forward.
+			let is_full_line = !r.is_empty()
+				&& r.anchor <= r.head
+				&& r.anchor == ctx.text.line_to_char(ctx.text.char_to_line(r.anchor))
+				&& r.head
+					== if ctx.text.char_to_line(r.head) < ctx.text.len_lines() {
+						ctx.text.line_to_char(ctx.text.char_to_line(r.head))
+					} else {
+						ctx.text.len_chars()
+					};
+
+			if is_full_line {
+				r.head = end;
+			} else {
+				r.anchor = start;
+				r.head = end;
+			}
+		}
 	});
 	ActionResult::Motion(new_sel)
 }
@@ -221,3 +241,70 @@ action!(
 		ActionResult::Motion(new_sel)
 	}
 );
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::ext::actions::ActionArgs;
+	use crate::{Rope, Selection};
+
+	#[test]
+	fn test_select_line_extend() {
+		let text = Rope::from("line 1\nline 2\nline 3\n");
+		// Select 'ine 1'
+		let sel = Selection::single(1, 6);
+
+		let ctx = ActionContext {
+			text: text.slice(..),
+			cursor: 6,
+			selection: &sel,
+			count: 1,
+			extend: true,
+			register: None,
+			args: ActionArgs::default(),
+		};
+
+		let result = select_line(&ctx);
+		if let ActionResult::Motion(new_sel) = result {
+			let primary = new_sel.primary();
+			// If it extends, anchor should stay at 1, head should be start of next line (7)
+			assert_eq!(
+				primary.anchor, 1,
+				"Anchor should be preserved when extending"
+			);
+			assert_eq!(primary.head, 7, "Head should be at end of line");
+		} else {
+			panic!("Expected Motion result");
+		}
+	}
+
+	#[test]
+	fn test_select_line_repeated() {
+		let text = Rope::from("line 1\nline 2\nline 3\n");
+		// Select line 1
+		let sel = Selection::single(0, 7);
+
+		let ctx = ActionContext {
+			text: text.slice(..),
+			cursor: 7,
+			selection: &sel,
+			count: 1,
+			extend: false, // Normal 'x'
+			register: None,
+			args: ActionArgs::default(),
+		};
+
+		let result = select_line(&ctx);
+		if let ActionResult::Motion(new_sel) = result {
+			let primary = new_sel.primary();
+			// Should extend to include line 2
+			assert_eq!(
+				primary.anchor, 0,
+				"Anchor should be preserved when already full line"
+			);
+			assert_eq!(primary.head, 14, "Head should move to end of next line");
+		} else {
+			panic!("Expected Motion result");
+		}
+	}
+}
