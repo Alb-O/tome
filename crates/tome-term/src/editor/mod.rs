@@ -121,7 +121,9 @@ impl Editor {
 			completions: CompletionState::default(),
 			extensions: {
 				let mut map = ExtensionMap::new();
-				for ext in EXTENSIONS {
+				let mut sorted_exts: Vec<_> = EXTENSIONS.iter().collect();
+				sorted_exts.sort_by_key(|e| e.priority);
+				for ext in sorted_exts {
 					(ext.init)(&mut map);
 				}
 				map
@@ -155,7 +157,9 @@ impl Editor {
 
 	pub fn tick(&mut self) {
 		use crate::editor::extensions::TICK_EXTENSIONS;
-		for ext in TICK_EXTENSIONS {
+		let mut sorted_ticks: Vec<_> = TICK_EXTENSIONS.iter().collect();
+		sorted_ticks.sort_by_key(|e| e.priority);
+		for ext in sorted_ticks {
 			(ext.tick)(self);
 		}
 	}

@@ -16,49 +16,88 @@ fn main() {
 			let entry = entry.unwrap();
 			let path = entry.path();
 
-			if path.is_dir() {
-				if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-					// Only include if it has a mod.rs or if it's a directory we want to treat as a module
-					if path.join("mod.rs").exists() || path.join("lib.rs").exists() {
-						extensions.push(name.to_string());
-					}
+			let name = if path.is_dir() {
+				if path.join("mod.rs").exists() || path.join("lib.rs").exists() {
+					path.file_name()
+						.and_then(|n| n.to_str())
+						.map(|s| s.to_string())
+				} else {
+					None
 				}
-			} else if path.is_file() {
-				if let Some(name) = path.file_stem().and_then(|n| n.to_str()) {
-					if path.extension().map(|e| e == "rs").unwrap_or(false) && name != "mod" {
-						extensions.push(name.to_string());
-					}
+			} else if path.is_file() && path.extension().map(|e| e == "rs").unwrap_or(false) {
+				let stem = path
+					.file_stem()
+					.and_then(|n| n.to_str())
+					.map(|s| s.to_string());
+				if stem.as_deref() == Some("mod") {
+					None
+				} else {
+					stem
 				}
+			} else {
+				None
+			};
+
+			if let Some(name) = name {
+				extensions.push((name, path));
 			}
 		}
 	}
+
+	// 1) Deterministic ordering: sort by name
+	extensions.sort_by(|(a, _), (b, _)| a.cmp(b));
 
 	let mut content = String::new();
-	for ext in extensions {
-		let path = ext_dir.join(&ext);
-		if path.is_dir() {
+	let mut extension_names = Vec::new();
+
+	for (raw_name, path) in extensions {
+		// 2) Name hygiene: sanitize for module identifier
+		let mod_name = raw_name.replace(['-', '.'], "_");
+
+		// Validate identifier (basic check: must start with letter/underscore)
+		if !mod_name
+			.chars()
+			.next()
+			.map(|c| c.is_alphabetic() || c == '_')
+			.unwrap_or(false)
+		{
+			panic!(
+				"Extension directory name '{}' is not a valid Rust identifier (sanitized to '{}')",
+				raw_name, mod_name
+			);
+		}
+
+		// 3) Portable paths: Use debug representation for correct escaping
+		let path_str = if path.is_dir() {
 			if path.join("mod.rs").exists() {
-				content.push_str(&format!(
-					"#[path = \"{}\"]\n",
-					path.join("mod.rs").display()
-				));
-			} else if path.join("lib.rs").exists() {
-				content.push_str(&format!(
-					"#[path = \"{}\"]\n",
-					path.join("lib.rs").display()
-				));
+				format!("{:?}", path.join("mod.rs").display().to_string())
+			} else {
+				format!("{:?}", path.join("lib.rs").display().to_string())
 			}
 		} else {
-			content.push_str(&format!("#[path = \"{}\"]\n", path.display()));
-		}
-		content.push_str(&format!("pub mod {};\n", ext));
+			format!("{:?}", path.display().to_string())
+		};
 
-		// Emit a cfg flag for this extension
-		println!("cargo:rustc-cfg=extension_{}", ext);
+		content.push_str(&format!("#[path = {}]\n", path_str));
+		content.push_str(&format!("pub mod {};\n", mod_name));
+
+		// Emit cfg flag
+		println!("cargo:rustc-cfg=extension_{}", mod_name);
+		// rerun-if-changed for each extension
+		println!("cargo:rerun-if-changed={}", path.display());
+
+		extension_names.push(raw_name);
 	}
+
+	// Generate a list of available extension names
+	content.push_str("\n/// List of all auto-discovered extension names.\n");
+	content.push_str(&format!(
+		"pub const EXTENSION_NAMES: &[&str] = &{:?};\n",
+		extension_names
+	));
 
 	fs::write(&dest_path, content).unwrap();
 
-	// Re-run if the extensions directory changes
+	// Re-run if the extensions directory changes (new folders added/removed)
 	println!("cargo:rerun-if-changed=src/extensions");
 }

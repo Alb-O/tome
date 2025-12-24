@@ -25,6 +25,8 @@ use crate::editor::extensions::{EXTENSIONS, ExtensionInitDef, ExtensionTickDef, 
 
 #[distributed_slice(EXTENSIONS)]
 static ACP_INIT: ExtensionInitDef = ExtensionInitDef {
+	id: "acp",
+	priority: 100,
 	init: |map| {
 		map.insert(AcpManager::new());
 	},
@@ -32,6 +34,7 @@ static ACP_INIT: ExtensionInitDef = ExtensionInitDef {
 
 #[distributed_slice(TICK_EXTENSIONS)]
 static ACP_TICK: ExtensionTickDef = ExtensionTickDef {
+	priority: 100,
 	tick: |editor| {
 		panel::poll_acp_events(editor);
 	},
