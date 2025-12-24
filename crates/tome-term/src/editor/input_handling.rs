@@ -26,7 +26,7 @@ impl Editor {
 	}
 
 	pub(crate) fn handle_key_active(&mut self, key: termina::event::KeyEvent) -> bool {
-		use tome_core::ext::{HookContext, emit_hook};
+		use tome_core::ext::{HookContext, emit_hook, find_action_by_id};
 
 		self.message = None;
 
@@ -72,6 +72,35 @@ impl Editor {
 		}
 
 		match result {
+			// Typed ActionId dispatch (preferred path)
+			KeyResult::ActionById {
+				id,
+				count,
+				extend,
+				register,
+			} => {
+				if let Some(action) = find_action_by_id(id) {
+					self.execute_action(action.name, count, extend, register)
+				} else {
+					self.show_error(format!("Unknown action ID: {}", id));
+					false
+				}
+			}
+			KeyResult::ActionByIdWithChar {
+				id,
+				count,
+				extend,
+				register,
+				char_arg,
+			} => {
+				if let Some(action) = find_action_by_id(id) {
+					self.execute_action_with_char(action.name, count, extend, register, char_arg)
+				} else {
+					self.show_error(format!("Unknown action ID: {}", id));
+					false
+				}
+			}
+			// String-based dispatch (backward compatibility)
 			KeyResult::Action {
 				name,
 				count,

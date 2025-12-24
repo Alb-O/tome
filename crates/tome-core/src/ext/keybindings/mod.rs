@@ -11,6 +11,8 @@ mod view;
 use linkme::distributed_slice;
 
 use crate::Mode;
+use crate::ext::ActionId;
+use crate::ext::index::resolve_action_id;
 use crate::key::Key;
 
 macro_rules! keybinding_slices {
@@ -119,6 +121,26 @@ pub fn find_binding(mode: BindingMode, key: Key) -> Option<&'static KeyBindingDe
 		.min_by_key(|kb| kb.priority)
 }
 
+/// Resolved keybinding with typed ActionId.
+#[derive(Debug, Clone, Copy)]
+pub struct ResolvedBinding {
+	/// The keybinding definition.
+	pub binding: &'static KeyBindingDef,
+	/// The resolved ActionId for efficient dispatch.
+	pub action_id: ActionId,
+}
+
+/// Look up a keybinding and resolve its action to a typed ActionId.
+/// This is the preferred method for input handling as it enables type-safe dispatch.
+///
+/// Returns None if no binding exists for the mode/key, or if the action name
+/// cannot be resolved to an ActionId (which indicates a configuration error).
+pub fn find_binding_resolved(mode: BindingMode, key: Key) -> Option<ResolvedBinding> {
+	let binding = find_binding(mode, key)?;
+	let action_id = resolve_action_id(binding.action)?;
+	Some(ResolvedBinding { binding, action_id })
+}
+
 /// Get all keybindings for a specific mode.
 pub fn bindings_for_mode(mode: BindingMode) -> impl Iterator<Item = &'static KeyBindingDef> {
 	slice_for_mode(mode).iter()
@@ -197,5 +219,20 @@ mod tests {
 			insert_bindings.len() >= 6,
 			"should have insert mode bindings"
 		);
+	}
+
+	#[test]
+	fn test_find_binding_resolved() {
+		// Test that find_binding_resolved returns ActionId
+		let resolved = find_binding_resolved(BindingMode::Normal, Key::char('h'));
+		assert!(resolved.is_some(), "should find binding for 'h'");
+		let resolved = resolved.unwrap();
+		assert_eq!(resolved.binding.action, "move_left");
+		assert!(resolved.action_id.is_valid(), "ActionId should be valid");
+
+		// Verify round-trip: resolved ActionId should map back to same action
+		let action = crate::ext::find_action_by_id(resolved.action_id);
+		assert!(action.is_some());
+		assert_eq!(action.unwrap().name, "move_left");
 	}
 }

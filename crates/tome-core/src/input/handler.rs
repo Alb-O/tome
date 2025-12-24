@@ -1,4 +1,4 @@
-use crate::ext::{BindingMode, find_binding};
+use crate::ext::{BindingMode, find_binding, find_binding_resolved};
 use crate::input::types::{KeyResult, Mode};
 use crate::key::{Key, KeyCode, MouseButton, MouseEvent, SpecialKey};
 
@@ -167,11 +167,12 @@ impl InputHandler {
 
 		let key = self.extend_and_lower_if_shift(key);
 
-		if let Some(binding) = find_binding(BindingMode::Goto, key) {
+		// Use typed ActionId dispatch
+		if let Some(resolved) = find_binding_resolved(BindingMode::Goto, key) {
 			self.mode = Mode::Normal;
 			self.reset_params();
-			return KeyResult::Action {
-				name: binding.action,
+			return KeyResult::ActionById {
+				id: resolved.action_id,
 				count,
 				extend,
 				register,
@@ -200,12 +201,12 @@ impl InputHandler {
 
 		let key = key.normalize().drop_shift();
 
-		// Try new keybinding registry first
-		if let Some(binding) = find_binding(BindingMode::View, key) {
+		// Use typed ActionId dispatch
+		if let Some(resolved) = find_binding_resolved(BindingMode::View, key) {
 			self.mode = Mode::Normal;
 			self.reset_params();
-			return KeyResult::Action {
-				name: binding.action,
+			return KeyResult::ActionById {
+				id: resolved.action_id,
 				count,
 				extend,
 				register,

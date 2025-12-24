@@ -3,6 +3,14 @@
 //! Actions are the unified abstraction for all editor operations that can be
 //! triggered by keybindings. This replaces the hardcoded `Command` enum with
 //! a dynamic, extensible registry.
+//!
+//! # Typed Action Dispatch
+//!
+//! Actions use typed `ActionId` values for dispatch instead of strings:
+//! - `ActionId` is a lightweight `u32` newtype assigned at registry build time
+//! - Human-readable names are kept at the edges (config, help, keybindings)
+//! - The input pipeline emits `ActionId` for fast, type-safe dispatch
+//! - Name-to-ID resolution happens once during registry initialization
 
 mod delete;
 mod editing;
@@ -22,6 +30,48 @@ use linkme::distributed_slice;
 use ropey::RopeSlice;
 
 use crate::selection::Selection;
+
+/// A typed action identifier for efficient, type-safe dispatch.
+///
+/// `ActionId` replaces stringly-typed action dispatch at the core level.
+/// The ID is assigned during registry initialization, mapping each action
+/// name to a unique numeric identifier.
+///
+/// Human-readable action names are preserved for:
+/// - User-facing configuration
+/// - Help and documentation
+/// - Error messages
+///
+/// The input pipeline and keybindings resolve to `ActionId` for dispatch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ActionId(pub(crate) u32);
+
+impl ActionId {
+	/// Invalid/unassigned action ID (used as sentinel value).
+	pub const INVALID: ActionId = ActionId(u32::MAX);
+
+	/// Returns true if this is a valid action ID.
+	#[inline]
+	pub fn is_valid(self) -> bool {
+		self != Self::INVALID
+	}
+
+	/// Get the raw numeric value.
+	#[inline]
+	pub fn as_u32(self) -> u32 {
+		self.0
+	}
+}
+
+impl std::fmt::Display for ActionId {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		if *self == Self::INVALID {
+			write!(f, "ActionId(INVALID)")
+		} else {
+			write!(f, "ActionId({})", self.0)
+		}
+	}
+}
 
 /// Registry of all actions, populated at link time.
 #[distributed_slice]

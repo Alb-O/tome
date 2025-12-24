@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+use crate::ext::actions::ActionId;
 use crate::ext::{
 	ACTIONS, ActionDef, COMMANDS, CommandDef, ExtensionMetadata, FILE_TYPES, FileTypeDef, MOTIONS,
 	MotionDef, TEXT_OBJECTS, TextObjectDef,
@@ -12,6 +13,18 @@ pub struct RegistryIndex<T: 'static> {
 	pub by_alias: HashMap<&'static str, &'static T>,
 	pub by_trigger: HashMap<char, &'static T>,
 	pub collisions: Vec<Collision<T>>,
+}
+
+/// Index for actions with typed ActionId support.
+pub struct ActionRegistryIndex {
+	/// Standard registry index for string-based lookups.
+	pub base: RegistryIndex<ActionDef>,
+	/// Map from ActionId to ActionDef for fast dispatch.
+	pub by_action_id: Vec<&'static ActionDef>,
+	/// Map from action name to ActionId for resolving keybindings.
+	pub name_to_id: HashMap<&'static str, ActionId>,
+	/// Map from alias to ActionId.
+	pub alias_to_id: HashMap<&'static str, ActionId>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,7 +73,7 @@ impl<T: 'static> RegistryIndex<T> {
 
 pub struct ExtensionRegistry {
 	pub commands: RegistryIndex<CommandDef>,
-	pub actions: RegistryIndex<ActionDef>,
+	pub actions: ActionRegistryIndex,
 	pub motions: RegistryIndex<MotionDef>,
 	pub text_objects: RegistryIndex<TextObjectDef>,
 	pub file_types: RegistryIndex<FileTypeDef>,
@@ -121,53 +134,73 @@ fn build_registry() -> ExtensionRegistry {
 		}
 	}
 
-	let mut actions: RegistryIndex<ActionDef> = RegistryIndex::new();
+	// Build action registry with typed ActionId support
+	let mut actions_base: RegistryIndex<ActionDef> = RegistryIndex::new();
+	let mut by_action_id: Vec<&'static ActionDef> = Vec::new();
+	let mut name_to_id: HashMap<&'static str, ActionId> = HashMap::new();
+	let mut alias_to_id: HashMap<&'static str, ActionId> = HashMap::new();
+
 	let mut sorted_actions: Vec<_> = ACTIONS.iter().collect();
 	sorted_actions.sort_by(|a, b| b.priority.cmp(&a.priority).then(a.id.cmp(b.id)));
 
 	for action in sorted_actions {
-		if let Some(existing) = actions.by_id.get(action.id) {
-			actions.collisions.push(Collision {
+		if let Some(existing) = actions_base.by_id.get(action.id) {
+			actions_base.collisions.push(Collision {
 				kind: CollisionKind::Id,
 				key: action.id.to_string(),
 				winner: existing,
 				shadowed: action,
 			});
 		} else {
-			actions.by_id.insert(action.id, action);
+			actions_base.by_id.insert(action.id, action);
 		}
 
-		if let Some(existing) = actions.by_name.get(action.name) {
-			actions.collisions.push(Collision {
+		if let Some(existing) = actions_base.by_name.get(action.name) {
+			actions_base.collisions.push(Collision {
 				kind: CollisionKind::Name,
 				key: action.name.to_string(),
 				winner: existing,
 				shadowed: action,
 			});
 		} else {
-			actions.by_name.insert(action.name, action);
+			// Assign ActionId when the action wins the name slot
+			let action_id = ActionId(by_action_id.len() as u32);
+			by_action_id.push(action);
+			name_to_id.insert(action.name, action_id);
+			actions_base.by_name.insert(action.name, action);
 		}
 
 		for alias in action.aliases {
-			if let Some(existing) = actions.by_name.get(alias) {
-				actions.collisions.push(Collision {
+			if let Some(existing) = actions_base.by_name.get(alias) {
+				actions_base.collisions.push(Collision {
 					kind: CollisionKind::Alias,
 					key: alias.to_string(),
 					winner: existing,
 					shadowed: action,
 				});
-			} else if let Some(existing) = actions.by_alias.get(alias) {
-				actions.collisions.push(Collision {
+			} else if let Some(existing) = actions_base.by_alias.get(alias) {
+				actions_base.collisions.push(Collision {
 					kind: CollisionKind::Alias,
 					key: alias.to_string(),
 					winner: existing,
 					shadowed: action,
 				});
 			} else {
-				actions.by_alias.insert(alias, action);
+				actions_base.by_alias.insert(alias, action);
+				// Map alias to the same ActionId as the primary name
+				if let Some(&id) = name_to_id.get(action.name) {
+					alias_to_id.insert(alias, id);
+				}
 			}
 		}
 	}
+
+	let actions = ActionRegistryIndex {
+		base: actions_base,
+		by_action_id,
+		name_to_id,
+		alias_to_id,
+	};
 
 	let mut motions: RegistryIndex<MotionDef> = RegistryIndex::new();
 	let mut sorted_motions: Vec<_> = MOTIONS.iter().collect();
@@ -414,9 +447,31 @@ pub fn find_command(name: &str) -> Option<&'static CommandDef> {
 pub fn find_action(name: &str) -> Option<&'static ActionDef> {
 	let reg = get_registry();
 	reg.actions
+		.base
 		.by_name
 		.get(name)
-		.or_else(|| reg.actions.by_alias.get(name))
+		.or_else(|| reg.actions.base.by_alias.get(name))
+		.copied()
+}
+
+/// Look up an action by typed ActionId.
+/// This is the preferred method for dispatch after keybinding resolution.
+pub fn find_action_by_id(id: ActionId) -> Option<&'static ActionDef> {
+	if !id.is_valid() {
+		return None;
+	}
+	let reg = get_registry();
+	reg.actions.by_action_id.get(id.0 as usize).copied()
+}
+
+/// Resolve an action name to its ActionId.
+/// Used during keybinding resolution to convert string-based bindings to typed IDs.
+pub fn resolve_action_id(name: &str) -> Option<ActionId> {
+	let reg = get_registry();
+	reg.actions
+		.name_to_id
+		.get(name)
+		.or_else(|| reg.actions.alias_to_id.get(name))
 		.copied()
 }
 
@@ -450,7 +505,13 @@ pub fn all_commands() -> impl Iterator<Item = &'static CommandDef> {
 }
 
 pub fn all_actions() -> impl Iterator<Item = &'static ActionDef> {
-	let mut v: Vec<_> = get_registry().actions.by_name.values().copied().collect();
+	let mut v: Vec<_> = get_registry()
+		.actions
+		.base
+		.by_name
+		.values()
+		.copied()
+		.collect();
 	v.sort_by_key(|a| a.name);
 	v.into_iter()
 }
@@ -508,7 +569,7 @@ fn diagnostics_internal(reg: &ExtensionRegistry) -> DiagnosticReport {
 	}
 
 	collect!(reg.commands);
-	collect!(reg.actions);
+	collect!(reg.actions.base);
 	collect!(reg.motions);
 	collect!(reg.text_objects);
 	collect!(reg.file_types);
@@ -543,7 +604,7 @@ mod tests {
 			}
 		}
 
-		for action in reg.actions.by_id.values() {
+		for action in reg.actions.base.by_id.values() {
 			for cap in action.required_caps {
 				assert!(
 					!unimplemented.contains(cap),
@@ -553,5 +614,36 @@ mod tests {
 				);
 			}
 		}
+	}
+
+	#[test]
+	fn test_action_id_resolution() {
+		use crate::ext::actions::ActionId;
+
+		// Test that action names resolve to ActionIds
+		let move_left_id = resolve_action_id("move_left");
+		assert!(
+			move_left_id.is_some(),
+			"move_left should resolve to ActionId"
+		);
+		let id = move_left_id.unwrap();
+		assert!(id.is_valid(), "ActionId should be valid");
+
+		// Test round-trip: name -> ActionId -> ActionDef
+		let action = find_action_by_id(id);
+		assert!(action.is_some(), "should find action by ActionId");
+		assert_eq!(action.unwrap().name, "move_left");
+
+		// Test invalid ActionId
+		let invalid = find_action_by_id(ActionId::INVALID);
+		assert!(invalid.is_none(), "INVALID ActionId should return None");
+
+		// Test consistency: find_action and find_action_by_id return same action
+		let by_name = find_action("move_left").unwrap();
+		let by_id = find_action_by_id(id).unwrap();
+		assert_eq!(
+			by_name.name, by_id.name,
+			"find_action and find_action_by_id should return the same action"
+		);
 	}
 }

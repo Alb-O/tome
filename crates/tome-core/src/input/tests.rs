@@ -1,7 +1,20 @@
 #[cfg(test)]
 mod tests {
+	use crate::ext::find_action_by_id;
 	use crate::input::{InputHandler, KeyResult};
 	use crate::key::{Key, KeyCode, Modifiers, SpecialKey};
+
+	/// Helper to extract action name and extend flag from KeyResult.
+	/// Handles both string-based Action and typed ActionById.
+	fn extract_action(result: KeyResult) -> Option<(String, bool)> {
+		match result {
+			KeyResult::Action { name, extend, .. } => Some((name.to_string(), extend)),
+			KeyResult::ActionById { id, extend, .. } => {
+				find_action_by_id(id).map(|def| (def.name.to_string(), extend))
+			}
+			_ => None,
+		}
+	}
 
 	#[test]
 	fn test_digit_count_accumulates() {
@@ -25,26 +38,18 @@ mod tests {
 	fn test_word_motion_sets_extend_with_shift() {
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key_with_shift('w'));
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "next_word_start");
-				assert!(extend);
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for shift+w");
+		assert_eq!(name, "next_word_start");
+		assert!(extend);
 	}
 
 	#[test]
 	fn test_word_motion_no_shift_not_extend() {
 		let mut h = InputHandler::new();
 		let res = h.handle_key(Key::char('w'));
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "next_word_start");
-				assert!(!extend);
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for w");
+		assert_eq!(name, "next_word_start");
+		assert!(!extend);
 	}
 
 	/// Simulates what the terminal sends: Shift+w comes as uppercase 'W' with shift modifier.
@@ -63,13 +68,9 @@ mod tests {
 		let key = key_shifted_uppercase('w');
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key);
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "next_long_word_start", "should match 'W' binding");
-				assert!(extend, "shift should set extend=true");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for Shift+W");
+		assert_eq!(name, "next_long_word_start", "should match 'W' binding");
+		assert!(extend, "shift should set extend=true");
 	}
 
 	#[test]
@@ -77,26 +78,18 @@ mod tests {
 		let key = key_shifted_uppercase('l');
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key);
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "move_right", "should match 'l' binding");
-				assert!(extend, "shift should set extend=true");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for Shift+L");
+		assert_eq!(name, "move_right", "should match 'l' binding");
+		assert!(extend, "shift should set extend=true");
 	}
 
 	#[test]
 	fn test_uppercase_w_means_long_word_not_extend() {
 		let mut h = InputHandler::new();
 		let res = h.handle_key(Key::char('W'));
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "next_long_word_start", "W should be WORD motion");
-				assert!(!extend, "no shift means no extend");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for W");
+		assert_eq!(name, "next_long_word_start", "W should be WORD motion");
+		assert!(!extend, "no shift means no extend");
 	}
 
 	#[test]
@@ -104,13 +97,9 @@ mod tests {
 		let key = key_shifted_uppercase('u');
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key);
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "redo", "Shift+U should be redo");
-				assert!(extend, "shift always sets extend");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for Shift+U");
+		assert_eq!(name, "redo", "Shift+U should be redo");
+		assert!(extend, "shift always sets extend");
 	}
 
 	#[test]
@@ -118,13 +107,9 @@ mod tests {
 		let key = key_shifted_uppercase('w');
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key);
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "next_long_word_start", "Shift+W should use W binding");
-				assert!(extend, "shift should set extend=true");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for Shift+W");
+		assert_eq!(name, "next_long_word_start", "Shift+W should use W binding");
+		assert!(extend, "shift should set extend=true");
 	}
 
 	#[test]
@@ -132,13 +117,10 @@ mod tests {
 		let key = Key::special(SpecialKey::PageDown).with_shift();
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key);
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "scroll_page_down");
-				assert!(extend, "shift+pagedown should extend");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) =
+			extract_action(res).expect("should return an action for Shift+PageDown");
+		assert_eq!(name, "scroll_page_down");
+		assert!(extend, "shift+pagedown should extend");
 	}
 
 	#[test]
@@ -146,13 +128,9 @@ mod tests {
 		let key = Key::special(SpecialKey::PageUp).with_shift();
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key);
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "scroll_page_up");
-				assert!(extend, "shift+pageup should extend");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for Shift+PageUp");
+		assert_eq!(name, "scroll_page_up");
+		assert!(extend, "shift+pageup should extend");
 	}
 
 	#[test]
@@ -160,13 +138,9 @@ mod tests {
 		let key = Key::special(SpecialKey::Home).with_shift();
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key);
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "move_line_start");
-				assert!(extend, "shift+home should extend");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for Shift+Home");
+		assert_eq!(name, "move_line_start");
+		assert!(extend, "shift+home should extend");
 	}
 
 	#[test]
@@ -174,13 +148,9 @@ mod tests {
 		let key = Key::special(SpecialKey::End).with_shift();
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key);
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "move_line_end");
-				assert!(extend, "shift+end should extend");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for Shift+End");
+		assert_eq!(name, "move_line_end");
+		assert!(extend, "shift+end should extend");
 	}
 
 	#[test]
@@ -188,13 +158,9 @@ mod tests {
 		let key = Key::special(SpecialKey::PageDown);
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key);
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "scroll_page_down");
-				assert!(!extend, "pagedown without shift should not extend");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for PageDown");
+		assert_eq!(name, "scroll_page_down");
+		assert!(!extend, "pagedown without shift should not extend");
 	}
 
 	#[test]
@@ -202,12 +168,8 @@ mod tests {
 		let key = Key::special(SpecialKey::Right).with_shift();
 		let mut h = InputHandler::new();
 		let res = h.handle_key(key);
-		match res {
-			KeyResult::Action { name, extend, .. } => {
-				assert_eq!(name, "move_right");
-				assert!(extend, "shift+right should extend");
-			}
-			other => panic!("unexpected result: {:?}", other),
-		}
+		let (name, extend) = extract_action(res).expect("should return an action for Shift+Right");
+		assert_eq!(name, "move_right");
+		assert!(extend, "shift+right should extend");
 	}
 }

@@ -111,9 +111,9 @@ pub mod statusline;
 
 #[cfg(feature = "host")]
 pub use actions::{
-	ACTIONS, ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult,
-	EditAction, ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount, ScrollDir,
-	VisualDirection, execute_action,
+	ACTIONS, ActionArgs, ActionContext, ActionDef, ActionHandler, ActionId, ActionMode,
+	ActionResult, EditAction, ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount,
+	ScrollDir, VisualDirection, execute_action,
 };
 #[cfg(feature = "host")]
 pub use completion::{
@@ -132,7 +132,8 @@ pub use hooks::{
 };
 #[cfg(feature = "host")]
 pub use keybindings::{
-	BindingMode, KeyBindingDef, bindings_for_action, bindings_for_mode, find_binding,
+	BindingMode, KeyBindingDef, ResolvedBinding, bindings_for_action, bindings_for_mode,
+	find_binding, find_binding_resolved,
 };
 #[cfg(feature = "host")]
 pub use options::{
@@ -567,8 +568,9 @@ pub static FILE_TYPES: [FileTypeDef];
 /// Look up a command by name or alias.
 #[cfg(feature = "host")]
 pub use index::{
-	all_actions, all_commands, all_motions, all_text_objects, find_action, find_command,
-	find_motion, find_text_object_by_name, find_text_object_by_trigger, get_registry,
+	all_actions, all_commands, all_motions, all_text_objects, find_action, find_action_by_id,
+	find_command, find_motion, find_text_object_by_name, find_text_object_by_trigger, get_registry,
+	resolve_action_id,
 };
 
 /// Detect file type from filename.

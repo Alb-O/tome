@@ -1,4 +1,4 @@
-use crate::ext::{ObjectSelectionKind, PendingKind};
+use crate::ext::{ObjectSelectionKind, PendingKind, resolve_action_id};
 use crate::input::InputHandler;
 use crate::input::types::{KeyResult, Mode};
 use crate::key::{Key, KeyCode, SpecialKey};
@@ -25,12 +25,23 @@ impl InputHandler {
 					let extend = self.extend;
 					let register = self.register;
 					self.reset_params();
-					KeyResult::ActionWithChar {
-						name: "find_char",
-						count,
-						extend,
-						register,
-						char_arg: ch,
+					// Use typed dispatch
+					if let Some(id) = resolve_action_id("find_char") {
+						KeyResult::ActionByIdWithChar {
+							id,
+							count,
+							extend,
+							register,
+							char_arg: ch,
+						}
+					} else {
+						KeyResult::ActionWithChar {
+							name: "find_char",
+							count,
+							extend,
+							register,
+							char_arg: ch,
+						}
 					}
 				}
 				KeyCode::Special(SpecialKey::Escape) => {
@@ -47,12 +58,23 @@ impl InputHandler {
 					let extend = self.extend;
 					let register = self.register;
 					self.reset_params();
-					KeyResult::ActionWithChar {
-						name: "find_char_reverse",
-						count,
-						extend,
-						register,
-						char_arg: ch,
+					// Use typed dispatch
+					if let Some(id) = resolve_action_id("find_char_reverse") {
+						KeyResult::ActionByIdWithChar {
+							id,
+							count,
+							extend,
+							register,
+							char_arg: ch,
+						}
+					} else {
+						KeyResult::ActionWithChar {
+							name: "find_char_reverse",
+							count,
+							extend,
+							register,
+							char_arg: ch,
+						}
 					}
 				}
 				KeyCode::Special(SpecialKey::Escape) => {
@@ -69,12 +91,23 @@ impl InputHandler {
 					let extend = self.extend;
 					let register = self.register;
 					self.reset_params();
-					KeyResult::ActionWithChar {
-						name: "replace_char",
-						count,
-						extend,
-						register,
-						char_arg: ch,
+					// Use typed dispatch
+					if let Some(id) = resolve_action_id("replace_char") {
+						KeyResult::ActionByIdWithChar {
+							id,
+							count,
+							extend,
+							register,
+							char_arg: ch,
+						}
+					} else {
+						KeyResult::ActionWithChar {
+							name: "replace_char",
+							count,
+							extend,
+							register,
+							char_arg: ch,
+						}
 					}
 				}
 				KeyCode::Special(SpecialKey::Escape) => {
@@ -92,22 +125,30 @@ impl InputHandler {
 					let register = self.register;
 					self.reset_params();
 
-					let kind = match selection {
-						ObjectSelectionKind::Inner => Some("select_object_inner"),
-						ObjectSelectionKind::Around => Some("select_object_around"),
-						ObjectSelectionKind::ToStart => Some("select_object_to_start"),
-						ObjectSelectionKind::ToEnd => Some("select_object_to_end"),
+					let action_name = match selection {
+						ObjectSelectionKind::Inner => "select_object_inner",
+						ObjectSelectionKind::Around => "select_object_around",
+						ObjectSelectionKind::ToStart => "select_object_to_start",
+						ObjectSelectionKind::ToEnd => "select_object_to_end",
 					};
 
-					match kind {
-						Some(action) => KeyResult::ActionWithChar {
-							name: action,
+					// Use typed dispatch
+					if let Some(id) = resolve_action_id(action_name) {
+						KeyResult::ActionByIdWithChar {
+							id,
 							count,
 							extend,
 							register,
 							char_arg: ch,
-						},
-						None => KeyResult::Consumed,
+						}
+					} else {
+						KeyResult::ActionWithChar {
+							name: action_name,
+							count,
+							extend,
+							register,
+							char_arg: ch,
+						}
 					}
 				}
 				KeyCode::Special(SpecialKey::Escape) => {

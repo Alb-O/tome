@@ -1,4 +1,4 @@
-use crate::ext::PendingKind;
+use crate::ext::{ActionId, PendingKind};
 use crate::key::ScrollDirection;
 
 /// Editor mode.
@@ -21,7 +21,22 @@ pub enum Mode {
 /// Result of processing a key.
 #[derive(Debug, Clone)]
 pub enum KeyResult {
-	/// An action to execute (string-based system).
+	/// An action to execute using typed ActionId (preferred).
+	ActionById {
+		id: ActionId,
+		count: usize,
+		extend: bool,
+		register: Option<char>,
+	},
+	/// An action with a character argument using typed ActionId (preferred).
+	ActionByIdWithChar {
+		id: ActionId,
+		count: usize,
+		extend: bool,
+		register: Option<char>,
+		char_arg: char,
+	},
+	/// An action to execute (string-based system, for backward compatibility).
 	Action {
 		name: &'static str,
 		count: usize,

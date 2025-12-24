@@ -1,4 +1,4 @@
-use crate::ext::{BindingMode, find_binding};
+use crate::ext::{BindingMode, find_binding_resolved, resolve_action_id};
 use crate::input::InputHandler;
 use crate::input::types::{KeyResult, Mode};
 use crate::key::{Key, KeyCode, Modifiers, SpecialKey};
@@ -13,6 +13,16 @@ impl InputHandler {
 
 		// Backspace in insert mode deletes backward
 		if matches!(key.code, KeyCode::Special(SpecialKey::Backspace)) {
+			// Use typed dispatch for delete_back
+			if let Some(id) = resolve_action_id("delete_back") {
+				return KeyResult::ActionById {
+					id,
+					count: 1,
+					extend: false,
+					register: None,
+				};
+			}
+			// Fallback to string-based if not found (shouldn't happen)
 			return KeyResult::Action {
 				name: "delete_back",
 				count: 1,
@@ -32,8 +42,8 @@ impl InputHandler {
 			key
 		};
 
-		// Try insert-mode keybindings first
-		if let Some(binding) = find_binding(BindingMode::Insert, key) {
+		// Try insert-mode keybindings first (typed dispatch)
+		if let Some(resolved) = find_binding_resolved(BindingMode::Insert, key) {
 			let count = if self.count > 0 {
 				self.count as usize
 			} else {
@@ -42,8 +52,8 @@ impl InputHandler {
 			let extend = self.extend;
 			let register = self.register;
 			self.reset_params();
-			return KeyResult::Action {
-				name: binding.action,
+			return KeyResult::ActionById {
+				id: resolved.action_id,
 				count,
 				extend,
 				register,
@@ -54,7 +64,8 @@ impl InputHandler {
 		let is_navigation_key =
 			matches!(key.code, KeyCode::Special(_)) || key.modifiers.ctrl || key.modifiers.alt;
 
-		if is_navigation_key && let Some(binding) = find_binding(BindingMode::Normal, key) {
+		if is_navigation_key && let Some(resolved) = find_binding_resolved(BindingMode::Normal, key)
+		{
 			let count = if self.count > 0 {
 				self.count as usize
 			} else {
@@ -63,8 +74,8 @@ impl InputHandler {
 			let extend = self.extend;
 			let register = self.register;
 			self.reset_params();
-			return KeyResult::Action {
-				name: binding.action,
+			return KeyResult::ActionById {
+				id: resolved.action_id,
 				count,
 				extend,
 				register,

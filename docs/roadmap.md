@@ -13,19 +13,27 @@ ______________________________________________________________________
 
 ### 1) Typed actions (`ActionId`) instead of stringly dispatch
 
-- [ ] Introduce `ActionId` (e.g. `u32` newtype or interned symbol)
-- [ ] Keep human-facing names at the edges (config/help), map to `ActionId` in registry build
-- [ ] Update input pipeline to emit `ActionId` (not `&'static str` / `String`)
-- [ ] Add a validation pass that rejects duplicate action names / IDs
+- [x] Introduce `ActionId` (e.g. `u32` newtype or interned symbol)
+- [x] Keep human-facing names at the edges (config/help), map to `ActionId` in registry build
+- [x] Update input pipeline to emit `ActionId` (not `&'static str` / `String`)
+- [x] Add a validation pass that rejects duplicate action names / IDs
+  \- Collisions tracked in `RegistryIndex.collisions`
+  \- Equal-priority collisions panic in debug builds
+  \- Priority-based shadowing logged as warnings
 
 ### 2) Action metadata + capability enforcement at registry level
 
-- [ ] Extend action descriptors with `required_caps: &[Capability]`
-- [ ] Registry build validates actions declare caps (and/or defaults)
-- [ ] Runtime dispatch checks caps once (before action fn runs)
-- [ ] Decide policy for missing caps:
-  - [ ] Hard error
-  - [ ] Graceful no-op + status message
+- [x] Extend action descriptors with `required_caps: &[Capability]`
+  \- `ActionDef.required_caps` field in `tome-core/src/ext/actions/mod.rs`
+  \- `CommandDef.required_caps` field in `tome-core/src/ext/mod.rs`
+- [x] Registry build validates actions declare caps (and/or defaults)
+  \- Test `test_no_unimplemented_capabilities` in `index.rs` validates no action uses unimplemented caps
+- [x] Runtime dispatch checks caps once (before action fn runs)
+  \- `check_all_capabilities()` in `EditorContext` (tome-core)
+  \- Called in `execute_action` / `execute_command_line` (tome-term)
+- [x] Decide policy for missing caps:
+  - [x] Hard error: returns early with `MissingCapability` error shown to user
+  - [ ] ~~Graceful no-op + status message~~ (rejected: hard error is clearer)
 
 ### 3) ChangeSet performance pass (avoid repeated `.chars().count()` hot paths)
 

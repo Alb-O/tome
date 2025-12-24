@@ -1,4 +1,4 @@
-use crate::ext::{BindingMode, find_binding};
+use crate::ext::{BindingMode, find_binding_resolved};
 use crate::input::InputHandler;
 use crate::input::types::KeyResult;
 use crate::key::Key;
@@ -14,7 +14,8 @@ impl InputHandler {
 
 		let key = self.extend_and_lower_if_shift(key);
 
-		if let Some(binding) = find_binding(BindingMode::Normal, key) {
+		// Use typed ActionId dispatch
+		if let Some(resolved) = find_binding_resolved(BindingMode::Normal, key) {
 			let count = if self.count > 0 {
 				self.count as usize
 			} else {
@@ -23,8 +24,8 @@ impl InputHandler {
 			let extend = self.extend;
 			let register = self.register;
 			self.reset_params();
-			return KeyResult::Action {
-				name: binding.action,
+			return KeyResult::ActionById {
+				id: resolved.action_id,
 				count,
 				extend,
 				register,
