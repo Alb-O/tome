@@ -11,7 +11,11 @@ path = "src/main.rs"
 
 [dependencies]
 agent-client-protocol.workspace = true
+agentfs-sdk.workspace = true
+anyhow = "1.0"
+async-trait = "0.1"
 clap.workspace = true
+futures = "0.3"
 home = "0.5"
 libloading = "0.8"
 linkme.workspace = true
