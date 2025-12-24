@@ -12,11 +12,12 @@ Kakoune-inspired modal text editor in Rust.
 
 - **tome-core**: Core editing primitives and extension system; `host` feature pulls in ropey/regex/termina/linkme for embedded use.
 - **tome-term**: Terminal UI (ratatui) and CLI binary `tome`; houses kitty GUI integration tests.
-- **tome-cabi-types**: C ABI surface/types generated with cbindgen for external plugins.
-- **demo-cabi-plugin**: Example `cdylib` plugin using the C ABI types.
-- **tome-macro**: Proc-macro experiments (not currently a workspace member).
+- **tome-macro**: Proc-macro utilities.
+- **ratatui**: Forked/hackable TUI library.
 
-## Extension System (`tome-core/src/ext/`)
+All crates live in `crates/` directory.
+
+## Extension System (`crates/tome-core/src/ext/`)
 
 Uses `linkme` for compile-time registration. Drop a file in, it's automatically included.
 
