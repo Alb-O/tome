@@ -5,33 +5,20 @@
 - [ ] Preserve **orthogonal modules** (low coupling, clear boundaries)
 - [ ] Keep **suckless-ish extensibility** (simple core, optional features)
 - [ ] Maintain **drop-in registration ergonomics** (e.g. `linkme`), but with explicit validation
-- [ ] Support **C ABI plugins** safely and predictably
 - [ ] Lean into **Rust superpowers** (proc-macros, types, property tests, invariants)
 
 ______________________________________________________________________
 
 ## Next 5 commits (highest leverage sequence)
 
-### 1) FFI ABI correctness + contract
-
-- [ ] Change all FFI callback fields to `Option<extern "C" fn(...)>` (not `fn(...)`)
-- [ ] Add `catch_unwind` wrappers so panics never cross the FFI boundary
-- [ ] Write an “FFI contract” doc:
-  - [ ] Ownership rules for `TomeOwnedStr` (who allocates, who frees)
-  - [ ] Encoding rules (UTF-8 guarantees? bytes allowed?)
-  - [ ] String layout rules (ptr/len vs NUL-terminated)
-  - [ ] Threading rules (callbacks can be called on which threads?)
-  - [ ] Versioning rules (`abi_version`, `struct_size`, forward/back compat expectations)
-- [ ] Add a minimal “ABI sanity” test plugin (build + load + call + free)
-
-### 2) Typed actions (`ActionId`) instead of stringly dispatch
+### 1) Typed actions (`ActionId`) instead of stringly dispatch
 
 - [ ] Introduce `ActionId` (e.g. `u32` newtype or interned symbol)
 - [ ] Keep human-facing names at the edges (config/help), map to `ActionId` in registry build
 - [ ] Update input pipeline to emit `ActionId` (not `&'static str` / `String`)
 - [ ] Add a validation pass that rejects duplicate action names / IDs
 
-### 3) Action metadata + capability enforcement at registry level
+### 2) Action metadata + capability enforcement at registry level
 
 - [ ] Extend action descriptors with `required_caps: &[Capability]`
 - [ ] Registry build validates actions declare caps (and/or defaults)
@@ -39,15 +26,14 @@ ______________________________________________________________________
 - [ ] Decide policy for missing caps:
   - [ ] Hard error
   - [ ] Graceful no-op + status message
-  - [ ] Defer to plugin error handling
 
-### 4) ChangeSet performance pass (avoid repeated `.chars().count()` hot paths)
+### 3) ChangeSet performance pass (avoid repeated `.chars().count()` hot paths)
 
 - [ ] Store cached char length in insert ops (`Insert { text, char_len }`)
 - [ ] Refactor apply/map/compose paths to reuse cached lengths
 - [ ] Add microbenchmarks for large inserts and repeated compositions
 
-### 5) Selection primary stability + property tests
+### 4) Selection primary stability + property tests
 
 - [ ] Track selection primary by index or tagged marker (not equality search)
 - [ ] Make normalization preserve “true primary” deterministically
@@ -56,9 +42,7 @@ ______________________________________________________________________
   - [ ] primary stability under sorting/merge/dedup
   - [ ] merge behavior when primary is inside merged spans
 
-______________________________________________________________________
-
-## Registry & module boundaries (keep `linkme`, reduce implicit coupling)
+### 5) Registry & module boundaries (keep `linkme`, reduce implicit coupling)
 
 - [ ] Create an explicit `RegistryBuilder` stage that consumes `linkme` slices and produces `Registry`
 - [ ] Centralize validation in registry build:
@@ -70,10 +54,6 @@ ______________________________________________________________________
 - [ ] Add a debug tool:
   - [ ] Print all registered actions/commands/hooks in a deterministic order
   - [ ] Print origin/module info if available (feature-gated)
-- [ ] Add compile-time-ish affordances via proc-macros:
-  - [ ] `#[action]` macro emits descriptor + handler fn wrapper
-  - [ ] optional `#[action(default_keys = "...")]`
-  - [ ] optional `#[action(caps = "...")]`
 
 ______________________________________________________________________
 
@@ -172,28 +152,6 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## C ABI plugins (make it boring and safe)
-
-- [ ] Standardize FFI types:
-  - [ ] Use `repr(C)` consistently
-  - [ ] Use `extern "C"` in all callback signatures and struct fields
-- [ ] Define and enforce ownership:
-  - [ ] Host-allocated strings freed by host `free_str`
-  - [ ] Guest-allocated strings freed by guest `free_str`
-  - [ ] Document which side can call which free
-- [ ] Decide plugin isolation model:
-  - [ ] Single-threaded callbacks only, or
-  - [ ] Thread-safe + send/sync requirements documented
-- [ ] Add compatibility tests:
-  - [ ] Old plugin with new host (forward compat)
-  - [ ] New plugin with old host (graceful failure)
-- [ ] Add a “safe host shim” layer:
-  - [ ] Validates function pointers are non-null before calling
-  - [ ] Validates struct_size >= expected minimum
-  - [ ] Validates abi_version range
-
-______________________________________________________________________
-
 ## Testing strategy (fast feedback + deep correctness)
 
 ### Golden/snapshot tests
@@ -219,7 +177,6 @@ ______________________________________________________________________
   - [ ] Basic navigation and editing flows
   - [ ] Undo/redo flows
   - [ ] Command mode entry/exit flows
-  - [ ] Plugin load + basic command invocation
 
 ______________________________________________________________________
 
@@ -230,4 +187,3 @@ ______________________________________________________________________
 - [ ] Add docs:
   - [ ] “How to write an action” (proc-macro usage)
   - [ ] “How keybinding resolution works” (pipeline)
-  - [ ] “Plugin authoring guide” (FFI contract + examples)

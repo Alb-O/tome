@@ -9,7 +9,6 @@ Your goal says “no tight coupling… event emitter/receiver… heavily utilize
 **Concrete improvement:** keep distributed slices *only* as a collection mechanism, but force everything into an explicit “registry build” step that:
 
 - validates uniqueness (`ActionId`, command names, hook names),
-- validates required capabilities (see ## 3),
 - produces an immutable `Registry` object passed around (no global map lookups sprinkled everywhere).
 
 This preserves “drop file in” ergonomics, while making module boundaries explicit at the registry layer.
@@ -35,28 +34,17 @@ Then use proc macros to generate:
 
 This aligns perfectly with your “heavy proc macro usage” goal .
 
-## 3) Capabilities: you already have the right shape — now enforce it automatically
-
-Your `EditorContext` capability pattern is good: optional accessors + `require_*` helpers + `check_capability` , with a central enum list .
-
-Where I’d push it further:
-
-- **Make required capabilities part of action/command metadata**, not ad-hoc checks inside bodies.
-- **Have the registry validate it**: if an action declares it needs `Search`, it must only be callable in contexts that provide it, or it must degrade gracefully (your choice).
-
-This is how you keep modules orthogonal *without* sprinkling `require_search()` everywhere.
-
-## 4) InputHandler: reduce cloning + make “params” (count/register/extend) a first-class parse phase
+## 3) InputHandler: reduce cloning + make “params” (count/register/extend) a first-class parse phase
 
 Two concrete issues to tighten:
 
-### 4a) Command mode cloning
+### 3a) Command mode cloning
 
 `handle_command_key` takes `mut input: String` and then writes it back into the mode on every keystroke . That’s fine for small strings, but it’s unnecessary churn.
 
 **Concrete improvement:** store the input in `self.mode` and mutate it in place. i.e. the handler should borrow/match `Mode::Command { .. }` and edit the internal string, rather than threading it through function args.
 
-### 4b) “count/register/extend” lifecycle
+### 3b) “count/register/extend” lifecycle
 
 You’re already tracking `count`, `register`, `extend` and resetting them . But you currently have a lot of duplicated “compute count/extend/register → reset_params → return Action” logic .
 
@@ -68,7 +56,7 @@ You’re already tracking `count`, `register`, `extend` and resetting them . But
 
 That makes multi-key chords and “pending action” cases much cleaner too.
 
-### 4c) Shift/extend semantics are clever but a bit magical
+### 3c) Shift/extend semantics are clever but a bit magical
 
 `extend_and_lower_if_shift()` implicitly toggles extend and modifies lookup keys . This works, but it creates surprising interactions over time (especially once users configure bindings heavily).
 
@@ -79,7 +67,7 @@ That makes multi-key chords and “pending action” cases much cleaner too.
 
 At minimum, I’d add tests covering “uppercase has its own binding vs falls back to lowercase” .
 
-## 5) Selection normalization: fix primary stability for duplicates + make normalization cheaper when building
+## 4) Selection normalization: fix primary stability for duplicates + make normalization cheaper when building
 
 Your selection model is solid and has nice utilities (normalize vs merge-adjacent) . The weak spot is **primary preservation** when duplicates exist.
 
@@ -97,7 +85,7 @@ Example: `from_vec()` preserves primary by equality search after moving into Sma
 
 Also: `push()` and `replace()` normalize every time . That’s fine for “few cursors”, but if you ever build large selections (search results, multi-cursor from file), a builder API that normalizes once can be a big win.
 
-## 6) ChangeSet/Transaction: correct, but performance will crater on large inserts
+## 5) ChangeSet/Transaction: correct, but performance will crater on large inserts
 
 You’re using character counts (`chars().count()`) in hot paths:
 
@@ -119,28 +107,7 @@ That’s all O(n) scanning per operation, and compose can amplify it badly.
   - `apply(invert(doc))` roundtrips the document
   - `compose(a,b)` equals applying `a` then `b` (property test on random ops)
 
-## 7) C ABI plugins: you’re close, but fix ABI correctness + define ownership rules
-
-Your V2 host/guest tables have the right versioning shape (`struct_size`, `abi_version`) .
-
-Two big improvements to make it robust:
-
-### 7a) Ensure all callback function pointers are `extern "C"` **in the struct field types**
-
-In the snippet, the struct fields are typed as `Option<fn(...)>` (Rust ABI) , while your constructors use `extern "C" fn` . Make those consistent as `Option<extern "C" fn(...)>` everywhere, or you’ll eventually trip UB (or coercion weirdness).
-
-### 7b) Document + enforce allocation/ownership boundaries
-
-You have `free_str` on both sides , which is good, but the rules must be explicit:
-
-- who allocates `TomeOwnedStr`?
-- who is allowed to free it?
-- does `TomeStr` guarantee UTF-8?
-- are strings NUL-terminated or (ptr,len)?
-
-**Concrete improvement:** write a single “FFI contract” doc and treat it like a spec. Also wrap every plugin callback with `catch_unwind` on the host side so panics never cross FFI.
-
-## 8) Testing: you already picked the right battleground — now add fuzz/property tests
+## 6) Testing: you already picked the right battleground — now add fuzz/property tests
 
 Your kitty integration harness is a huge advantage for catching real drift .
 
@@ -154,8 +121,8 @@ To complement that:
 
 If I were sequencing this for max leverage:
 
-1. Fix C ABI callback types (`extern "C"` in struct fields) + write the ownership spec.
 1. Introduce `ActionId` and convert keybinding dispatch off strings.
 1. Add action metadata (required capabilities) and registry validation.
 1. Cache char lengths in ChangeSet inserts; reduce `.chars().count()` churn.
 1. Fix Selection primary stability for duplicates + add property tests.
+1. Expand kitty integration harness coverage.
