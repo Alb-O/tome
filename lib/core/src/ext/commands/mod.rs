@@ -4,7 +4,6 @@
 //! The linkme distributed slice collects them at link time.
 
 mod buffer;
-mod cabi;
 mod edit;
 mod ext_diag;
 mod help;

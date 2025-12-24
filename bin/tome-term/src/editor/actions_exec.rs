@@ -27,10 +27,6 @@ impl Editor {
 		let arg_strings: Vec<String> = parts.map(|s| s.to_string()).collect();
 		let args: Vec<&str> = arg_strings.iter().map(|s| s.as_str()).collect();
 
-		if self.try_execute_plugin_command(name, &args) {
-			return false;
-		}
-
 		let cmd = match find_command(name) {
 			Some(cmd) => cmd,
 			None => {

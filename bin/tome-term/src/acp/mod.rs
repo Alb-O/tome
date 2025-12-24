@@ -7,6 +7,6 @@
 mod backend;
 mod commands;
 mod handler;
-mod state;
+pub mod state;
 
 pub use state::{AcpEvent, AcpManager, ChatRole};

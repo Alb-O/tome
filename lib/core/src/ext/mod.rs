@@ -15,8 +15,6 @@ pub enum ExtensionSource {
 	Builtin,
 	/// Defined in a library crate.
 	Crate(&'static str),
-	/// Loaded at runtime via a plugin.
-	Plugin(&'static str),
 }
 
 #[cfg(feature = "host")]
@@ -25,7 +23,6 @@ impl std::fmt::Display for ExtensionSource {
 		match self {
 			Self::Builtin => write!(f, "builtin"),
 			Self::Crate(name) => write!(f, "crate:{}", name),
-			Self::Plugin(name) => write!(f, "plugin:{}", name),
 		}
 	}
 }
@@ -331,20 +328,6 @@ pub trait EditorOps: EditorCapabilities {
 	/// Set the editor theme.
 	fn set_theme(&mut self, _theme_name: &str) -> Result<(), CommandError> {
 		Err(CommandError::Unsupported("set_theme"))
-	}
-
-	/// Handle a permission decision from the user.
-	fn on_permission_decision(
-		&mut self,
-		_request_id: u64,
-		_option_id: &str,
-	) -> Result<(), CommandError> {
-		Err(CommandError::Unsupported("on_permission_decision"))
-	}
-
-	/// Execute a plugin-related command.
-	fn plugin_command(&mut self, _args: &[&str]) -> Result<(), CommandError> {
-		Err(CommandError::Unsupported("plugin_command"))
 	}
 
 	/// Start the ACP agent in the given working directory.

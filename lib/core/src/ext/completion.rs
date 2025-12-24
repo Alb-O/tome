@@ -6,7 +6,6 @@ use crate::ext::COMMANDS;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompletionKind {
 	Command,
-	Plugin,
 	File,
 	Buffer,
 	Snippet,

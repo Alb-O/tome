@@ -28,7 +28,6 @@ pub fn run_editor(
 
 	// Start UI panels (includes terminal prewarm).
 	editor.ui_startup();
-	editor.autoload_plugins();
 
 	if let Some(cmd) = startup_ex.as_deref() {
 		let should_quit = editor.execute_ex_command(cmd);
@@ -42,7 +41,6 @@ pub fn run_editor(
 	let result = (|| {
 		loop {
 			editor.ui_tick();
-			editor.poll_plugins();
 			editor.poll_acp_events();
 
 			terminal.draw(|frame| editor.render(frame))?;

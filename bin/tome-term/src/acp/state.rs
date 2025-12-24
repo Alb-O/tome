@@ -14,6 +14,7 @@ use tokio::runtime::Runtime;
 use tokio::sync::mpsc::{self, Sender};
 use tokio::sync::oneshot;
 use tokio::task::LocalSet;
+use tome_core::Rope;
 
 use crate::acp::backend::AcpBackend;
 
@@ -71,6 +72,30 @@ pub struct PermissionOption {
 	pub label: String,
 }
 
+/// State for a chat panel.
+pub struct ChatPanelState {
+	pub transcript: Vec<ChatItem>,
+	pub input: Rope,
+	pub input_cursor: usize,
+}
+
+impl ChatPanelState {
+	pub fn new(_title: String) -> Self {
+		Self {
+			transcript: Vec::new(),
+			input: Rope::from(""),
+			input_cursor: 0,
+		}
+	}
+}
+
+/// A single item in the chat transcript.
+#[derive(Debug, Clone)]
+pub struct ChatItem {
+	pub role: ChatRole,
+	pub text: String,
+}
+
 /// Shared state accessible from multiple threads.
 #[derive(Clone)]
 pub struct AcpState {
@@ -86,6 +111,8 @@ pub struct AcpState {
 	pub next_permission_id: Arc<AtomicU64>,
 	/// Workspace root directory for security checks.
 	pub workspace_root: Arc<Mutex<Option<PathBuf>>>,
+	/// Panels managed by ACP.
+	pub panels: Arc<Mutex<HashMap<u64, ChatPanelState>>>,
 }
 
 impl AcpState {
@@ -97,6 +124,7 @@ impl AcpState {
 			pending_permissions: Arc::new(Mutex::new(HashMap::new())),
 			next_permission_id: Arc::new(AtomicU64::new(1)),
 			workspace_root: Arc::new(Mutex::new(None)),
+			panels: Arc::new(Mutex::new(HashMap::new())),
 		}
 	}
 

@@ -4,6 +4,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Paragraph};
 use termina::event::{KeyCode as TmKeyCode, Modifiers as TmModifiers};
 
+use crate::acp::state::ChatRole;
 use crate::theme::Theme;
 use crate::ui::FocusTarget;
 use crate::ui::dock::DockSlot;
@@ -13,12 +14,12 @@ pub fn chat_panel_ui_id(panel_id: u64) -> String {
 	format!("chat:{}", panel_id)
 }
 
-pub struct PluginChatPanel {
+pub struct AcpChatPanel {
 	panel_id: u64,
 	ui_id: String,
 }
 
-impl PluginChatPanel {
+impl AcpChatPanel {
 	pub fn new(panel_id: u64, _title: String) -> Self {
 		Self {
 			panel_id,
@@ -26,18 +27,17 @@ impl PluginChatPanel {
 		}
 	}
 
-	fn role_prefix(role: tome_cabi_types::TomeChatRole) -> &'static str {
-		use tome_cabi_types::TomeChatRole;
+	fn role_prefix(role: ChatRole) -> &'static str {
 		match role {
-			TomeChatRole::User => "You",
-			TomeChatRole::Assistant => "Assistant",
-			TomeChatRole::System => "System",
-			TomeChatRole::Thought => "Thought",
+			ChatRole::User => "You",
+			ChatRole::Assistant => "Assistant",
+			ChatRole::System => "System",
+			ChatRole::Thought => "Thought",
 		}
 	}
 }
 
-impl Panel for PluginChatPanel {
+impl Panel for AcpChatPanel {
 	fn id(&self) -> &str {
 		&self.ui_id
 	}
@@ -64,19 +64,7 @@ impl Panel for PluginChatPanel {
 				) && key.modifiers.contains(TmModifiers::CONTROL);
 
 				if raw_ctrl_enter {
-					// Check if this is an ACP panel or a plugin panel
-					let is_acp = editor
-						.plugins
-						.panel_owners
-						.get(&self.panel_id)
-						.map(|s| s == "__acp__")
-						.unwrap_or(false);
-
-					if is_acp {
-						editor.submit_acp_panel();
-					} else {
-						editor.submit_plugin_panel(self.panel_id);
-					}
+					editor.submit_acp_panel();
 					return EventResult::consumed().with_request(UiRequest::Redraw);
 				}
 
@@ -85,7 +73,8 @@ impl Panel for PluginChatPanel {
 						.with_request(UiRequest::Focus(FocusTarget::editor()));
 				}
 
-				let Some(panel) = editor.plugins.panels.get_mut(&self.panel_id) else {
+				let mut panels = editor.acp.state.panels.lock();
+				let Some(panel) = panels.get_mut(&self.panel_id) else {
 					return EventResult::consumed();
 				};
 
@@ -122,7 +111,8 @@ impl Panel for PluginChatPanel {
 				EventResult::consumed().with_request(UiRequest::Redraw)
 			}
 			UiEvent::Paste(text) if focused => {
-				let Some(panel) = editor.plugins.panels.get_mut(&self.panel_id) else {
+				let mut panels = editor.acp.state.panels.lock();
+				let Some(panel) = panels.get_mut(&self.panel_id) else {
 					return EventResult::consumed();
 				};
 				panel.input.insert(panel.input_cursor, &text);
@@ -152,7 +142,8 @@ impl Panel for PluginChatPanel {
 
 		frame.render_widget(Block::default().style(bg), area);
 
-		let Some(state) = editor.plugins.panels.get(&self.panel_id) else {
+		let panels = editor.acp.state.panels.lock();
+		let Some(state) = panels.get(&self.panel_id) else {
 			let w = Paragraph::new("[missing panel state]").style(bg);
 			frame.render_widget(w, area);
 			return None;
@@ -167,13 +158,13 @@ impl Panel for PluginChatPanel {
 
 		let mut transcript_lines: Vec<Line> = Vec::new();
 		for item in &state.transcript {
-			let role = Self::role_prefix(item._role);
-			let style = match item._role {
-				tome_cabi_types::TomeChatRole::User => user_style,
+			let role = Self::role_prefix(item.role);
+			let style = match item.role {
+				ChatRole::User => user_style,
 				_ => assistant_style,
 			};
 
-			for (i, line) in item._text.lines().enumerate() {
+			for (i, line) in item.text.lines().enumerate() {
 				if i == 0 {
 					transcript_lines.push(Line::from(vec![
 						Span::styled(format!("{}: ", role), style),

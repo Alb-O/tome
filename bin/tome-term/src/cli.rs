@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{Args, Parser, Subcommand};
+use clap::Parser;
 
 use crate::styles::cli_styles;
 
@@ -20,53 +20,4 @@ pub struct Cli {
 	/// Exit immediately after running `--ex`
 	#[arg(long, short = 'q')]
 	pub quit_after_ex: bool,
-
-	#[command(subcommand)]
-	pub command: Option<Commands>,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum Commands {
-	/// Plugin management
-	Plugin(PluginArgs),
-}
-
-#[derive(Args, Debug)]
-pub struct PluginArgs {
-	#[command(subcommand)]
-	pub command: PluginCommands,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum PluginCommands {
-	/// Add a plugin from a local path
-	Add {
-		/// Path to the plugin
-		path: PathBuf,
-		/// Register as a development plugin
-		#[arg(long)]
-		dev: bool,
-	},
-	/// List installed plugins
-	List,
-	/// Remove plugins
-	Remove {
-		/// IDs of the plugins to remove
-		ids: Vec<String>,
-	},
-	/// Enable plugins
-	Enable {
-		/// IDs of the plugins to enable
-		ids: Vec<String>,
-	},
-	/// Disable plugins
-	Disable {
-		/// IDs of the plugins to disable
-		ids: Vec<String>,
-	},
-	/// Reload plugins (experimental)
-	Reload {
-		/// IDs of the plugins to reload
-		ids: Vec<String>,
-	},
 }

@@ -2,10 +2,10 @@
 
 use std::path::PathBuf;
 
+use crate::acp::state::{ChatItem, ChatPanelState};
 use crate::acp::{AcpEvent, ChatRole};
 use crate::editor::Editor;
-use crate::plugin::panels::ChatItem;
-use crate::ui::panels::chat::{PluginChatPanel, chat_panel_ui_id};
+use crate::ui::panels::chat::{AcpChatPanel, chat_panel_ui_id};
 
 /// Panel ID for the ACP chat panel.
 pub const ACP_PANEL_ID: u64 = u64::MAX - 1; // Reserve a special ID for ACP
@@ -27,20 +27,12 @@ impl Editor {
 	pub fn acp_toggle(&mut self) -> Result<(), tome_core::ext::CommandError> {
 		let panel_id = self.acp.panel_id().unwrap_or(ACP_PANEL_ID);
 
+		let mut panels = self.acp.state.panels.lock();
 		// Create the panel state if it doesn't exist
-		if !self.plugins.panels.contains_key(&panel_id) {
-			use crate::plugin::panels::ChatPanelState;
-			self.plugins
-				.panels
-				.insert(panel_id, ChatPanelState::new("ACP Agent".to_string()));
-			self.plugins
-				.panel_owners
-				.insert(panel_id, "__acp__".to_string());
+		if let std::collections::hash_map::Entry::Vacant(e) = panels.entry(panel_id) {
+			e.insert(ChatPanelState::new("ACP Agent".to_string()));
 
-			let ui_id = chat_panel_ui_id(panel_id);
-			self.plugins.panel_ui_ids.insert(panel_id, ui_id.clone());
-
-			self.ui.register_panel(Box::new(PluginChatPanel::new(
+			self.ui.register_panel(Box::new(AcpChatPanel::new(
 				panel_id,
 				"ACP Agent".to_string(),
 			)));
@@ -79,7 +71,8 @@ impl Editor {
 			None => return,
 		};
 
-		if let Some(panel) = self.plugins.panels.get_mut(&panel_id) {
+		let mut panels = self.acp.state.panels.lock();
+		if let Some(panel) = panels.get_mut(&panel_id) {
 			let text = panel.input.to_string();
 			if text.trim().is_empty() {
 				return;
@@ -87,8 +80,8 @@ impl Editor {
 
 			// Add user message to transcript
 			panel.transcript.push(ChatItem {
-				_role: tome_cabi_types::TomeChatRole::User,
-				_text: text.clone(),
+				role: ChatRole::User,
+				text: text.clone(),
 			});
 			panel.input = "".into();
 			panel.input_cursor = 0;
@@ -113,18 +106,9 @@ impl Editor {
 					None => return,
 				};
 
-				let cabi_role = match role {
-					ChatRole::User => tome_cabi_types::TomeChatRole::User,
-					ChatRole::Assistant => tome_cabi_types::TomeChatRole::Assistant,
-					ChatRole::System => tome_cabi_types::TomeChatRole::System,
-					ChatRole::Thought => tome_cabi_types::TomeChatRole::Thought,
-				};
-
-				if let Some(panel) = self.plugins.panels.get_mut(&panel_id) {
-					panel.transcript.push(ChatItem {
-						_role: cabi_role,
-						_text: text,
-					});
+				let mut panels = self.acp.state.panels.lock();
+				if let Some(panel) = panels.get_mut(&panel_id) {
+					panel.transcript.push(ChatItem { role, text });
 					self.needs_redraw = true;
 				}
 			}

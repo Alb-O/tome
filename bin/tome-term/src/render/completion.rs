@@ -27,7 +27,6 @@ impl Editor {
 
 				let kind_icon = match item.kind {
 					CompletionKind::Command => "󰘳",
-					CompletionKind::Plugin => "󰏗",
 					CompletionKind::File => "󰈔",
 					CompletionKind::Buffer => "󰈙",
 					CompletionKind::Snippet => "󰘦",
@@ -35,7 +34,6 @@ impl Editor {
 
 				let kind_color = match item.kind {
 					CompletionKind::Command => self.theme.colors.status.command_bg,
-					CompletionKind::Plugin => self.theme.colors.status.insert_bg,
 					CompletionKind::File => self.theme.colors.status.normal_bg,
 					CompletionKind::Buffer => self.theme.colors.status.view_bg,
 					CompletionKind::Snippet => self.theme.colors.status.goto_bg,
@@ -67,7 +65,6 @@ impl Editor {
 
 				let kind_name = match item.kind {
 					CompletionKind::Command => "Cmd",
-					CompletionKind::Plugin => "Plug",
 					CompletionKind::File => "File",
 					CompletionKind::Buffer => "Buf",
 					CompletionKind::Snippet => "Snip",

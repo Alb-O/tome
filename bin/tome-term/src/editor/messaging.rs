@@ -3,14 +3,16 @@ use std::time::Duration;
 use tome_core::ext::notifications::{
 	Anchor, Animation, Level, Notification, SizeConstraint, Timing,
 };
-use tome_core::ext::{
-	CommandSource, CompletionContext, CompletionItem, CompletionKind, CompletionSource,
-};
+use tome_core::ext::{CommandSource, CompletionContext, CompletionSource};
 
 use crate::editor::Editor;
 use crate::editor::types::{Message, MessageKind};
 
 impl Editor {
+	#[allow(
+		dead_code,
+		reason = "Method currently unused but intended for future extension use cases"
+	)]
 	pub fn request_redraw(&mut self) {
 		self.needs_redraw = true;
 	}
@@ -112,19 +114,6 @@ impl Editor {
 
 			let mut items = CommandSource.complete(&ctx);
 
-			for full_name in self.plugins.commands.keys() {
-				if full_name.starts_with(input) {
-					items.push(CompletionItem {
-						label: full_name.clone(),
-						insert_text: full_name.clone(),
-						detail: None,
-						filter_text: None,
-						kind: CompletionKind::Plugin,
-					});
-				}
-			}
-
-			// Deduplicate by label (native commands might be shadowed by plugin names if they were to overlap, but they don't yet)
 			items.sort_by(|a, b| a.label.cmp(&b.label));
 			items.dedup_by(|a, b| a.label == b.label);
 

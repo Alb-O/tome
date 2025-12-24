@@ -5,7 +5,6 @@ mod history;
 mod input_handling;
 mod messaging;
 mod navigation;
-mod plugins;
 mod search;
 pub mod types;
 
@@ -21,7 +20,6 @@ pub use types::{HistoryEntry, Message, MessageKind, Registers};
 
 use crate::acp::AcpManager;
 use crate::editor::types::CompletionState;
-use crate::plugin::PluginManager;
 use crate::theme::Theme;
 use crate::ui::UiManager;
 
@@ -44,13 +42,15 @@ pub struct Editor {
 	pub theme: &'static Theme,
 	pub window_width: Option<u16>,
 	pub window_height: Option<u16>,
-	pub plugins: PluginManager,
 	pub ui: UiManager,
 	pub needs_redraw: bool,
 	pub(crate) insert_undo_active: bool,
-	pub(crate) pending_permissions: Vec<crate::plugin::manager::PendingPermission>,
 	pub notifications: Notifications,
 	pub last_tick: std::time::SystemTime,
+	#[allow(
+		dead_code,
+		reason = "IPC server currently only used for internal messaging, but field is read via debug tools"
+	)]
 	pub ipc: Option<crate::ipc::IpcServer>,
 	pub completions: CompletionState,
 	pub acp: AcpManager,
@@ -106,16 +106,13 @@ impl Editor {
 			theme: &crate::themes::solarized::SOLARIZED_DARK,
 			window_width: None,
 			window_height: None,
-			plugins: PluginManager::new(),
 			ui: {
 				let mut ui = UiManager::new();
 				ui.register_panel(Box::new(crate::ui::panels::terminal::TerminalPanel::new()));
-				ui.register_panel(Box::new(crate::ui::panels::plugins::PluginsPanel::new()));
 				ui
 			},
 			needs_redraw: false,
 			insert_undo_active: false,
-			pending_permissions: Vec::new(),
 			notifications: Notifications::new()
 				.max_concurrent(Some(5))
 				.overflow(Overflow::DiscardOldest),
@@ -304,119 +301,6 @@ impl Editor {
 				err.push_str(&format!(". Did you mean '{}'?", suggestion));
 			}
 			Err(tome_core::ext::CommandError::Failed(err))
-		}
-	}
-
-	pub fn on_permission_decision(
-		&mut self,
-		request_id: u64,
-		option_id: &str,
-	) -> Result<(), tome_core::ext::CommandError> {
-		let pos = self
-			.pending_permissions
-			.iter()
-			.position(|p| p.request_id == request_id)
-			.ok_or_else(|| {
-				tome_core::ext::CommandError::Failed(format!(
-					"No pending permission request with ID {}",
-					request_id
-				))
-			})?;
-
-		let pending = self.pending_permissions.remove(pos);
-		let plugin_id = pending.plugin_id;
-
-		if let Some(plugin) = self.plugins.plugins.get(&plugin_id)
-			&& let Some(on_decision) = plugin.guest.on_permission_decision
-		{
-			use crate::plugin::manager::PluginContextGuard;
-			let ed_ptr = self as *mut Editor;
-			let mgr_ptr = unsafe { &mut (*ed_ptr).plugins as *mut _ };
-			let _guard = unsafe { PluginContextGuard::new(mgr_ptr, ed_ptr, &plugin_id) };
-			let option_tome = tome_cabi_types::TomeStr {
-				ptr: option_id.as_ptr(),
-				len: option_id.len(),
-			};
-			on_decision(request_id, option_tome);
-			return Ok(());
-		}
-
-		Err(tome_core::ext::CommandError::Failed(format!(
-			"Plugin {} does not support permission decisions",
-			plugin_id
-		)))
-	}
-
-	pub fn plugin_command(&mut self, args: &[&str]) -> Result<(), tome_core::ext::CommandError> {
-		if args.is_empty() {
-			self.ui
-				.toggle_panel(crate::ui::panels::plugins::PLUGINS_PANEL_ID);
-			self.needs_redraw = true;
-			return Ok(());
-		}
-
-		match args[0] {
-			"enable" => {
-				if args.len() < 2 {
-					return Err(tome_core::ext::CommandError::MissingArgument("id"));
-				}
-				let id = args[1];
-				if !self
-					.plugins
-					.config
-					.plugins
-					.enabled
-					.contains(&id.to_string())
-				{
-					self.plugins.config.plugins.enabled.push(id.to_string());
-					self.save_plugin_config();
-				}
-				let mgr_ptr = &mut self.plugins as *mut PluginManager;
-				unsafe {
-					(*mgr_ptr)
-						.load(self, id)
-						.map_err(|e| tome_core::ext::CommandError::Failed(e.to_string()))?
-				};
-				Ok(())
-			}
-			"disable" => {
-				if args.len() < 2 {
-					return Err(tome_core::ext::CommandError::MissingArgument("id"));
-				}
-				let id = args[1];
-				self.plugins.config.plugins.enabled.retain(|e| e != id);
-				self.save_plugin_config();
-				self.show_message(format!("Plugin {} disabled. Restart to unload fully.", id));
-				Ok(())
-			}
-			"reload" => {
-				if args.len() < 2 {
-					return Err(tome_core::ext::CommandError::MissingArgument("id"));
-				}
-				let id = args[1];
-				let mgr_ptr = &mut self.plugins as *mut PluginManager;
-				unsafe {
-					(*mgr_ptr)
-						.load(self, id)
-						.map_err(|e| tome_core::ext::CommandError::Failed(e.to_string()))?
-				};
-				Ok(())
-			}
-			"logs" => {
-				if args.len() < 2 {
-					return Err(tome_core::ext::CommandError::MissingArgument("id"));
-				}
-				let id = args[1];
-				let logs = self.plugins.logs.get(id).cloned().unwrap_or_default();
-				let content = logs.join("\n");
-				self.doc = Rope::from(content.as_str());
-				self.path = Some(std::path::PathBuf::from(format!("plugin-logs-{}", id)));
-				Ok(())
-			}
-			_ => Err(tome_core::ext::CommandError::Failed(format!(
-				"Unknown plugin command: {}",
-				args[0]
-			))),
 		}
 	}
 }

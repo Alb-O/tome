@@ -5,13 +5,14 @@ use std::{fs, io};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 
-use crate::plugin::manager::get_config_dir;
+use crate::paths::get_config_dir;
 
 pub enum IpcMessage {
-	ReloadPlugin(String),
+	// Add other IPC messages here as needed
 }
 
 pub struct IpcServer {
+	#[allow(dead_code)]
 	receiver: mpsc::Receiver<IpcMessage>,
 }
 
@@ -52,21 +53,27 @@ impl IpcServer {
 		Ok(Self { receiver })
 	}
 
+	#[allow(
+		dead_code,
+		reason = "Method intended for future usage in processing IPC messages"
+	)]
 	pub fn poll(&self) -> Option<IpcMessage> {
 		self.receiver.try_recv().ok()
 	}
 }
 
-fn handle_client_msg(msg: &str, sender: mpsc::Sender<IpcMessage>) {
+fn handle_client_msg(msg: &str, _sender: mpsc::Sender<IpcMessage>) {
 	let parts: Vec<&str> = msg.split_whitespace().collect();
 	if parts.is_empty() {
 		return;
 	}
 
+	#[allow(
+		clippy::match_single_binding,
+		reason = "Match block is intended for future expansion of IPC commands"
+	)]
 	match parts[0] {
-		"reload" if parts.len() > 1 => {
-			let _ = sender.send(IpcMessage::ReloadPlugin(parts[1].to_string()));
-		}
+		// Handle other commands here
 		_ => {}
 	}
 }
@@ -75,6 +82,10 @@ pub fn get_socket_path() -> Option<PathBuf> {
 	get_config_dir().map(|d| d.join("tome.sock"))
 }
 
+#[allow(
+	dead_code,
+	reason = "Function intended for future usage in sending IPC messages from other processes"
+)]
 pub async fn send_client_msg(msg: &str) -> io::Result<()> {
 	let socket_path =
 		get_socket_path().ok_or_else(|| io::Error::other("Could not determine socket path"))?;

@@ -63,18 +63,6 @@ impl EditorOps for Editor {
 		self.modified
 	}
 
-	fn on_permission_decision(
-		&mut self,
-		request_id: u64,
-		option_id: &str,
-	) -> Result<(), tome_core::ext::CommandError> {
-		Editor::on_permission_decision(self, request_id, option_id)
-	}
-
-	fn plugin_command(&mut self, args: &[&str]) -> Result<(), tome_core::ext::CommandError> {
-		Editor::plugin_command(self, args)
-	}
-
 	fn set_theme(&mut self, theme_name: &str) -> Result<(), tome_core::ext::CommandError> {
 		Editor::set_theme(self, theme_name)
 	}
