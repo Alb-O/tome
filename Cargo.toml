@@ -10,7 +10,7 @@ repository = "https://github.com/Alb-O/tome"
 
 [workspace.dependencies]
 agent-client-protocol = "0.9.1"
-agentfs-sdk = { path = "vendor/agentfs/sdk/rust" }
+agentfs-sdk = { path = "vendor/subtrees/agentfs/sdk/rust" }
 clap = { version = "4", features = ["derive"] }
 criterion = "0.8"
 insta = "1.44"

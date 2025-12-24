@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
-# This file tracks external repositories integrated via git subtree.
+# This file manages external repositories integrated via git subtree.
 # Usage: ./vendor/subtrees.sh [pull|push] <name> [branch]
 
 set -e
 
-# Repository definitions
-declare -A REPOS
-REPOS[agentfs]="https://github.com/tursodatabase/agentfs"
-
-# Prefix definitions
-declare -A PREFIXES
-PREFIXES[agentfs]="vendor/agentfs"
+# Load metadata
+SCRIPT_DIR=$(dirname "$0")
+source "$SCRIPT_DIR/subtrees.meta.sh"
 
 COMMAND=$1
 NAME=$2

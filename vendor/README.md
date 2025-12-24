@@ -4,7 +4,7 @@ This directory contains external dependencies and SDKs that are integrated direc
 
 ## Management
 
-Subtrees are tracked in `vendor/subtrees.sh`. This script provides a central place to manage upstream synchronization.
+Subtrees are declared in `vendor/subtrees.meta.sh` and managed via `vendor/subtrees.sh`. These scripts provide a central place to manage upstream synchronization.
 
 ### Syncing with Upstream (Pulling)
 
@@ -26,9 +26,9 @@ If you have made local changes to a vendored directory and wish to contribute th
 
 ## Available Subtrees
 
-| Name      | Path             | Source                                   |
-| --------- | ---------------- | ---------------------------------------- |
-| `agentfs` | `vendor/agentfs` | https://github.com/tursodatabase/agentfs |
+| Name      | Path                      | Source                                   |
+| --------- | ------------------------- | ---------------------------------------- |
+| `agentfs` | `vendor/subtrees/agentfs` | https://github.com/tursodatabase/agentfs |
 
 ## Why Subtrees?
 
