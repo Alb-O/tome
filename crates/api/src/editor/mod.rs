@@ -278,11 +278,10 @@ impl Editor {
 			r.anchor = pos;
 			r.head = pos;
 		});
-		tx.apply(&mut self.doc);
+		self.apply_transaction(&tx);
 
 		self.selection = new_selection;
 		self.cursor = self.selection.primary().head;
-		self.modified = true;
 	}
 
 	pub fn yank_selection(&mut self) {
@@ -361,8 +360,7 @@ impl Editor {
 			self.save_undo_state();
 			let tx = Transaction::delete(self.doc.slice(..), &self.selection);
 			self.selection = tx.map_selection(&self.selection);
-			tx.apply(&mut self.doc);
-			self.modified = true;
+			self.apply_transaction(&tx);
 		}
 	}
 
@@ -449,5 +447,48 @@ impl Editor {
 			}
 		}
 		None
+	}
+
+	/// Applies a transaction to the document with incremental syntax tree update.
+	///
+	/// This is the central method for all document modifications. It:
+	/// 1. Applies the changeset to the rope
+	/// 2. Incrementally updates the syntax tree (if present)
+	/// 3. Sets the modified flag
+	///
+	/// All edit operations should use this method to ensure the syntax tree stays in sync.
+	pub fn apply_transaction(&mut self, tx: &Transaction) {
+		// Capture old document state for incremental syntax update
+		let old_doc = self.doc.clone();
+
+		// Apply the transaction to the document
+		tx.apply(&mut self.doc);
+
+		// Incrementally update syntax tree if present
+		if let Some(ref mut syntax) = self.syntax {
+			if let Err(e) = syntax.update_from_changeset(
+				old_doc.slice(..),
+				self.doc.slice(..),
+				tx.changes(),
+				&self.language_loader,
+			) {
+				// Log error but don't fail - syntax highlighting is non-critical
+				// In the future, could fall back to full reparse
+				eprintln!("Syntax update error: {e}");
+			}
+		}
+
+		self.modified = true;
+	}
+
+	/// Reparses the entire syntax tree from scratch.
+	///
+	/// Used after operations that replace the entire document (undo/redo).
+	pub fn reparse_syntax(&mut self) {
+		if self.syntax.is_some() {
+			// Get the language from the existing syntax tree
+			let lang_id = self.syntax.as_ref().unwrap().root_language();
+			self.syntax = Syntax::new(self.doc.slice(..), lang_id, &self.language_loader).ok();
+		}
 	}
 }

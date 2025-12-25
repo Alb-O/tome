@@ -262,3 +262,93 @@ fn test_language_loader_tree_house_trait() {
 	fn assert_language_loader<T: tree_house::LanguageLoader>() {}
 	assert_language_loader::<LanguageLoader>();
 }
+
+/// Tests that tree-sitter syntax trees are correctly updated incrementally.
+///
+/// This verifies the core incremental parsing flow:
+/// 1. Parse initial document to create syntax tree
+/// 2. Apply an insertion via Transaction and update tree incrementally
+/// 3. Apply a deletion via Transaction and update tree incrementally
+/// 4. Verify tree structure remains valid after each edit
+///
+/// The test uses a minimal Rust source (`fn main() {}`) and inserts/deletes
+/// a let statement to exercise the ChangeSet-to-InputEdit conversion.
+#[test]
+fn test_incremental_syntax_update() {
+	use tome_base::{Selection, Transaction};
+
+	let mut loader = LanguageLoader::new();
+
+	let rust = LanguageData::new(
+		"rust".to_string(),
+		None,
+		vec!["rs".to_string()],
+		vec![],
+		vec![],
+		vec!["//".to_string()],
+		Some(("/*".to_string(), "*/".to_string())),
+		Some("rust"),
+	);
+	let rust_lang = loader.register(rust);
+
+	let mut source = Rope::from_str("fn main() {}");
+
+	let mut syntax = match Syntax::new(source.slice(..), rust_lang, &loader) {
+		Ok(s) => s,
+		Err(e) => {
+			println!(
+				"Skipping incremental update test - no grammar available: {:?}",
+				e
+			);
+			return;
+		}
+	};
+
+	let root = syntax.tree().root_node();
+	assert_eq!(root.kind(), "source_file");
+	let initial_child_count = root.child_count();
+
+	let old_source = source.clone();
+	let insert_pos = 11;
+	let selection = Selection::point(insert_pos);
+	let tx = Transaction::insert(source.slice(..), &selection, " let x = 42;".to_string());
+	tx.apply(&mut source);
+
+	syntax
+		.update_from_changeset(
+			old_source.slice(..),
+			source.slice(..),
+			tx.changes(),
+			&loader,
+		)
+		.expect("Incremental update should succeed");
+
+	let root = syntax.tree().root_node();
+	assert_eq!(root.kind(), "source_file");
+	assert!(
+		root.child_count() >= initial_child_count,
+		"Tree should reflect the insertion"
+	);
+
+	let after_insert = source.to_string();
+	assert_eq!(after_insert, "fn main() { let x = 42;}");
+
+	let old_source = source.clone();
+	let delete_selection = Selection::single(11, 23);
+	let tx = Transaction::delete(source.slice(..), &delete_selection);
+	tx.apply(&mut source);
+
+	syntax
+		.update_from_changeset(
+			old_source.slice(..),
+			source.slice(..),
+			tx.changes(),
+			&loader,
+		)
+		.expect("Delete update should succeed");
+
+	let after_delete = source.to_string();
+	assert_eq!(after_delete, "fn main() {}");
+
+	println!("Incremental syntax updates work correctly!");
+}

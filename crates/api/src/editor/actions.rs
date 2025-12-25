@@ -22,8 +22,7 @@ impl Editor {
 					self.save_undo_state();
 					let tx = Transaction::delete(self.doc.slice(..), &self.selection);
 					self.selection = tx.map_selection(&self.selection);
-					tx.apply(&mut self.doc);
-					self.modified = true;
+					self.apply_transaction(&tx);
 				}
 			}
 			EditAction::Change { yank } => {
@@ -34,8 +33,7 @@ impl Editor {
 					self.save_undo_state();
 					let tx = Transaction::delete(self.doc.slice(..), &self.selection);
 					self.selection = tx.map_selection(&self.selection);
-					tx.apply(&mut self.doc);
-					self.modified = true;
+					self.apply_transaction(&tx);
 				}
 				self.input.set_mode(Mode::Insert);
 			}
@@ -66,24 +64,22 @@ impl Editor {
 					let replacement = std::iter::repeat_n(ch, len).collect::<String>();
 					let tx = Transaction::delete(self.doc.slice(..), &self.selection);
 					self.selection = tx.map_selection(&self.selection);
-					tx.apply(&mut self.doc);
+					self.apply_transaction(&tx);
 					let tx = Transaction::insert(self.doc.slice(..), &self.selection, replacement);
-					tx.apply(&mut self.doc);
+					self.apply_transaction(&tx);
 					self.cursor = self.selection.primary().head + len;
 					self.selection = Selection::point(self.cursor);
-					self.modified = true;
 				} else {
 					self.save_undo_state();
 					self.selection = Selection::single(from, from + 1);
 					let tx = Transaction::delete(self.doc.slice(..), &self.selection);
 					self.selection = tx.map_selection(&self.selection);
-					tx.apply(&mut self.doc);
+					self.apply_transaction(&tx);
 					let tx =
 						Transaction::insert(self.doc.slice(..), &self.selection, ch.to_string());
-					tx.apply(&mut self.doc);
+					self.apply_transaction(&tx);
 					self.cursor = self.selection.primary().head + 1;
 					self.selection = Selection::point(self.cursor);
-					self.modified = true;
 				}
 			}
 			EditAction::Undo => {
@@ -109,9 +105,8 @@ impl Editor {
 					self.selection = Selection::single(line_start, line_start + spaces);
 					let tx = Transaction::delete(self.doc.slice(..), &self.selection);
 					self.selection = tx.map_selection(&self.selection);
-					tx.apply(&mut self.doc);
+					self.apply_transaction(&tx);
 					self.cursor = self.cursor.saturating_sub(spaces);
-					self.modified = true;
 				}
 			}
 			EditAction::ToLowerCase => {
@@ -138,13 +133,12 @@ impl Editor {
 					self.selection = Selection::single(end_of_line, end_of_line + 1);
 					let tx = Transaction::delete(self.doc.slice(..), &self.selection);
 					self.selection = tx.map_selection(&self.selection);
-					tx.apply(&mut self.doc);
+					self.apply_transaction(&tx);
 					let tx =
 						Transaction::insert(self.doc.slice(..), &self.selection, " ".to_string());
-					tx.apply(&mut self.doc);
+					self.apply_transaction(&tx);
 					self.cursor = self.selection.primary().head + 1;
 					self.selection = Selection::point(self.cursor);
-					self.modified = true;
 				}
 			}
 			EditAction::DeleteBack => {
@@ -178,11 +172,10 @@ impl Editor {
 					r.anchor = pos;
 					r.head = pos;
 				});
-				tx.apply(&mut self.doc);
+				self.apply_transaction(&tx);
 
 				self.selection = new_selection;
 				self.cursor = self.selection.primary().head;
-				self.modified = true;
 			}
 			EditAction::OpenBelow => {
 				let slice = self.doc.slice(..);
@@ -281,12 +274,11 @@ impl Editor {
 			let new_len = text.chars().count();
 			let tx = Transaction::delete(self.doc.slice(..), &self.selection);
 			self.selection = tx.map_selection(&self.selection);
-			tx.apply(&mut self.doc);
+			self.apply_transaction(&tx);
 			let tx = Transaction::insert(self.doc.slice(..), &self.selection, text);
-			tx.apply(&mut self.doc);
+			self.apply_transaction(&tx);
 			self.cursor = self.selection.primary().head + new_len;
 			self.selection = Selection::point(self.cursor);
-			self.modified = true;
 		}
 	}
 }
