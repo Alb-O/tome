@@ -21,3 +21,8 @@ rule:
           - regex: ^//[/!]
           - regex: ^//\s*(?i)(TODO|FIXME|BUG|SAFETY|NOTE|CHECK|XXX|HACK|DEBUG|INTERNAL|TEST|STUB|WAIT|FALLTHROUGH|REFACTOR|OPTIMIZE|DOCS|FIX|PERF|WARN|WARNING|INFO|LINT|ANCHOR)
           - regex: ^//\s*(\.\.\.|$)
+          # Skip comments that are part of a multi-line comment block
+          - precedes:
+              kind: line_comment
+          - follows:
+              kind: line_comment
