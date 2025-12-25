@@ -1,31 +1,46 @@
 use std::time::Duration;
 
-use crate::notifications::{AutoDismiss, Level};
-use crate::notification_type;
+use tome_macro::register_notification;
+use tome_manifest::SemanticStyle;
 
-notification_type!(
+use crate::notifications::{AutoDismiss, Level};
+
+register_notification!(
 	INFO,
 	"info",
-	Level::Info,
-	None,
-	None,
-	Some(AutoDismiss::After(Duration::from_secs(4)))
+	level: Level::Info,
+	style: SemanticStyle::Info,
+	dismiss: AutoDismiss::After(Duration::from_secs(4))
 );
 
-notification_type!(
+register_notification!(
 	WARN,
 	"warn",
-	Level::Warn,
-	None,
-	None,
-	Some(AutoDismiss::After(Duration::from_secs(6)))
+	level: Level::Warn,
+	style: SemanticStyle::Warning,
+	dismiss: AutoDismiss::After(Duration::from_secs(6))
 );
 
-notification_type!(
+register_notification!(
 	ERROR,
 	"error",
-	Level::Error,
-	None,
-	None,
-	Some(AutoDismiss::Never)
+	level: Level::Error,
+	style: SemanticStyle::Error,
+	dismiss: AutoDismiss::Never
+);
+
+register_notification!(
+	SUCCESS,
+	"success",
+	level: Level::Info,
+	style: SemanticStyle::Success,
+	dismiss: AutoDismiss::After(Duration::from_secs(3))
+);
+
+register_notification!(
+	DEBUG,
+	"debug",
+	level: Level::Debug,
+	style: SemanticStyle::Dim,
+	dismiss: AutoDismiss::After(Duration::from_secs(2))
 );

@@ -94,6 +94,31 @@ impl std::fmt::Display for ActionId {
 	}
 }
 
+/// Semantic styles for UI elements like notifications.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum SemanticStyle {
+	#[default]
+	Normal,
+	Info,
+	Warning,
+	Error,
+	Success,
+	Dim,
+}
+
+impl std::fmt::Display for SemanticStyle {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Normal => write!(f, "Normal"),
+			Self::Info => write!(f, "Info"),
+			Self::Warning => write!(f, "Warning"),
+			Self::Error => write!(f, "Error"),
+			Self::Success => write!(f, "Success"),
+			Self::Dim => write!(f, "Dim"),
+		}
+	}
+}
+
 pub trait RegistryMetadata {
 	fn id(&self) -> &'static str;
 	fn name(&self) -> &'static str;
@@ -143,6 +168,7 @@ pub mod index;
 pub mod keybindings;
 pub mod macros;
 pub mod mode;
+pub mod notifications;
 pub mod options;
 pub mod statusline;
 
@@ -282,6 +308,10 @@ pub use keybindings::{
 	find_binding, find_binding_resolved,
 };
 pub use mode::Mode;
+pub use notifications::{
+	Animation, AutoDismiss, Level, NOTIFICATION_TYPES, NotificationTypeDef, Timing,
+	find_notification_type,
+};
 pub use options::{
 	OPTIONS, OptionDef, OptionScope, OptionType, OptionValue, all_options, find_option,
 };

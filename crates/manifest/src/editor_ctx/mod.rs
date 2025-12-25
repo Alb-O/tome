@@ -46,20 +46,20 @@ impl<'a> EditorContext<'a> {
 		self.inner.set_mode(mode);
 	}
 
+	pub fn notify(&mut self, type_id: &str, msg: &str) {
+		self.inner.notify(type_id, msg);
+	}
+
 	pub fn message(&mut self, msg: &str) {
-		self.inner.show_message(msg);
+		self.inner.notify("info", msg);
 	}
 
 	pub fn warning(&mut self, msg: &str) {
-		self.inner.show_warning(msg);
+		self.inner.notify("warn", msg);
 	}
 
 	pub fn error(&mut self, msg: &str) {
-		self.inner.show_error(msg);
-	}
-
-	pub fn notify(&mut self, type_name: &str, msg: &str) {
-		self.inner.notify(type_name, msg);
+		self.inner.notify("error", msg);
 	}
 
 	pub fn search(&mut self) -> Option<&mut dyn SearchAccess> {

@@ -52,20 +52,8 @@ impl ModeAccess for Editor {
 }
 
 impl MessageAccess for Editor {
-	fn show_message(&mut self, msg: &str) {
-		self.show_message(msg);
-	}
-
-	fn show_warning(&mut self, msg: &str) {
-		self.show_warning(msg);
-	}
-
-	fn show_error(&mut self, msg: &str) {
-		self.show_error(msg);
-	}
-
-	fn notify(&mut self, type_name: &str, msg: &str) {
-		self.notify(type_name, msg);
+	fn notify(&mut self, type_id: &str, msg: &str) {
+		self.notify(type_id, msg);
 	}
 
 	fn clear_message(&mut self) {

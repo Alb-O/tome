@@ -1,6 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::BorderType;
 use ratatui::widgets::block::Padding;
+pub use tome_manifest::notifications::find_notification_type;
 
 use crate::notifications::notification::Notification;
 use crate::notifications::types::{
@@ -24,6 +25,19 @@ impl NotificationBuilder {
 				..Default::default()
 			},
 		}
+	}
+
+	pub fn from_registry(name: &str, content: impl Into<Text<'static>>) -> Self {
+		let mut builder = Self::new(content);
+		if let Some(t) = find_notification_type(name) {
+			builder = builder
+				.level(t.level)
+				.auto_dismiss(t.auto_dismiss)
+				.animation(t.animation)
+				.timing(t.timing.0, t.timing.1, t.timing.2);
+			// Semantic style is handled by the caller (Editor) because it needs a Theme
+		}
+		builder
 	}
 
 	pub fn title(mut self, title: impl Into<Line<'static>>) -> Self {
