@@ -84,12 +84,8 @@ pub fn load_grammar_or_build(name: &str) -> Result<Grammar, GrammarError> {
 fn auto_build_grammar(name: &str) -> Result<(), GrammarError> {
 	use crate::build::{build_grammar, fetch_grammar, load_grammar_configs};
 
-	let configs = load_grammar_configs().map_err(|e| {
-		GrammarError::Io(std::io::Error::new(
-			std::io::ErrorKind::Other,
-			e.to_string(),
-		))
-	})?;
+	let configs = load_grammar_configs()
+		.map_err(|e| GrammarError::Io(std::io::Error::other(e.to_string())))?;
 
 	let config = configs
 		.into_iter()
@@ -97,20 +93,12 @@ fn auto_build_grammar(name: &str) -> Result<(), GrammarError> {
 		.ok_or_else(|| GrammarError::NotFound(format!("{} (no config in languages.toml)", name)))?;
 
 	log::info!("Fetching grammar source for '{}'...", name);
-	fetch_grammar(&config).map_err(|e| {
-		GrammarError::Io(std::io::Error::new(
-			std::io::ErrorKind::Other,
-			format!("fetch failed: {}", e),
-		))
-	})?;
+	fetch_grammar(&config)
+		.map_err(|e| GrammarError::Io(std::io::Error::other(format!("fetch failed: {}", e))))?;
 
 	log::info!("Building grammar '{}'...", name);
-	build_grammar(&config).map_err(|e| {
-		GrammarError::Io(std::io::Error::new(
-			std::io::ErrorKind::Other,
-			format!("build failed: {}", e),
-		))
-	})?;
+	build_grammar(&config)
+		.map_err(|e| GrammarError::Io(std::io::Error::other(format!("build failed: {}", e))))?;
 
 	log::info!("Successfully built grammar '{}'", name);
 	Ok(())

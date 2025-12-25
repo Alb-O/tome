@@ -220,18 +220,5 @@ mod tests {
 		);
 	}
 
-	#[test]
-	fn test_find_binding_resolved() {
-		// Test that find_binding_resolved returns ActionId
-		let resolved = find_binding_resolved(BindingMode::Normal, Key::char('h'));
-		assert!(resolved.is_some(), "should find binding for 'h'");
-		let resolved = resolved.unwrap();
-		assert_eq!(resolved.binding.action, "move_left");
-		assert!(resolved.action_id.is_valid(), "ActionId should be valid");
-
-		// Verify round-trip: resolved ActionId should map back to same action
-		let action = crate::find_action_by_id(resolved.action_id);
-		assert!(action.is_some());
-		assert_eq!(action.unwrap().name, "move_left");
-	}
+	// test_find_binding_resolved moved to tests/registry.rs (requires tome-stdlib)
 }

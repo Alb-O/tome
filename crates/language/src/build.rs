@@ -111,7 +111,7 @@ fn ensure_git_available() -> Result<()> {
 /// re-fetched at any time.
 pub fn grammar_sources_dir() -> PathBuf {
 	cache_dir()
-		.unwrap_or_else(|| runtime_dir())
+		.unwrap_or_else(runtime_dir)
 		.join("grammars")
 		.join("sources")
 }
@@ -278,14 +278,12 @@ fn needs_recompile(src_dir: &Path, lib_path: &Path) -> bool {
 	let source_files = ["parser.c", "scanner.c", "scanner.cc"];
 	for file in source_files {
 		let src_path = src_dir.join(file);
-		if src_path.exists() {
-			if let Ok(meta) = fs::metadata(&src_path) {
-				if let Ok(src_mtime) = meta.modified() {
-					if src_mtime > lib_mtime {
-						return true;
-					}
-				}
-			}
+		if src_path.exists()
+			&& let Ok(meta) = fs::metadata(&src_path)
+			&& let Ok(src_mtime) = meta.modified()
+			&& src_mtime > lib_mtime
+		{
+			return true;
 		}
 	}
 
@@ -368,7 +366,7 @@ pub fn build_grammar(grammar: &GrammarConfig) -> Result<BuildStatus> {
 	fs::create_dir_all(&obj_dir)?;
 	build.out_dir(&obj_dir);
 
-	let _objects = build
+	build
 		.try_compile(&grammar.grammar_id)
 		.map_err(|e| GrammarBuildError::Compilation(e.to_string()))?;
 

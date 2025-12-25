@@ -10,3 +10,6 @@ log.workspace = true
 serde.workspace = true
 tome-base.workspace = true
 tome-manifest.workspace = true
+
+[dev-dependencies]
+tome-stdlib.workspace = true
