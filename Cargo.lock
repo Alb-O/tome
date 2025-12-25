@@ -2428,16 +2428,19 @@ dependencies = [
 name = "tome-language"
 version = "0.1.0"
 dependencies = [
+ "cc",
  "libloading",
  "log",
  "once_cell",
  "ratatui 0.30.0-hackable",
  "regex",
  "ropey",
+ "serde",
  "tempfile",
  "thiserror 2.0.17",
  "tome-base",
  "tome-manifest",
+ "toml",
  "tree-house",
 ]
 
@@ -2515,6 +2518,7 @@ dependencies = [
  "tome-api",
  "tome-base",
  "tome-extensions",
+ "tome-language",
  "tome-manifest",
  "tome-stdlib",
  "tome-theme",

@@ -19,6 +19,7 @@
 //! - File type associations
 //! - Query files (highlights, indents, textobjects, injections, locals)
 
+pub mod build;
 pub mod grammar;
 pub mod highlight;
 pub mod language;
@@ -26,8 +27,11 @@ pub mod loader;
 pub mod query;
 pub mod syntax;
 
-pub use grammar::{GrammarError, GrammarSource};
+pub use grammar::{
+	GrammarError, GrammarSource, cache_dir, grammar_search_paths, load_grammar,
+	load_grammar_or_build, query_search_paths, runtime_dir,
+};
 pub use highlight::{Highlight, HighlightEvent, HighlightSpan, HighlightStyles, Highlighter};
 pub use language::LanguageData;
 pub use loader::{LanguageId, LanguageLoader};
-pub use query::{read_query, CapturedNode, IndentQuery, RainbowQuery, TagQuery, TextObjectQuery};
+pub use query::{CapturedNode, IndentQuery, RainbowQuery, TagQuery, TextObjectQuery, read_query};

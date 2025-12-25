@@ -24,6 +24,7 @@ tokio-util.workspace = true
 tome-api.workspace = true
 tome-base.workspace = true
 tome-extensions.workspace = true
+tome-language.workspace = true
 tome-manifest.workspace = true
 tome-stdlib.workspace = true
 tome-theme.workspace = true

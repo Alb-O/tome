@@ -7,7 +7,7 @@ use once_cell::sync::OnceCell;
 use tome_manifest::LanguageDef;
 use tree_house::LanguageConfig as TreeHouseConfig;
 
-use crate::grammar::load_grammar;
+use crate::grammar::load_grammar_or_build;
 use crate::query::read_query;
 
 /// Language data with lazily-loaded syntax configuration.
@@ -75,8 +75,11 @@ impl LanguageData {
 	}
 
 	/// Loads the complete language configuration (grammar + queries).
+	///
+	/// This will automatically attempt to fetch and build the grammar if it's
+	/// not found in any of the search paths (including Helix runtime directories).
 	fn load_syntax_config(&self) -> Option<TreeHouseConfig> {
-		let grammar = match load_grammar(&self.grammar_name) {
+		let grammar = match load_grammar_or_build(&self.grammar_name) {
 			Ok(g) => g,
 			Err(e) => {
 				log::warn!("Failed to load grammar '{}': {}", self.grammar_name, e);
@@ -89,7 +92,17 @@ impl LanguageData {
 		let locals = read_query(&self.grammar_name, "locals.scm");
 
 		match TreeHouseConfig::new(grammar, &highlights, &injections, &locals) {
-			Ok(config) => Some(config),
+			Ok(config) => {
+				// Configure the highlight query with scope names.
+				// This maps capture names (e.g., "keyword") to Highlight indices.
+				// We assign sequential indices to each unique scope name.
+				let mut scope_idx = 0u32;
+				config.configure(|_scope| {
+					scope_idx += 1;
+					Some(tree_house::highlighter::Highlight::new(scope_idx))
+				});
+				Some(config)
+			}
 			Err(e) => {
 				log::warn!(
 					"Failed to create language config for '{}': {}",
@@ -107,11 +120,18 @@ impl From<&LanguageDef> for LanguageData {
 		Self::new(
 			def.name.to_string(),
 			def.grammar.map(|s: &str| s.to_string()),
-			def.extensions.iter().map(|s: &&str| s.to_string()).collect(),
+			def.extensions
+				.iter()
+				.map(|s: &&str| s.to_string())
+				.collect(),
 			def.filenames.iter().map(|s: &&str| s.to_string()).collect(),
 			def.shebangs.iter().map(|s: &&str| s.to_string()).collect(),
-			def.comment_tokens.iter().map(|s: &&str| s.to_string()).collect(),
-			def.block_comment.map(|(s, e): (&str, &str)| (s.to_string(), e.to_string())),
+			def.comment_tokens
+				.iter()
+				.map(|s: &&str| s.to_string())
+				.collect(),
+			def.block_comment
+				.map(|(s, e): (&str, &str)| (s.to_string(), e.to_string())),
 			def.injection_regex,
 		)
 	}
