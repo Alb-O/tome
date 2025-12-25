@@ -1,7 +1,7 @@
 use futures::future::LocalBoxFuture;
+use tome_manifest::{CommandContext, CommandError, CommandOutcome};
 
 use crate::command;
-use tome_manifest::{CommandContext, CommandError, CommandOutcome};
 
 command!(edit, { aliases: &["e"], description: "Edit a file" }, handler: cmd_edit);
 
@@ -12,7 +12,7 @@ fn cmd_edit<'a>(
 		if ctx.args.is_empty() {
 			return Err(CommandError::MissingArgument("filename"));
 		}
-		ctx.message(&format!("edit {} - not yet implemented", ctx.args[0]));
+		ctx.warning(&format!("edit {} - not yet implemented", ctx.args[0]));
 		Ok(CommandOutcome::Ok)
 	})
 }

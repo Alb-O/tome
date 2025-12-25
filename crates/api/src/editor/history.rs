@@ -41,7 +41,7 @@ impl Editor {
 			self.selection = entry.selection;
 			self.show_message("Undo");
 		} else {
-			self.show_message("Nothing to undo");
+			self.show_warning("Nothing to undo");
 		}
 	}
 
@@ -57,7 +57,7 @@ impl Editor {
 			self.selection = entry.selection;
 			self.show_message("Redo");
 		} else {
-			self.show_message("Nothing to redo");
+			self.show_warning("Nothing to redo");
 		}
 	}
 }

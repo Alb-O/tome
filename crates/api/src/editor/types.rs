@@ -4,6 +4,7 @@ use tome_manifest::CompletionItem;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MessageKind {
 	Info,
+	Warning,
 	Error,
 }
 

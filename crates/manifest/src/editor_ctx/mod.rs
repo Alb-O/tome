@@ -6,10 +6,10 @@ mod handlers;
 pub use capabilities::*;
 pub use handlers::*;
 use ropey::RopeSlice;
-
-use crate::{Capability, CommandError, Mode};
 use tome_base::range::CharIdx;
 use tome_base::selection::Selection;
+
+use crate::{Capability, CommandError, Mode};
 
 /// Context passed to action result handlers.
 pub struct EditorContext<'a> {
@@ -48,6 +48,10 @@ impl<'a> EditorContext<'a> {
 
 	pub fn message(&mut self, msg: &str) {
 		self.inner.show_message(msg);
+	}
+
+	pub fn warning(&mut self, msg: &str) {
+		self.inner.show_warning(msg);
 	}
 
 	pub fn error(&mut self, msg: &str) {
@@ -92,9 +96,7 @@ impl<'a> EditorContext<'a> {
 		self.inner.selection_ops()
 	}
 
-	pub fn require_selection_ops(
-		&mut self,
-	) -> Result<&mut dyn SelectionOpsAccess, CommandError> {
+	pub fn require_selection_ops(&mut self) -> Result<&mut dyn SelectionOpsAccess, CommandError> {
 		self.inner
 			.selection_ops()
 			.ok_or(CommandError::MissingCapability(Capability::SelectionOps))
@@ -115,10 +117,7 @@ impl<'a> EditorContext<'a> {
 		}
 	}
 
-	pub fn check_all_capabilities(
-		&mut self,
-		caps: &[Capability],
-	) -> Result<(), CommandError> {
+	pub fn check_all_capabilities(&mut self, caps: &[Capability]) -> Result<(), CommandError> {
 		for &cap in caps {
 			if !self.check_capability(cap) {
 				return Err(CommandError::MissingCapability(cap));

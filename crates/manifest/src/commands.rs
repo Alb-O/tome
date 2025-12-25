@@ -33,6 +33,9 @@ impl<'a> CommandContext<'a> {
 	pub fn message(&mut self, msg: &str) {
 		self.editor.show_message(msg);
 	}
+	pub fn warning(&mut self, msg: &str) {
+		self.editor.show_warning(msg);
+	}
 	pub fn error(&mut self, msg: &str) {
 		self.editor.show_error(msg);
 	}

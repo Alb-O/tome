@@ -36,7 +36,8 @@ async fn main() -> anyhow::Result<()> {
 					&& last_text.as_deref() != Some(message.text.as_str())
 				{
 					match message.kind {
-						tome_api::editor::MessageKind::Info => {
+						tome_api::editor::MessageKind::Info
+						| tome_api::editor::MessageKind::Warning => {
 							eprintln!("{}", message.text);
 							if message.text.starts_with("Failed to start agent:")
 								|| message.text.starts_with("ACP IO error:")

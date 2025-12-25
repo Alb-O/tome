@@ -43,6 +43,34 @@ impl Editor {
 		}
 	}
 
+	pub fn show_warning(&mut self, text: impl Into<String>) {
+		let text = text.into();
+		self.message = Some(Message {
+			text: text.clone(),
+			kind: MessageKind::Warning,
+		});
+
+		let style = ratatui::style::Style::default()
+			.bg(self.theme.colors.popup.bg)
+			.fg(self.theme.colors.status.warning_fg);
+
+		if let Ok(notif) = Notification::builder(text)
+			.level(Level::Warn)
+			.animation(Animation::Fade)
+			.anchor(Anchor::BottomRight)
+			.timing(
+				Timing::Fixed(Duration::from_millis(200)),
+				Timing::Fixed(Duration::from_secs(4)),
+				Timing::Fixed(Duration::from_millis(200)),
+			)
+			.max_size(SizeConstraint::Absolute(40), SizeConstraint::Absolute(5))
+			.style(style)
+			.build()
+		{
+			let _ = self.notifications.add(notif);
+		}
+	}
+
 	pub fn show_error(&mut self, text: impl Into<String>) {
 		let text = text.into();
 		self.message = Some(Message {

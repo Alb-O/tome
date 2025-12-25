@@ -293,7 +293,7 @@ fn handle_acp_event(editor: &mut tome_api::editor::Editor, event: crate::acp::Ac
 		AcpEvent::RequestPermission { id, prompt, .. } => {
 			// For now, show a message and auto-allow
 			// TODO: implement proper permission UI
-			editor.show_message(format!("ACP permission request: {}", prompt));
+			editor.show_warning(format!("ACP permission request: {}", prompt));
 			let acp = editor
 				.extensions
 				.get::<AcpManager>()

@@ -153,7 +153,7 @@ impl Editor {
 						self.show_message(format!("Found: {}", pattern));
 					}
 					Ok(None) => {
-						self.show_message(format!("Pattern not found: {}", pattern));
+						self.show_warning(format!("Pattern not found: {}", pattern));
 					}
 					Err(e) => {
 						self.show_error(format!("Regex error: {}", e));

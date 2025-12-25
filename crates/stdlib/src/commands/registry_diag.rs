@@ -1,8 +1,8 @@
 use futures::future::LocalBoxFuture;
-
-use crate::command;
 use tome_manifest::index::diagnostics;
 use tome_manifest::{CommandContext, CommandError, CommandOutcome};
+
+use crate::command;
 
 command!(registry_diag, { aliases: &["registry.diag"], description: "Show registry system diagnostics" }, handler: cmd_registry_diag);
 command!(registry_doctor, { aliases: &["registry.doctor"], description: "Check for registry collisions and suggest fixes" }, handler: cmd_registry_doctor);
@@ -32,7 +32,8 @@ fn cmd_registry_diag<'a>(
 		));
 
 		let diag = diagnostics();
-		if !diag.collisions.is_empty() {
+		let has_collisions = !diag.collisions.is_empty();
+		if has_collisions {
 			out.push(format!("\nTotal Collisions: {}", diag.collisions.len()));
 			for c in &diag.collisions {
 				out.push(format!(
@@ -51,7 +52,11 @@ fn cmd_registry_diag<'a>(
 			out.push("\nNo collisions detected.".to_string());
 		}
 
-		ctx.message(&out.join("\n"));
+		if has_collisions {
+			ctx.warning(&out.join("\n"));
+		} else {
+			ctx.message(&out.join("\n"));
+		}
 		Ok(CommandOutcome::Ok)
 	})
 }
@@ -104,7 +109,7 @@ fn cmd_registry_doctor<'a>(
 			}
 		}
 
-		ctx.message(&out.join("\n"));
+		ctx.warning(&out.join("\n"));
 		Ok(CommandOutcome::Ok)
 	})
 }
