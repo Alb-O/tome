@@ -1,7 +1,5 @@
-use std::time::Duration;
-
+use ratatui::style::Style;
 use tome_manifest::completion::{CommandSource, CompletionContext, CompletionSource};
-use tome_stdlib::notifications::{Anchor, Animation, Level, Notification, SizeConstraint, Timing};
 
 use crate::editor::Editor;
 use crate::editor::types::{Message, MessageKind};
@@ -16,116 +14,69 @@ impl Editor {
 	}
 
 	pub fn show_message(&mut self, text: impl Into<String>) {
-		let text = text.into();
-		self.message = Some(Message {
-			text: text.clone(),
-			kind: MessageKind::Info,
-		});
-
-		let style = ratatui::style::Style::default()
-			.bg(self.theme.colors.popup.bg)
-			.fg(self.theme.colors.popup.fg);
-
-		if let Ok(notif) = Notification::builder(text)
-			.level(Level::Info)
-			.animation(Animation::Fade)
-			.anchor(Anchor::BottomRight)
-			.timing(
-				Timing::Fixed(Duration::from_millis(200)),
-				Timing::Fixed(Duration::from_secs(3)),
-				Timing::Fixed(Duration::from_millis(200)),
-			)
-			.max_size(SizeConstraint::Absolute(40), SizeConstraint::Absolute(5))
-			.style(style)
-			.build()
-		{
-			let _ = self.notifications.add(notif);
-		}
+		self.notify("info", text);
 	}
 
 	pub fn show_warning(&mut self, text: impl Into<String>) {
-		let text = text.into();
-		self.message = Some(Message {
-			text: text.clone(),
-			kind: MessageKind::Warning,
-		});
-
-		let style = ratatui::style::Style::default()
-			.bg(self.theme.colors.popup.bg)
-			.fg(self.theme.colors.status.warning_fg);
-
-		if let Ok(notif) = Notification::builder(text)
-			.level(Level::Warn)
-			.animation(Animation::Fade)
-			.anchor(Anchor::BottomRight)
-			.timing(
-				Timing::Fixed(Duration::from_millis(200)),
-				Timing::Fixed(Duration::from_secs(4)),
-				Timing::Fixed(Duration::from_millis(200)),
-			)
-			.max_size(SizeConstraint::Absolute(40), SizeConstraint::Absolute(5))
-			.style(style)
-			.build()
-		{
-			let _ = self.notifications.add(notif);
-		}
+		self.notify("warn", text);
 	}
 
 	pub fn show_error(&mut self, text: impl Into<String>) {
-		let text = text.into();
-		self.message = Some(Message {
-			text: text.clone(),
-			kind: MessageKind::Error,
-		});
-
-		let style = ratatui::style::Style::default()
-			.bg(self.theme.colors.popup.bg)
-			.fg(self.theme.colors.status.error_fg);
-
-		if let Ok(notif) = Notification::builder(text)
-			.level(Level::Error)
-			.animation(Animation::Fade)
-			.anchor(Anchor::BottomRight)
-			.timing(
-				Timing::Fixed(Duration::from_millis(200)),
-				Timing::Fixed(Duration::from_secs(5)),
-				Timing::Fixed(Duration::from_millis(200)),
-			)
-			.max_size(SizeConstraint::Absolute(40), SizeConstraint::Absolute(5))
-			.style(style)
-			.build()
-		{
-			let _ = self.notifications.add(notif);
-		}
+		self.notify("error", text);
 	}
 
 	pub fn notify(&mut self, type_name: &str, text: impl Into<String>) {
-		use tome_stdlib::notifications::find_notification_type;
+		use tome_stdlib::notifications::{
+			Level as NotifLevel, NotificationBuilder, find_notification_type,
+		};
 		let text = text.into();
+
+		// Update legacy message field for CLI and status line
 		let type_def = find_notification_type(type_name);
+		let kind = match type_def.map(|t| t.level).unwrap_or(NotifLevel::Info) {
+			NotifLevel::Error => MessageKind::Error,
+			NotifLevel::Warn => MessageKind::Warning,
+			_ => MessageKind::Info,
+		};
+		self.message = Some(Message {
+			text: text.clone(),
+			kind,
+		});
 
-		let level = type_def.map(|t| t.level).unwrap_or(Level::Info);
-		let auto_dismiss = type_def.and_then(|t| t.auto_dismiss).unwrap_or_default();
+		let builder = NotificationBuilder::from_registry(type_name, text);
 
-		let mut builder = Notification::builder(text)
-			.level(level)
-			.auto_dismiss(auto_dismiss)
-			.animation(Animation::Fade)
-			.anchor(Anchor::BottomRight)
-			.timing(
-				Timing::Fixed(Duration::from_millis(200)),
-				Timing::Auto, // uses auto_dismiss for dwell
-				Timing::Fixed(Duration::from_millis(200)),
-			)
-			.max_size(SizeConstraint::Absolute(40), SizeConstraint::Absolute(5));
+		// Resolve semantic style from theme
+		let style =
+			if let Some(t) = type_def {
+				use tome_manifest::SemanticStyle;
+				match t.semantic_style {
+					SemanticStyle::Info => Style::default().bg(self.theme.colors.popup.bg).fg(self
+						.theme
+						.colors
+						.popup
+						.fg),
+					SemanticStyle::Warning => Style::default()
+						.bg(self.theme.colors.popup.bg)
+						.fg(self.theme.colors.status.warning_fg),
+					SemanticStyle::Error => Style::default()
+						.bg(self.theme.colors.popup.bg)
+						.fg(self.theme.colors.status.error_fg),
+					SemanticStyle::Success => Style::default()
+						.bg(self.theme.colors.popup.bg)
+						.fg(self.theme.colors.status.success_fg),
+					_ => Style::default().bg(self.theme.colors.popup.bg).fg(self
+						.theme
+						.colors
+						.popup
+						.fg),
+				}
+			} else {
+				Style::default()
+					.bg(self.theme.colors.popup.bg)
+					.fg(self.theme.colors.popup.fg)
+			};
 
-		if let Some(t) = type_def
-			&& let Some(style) = t.style
-		{
-			builder = builder.style(style);
-		}
-
-		if let Ok(notif) = builder.build() {
+		if let Ok(notif) = builder.style(style).build() {
 			let _ = self.notifications.add(notif);
 		}
 	}

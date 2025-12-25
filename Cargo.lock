@@ -2445,6 +2445,7 @@ dependencies = [
  "thiserror 2.0.17",
  "tome-base",
  "tome-input",
+ "tome-macro",
  "tome-manifest",
  "unicode-segmentation",
  "unicode-width 0.2.0",

@@ -1,6 +1,7 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{FnArg, ItemTrait, ReturnType, TraitItem, parse_macro_input};
+use syn::parse::{Parse, ParseStream};
+use syn::{FnArg, ItemTrait, ReturnType, Token, TraitItem, parse_macro_input};
 
 #[proc_macro_attribute]
 pub fn tome_api(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -10,90 +11,88 @@ pub fn tome_api(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 	// Parse context type from attribute (e.g. #[tome_api(ExtensionHostContext)])
 	let context_type = if attr.is_empty() {
-		// Default or error? We need the context type to be concrete.
-		// Let's assume the user MUST provide it if they want host functions.
 		None
 	} else {
 		Some(parse_macro_input!(attr as syn::Type))
 	};
 
-	// 1. Generate the Guest implementation (bindings)
-
 	let guest_methods = trait_items.iter().filter_map(|item| {
-        if let TraitItem::Fn(method) = item {
-            let sig = &method.sig;
-            let name = &sig.ident;
+		if let TraitItem::Fn(method) = item {
+			let sig = &method.sig;
+			let name = &sig.ident;
 
-            let inputs = &sig.inputs;
-            let args: Vec<_> = inputs.iter().skip(1).filter_map(|arg| {
-                if let FnArg::Typed(pat) = arg {
-                    Some((&pat.pat, &pat.ty))
-                } else {
-                    None
-                }
-            }).collect();
+			let inputs = &sig.inputs;
+			let args: Vec<_> = inputs
+				.iter()
+				.skip(1)
+				.filter_map(|arg| {
+					if let FnArg::Typed(pat) = arg {
+						Some((&pat.pat, &pat.ty))
+					} else {
+						None
+					}
+				})
+				.collect();
 
-            let arg_names: Vec<_> = args.iter().map(|(n, _)| n).collect();
-            let arg_types: Vec<_> = args.iter().map(|(_, t)| t).collect();
+			let arg_names: Vec<_> = args.iter().map(|(n, _)| n).collect();
+			let arg_types: Vec<_> = args.iter().map(|(_, t)| t).collect();
 
-            let host_fn_name = format_ident!("{}", name);
+			let host_fn_name = format_ident!("{}", name);
 
-            // Determine return type logic
-            let return_type = match &sig.output {
-                ReturnType::Default => quote! { () },
-                ReturnType::Type(_, ty) => quote! { #ty },
-            };
+			let return_type = match &sig.output {
+				ReturnType::Default => quote! { () },
+				ReturnType::Type(_, ty) => quote! { #ty },
+			};
 
-            let has_args = !args.is_empty();
-            let struct_def = if has_args {
-                quote! {
-                    #[derive(serde::Serialize)]
-                    struct Input<'a> {
-                        #(#arg_names: &'a #arg_types),*
-                    }
-                }
-            } else {
-                quote! {
-                    #[derive(serde::Serialize)]
-                    struct Input {}
-                }
-            };
+			let has_args = !args.is_empty();
+			let struct_def = if has_args {
+				quote! {
+					#[derive(serde::Serialize)]
+					struct Input<'a> {
+						#(#arg_names: &'a #arg_types),*
+					}
+				}
+			} else {
+				quote! {
+					#[derive(serde::Serialize)]
+					struct Input {}
+				}
+			};
 
-            let struct_init = if has_args {
-                quote! {
-                    let input = Input { #(#arg_names: &#arg_names),* };
-                }
-            } else {
-                quote! {
-                    let input = Input {};
-                }
-            };
+			let struct_init = if has_args {
+				quote! {
+					let input = Input { #(#arg_names: &#arg_names),* };
+				}
+			} else {
+				quote! {
+					let input = Input {};
+				}
+			};
 
-            Some(quote! {
-                pub fn #name(#(#arg_names: #arg_types),*) -> #return_type {
-                    #[link(wasm_import_module = "host")]
-                    extern "C" {
-                        fn #host_fn_name(ptr: u64) -> u64;
-                    }
+			Some(quote! {
+				pub fn #name(#(#arg_names: #arg_types),*) -> #return_type {
+					#[link(wasm_import_module = "host")]
+					extern "C" {
+						fn #host_fn_name(ptr: u64) -> u64;
+					}
 
-                    #struct_def
+					#struct_def
+					#struct_init
 
-                    #struct_init
+					let input_json = serde_json::to_vec(&input).expect("Failed to serialize input");
+					let input_mem = extism_pdk::Memory::from_bytes(input_json).expect("Failed to allocate memory");
 
-                    let input_json = serde_json::to_vec(&input).expect("Failed to serialize input");
-                    let input_mem = extism_pdk::Memory::from_bytes(input_json).expect("Failed to allocate memory");
+					let offset = unsafe { #host_fn_name(input_mem.offset()) };
+					let output_mem = extism_pdk::Memory::find(offset).expect("Failed to find output memory");
 
-                    let offset = unsafe { #host_fn_name(input_mem.offset()) };
-                    let output_mem = extism_pdk::Memory::find(offset).expect("Failed to find output memory");
-
-                    let output: #return_type = serde_json::from_slice(&output_mem.to_vec()).expect("Failed to deserialize output");
-                    output
-                }
-            })
-        } else {
-            None
-        }
-    });
+					let output: #return_type = serde_json::from_slice(&output_mem.to_vec()).expect("Failed to deserialize output");
+					output
+				}
+			})
+		} else {
+			None
+		}
+	});
 
 	let host_code = if let Some(ctx_type) = context_type {
 		let host_macro_items: Vec<_> = trait_items
@@ -220,4 +219,106 @@ pub fn tome_api(attr: TokenStream, item: TokenStream) -> TokenStream {
 		#host_code
 	}
 	.into()
+}
+
+struct NotificationInput {
+	static_name: syn::Ident,
+	id: syn::LitStr,
+	fields: Vec<(syn::Ident, syn::Expr)>,
+}
+
+impl Parse for NotificationInput {
+	fn parse(input: ParseStream) -> syn::Result<Self> {
+		let static_name: syn::Ident = input.parse()?;
+		input.parse::<Token![,]>()?;
+		let id: syn::LitStr = input.parse()?;
+
+		let mut fields = Vec::new();
+		while !input.is_empty() {
+			if input.peek(Token![,]) {
+				input.parse::<Token![,]>()?;
+			}
+			if input.is_empty() {
+				break;
+			}
+			let name: syn::Ident = input.parse()?;
+			input.parse::<Token![:]>()?;
+			let val: syn::Expr = input.parse()?;
+			fields.push((name, val));
+		}
+
+		Ok(NotificationInput {
+			static_name,
+			id,
+			fields,
+		})
+	}
+}
+
+#[proc_macro]
+pub fn register_notification(input: TokenStream) -> TokenStream {
+	let NotificationInput {
+		static_name,
+		id,
+		fields,
+	} = parse_macro_input!(input as NotificationInput);
+
+	let mut level = quote! { tome_manifest::notifications::Level::Info };
+	let mut style = quote! { tome_manifest::SemanticStyle::Info };
+	let mut dismiss = quote! { tome_manifest::notifications::AutoDismiss::default() };
+	let mut icon = quote! { None };
+	let mut animation = quote! { tome_manifest::notifications::Animation::Fade };
+	let mut timing = quote! {
+		(
+			tome_manifest::notifications::Timing::Fixed(::std::time::Duration::from_millis(200)),
+			tome_manifest::notifications::Timing::Auto,
+			tome_manifest::notifications::Timing::Fixed(::std::time::Duration::from_millis(200)),
+		)
+	};
+
+	for (name, val) in fields {
+		match name.to_string().as_str() {
+			"level" => level = quote! { #val },
+			"style" => style = quote! { #val },
+			"dismiss" => dismiss = quote! { #val },
+			"icon" => icon = quote! { Some(#val) },
+			"animation" => animation = quote! { #val },
+			"timing" => timing = quote! { #val },
+			_ => {
+				return syn::Error::new(name.span(), "Unknown notification field")
+					.to_compile_error()
+					.into();
+			}
+		}
+	}
+
+	let helper_name = format_ident!("{}", id.value().replace(".", "_"));
+	let trait_name = format_ident!("Notify{}Ext", static_name);
+
+	let expanded = quote! {
+		#[::linkme::distributed_slice(tome_manifest::notifications::NOTIFICATION_TYPES)]
+		pub static #static_name: tome_manifest::notifications::NotificationTypeDef =
+			tome_manifest::notifications::NotificationTypeDef {
+				id: #id,
+				name: #id,
+				level: #level,
+				icon: #icon,
+				semantic_style: #style,
+				auto_dismiss: #dismiss,
+				animation: #animation,
+				timing: #timing,
+				priority: 0,
+				source: tome_manifest::RegistrySource::Crate(env!("CARGO_PKG_NAME")),
+			};
+
+		pub trait #trait_name: tome_manifest::notifications::NotificationExt {
+			fn #helper_name(&mut self, msg: &str) {
+				self.notify(#id, msg);
+			}
+		}
+
+		impl<T: tome_manifest::notifications::NotificationExt + ?Sized> #trait_name for T {}
+	};
+
+	expanded.into()
 }

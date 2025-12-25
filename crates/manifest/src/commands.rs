@@ -31,13 +31,16 @@ impl<'a> CommandContext<'a> {
 		self.editor.text()
 	}
 	pub fn message(&mut self, msg: &str) {
-		self.editor.show_message(msg);
+		self.editor.notify("info", msg);
 	}
 	pub fn warning(&mut self, msg: &str) {
-		self.editor.show_warning(msg);
+		self.editor.notify("warn", msg);
 	}
 	pub fn error(&mut self, msg: &str) {
-		self.editor.show_error(msg);
+		self.editor.notify("error", msg);
+	}
+	pub fn notify(&mut self, type_id: &str, msg: &str) {
+		self.editor.notify(type_id, msg);
 	}
 	pub fn require_user_data<T: std::any::Any + Sync>(&self) -> Result<&'static T, CommandError> {
 		self.user_data

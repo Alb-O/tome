@@ -46,6 +46,7 @@ tome-api = { path = "crates/api" }
 tome-base = { path = "crates/base" }
 tome-extensions = { path = "crates/extensions" }
 tome-input = { path = "crates/input" }
+tome-macro = { path = "crates/macro" }
 tome-manifest = { path = "crates/manifest" }
 tome-stdlib = { path = "crates/stdlib" }
 tome-theme = { path = "crates/theme" }

@@ -38,6 +38,7 @@ termina = { workspace = true, optional = true }
 thiserror.workspace = true
 tome-base.workspace = true
 tome-input.workspace = true
+tome-macro.workspace = true
 tome-manifest.workspace = true
 unicode-segmentation = { workspace = true, optional = true }
 unicode-width = { workspace = true, optional = true }

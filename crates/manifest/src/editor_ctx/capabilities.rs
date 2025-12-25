@@ -33,10 +33,10 @@ pub trait ModeAccess {
 
 /// Message display and notifications.
 pub trait MessageAccess {
-	fn show_message(&mut self, msg: &str);
-	fn show_warning(&mut self, msg: &str);
-	fn show_error(&mut self, msg: &str);
-	fn notify(&mut self, type_name: &str, msg: &str);
+	/// Generic notification entry point.
+	fn notify(&mut self, type_id: &str, msg: &str);
+
+	/// Clear the current message.
 	fn clear_message(&mut self);
 }
 
