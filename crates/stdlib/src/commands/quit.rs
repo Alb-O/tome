@@ -1,7 +1,7 @@
 use futures::future::LocalBoxFuture;
-
-use crate::command;
 use tome_manifest::{CommandContext, CommandError, CommandOutcome};
+
+use crate::{NotifyERRORExt, command};
 
 command!(quit, { aliases: &["q"], description: "Quit the editor" }, handler: cmd_quit);
 

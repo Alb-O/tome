@@ -30,7 +30,7 @@ impl Editor {
 		let cmd = match find_command(name) {
 			Some(cmd) => cmd,
 			None => {
-				self.show_error(format!("Unknown command: {}", name));
+				self.notify("error", format!("Unknown command: {}", name));
 				return false;
 			}
 		};
@@ -40,7 +40,7 @@ impl Editor {
 			use tome_manifest::EditorContext;
 			let mut e_ctx = EditorContext::new(self);
 			if let Err(e) = e_ctx.check_all_capabilities(cmd.required_caps) {
-				self.show_error(e.to_string());
+				self.notify("error", e.to_string());
 				return false;
 			}
 		}
@@ -62,7 +62,7 @@ impl Editor {
 			Ok(CommandOutcome::Quit) => true,
 			Ok(CommandOutcome::ForceQuit) => true,
 			Err(e) => {
-				self.show_error(e.to_string());
+				self.notify("error", e.to_string());
 				false
 			}
 		}
@@ -78,7 +78,7 @@ impl Editor {
 		let action = match find_action(name) {
 			Some(a) => a,
 			None => {
-				self.show_error(format!("Unknown action: {}", name));
+				self.notify("error", format!("Unknown action: {}", name));
 				return false;
 			}
 		};
@@ -88,7 +88,7 @@ impl Editor {
 			use tome_manifest::EditorContext;
 			let mut e_ctx = EditorContext::new(self);
 			if let Err(e) = e_ctx.check_all_capabilities(action.required_caps) {
-				self.show_error(e.to_string());
+				self.notify("error", e.to_string());
 				return false;
 			}
 		}
@@ -118,7 +118,7 @@ impl Editor {
 		let action = match find_action(name) {
 			Some(a) => a,
 			None => {
-				self.show_error(format!("Unknown action: {}", name));
+				self.notify("error", format!("Unknown action: {}", name));
 				return false;
 			}
 		};
@@ -128,7 +128,7 @@ impl Editor {
 			use tome_manifest::EditorContext;
 			let mut e_ctx = EditorContext::new(self);
 			if let Err(e) = e_ctx.check_all_capabilities(action.required_caps) {
-				self.show_error(e.to_string());
+				self.notify("error", e.to_string());
 				return false;
 			}
 		}

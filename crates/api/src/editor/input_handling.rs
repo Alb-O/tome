@@ -85,7 +85,7 @@ impl Editor {
 				if let Some(action) = find_action_by_id(id) {
 					self.execute_action(action.name, count, extend, register)
 				} else {
-					self.show_error(format!("Unknown action ID: {}", id));
+					self.notify("error", format!("Unknown action ID: {}", id));
 					false
 				}
 			}
@@ -99,7 +99,7 @@ impl Editor {
 				if let Some(action) = find_action_by_id(id) {
 					self.execute_action_with_char(action.name, count, extend, register, char_arg)
 				} else {
-					self.show_error(format!("Unknown action ID: {}", id));
+					self.notify("error", format!("Unknown action ID: {}", id));
 					false
 				}
 			}
@@ -150,13 +150,13 @@ impl Editor {
 					Ok(Some(range)) => {
 						self.cursor = range.head;
 						self.selection = Selection::single(range.min(), range.max());
-						self.show_message(format!("Found: {}", pattern));
+						self.notify("info", format!("Found: {}", pattern));
 					}
 					Ok(None) => {
-						self.show_warning(format!("Pattern not found: {}", pattern));
+						self.notify("warn", format!("Pattern not found: {}", pattern));
 					}
 					Err(e) => {
-						self.show_error(format!("Regex error: {}", e));
+						self.notify("error", format!("Regex error: {}", e));
 					}
 				}
 				false
@@ -178,19 +178,31 @@ impl Editor {
 				false
 			}
 			KeyResult::PipeReplace { command } => {
-				self.show_error(format!("Pipe (replace) not yet implemented: {}", command));
+				self.notify(
+					"error",
+					format!("Pipe (replace) not yet implemented: {}", command),
+				);
 				false
 			}
 			KeyResult::PipeIgnore { command } => {
-				self.show_error(format!("Pipe (ignore) not yet implemented: {}", command));
+				self.notify(
+					"error",
+					format!("Pipe (ignore) not yet implemented: {}", command),
+				);
 				false
 			}
 			KeyResult::InsertOutput { command } => {
-				self.show_error(format!("Insert output not yet implemented: {}", command));
+				self.notify(
+					"error",
+					format!("Insert output not yet implemented: {}", command),
+				);
 				false
 			}
 			KeyResult::AppendOutput { command } => {
-				self.show_error(format!("Append output not yet implemented: {}", command));
+				self.notify(
+					"error",
+					format!("Append output not yet implemented: {}", command),
+				);
 				false
 			}
 			KeyResult::Consumed => false,

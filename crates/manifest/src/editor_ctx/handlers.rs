@@ -7,6 +7,7 @@
 use linkme::distributed_slice;
 
 use super::EditorContext;
+use super::capabilities::MessageAccess;
 use crate::actions::ActionResult;
 
 /// Outcome of handling an action result.
@@ -90,10 +91,13 @@ fn run_handlers(
 			HandleOutcome::NotHandled => continue,
 		}
 	}
-	ctx.message(&format!(
-		"Unhandled action result: {:?}",
-		std::mem::discriminant(result)
-	));
+	ctx.notify(
+		"info",
+		&format!(
+			"Unhandled action result: {:?}",
+			std::mem::discriminant(result)
+		),
+	);
 	false
 }
 

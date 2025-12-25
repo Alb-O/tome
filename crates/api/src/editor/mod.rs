@@ -98,7 +98,7 @@ impl tome_manifest::editor_ctx::FileOpsAccess for Editor {
 				.map_err(|e| tome_manifest::CommandError::Io(e.to_string()))?;
 
 			self.modified = false;
-			self.show_message(format!("Saved {}", path_owned.display()));
+			self.notify("info", format!("Saved {}", path_owned.display()));
 
 			emit_hook(&HookContext::BufferWrite { path: &path_owned });
 
@@ -268,7 +268,7 @@ impl Editor {
 		let to = primary.max();
 		if from < to {
 			self.registers.yank = self.doc.slice(from..to).to_string();
-			self.show_message(format!("Yanked {} chars", to - from));
+			self.notify("info", format!("Yanked {} chars", to - from));
 		}
 	}
 

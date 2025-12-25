@@ -13,18 +13,6 @@ impl Editor {
 		self.needs_redraw = true;
 	}
 
-	pub fn show_message(&mut self, text: impl Into<String>) {
-		self.notify("info", text);
-	}
-
-	pub fn show_warning(&mut self, text: impl Into<String>) {
-		self.notify("warn", text);
-	}
-
-	pub fn show_error(&mut self, text: impl Into<String>) {
-		self.notify("error", text);
-	}
-
 	pub fn notify(&mut self, type_name: &str, text: impl Into<String>) {
 		use tome_stdlib::notifications::{
 			Level as NotifLevel, NotificationBuilder, find_notification_type,

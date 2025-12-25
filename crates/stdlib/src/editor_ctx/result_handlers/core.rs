@@ -4,6 +4,8 @@ use tome_manifest::actions::ActionResult;
 use tome_manifest::editor_ctx::HandleOutcome;
 use tome_manifest::{Mode, result_handler};
 
+use crate::{NotifyERRORExt, NotifyINFOExt};
+
 result_handler!(RESULT_OK_HANDLERS, HANDLE_OK, "ok", |_, _, _| {
 	HandleOutcome::Handled
 });
@@ -64,7 +66,7 @@ result_handler!(
 	"pending",
 	|r, ctx, _| {
 		if let ActionResult::Pending(pending) = r {
-			ctx.message(&pending.prompt);
+			ctx.info(&pending.prompt);
 			ctx.set_mode(Mode::PendingAction(pending.kind));
 		}
 		HandleOutcome::Handled

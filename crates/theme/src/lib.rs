@@ -171,6 +171,7 @@ pub fn suggest_theme(name: &str) -> Option<&'static str> {
 }
 
 use futures::future::LocalBoxFuture;
+use tome_manifest::editor_ctx::MessageAccess;
 use tome_manifest::{
 	COMMANDS, CommandContext, CommandDef, CommandError, CommandOutcome, OPTIONS, OptionDef,
 	OptionScope, OptionType, OptionValue,
@@ -198,10 +199,10 @@ fn cmd_theme<'a>(
 			.first()
 			.ok_or(CommandError::MissingArgument("theme name"))?;
 		// TODO: Implement theme access trait in EditorOps
-		ctx.message(&format!(
-			"Theme command not yet implemented: {}",
-			theme_name
-		));
+		ctx.notify(
+			"info",
+			&format!("Theme command not yet implemented: {}", theme_name),
+		);
 		Ok(CommandOutcome::Ok)
 	})
 }

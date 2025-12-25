@@ -105,18 +105,3 @@ pub static NOTIFICATION_TYPES: [NotificationTypeDef];
 pub fn find_notification_type(name: &str) -> Option<&'static NotificationTypeDef> {
 	NOTIFICATION_TYPES.iter().find(|t| t.name == name)
 }
-
-/// Extension trait for convenient notification emitting.
-pub trait NotificationExt: crate::editor_ctx::MessageAccess {
-	fn info(&mut self, msg: &str) {
-		self.notify("info", msg);
-	}
-	fn warn(&mut self, msg: &str) {
-		self.notify("warn", msg);
-	}
-	fn error(&mut self, msg: &str) {
-		self.notify("error", msg);
-	}
-}
-
-impl<T: crate::editor_ctx::MessageAccess + ?Sized> NotificationExt for T {}
