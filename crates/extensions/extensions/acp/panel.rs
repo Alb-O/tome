@@ -141,13 +141,13 @@ impl Panel for AcpChatPanel {
 		theme: &Theme,
 	) -> Option<CursorRequest> {
 		let bg = Style::default()
-			.bg(theme.colors.popup.bg)
-			.fg(theme.colors.popup.fg);
+			.bg(theme.colors.popup.bg.into())
+			.fg(theme.colors.popup.fg.into());
 		let user_style = Style::default()
-			.fg(theme.colors.ui.fg)
+			.fg(theme.colors.ui.fg.into())
 			.add_modifier(Modifier::BOLD);
-		let assistant_style = Style::default().fg(theme.colors.ui.fg);
-		let input_style = Style::default().fg(theme.colors.ui.command_input_fg);
+		let assistant_style = Style::default().fg(theme.colors.ui.fg.into());
+		let input_style = Style::default().fg(theme.colors.ui.command_input_fg.into());
 
 		frame.render_widget(Block::default().style(bg), area);
 

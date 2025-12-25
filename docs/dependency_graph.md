@@ -95,15 +95,23 @@ This is a suggested migration target for existing code:
 
 ## Update plan (major overhaul)
 
-Phase 0 - Document and enforce boundaries
+Phase 0 - Document and enforce boundaries [DONE]
 
 - Add this document and update extension_model.md to match the new layering rules.
 - Add a simple crate dependency check (manual or via cargo tree notes).
 
-Phase 1 - Extract core + manifest
+Phase 1 - Extract core + manifest [DONE]
 
 - Move all UI and runtime types out of tome-manifest into tome-theme or tome-ui.
 - Rename or split tome-base into tome-core with no terminal deps.
+
+Completed:
+
+- Created `tome_base::color` module with abstract Color, Modifier, Style types
+- Removed ratatui from tome-manifest (now uses tome_base::color)
+- Removed ratatui from tome-theme (re-exports tome_base::color)
+- Added From trait impls for ratatui conversion (gated behind `ratatui` feature)
+- Updated tome-api/tome-extensions to use `.into()` at UI boundary
 
 Phase 2 - Split tome-api
 
@@ -127,6 +135,37 @@ Phase 5 - Build time optimizations
 - Make host features opt-in; keep default features minimal.
 - Avoid building ratatui in non-UI workflows.
 
+## Technical notes
+
+### Abstract color types (Phase 1)
+
+The `tome_base::color` module provides UI-agnostic types:
+
+```rust
+// crates/base/src/color.rs
+pub enum Color { Reset, Black, Red, ..., Rgb(u8,u8,u8), Indexed(u8) }
+pub struct Modifier(u16);  // bitflags: BOLD, ITALIC, UNDERLINED, etc.
+pub struct Style { fg: Option<Color>, bg: Option<Color>, modifiers: Modifier }
+```
+
+Conversion to ratatui is via `From` traits, gated behind the `ratatui` feature (default on):
+
+```rust
+// In crates that use ratatui
+let ratatui_color: ratatui::style::Color = theme.colors.ui.bg.into();
+let ratatui_style: ratatui::style::Style = abstract_style.into();
+```
+
+Pattern: Define abstract types in core, convert at UI boundary with `.into()`.
+
+### Current dependency violations (remaining)
+
+| Crate       | Issue                       | Fix                                     |
+| ----------- | --------------------------- | --------------------------------------- |
+| tome-stdlib | Has ratatui, crossterm deps | Move notification rendering to UI crate |
+| tome-api    | Monolith with UI+runtime    | Split per Phase 2                       |
+| tome-base   | Has termina (for Key)       | Acceptable for now, or abstract later   |
+
 ## Risks and tradeoffs
 
 - This is intentionally unstable. Expect breaking APIs and moving types.
@@ -138,3 +177,17 @@ Phase 5 - Build time optimizations
 - Do we want an explicit "tome-engine" name instead of tome-app?
 - How strict should feature gating be for host extensions?
 - Should theme live under manifest (pure data) or render (computed styles)?
+
+## Current state (post Phase 1)
+
+```
+tome-manifest ─┬─> tome-base (no ratatui)
+               └─> futures, linkme, ropey, serde, etc.
+
+tome-theme ────┬─> tome-base (no ratatui)
+               └─> tome-manifest
+
+tome-api ──────┬─> ratatui (UI boundary, uses .into())
+               ├─> tome-theme, tome-manifest, tome-stdlib
+               └─> tokio, agentfs, etc.
+```

@@ -1,9 +1,8 @@
 use linkme::distributed_slice;
-use ratatui::style::{Color, Modifier};
 
 use crate::{
-	NotificationColors, PopupColors, StatusColors, SyntaxStyle, SyntaxStyles, THEMES, Theme,
-	ThemeColors, UiColors,
+	Color, Modifier, NotificationColors, PopupColors, StatusColors, SyntaxStyle, SyntaxStyles,
+	THEMES, Theme, ThemeColors, UiColors,
 };
 
 #[distributed_slice(THEMES)]

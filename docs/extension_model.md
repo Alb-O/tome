@@ -90,3 +90,31 @@ Rules:
 
 - The current codebase still uses tome-api as a monolith. The target is to split it into tome-render, tome-runtime, tome-app, and tome-extension-api.
 - This document describes the intended end state and should guide refactors and new work.
+
+## 7. Migration Progress
+
+### Phase 1 Complete
+
+Abstract color/style types now live in `tome-base`:
+
+- `tome_base::Color` - UI-agnostic color enum
+- `tome_base::Modifier` - text style modifiers (bold, italic, etc.)
+- `tome_base::Style` - combined fg/bg/modifiers
+
+Crates updated:
+
+- `tome-manifest` - no longer depends on ratatui
+- `tome-theme` - no longer depends on ratatui, re-exports from tome_base
+
+UI boundary pattern:
+
+```rust
+// In tome-api or other UI crates
+Style::default().bg(theme.colors.ui.bg.into())  // .into() converts to ratatui
+```
+
+### Remaining work
+
+- tome-stdlib still has ratatui/crossterm (notification rendering)
+- tome-api needs split into render/runtime/app/extension-api
+- tome-extensions should depend on extension-api, not full app

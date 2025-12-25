@@ -43,7 +43,7 @@ impl Editor {
 
 		frame.render_widget(Clear, area);
 
-		let bg_block = Block::default().style(Style::default().bg(self.theme.colors.ui.bg));
+		let bg_block = Block::default().style(Style::default().bg(self.theme.colors.ui.bg.into()));
 		frame.render_widget(bg_block, area);
 
 		let has_command_line = self.input.command_line().is_some();
@@ -78,12 +78,13 @@ impl Editor {
 
 		if has_command_line {
 			let message_bg =
-				Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
+				Block::default().style(Style::default().bg(self.theme.colors.popup.bg.into()));
 			frame.render_widget(message_bg, chunks[1]);
 			frame.render_widget(self.render_message_line(), chunks[1]);
 		}
 
-		let status_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
+		let status_bg =
+			Block::default().style(Style::default().bg(self.theme.colors.popup.bg.into()));
 		frame.render_widget(status_bg, chunks[2]);
 		frame.render_widget(self.render_status_line(), chunks[2]);
 
@@ -183,11 +184,11 @@ impl Editor {
 					format!("{:>width$} ", "┆", width = gutter_width as usize - 1)
 				};
 				let gutter_style = if is_first_segment {
-					Style::default().fg(self.theme.colors.ui.gutter_fg)
+					Style::default().fg(self.theme.colors.ui.gutter_fg.into())
 				} else {
 					let bg_color = self.theme.colors.ui.bg;
 					let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
-					Style::default().fg(dim_color)
+					Style::default().fg(dim_color.into())
 				};
 
 				let mut spans = vec![Span::styled(line_num_str, gutter_style)];
@@ -262,7 +263,7 @@ impl Editor {
 					let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
 					spans.push(Span::styled(
 						" ".repeat(fill_count),
-						Style::default().fg(dim_color),
+						Style::default().fg(dim_color.into()),
 					));
 				}
 
@@ -306,7 +307,7 @@ impl Editor {
 					current_line_idx + 1,
 					width = gutter_width as usize - 1
 				);
-				let gutter_style = Style::default().fg(self.theme.colors.ui.gutter_fg);
+				let gutter_style = Style::default().fg(self.theme.colors.ui.gutter_fg.into());
 				let mut spans = vec![Span::styled(line_num_str, gutter_style)];
 
 				let is_last_doc_line = current_line_idx + 1 >= total_lines;
@@ -347,7 +348,7 @@ impl Editor {
 			let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
 			output_lines.push(Line::from(vec![Span::styled(
 				line_num_str,
-				Style::default().fg(dim_color),
+				Style::default().fg(dim_color.into()),
 			)]));
 		}
 

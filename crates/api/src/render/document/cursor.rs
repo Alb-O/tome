@@ -28,23 +28,27 @@ impl Editor {
 	/// primary cursors, secondary cursors, selections, and base text.
 	pub fn make_cursor_styles(&self) -> CursorStyles {
 		let primary_cursor_style = Style::default()
-			.bg(self.theme.colors.ui.cursor_bg)
-			.fg(self.theme.colors.ui.cursor_fg)
+			.bg(self.theme.colors.ui.cursor_bg.into())
+			.fg(self.theme.colors.ui.cursor_fg.into())
 			.add_modifier(Modifier::BOLD);
 
 		let secondary_cursor_style = {
 			let bg = blend_colors(self.theme.colors.ui.cursor_bg, self.theme.colors.ui.bg, 0.4);
 			let fg = blend_colors(self.theme.colors.ui.cursor_fg, self.theme.colors.ui.fg, 0.4);
-			Style::default().bg(bg).fg(fg).add_modifier(Modifier::BOLD)
+			Style::default()
+				.bg(bg.into())
+				.fg(fg.into())
+				.add_modifier(Modifier::BOLD)
 		};
 
-		let base_style = Style::default()
-			.fg(self.theme.colors.ui.fg)
-			.bg(self.theme.colors.ui.bg);
+		let base_style =
+			Style::default()
+				.fg(self.theme.colors.ui.fg.into())
+				.bg(self.theme.colors.ui.bg.into());
 
 		let selection_style = Style::default()
-			.bg(self.theme.colors.ui.selection_bg)
-			.fg(self.theme.colors.ui.selection_fg);
+			.bg(self.theme.colors.ui.selection_bg.into())
+			.fg(self.theme.colors.ui.selection_fg.into());
 
 		CursorStyles {
 			primary: primary_cursor_style,

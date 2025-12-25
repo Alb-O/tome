@@ -2381,6 +2381,7 @@ dependencies = [
  "crossterm",
  "linkme",
  "log",
+ "ratatui 0.30.0-hackable",
  "ropey",
  "serde",
  "smallvec",
@@ -2464,7 +2465,6 @@ dependencies = [
  "linkme",
  "log",
  "paste",
- "ratatui 0.30.0-hackable",
  "ropey",
  "serde",
  "strsim",
@@ -2535,7 +2535,6 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "linkme",
- "ratatui 0.30.0-hackable",
  "serde",
  "strsim",
  "tome-base",

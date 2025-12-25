@@ -409,7 +409,7 @@ impl Editor {
 		// Create highlight styles from theme to resolve captures to styles
 		let highlight_styles =
 			tome_language::highlight::HighlightStyles::new(SyntaxStyles::scope_names(), |scope| {
-				self.theme.colors.syntax.resolve(scope)
+				self.theme.colors.syntax.resolve(scope).into()
 			});
 
 		// Get highlighter for visible range

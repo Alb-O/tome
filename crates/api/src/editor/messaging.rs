@@ -38,7 +38,7 @@ impl Editor {
 			.unwrap_or(tome_manifest::SEMANTIC_INFO);
 		let style = self.theme.colors.notification_style(semantic);
 
-		if let Ok(notif) = builder.style(style).build() {
+		if let Ok(notif) = builder.style(style.into()).build() {
 			let _ = self.notifications.add(notif);
 		}
 	}

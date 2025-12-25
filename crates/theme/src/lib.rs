@@ -1,8 +1,9 @@
 use linkme::distributed_slice;
-use ratatui::style::Color;
 
 pub mod themes;
 
+// Re-export abstract color types from tome-base
+pub use tome_base::color::{Color, Modifier};
 pub use tome_manifest::syntax::{SyntaxStyle, SyntaxStyles};
 
 #[non_exhaustive]
@@ -154,12 +155,10 @@ pub static DEFAULT_THEME: Theme = Theme {
 	source: tome_manifest::RegistrySource::Builtin,
 };
 
-use ratatui::style::Style;
-
 impl ThemeColors {
 	/// Resolve notification style for a given semantic identifier.
 	/// Uses notification-specific overrides if set, otherwise inherits from popup/status colors.
-	pub fn notification_style(&self, semantic: &str) -> Style {
+	pub fn notification_style(&self, semantic: &str) -> tome_base::Style {
 		let override_pair = self
 			.notification
 			.overrides
@@ -182,7 +181,7 @@ impl ThemeColors {
 			}
 		});
 
-		Style::default().bg(bg).fg(fg)
+		tome_base::Style::new().bg(bg).fg(fg)
 	}
 
 	/// Resolve notification border color.
@@ -206,20 +205,19 @@ pub fn get_theme(name: &str) -> Option<&'static Theme> {
 		.find(|t| normalize(t.name) == search || t.aliases.iter().any(|a| normalize(a) == search))
 }
 
+/// Blend two colors with the given alpha (0.0 = bg, 1.0 = fg).
+/// Only works with RGB colors; returns fg unchanged for non-RGB.
 pub fn blend_colors(fg: Color, bg: Color, alpha: f32) -> Color {
-	let fg_rgb = match fg {
-		Color::Rgb(r, g, b) => (r, g, b),
-		_ => return fg, // Fallback for non-RGB colors
+	let Color::Rgb(fg_r, fg_g, fg_b) = fg else {
+		return fg;
+	};
+	let Color::Rgb(bg_r, bg_g, bg_b) = bg else {
+		return fg;
 	};
 
-	let bg_rgb = match bg {
-		Color::Rgb(r, g, b) => (r, g, b),
-		_ => return fg, // Fallback if background is unknown/non-RGB
-	};
-
-	let r = (fg_rgb.0 as f32 * alpha + bg_rgb.0 as f32 * (1.0 - alpha)) as u8;
-	let g = (fg_rgb.1 as f32 * alpha + bg_rgb.1 as f32 * (1.0 - alpha)) as u8;
-	let b = (fg_rgb.2 as f32 * alpha + bg_rgb.2 as f32 * (1.0 - alpha)) as u8;
+	let r = (fg_r as f32 * alpha + bg_r as f32 * (1.0 - alpha)) as u8;
+	let g = (fg_g as f32 * alpha + bg_g as f32 * (1.0 - alpha)) as u8;
+	let b = (fg_b as f32 * alpha + bg_b as f32 * (1.0 - alpha)) as u8;
 
 	Color::Rgb(r, g, b)
 }
