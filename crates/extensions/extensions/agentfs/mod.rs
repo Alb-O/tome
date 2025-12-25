@@ -8,11 +8,16 @@ use std::sync::Arc;
 
 use agentfs_sdk::{AgentFS, AgentFSOptions, FileSystem, HostFS};
 use linkme::distributed_slice;
-
 use tome_api::editor::extensions::{EXTENSIONS, ExtensionInitDef};
 
 pub struct AgentFsManager {
 	pub current_agent_id: Option<String>,
+}
+
+impl Default for AgentFsManager {
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl AgentFsManager {

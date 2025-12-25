@@ -1,9 +1,9 @@
 use futures::future::LocalBoxFuture;
-use tome_core::command;
-use tome_core::registry::{CommandContext, CommandError, CommandOutcome};
+use tome_api::editor::Editor;
+use tome_manifest::{CommandContext, CommandError, CommandOutcome};
+use tome_stdlib::command;
 
 use crate::agentfs::AgentFsManager;
-use tome_api::editor::Editor;
 
 command!(agent_connect, {
 	aliases: &["agent.connect", "agent.c"],
@@ -71,6 +71,6 @@ trait CommandContextExt {
 impl<'a> CommandContextExt for CommandContext<'a> {
 	fn require_editor_mut(&mut self) -> &mut Editor {
 		// SAFETY: We know that in tome-term, EditorOps is implemented by Editor
-		unsafe { &mut *(self.editor as *mut dyn tome_core::registry::EditorOps as *mut Editor) }
+		unsafe { &mut *(self.editor as *mut dyn tome_manifest::EditorOps as *mut Editor) }
 	}
 }
