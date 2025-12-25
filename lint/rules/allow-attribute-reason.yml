@@ -1,0 +1,20 @@
+id: allow-attribute-reason
+language: rust
+severity: info
+message: "The 'allow' attribute should include a 'reason' justification."
+note: "Adding a reason helps others understand why a lint is being suppressed, e.g., #[allow(dead_code, reason = \"documented unused API\")]"
+files:
+  - "crates/**/*.rs"
+ignores:
+  - "crates/ratatui/**/*.rs"
+  - "vendor/**/*.rs"
+rule:
+  any:
+    - all:
+        - pattern: "#[allow($$$ARGS)]"
+        - not:
+            regex: "reason\\s*="
+    - all:
+        - pattern: "#![allow($$$ARGS)]"
+        - not:
+            regex: "reason\\s*="
