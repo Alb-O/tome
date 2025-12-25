@@ -297,7 +297,7 @@ mod tests {
 		assert_eq!(edits.len(), 1);
 		assert_eq!(edits[0].start_byte, 5);
 		assert_eq!(edits[0].old_end_byte, 5);
-		assert_eq!(edits[0].new_end_byte, 15); // 5 + " beautiful".len()
+		assert_eq!(edits[0].new_end_byte, 15);
 	}
 
 	#[test]
@@ -325,6 +325,6 @@ mod tests {
 		assert_eq!(edits.len(), 1);
 		assert_eq!(edits[0].start_byte, 6);
 		assert_eq!(edits[0].old_end_byte, 11);
-		assert_eq!(edits[0].new_end_byte, 10); // 6 + "rust".len()
+		assert_eq!(edits[0].new_end_byte, 10);
 	}
 }

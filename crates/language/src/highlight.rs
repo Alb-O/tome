@@ -149,7 +149,9 @@ impl<'a> Iterator for Highlighter<'a> {
 			}
 		}
 
-		// Emit final span if any
+		// After exhausting the inner iterator, we may still have a pending highlight
+		// span that wasn't closed by a HighlightEnd event. Emit it now covering the
+		// remaining byte range up to the document end.
 		if let Some(h) = self.current_highlight.take() {
 			let offset = self.inner.next_event_offset().min(self.end_byte);
 			if self.current_start < offset {
