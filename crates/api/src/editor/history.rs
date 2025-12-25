@@ -39,9 +39,9 @@ impl Editor {
 
 			self.doc = entry.doc;
 			self.selection = entry.selection;
-			self.show_message("Undo");
+			self.notify("info", "Undo");
 		} else {
-			self.show_warning("Nothing to undo");
+			self.notify("warn", "Nothing to undo");
 		}
 	}
 
@@ -55,9 +55,9 @@ impl Editor {
 
 			self.doc = entry.doc;
 			self.selection = entry.selection;
-			self.show_message("Redo");
+			self.notify("info", "Redo");
 		} else {
-			self.show_warning("Nothing to redo");
+			self.notify("warn", "Nothing to redo");
 		}
 	}
 }

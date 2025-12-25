@@ -20,6 +20,10 @@ pub mod statusline;
 // Re-export WordType from movement when host feature is enabled
 #[cfg(feature = "host")]
 pub use movement::WordType;
+// Re-export notification extension traits for convenient use
+pub use notifications::{
+	NotifyDEBUGExt, NotifyERRORExt, NotifyINFOExt, NotifySUCCESSExt, NotifyWARNExt,
+};
 // Re-export types from tome-base for convenience
 pub use tome_base::range::CharIdx;
 pub use tome_base::{

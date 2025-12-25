@@ -19,14 +19,14 @@ impl Editor {
 					}
 				}
 				Ok(None) => {
-					self.show_warning("Pattern not found");
+					self.notify("warn", "Pattern not found");
 				}
 				Err(e) => {
-					self.show_error(format!("Regex error: {}", e));
+					self.notify("error", format!("Regex error: {}", e));
 				}
 			}
 		} else {
-			self.show_warning("No search pattern");
+			self.notify("warn", "No search pattern");
 		}
 		false
 	}
@@ -46,14 +46,14 @@ impl Editor {
 					}
 				}
 				Ok(None) => {
-					self.show_warning("Pattern not found");
+					self.notify("warn", "Pattern not found");
 				}
 				Err(e) => {
-					self.show_error(format!("Regex error: {}", e));
+					self.notify("error", format!("Regex error: {}", e));
 				}
 			}
 		} else {
-			self.show_warning("No search pattern");
+			self.notify("warn", "No search pattern");
 		}
 		false
 	}
@@ -66,20 +66,20 @@ impl Editor {
 			let text: String = self.doc.slice(from..to).chars().collect();
 			let pattern = movement::escape_pattern(&text);
 			self.input.set_last_search(pattern.clone(), false);
-			self.show_message(format!("Search: {}", text));
+			self.notify("info", format!("Search: {}", text));
 			match movement::find_next(self.doc.slice(..), &pattern, to) {
 				Ok(Some(range)) => {
 					self.selection = Selection::single(range.min(), range.max());
 				}
 				Ok(None) => {
-					self.show_warning("No more matches");
+					self.notify("warn", "No more matches");
 				}
 				Err(e) => {
-					self.show_error(format!("Regex error: {}", e));
+					self.notify("error", format!("Regex error: {}", e));
 				}
 			}
 		} else {
-			self.show_warning("No selection");
+			self.notify("warn", "No selection");
 		}
 		false
 	}
@@ -89,7 +89,7 @@ impl Editor {
 		let from = primary.min();
 		let to = primary.max();
 		if from >= to {
-			self.show_warning("No selection to search in");
+			self.notify("warn", "No selection to search in");
 			return false;
 		}
 
@@ -100,13 +100,13 @@ impl Editor {
 					.map(|r| tome_base::range::Range::new(from + r.min(), from + r.max()))
 					.collect();
 				self.selection = Selection::from_vec(new_ranges, 0);
-				self.show_message(format!("{} matches", self.selection.len()));
+				self.notify("info", format!("{} matches", self.selection.len()));
 			}
 			Ok(_) => {
-				self.show_warning("No matches found");
+				self.notify("warn", "No matches found");
 			}
 			Err(e) => {
-				self.show_error(format!("Regex error: {}", e));
+				self.notify("error", format!("Regex error: {}", e));
 			}
 		}
 		false
@@ -117,7 +117,7 @@ impl Editor {
 		let from = primary.min();
 		let to = primary.max();
 		if from >= to {
-			self.show_warning("No selection to split");
+			self.notify("warn", "No selection to split");
 			return false;
 		}
 
@@ -137,16 +137,16 @@ impl Editor {
 				}
 				if !new_ranges.is_empty() {
 					self.selection = Selection::from_vec(new_ranges, 0);
-					self.show_message(format!("{} splits", self.selection.len()));
+					self.notify("info", format!("{} splits", self.selection.len()));
 				} else {
-					self.show_warning("Split produced no ranges");
+					self.notify("warn", "Split produced no ranges");
 				}
 			}
 			Ok(_) => {
-				self.show_warning("No matches found to split on");
+				self.notify("warn", "No matches found to split on");
 			}
 			Err(e) => {
-				self.show_error(format!("Regex error: {}", e));
+				self.notify("error", format!("Regex error: {}", e));
 			}
 		}
 		false
@@ -157,7 +157,7 @@ impl Editor {
 		let from = primary.min();
 		let to = primary.max();
 		if from >= to {
-			self.show_warning("No selection to split");
+			self.notify("warn", "No selection to split");
 			return false;
 		}
 
@@ -179,7 +179,7 @@ impl Editor {
 
 		if !new_ranges.is_empty() {
 			self.selection = Selection::from_vec(new_ranges, 0);
-			self.show_message(format!("{} lines", self.selection.len()));
+			self.notify("info", format!("{} lines", self.selection.len()));
 		}
 		false
 	}
@@ -198,7 +198,7 @@ impl Editor {
 					}
 				}
 				Err(e) => {
-					self.show_error(format!("Regex error: {}", e));
+					self.notify("error", format!("Regex error: {}", e));
 					had_error = true;
 					break;
 				}
@@ -210,11 +210,11 @@ impl Editor {
 		}
 
 		if kept_ranges.is_empty() {
-			self.show_warning("No selections remain");
+			self.notify("warn", "No selections remain");
 		} else {
 			let count = kept_ranges.len();
 			self.selection = Selection::from_vec(kept_ranges, 0);
-			self.show_message(format!("{} selections kept", count));
+			self.notify("info", format!("{} selections kept", count));
 		}
 		false
 	}

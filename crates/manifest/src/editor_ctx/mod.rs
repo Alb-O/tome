@@ -17,6 +17,16 @@ pub struct EditorContext<'a> {
 	inner: &'a mut dyn EditorCapabilities,
 }
 
+impl<'a> MessageAccess for EditorContext<'a> {
+	fn notify(&mut self, type_id: &str, msg: &str) {
+		self.inner.notify(type_id, msg);
+	}
+
+	fn clear_message(&mut self) {
+		self.inner.clear_message();
+	}
+}
+
 impl<'a> EditorContext<'a> {
 	pub fn new(inner: &'a mut dyn EditorCapabilities) -> Self {
 		Self { inner }
@@ -44,22 +54,6 @@ impl<'a> EditorContext<'a> {
 
 	pub fn set_mode(&mut self, mode: Mode) {
 		self.inner.set_mode(mode);
-	}
-
-	pub fn notify(&mut self, type_id: &str, msg: &str) {
-		self.inner.notify(type_id, msg);
-	}
-
-	pub fn message(&mut self, msg: &str) {
-		self.inner.notify("info", msg);
-	}
-
-	pub fn warning(&mut self, msg: &str) {
-		self.inner.notify("warn", msg);
-	}
-
-	pub fn error(&mut self, msg: &str) {
-		self.inner.notify("error", msg);
 	}
 
 	pub fn search(&mut self) -> Option<&mut dyn SearchAccess> {

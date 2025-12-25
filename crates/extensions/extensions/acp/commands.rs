@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use futures::future::LocalBoxFuture;
 use tome_manifest::{CommandContext, CommandError, CommandOutcome};
-use tome_stdlib::command;
+use tome_stdlib::{NotifyINFOExt, command};
 
 use crate::acp::AcpManager;
 use crate::acp::panel::{AcpChatPanel, chat_panel_ui_id};
@@ -39,7 +39,7 @@ fn cmd_acp_start<'a>(
 		let editor = ctx.require_editor_mut();
 		if let Some(acp) = editor.extensions.get_mut::<AcpManager>() {
 			acp.start(cwd);
-			ctx.message("ACP agent starting...");
+			ctx.info("ACP agent starting...");
 			Ok(CommandOutcome::Ok)
 		} else {
 			Err(CommandError::Failed("ACP extension not loaded".to_string()))
@@ -59,7 +59,7 @@ fn cmd_acp_stop<'a>(
 		let editor = ctx.require_editor_mut();
 		if let Some(acp) = editor.extensions.get_mut::<AcpManager>() {
 			acp.stop();
-			ctx.message("ACP agent stopped");
+			ctx.info("ACP agent stopped");
 			Ok(CommandOutcome::Ok)
 		} else {
 			Err(CommandError::Failed("ACP extension not loaded".to_string()))
@@ -142,7 +142,7 @@ fn cmd_acp_cancel<'a>(
 		let editor = ctx.require_editor_mut();
 		if let Some(acp) = editor.extensions.get_mut::<AcpManager>() {
 			acp.cancel();
-			ctx.message("ACP request cancelled");
+			ctx.info("ACP request cancelled");
 			Ok(CommandOutcome::Ok)
 		} else {
 			Err(CommandError::Failed("ACP extension not loaded".to_string()))

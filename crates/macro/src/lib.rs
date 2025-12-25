@@ -311,13 +311,13 @@ pub fn register_notification(input: TokenStream) -> TokenStream {
 				source: tome_manifest::RegistrySource::Crate(env!("CARGO_PKG_NAME")),
 			};
 
-		pub trait #trait_name: tome_manifest::notifications::NotificationExt {
+		pub trait #trait_name: tome_manifest::editor_ctx::MessageAccess {
 			fn #helper_name(&mut self, msg: &str) {
 				self.notify(#id, msg);
 			}
 		}
 
-		impl<T: tome_manifest::notifications::NotificationExt + ?Sized> #trait_name for T {}
+		impl<T: tome_manifest::editor_ctx::MessageAccess + ?Sized> #trait_name for T {}
 	};
 
 	expanded.into()

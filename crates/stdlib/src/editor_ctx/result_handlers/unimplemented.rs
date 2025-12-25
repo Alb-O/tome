@@ -6,11 +6,13 @@ use tome_manifest::actions::ActionResult;
 use tome_manifest::editor_ctx::HandleOutcome;
 use tome_manifest::result_handler;
 
+use crate::NotifyWARNExt;
+
 macro_rules! unimplemented_handler {
 	($slice:ident, $static_name:ident, $name:literal, $variant:pat, $msg:literal) => {
 		result_handler!($slice, $static_name, $name, |r, ctx, _| {
 			if matches!(r, $variant) {
-				ctx.warning($msg);
+				ctx.warn($msg);
 			}
 			HandleOutcome::Handled
 		});
@@ -27,7 +29,7 @@ result_handler!(
 			ops.split_lines();
 			HandleOutcome::Handled
 		} else {
-			ctx.warning("Split lines not available");
+			ctx.warn("Split lines not available");
 			HandleOutcome::Handled
 		}
 	}

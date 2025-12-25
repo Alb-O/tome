@@ -1,7 +1,7 @@
 use futures::future::LocalBoxFuture;
 use tome_api::editor::Editor;
 use tome_manifest::{CommandContext, CommandError, CommandOutcome};
-use tome_stdlib::command;
+use tome_stdlib::{NotifyINFOExt, command};
 
 use crate::agentfs::AgentFsManager;
 
@@ -24,7 +24,7 @@ fn cmd_agent_connect<'a>(
 			match manager.connect(id_or_path).await {
 				Ok(fs) => {
 					editor.set_filesystem(fs);
-					ctx.message(&format!("Connected to agent: {}", id_or_path));
+					ctx.info(&format!("Connected to agent: {}", id_or_path));
 					Ok(CommandOutcome::Ok)
 				}
 				Err(e) => Err(CommandError::Failed(format!("Failed to connect: {}", e))),
@@ -51,7 +51,7 @@ fn cmd_agent_disconnect<'a>(
 			match manager.disconnect() {
 				Ok(fs) => {
 					editor.set_filesystem(fs);
-					ctx.message("Disconnected from AgentFS");
+					ctx.info("Disconnected from AgentFS");
 					Ok(CommandOutcome::Ok)
 				}
 				Err(e) => Err(CommandError::Failed(format!("Failed to disconnect: {}", e))),

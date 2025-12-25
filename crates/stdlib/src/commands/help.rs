@@ -1,7 +1,7 @@
 use futures::future::LocalBoxFuture;
-
-use crate::command;
 use tome_manifest::{CommandContext, CommandError, CommandOutcome, find_command};
+
+use crate::{NotifyINFOExt, command};
 
 command!(help, { aliases: &["h"], description: "Show help for commands" }, handler: cmd_help);
 
@@ -23,7 +23,7 @@ fn cmd_help<'a>(
 					let caps: Vec<_> = cmd.required_caps.iter().map(|c| c.to_string()).collect();
 					out.push(format!("Required Capabilities: {}", caps.join(", ")));
 				}
-				ctx.message(&out.join("\n"));
+				ctx.info(&out.join("\n"));
 				return Ok(CommandOutcome::Ok);
 			} else {
 				return Err(CommandError::NotFound(cmd_name.to_string()));
@@ -44,7 +44,7 @@ fn cmd_help<'a>(
 				format!(":{}{} - {}", c.name, aliases, c.description)
 			})
 			.collect();
-		ctx.message(&help_text.join(" | "));
+		ctx.info(&help_text.join(" | "));
 		Ok(CommandOutcome::Ok)
 	})
 }

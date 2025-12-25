@@ -26,21 +26,19 @@ pub struct CommandContext<'a> {
 	pub user_data: Option<&'static (dyn std::any::Any + Sync)>,
 }
 
+impl<'a> crate::editor_ctx::MessageAccess for CommandContext<'a> {
+	fn notify(&mut self, type_id: &str, msg: &str) {
+		self.editor.notify(type_id, msg);
+	}
+
+	fn clear_message(&mut self) {
+		self.editor.clear_message();
+	}
+}
+
 impl<'a> CommandContext<'a> {
 	pub fn text(&self) -> RopeSlice<'_> {
 		self.editor.text()
-	}
-	pub fn message(&mut self, msg: &str) {
-		self.editor.notify("info", msg);
-	}
-	pub fn warning(&mut self, msg: &str) {
-		self.editor.notify("warn", msg);
-	}
-	pub fn error(&mut self, msg: &str) {
-		self.editor.notify("error", msg);
-	}
-	pub fn notify(&mut self, type_id: &str, msg: &str) {
-		self.editor.notify(type_id, msg);
 	}
 	pub fn require_user_data<T: std::any::Any + Sync>(&self) -> Result<&'static T, CommandError> {
 		self.user_data
