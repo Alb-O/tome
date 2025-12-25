@@ -2363,10 +2363,12 @@ dependencies = [
  "tokio-util",
  "tome-base",
  "tome-input",
+ "tome-language",
  "tome-manifest",
  "tome-stdlib",
  "tome-theme",
  "toml",
+ "tree-house",
  "tui-term",
  "unicode-segmentation",
  "unicode-width 0.2.0",
@@ -2435,6 +2437,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.17",
  "tome-base",
+ "tome-manifest",
  "tree-house",
 ]
 

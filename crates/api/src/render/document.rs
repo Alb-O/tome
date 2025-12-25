@@ -142,6 +142,9 @@ impl Editor {
 		let blink_on = self.cursor_blink_visible();
 		let styles = self.make_cursor_styles();
 
+		// Collect syntax highlight spans for the visible viewport
+		let highlight_spans = self.collect_highlight_spans(area);
+
 		let mut output_lines: Vec<Line> = Vec::new();
 		let mut current_line_idx = self.scroll_line;
 		let mut start_segment = self.scroll_segment;
@@ -209,11 +212,13 @@ impl Editor {
 					} else {
 						styles.secondary
 					};
-					let non_cursor_style = if in_selection {
-						styles.selection
-					} else {
-						styles.base
-					};
+				// Apply syntax highlighting style, falling back to base style
+				let syntax_style = self.style_for_byte_pos(doc_pos, &highlight_spans);
+				let non_cursor_style = if in_selection {
+					styles.selection
+				} else {
+					syntax_style.unwrap_or(styles.base)
+				};
 					let style = if is_cursor && use_block_cursor {
 						if blink_on { cursor_style } else { styles.base }
 					} else {
