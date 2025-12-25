@@ -9,12 +9,10 @@ use std::time::Duration;
 use ropey::RopeSlice;
 use thiserror::Error;
 use tree_house::tree_sitter::{InputEdit, Node, Tree};
-use tree_house::{Layer, TreeCursor};
+use tree_house::{Language, Layer, TreeCursor};
 
-use tree_house::Language;
-
-use crate::loader::LanguageLoader;
 use crate::highlight::Highlighter;
+use crate::loader::LanguageLoader;
 
 /// Default parse timeout (500ms).
 const PARSE_TIMEOUT: Duration = Duration::from_millis(500);
@@ -189,19 +187,19 @@ fn generate_edits(old_text: RopeSlice, changeset: &tome_base::ChangeSet) -> Vec<
 					let old_end_byte = old_text.char_to_byte(old_end) as u32;
 					iter.next();
 
-				edits.push(InputEdit {
-					start_byte,
-					old_end_byte,
-					new_end_byte: start_byte + s.text.len() as u32,
-					start_point: Point::ZERO,
-					old_end_point: Point::ZERO,
-					new_end_point: Point::ZERO,
-				});
-			} else {
-				edits.push(InputEdit {
-					start_byte,
-					old_end_byte: start_byte,
-					new_end_byte: start_byte + s.text.len() as u32,
+					edits.push(InputEdit {
+						start_byte,
+						old_end_byte,
+						new_end_byte: start_byte + s.text.len() as u32,
+						start_point: Point::ZERO,
+						old_end_point: Point::ZERO,
+						new_end_point: Point::ZERO,
+					});
+				} else {
+					edits.push(InputEdit {
+						start_byte,
+						old_end_byte: start_byte,
+						new_end_byte: start_byte + s.text.len() as u32,
 						start_point: Point::ZERO,
 						old_end_point: Point::ZERO,
 						new_end_point: Point::ZERO,
@@ -290,7 +288,11 @@ mod tests {
 	fn test_generate_edits_insert() {
 		use tome_base::transaction::Change;
 		let doc = Rope::from("hello world");
-		let changes = vec![Change { start: 5, end: 5, replacement: Some(" beautiful".into()) }];
+		let changes = vec![Change {
+			start: 5,
+			end: 5,
+			replacement: Some(" beautiful".into()),
+		}];
 		let tx = Transaction::change(doc.slice(..), changes.into_iter());
 
 		let edits = generate_edits(doc.slice(..), tx.changes());
@@ -304,7 +306,11 @@ mod tests {
 	fn test_generate_edits_delete() {
 		use tome_base::transaction::Change;
 		let doc = Rope::from("hello world");
-		let changes = vec![Change { start: 5, end: 11, replacement: None }];
+		let changes = vec![Change {
+			start: 5,
+			end: 11,
+			replacement: None,
+		}];
 		let tx = Transaction::change(doc.slice(..), changes.into_iter());
 
 		let edits = generate_edits(doc.slice(..), tx.changes());
@@ -318,7 +324,11 @@ mod tests {
 	fn test_generate_edits_replace() {
 		use tome_base::transaction::Change;
 		let doc = Rope::from("hello world");
-		let changes = vec![Change { start: 6, end: 11, replacement: Some("rust".into()) }];
+		let changes = vec![Change {
+			start: 6,
+			end: 11,
+			replacement: Some("rust".into()),
+		}];
 		let tx = Transaction::change(doc.slice(..), changes.into_iter());
 
 		let edits = generate_edits(doc.slice(..), tx.changes());

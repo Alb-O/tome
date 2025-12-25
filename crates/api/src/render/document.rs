@@ -212,13 +212,13 @@ impl Editor {
 					} else {
 						styles.secondary
 					};
-				// Apply syntax highlighting style, falling back to base style
-				let syntax_style = self.style_for_byte_pos(doc_pos, &highlight_spans);
-				let non_cursor_style = if in_selection {
-					styles.selection
-				} else {
-					syntax_style.unwrap_or(styles.base)
-				};
+					// Apply syntax highlighting style, falling back to base style
+					let syntax_style = self.style_for_byte_pos(doc_pos, &highlight_spans);
+					let non_cursor_style = if in_selection {
+						styles.selection
+					} else {
+						syntax_style.unwrap_or(styles.base)
+					};
 					let style = if is_cursor && use_block_cursor {
 						if blink_on { cursor_style } else { styles.base }
 					} else {

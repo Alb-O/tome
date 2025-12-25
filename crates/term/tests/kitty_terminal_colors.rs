@@ -1,12 +1,18 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-#[allow(unused_imports, reason = "test harness utilities for conditional test execution")]
+#[allow(
+	unused_imports,
+	reason = "test harness utilities for conditional test execution"
+)]
 use kitty_test_harness::{
 	kitty_send_keys, pause_briefly, require_kitty, run_with_timeout, wait_for_screen_text_clean,
 	with_kitty_capture,
 };
-#[allow(unused_imports, reason = "shared test utilities for keyboard input simulation")]
+#[allow(
+	unused_imports,
+	reason = "shared test utilities for keyboard input simulation"
+)]
 use termwiz::input::{KeyCode, Modifiers};
 
 #[allow(dead_code, reason = "shared test constant")]
@@ -83,7 +89,10 @@ fn parse_bg_from_sgr_tokens(tokens: &[&[u8]], mut current: Option<Rgb>) -> Optio
 	current
 }
 
-#[allow(dead_code, reason = "extracts background color at specific marker position")]
+#[allow(
+	dead_code,
+	reason = "extracts background color at specific marker position"
+)]
 fn bg_at_marker(raw: &[u8], marker: &[u8]) -> Option<Rgb> {
 	let marker_pos = raw.windows(marker.len()).position(|w| w == marker)?;
 

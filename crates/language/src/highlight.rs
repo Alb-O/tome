@@ -7,10 +7,10 @@ use std::ops::{Bound, RangeBounds};
 
 use ratatui::style::Style;
 use ropey::RopeSlice;
-use crate::loader::LanguageLoader;
-
 // Re-export tree-house highlight types for convenience.
 pub use tree_house::highlighter::{Highlight, HighlightEvent};
+
+use crate::loader::LanguageLoader;
 
 /// Maps highlight captures to styles.
 ///
@@ -49,7 +49,10 @@ impl HighlightStyles {
 	/// Resolves a highlight index to a style.
 	#[inline]
 	pub fn style_for_highlight(&self, highlight: Highlight) -> Style {
-		self.styles.get(highlight.idx()).copied().unwrap_or_default()
+		self.styles
+			.get(highlight.idx())
+			.copied()
+			.unwrap_or_default()
 	}
 }
 
@@ -85,8 +88,7 @@ impl<'a> Highlighter<'a> {
 			Bound::Unbounded => source.len_bytes() as u32,
 		};
 
-		let inner =
-			tree_house::highlighter::Highlighter::new(syntax, source, loader, start..end);
+		let inner = tree_house::highlighter::Highlighter::new(syntax, source, loader, start..end);
 
 		Self {
 			current_start: inner.next_event_offset(),

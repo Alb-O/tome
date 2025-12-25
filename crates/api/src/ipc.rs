@@ -12,7 +12,10 @@ pub enum IpcMessage {
 }
 
 pub struct IpcServer {
-	#[allow(dead_code, reason = "IPC infrastructure placeholder, receiver will be used when message handling is implemented")]
+	#[allow(
+		dead_code,
+		reason = "IPC infrastructure placeholder, receiver will be used when message handling is implemented"
+	)]
 	receiver: mpsc::Receiver<IpcMessage>,
 }
 

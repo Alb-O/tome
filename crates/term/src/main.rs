@@ -10,7 +10,10 @@ use clap::Parser;
 use cli::{Cli, Command, GrammarAction};
 use tome_api::Editor;
 // Force linking of tome-extensions so distributed_slices are registered
-#[allow(unused_imports, reason = "ensures tome-extensions distributed_slices are linked")]
+#[allow(
+	unused_imports,
+	reason = "ensures tome-extensions distributed_slices are linked"
+)]
 use tome_extensions as _;
 
 #[tokio::main]
@@ -70,14 +73,17 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn handle_grammar_command(action: GrammarAction) -> anyhow::Result<()> {
-	use tome_language::build::{fetch_all_grammars, build_all_grammars, load_grammar_configs};
+	use tome_language::build::{build_all_grammars, fetch_all_grammars, load_grammar_configs};
 
 	let configs = load_grammar_configs()?;
 
 	match action {
 		GrammarAction::Fetch { only } => {
 			let configs: Vec<_> = if let Some(ref names) = only {
-				configs.into_iter().filter(|c| names.contains(&c.grammar_id)).collect()
+				configs
+					.into_iter()
+					.filter(|c| names.contains(&c.grammar_id))
+					.collect()
 			} else {
 				configs
 			};
@@ -87,7 +93,10 @@ fn handle_grammar_command(action: GrammarAction) -> anyhow::Result<()> {
 		}
 		GrammarAction::Build { only } => {
 			let configs: Vec<_> = if let Some(ref names) = only {
-				configs.into_iter().filter(|c| names.contains(&c.grammar_id)).collect()
+				configs
+					.into_iter()
+					.filter(|c| names.contains(&c.grammar_id))
+					.collect()
 			} else {
 				configs
 			};
@@ -97,7 +106,10 @@ fn handle_grammar_command(action: GrammarAction) -> anyhow::Result<()> {
 		}
 		GrammarAction::Sync { only } => {
 			let configs: Vec<_> = if let Some(ref names) = only {
-				configs.into_iter().filter(|c| names.contains(&c.grammar_id)).collect()
+				configs
+					.into_iter()
+					.filter(|c| names.contains(&c.grammar_id))
+					.collect()
 			} else {
 				configs
 			};
@@ -114,7 +126,12 @@ fn handle_grammar_command(action: GrammarAction) -> anyhow::Result<()> {
 	Ok(())
 }
 
-fn report_fetch_results(results: &[(tome_language::build::GrammarConfig, Result<tome_language::build::FetchStatus, tome_language::build::GrammarBuildError>)]) {
+fn report_fetch_results(
+	results: &[(
+		tome_language::build::GrammarConfig,
+		Result<tome_language::build::FetchStatus, tome_language::build::GrammarBuildError>,
+	)],
+) {
 	use tome_language::build::FetchStatus;
 	let mut success = 0;
 	let mut skipped = 0;
@@ -145,7 +162,12 @@ fn report_fetch_results(results: &[(tome_language::build::GrammarConfig, Result<
 	println!("\nFetch: {success} succeeded, {skipped} skipped, {failed} failed");
 }
 
-fn report_build_results(results: &[(tome_language::build::GrammarConfig, Result<tome_language::build::BuildStatus, tome_language::build::GrammarBuildError>)]) {
+fn report_build_results(
+	results: &[(
+		tome_language::build::GrammarConfig,
+		Result<tome_language::build::BuildStatus, tome_language::build::GrammarBuildError>,
+	)],
+) {
 	use tome_language::build::BuildStatus;
 	let mut success = 0;
 	let mut skipped = 0;
