@@ -8,16 +8,16 @@ license.workspace = true
 [dependencies]
 agent-client-protocol.workspace = true
 agentfs-sdk.workspace = true
-anyhow = "1.0"
-futures = "0.3"
+anyhow.workspace = true
+futures.workspace = true
 linkme.workspace = true
-parking_lot = "0.12"
+parking_lot.workspace = true
 paste.workspace = true
 ratatui.workspace = true
 ropey.workspace = true
 serde.workspace = true
 termina.workspace = true
 tokio.workspace = true
-tokio-util = { version = "0.7", features = ["compat"] }
-tome-api = { path = "../api" }
+tokio-util.workspace = true
+tome-api.workspace = true
 tome-core.workspace = true
