@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-	use crate::{InputHandler, KeyResult};
 	use tome_base::key::{Key, KeyCode, Modifiers, SpecialKey};
 	use tome_manifest::find_action_by_id;
+
+	use crate::{InputHandler, KeyResult};
 
 	/// Helper to extract action name and extend flag from KeyResult.
 	/// Handles both string-based Action and typed ActionById.

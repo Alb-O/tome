@@ -3,9 +3,9 @@
 use regex::Regex;
 pub use regex::escape as escape_pattern;
 use ropey::RopeSlice;
+use tome_base::range::CharIdx;
 
 use crate::Range;
-use tome_base::range::CharIdx;
 
 /// Check if text matches a regex pattern.
 pub fn matches_pattern(text: &str, pattern: &str) -> Result<bool, regex::Error> {

@@ -1,9 +1,9 @@
 //! Text object selection (words, surrounds, etc).
 
 use ropey::RopeSlice;
+use tome_base::range::{CharIdx, Range};
 
 use super::{WordType, is_word_char};
-use tome_base::range::{CharIdx, Range};
 
 /// Select a word object (inner or around).
 /// Inner: just the word characters

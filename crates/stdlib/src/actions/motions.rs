@@ -1,12 +1,10 @@
 //! Motion actions that wrap MotionDefs into ActionDefs.
 
 use linkme::distributed_slice;
-
-use tome_manifest::ACTIONS;
-use tome_manifest::actions::{ActionContext, ActionDef, ActionResult};
-use tome_manifest::find_motion;
 use tome_base::range::Range;
 use tome_base::selection::Selection;
+use tome_manifest::actions::{ActionContext, ActionDef, ActionResult};
+use tome_manifest::{ACTIONS, find_motion};
 
 /// Cursor movement - moves cursor (and all cursors) without creating new selections unless extending.
 fn cursor_move_action(ctx: &ActionContext, motion_name: &str) -> ActionResult {

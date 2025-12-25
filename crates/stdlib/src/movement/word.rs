@@ -1,9 +1,9 @@
 //! Word movement functions (Kakoune's w, b, e commands).
 
 use ropey::RopeSlice;
+use tome_base::range::{CharIdx, Range};
 
 use super::{WordType, is_word_char, make_range_select};
-use tome_base::range::{CharIdx, Range};
 
 /// Move to next word start (Kakoune's `w` command).
 /// Selects the word and following whitespace on the right.

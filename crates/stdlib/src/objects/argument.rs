@@ -1,7 +1,6 @@
 //! Argument/parameter text object.
 
 use ropey::RopeSlice;
-
 use tome_base::range::Range;
 
 /// Find argument boundaries, handling nested delimiters and whitespace.

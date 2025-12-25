@@ -1,9 +1,9 @@
 //! Insert mode keybindings.
 
 use linkme::distributed_slice;
+use tome_base::key::{Key, SpecialKey};
 
 use crate::keybindings::{BindingMode, KEYBINDINGS_INSERT, KeyBindingDef};
-use tome_base::key::{Key, SpecialKey};
 
 const DEFAULT_PRIORITY: i16 = 100;
 

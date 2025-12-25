@@ -1,7 +1,8 @@
 //! Scroll/view actions.
 
-use crate::action;
 use tome_manifest::actions::{ActionResult, EditAction, ScrollAmount, ScrollDir, VisualDirection};
+
+use crate::action;
 
 action!(scroll_up, { description: "Scroll view up" }, |ctx| {
 	ActionResult::Edit(EditAction::Scroll {

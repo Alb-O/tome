@@ -84,8 +84,7 @@ impl Notifications {
 			.states
 			.iter()
 			.filter_map(|(id, state)| {
-				if state.current_phase == crate::notifications::types::AnimationPhase::Finished
-				{
+				if state.current_phase == crate::notifications::types::AnimationPhase::Finished {
 					Some(*id)
 				} else {
 					None

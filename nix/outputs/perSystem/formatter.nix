@@ -22,6 +22,7 @@
       excludes = [
         "target/*"
         "**/target/*"
+        "vendor/*"
       ];
       rust = {
         enable = true;

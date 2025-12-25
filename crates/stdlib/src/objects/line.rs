@@ -1,7 +1,6 @@
 //! Line text object.
 
 use ropey::RopeSlice;
-
 use tome_base::range::Range;
 
 fn line_inner(text: RopeSlice, pos: usize) -> Option<Range> {

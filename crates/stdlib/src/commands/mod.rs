@@ -5,8 +5,8 @@
 
 mod buffer;
 mod edit;
-mod registry_diag;
 mod help;
 mod quit;
+mod registry_diag;
 mod test_notify;
 mod write;

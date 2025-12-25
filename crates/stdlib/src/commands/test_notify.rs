@@ -1,9 +1,9 @@
 #[cfg(feature = "host")]
 use futures::future::LocalBoxFuture;
+use tome_manifest::{CommandContext, CommandError, CommandOutcome};
 
 #[cfg(feature = "host")]
 use crate::command;
-use tome_manifest::{CommandContext, CommandError, CommandOutcome};
 
 #[cfg(feature = "host")]
 command!(test_notify, { aliases: &[], description: "Test the new notification system" }, handler: test_notify);

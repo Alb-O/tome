@@ -1,7 +1,8 @@
-use crate::InputHandler;
-use crate::types::{KeyResult, Mode};
 use tome_base::key::{Key, KeyCode, Modifiers, SpecialKey};
 use tome_manifest::{BindingMode, find_binding_resolved, resolve_action_id};
+
+use crate::InputHandler;
+use crate::types::{KeyResult, Mode};
 
 impl InputHandler {
 	pub(crate) fn handle_insert_key(&mut self, key: Key) -> KeyResult {

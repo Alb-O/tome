@@ -1,6 +1,7 @@
 //! Find character actions (f/t/F/T commands).
 
 use tome_manifest::actions::{ActionResult, PendingAction, PendingKind};
+
 use crate::{action, movement};
 
 action!(

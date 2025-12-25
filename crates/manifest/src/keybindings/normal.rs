@@ -1,9 +1,9 @@
 //! Default keybindings for normal mode.
 
 use linkme::distributed_slice;
+use tome_base::key::{Key, SpecialKey};
 
 use crate::keybindings::{BindingMode, KEYBINDINGS_NORMAL, KeyBindingDef};
-use tome_base::key::{Key, SpecialKey};
 
 const DEFAULT_PRIORITY: i16 = 100;
 

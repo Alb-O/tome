@@ -1,6 +1,7 @@
-use crate::types::{KeyResult, Mode};
 use tome_base::key::{Key, KeyCode, MouseButton, MouseEvent, SpecialKey};
 use tome_manifest::{BindingMode, find_binding, find_binding_resolved};
+
+use crate::types::{KeyResult, Mode};
 
 /// Manages input state and key processing.
 #[derive(Debug, Clone)]

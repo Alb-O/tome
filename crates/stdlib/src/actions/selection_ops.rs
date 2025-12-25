@@ -1,9 +1,10 @@
 //! Selection manipulation actions (collapse, flip, select all, etc.).
 
-use crate::action;
 use tome_base::range::Range;
-use tome_manifest::actions::{ActionContext, ActionResult};
 use tome_base::selection::Selection;
+use tome_manifest::actions::{ActionContext, ActionResult};
+
+use crate::action;
 
 action!(collapse_selection, { description: "Collapse selection to cursor" }, handler: collapse_selection);
 
@@ -230,8 +231,9 @@ action!(
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use tome_manifest::actions::ActionArgs;
+
+	use super::*;
 	use crate::{Rope, Selection};
 
 	#[test]

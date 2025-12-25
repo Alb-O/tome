@@ -1,6 +1,7 @@
+use tome_base::key::{Key, KeyCode, SpecialKey};
+
 use crate::InputHandler;
 use crate::types::{KeyResult, Mode};
-use tome_base::key::{Key, KeyCode, SpecialKey};
 
 impl InputHandler {
 	pub(crate) fn handle_command_key(

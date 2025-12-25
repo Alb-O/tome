@@ -1,7 +1,7 @@
 use ropey::RopeSlice;
+use tome_base::range::Range;
 
 use crate::movement::{WordType, select_word_object};
-use tome_base::range::Range;
 use crate::text_object;
 
 text_object!(
