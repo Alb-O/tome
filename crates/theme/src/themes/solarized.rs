@@ -1,7 +1,7 @@
 use linkme::distributed_slice;
 use ratatui::style::Color;
 
-use crate::{PopupColors, StatusColors, THEMES, Theme, ThemeColors, UiColors};
+use crate::{NotificationColors, PopupColors, StatusColors, THEMES, Theme, ThemeColors, UiColors};
 
 #[distributed_slice(THEMES)]
 pub static SOLARIZED_DARK: Theme = Theme {
@@ -43,6 +43,7 @@ pub static SOLARIZED_DARK: Theme = Theme {
 			border: Color::Rgb(88, 110, 117), // base01
 			title: Color::Rgb(181, 137, 0),   // yellow
 		},
+		notification: NotificationColors::INHERITED,
 	},
 	priority: 0,
 	source: tome_manifest::RegistrySource::Builtin,

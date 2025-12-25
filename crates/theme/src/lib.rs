@@ -46,12 +46,61 @@ pub struct PopupColors {
 	pub title: Color,
 }
 
+/// Per-semantic-style color pair for notifications.
+/// If None, inherits from the base theme colors.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SemanticColorPair {
+	pub bg: Option<Color>,
+	pub fg: Option<Color>,
+}
+
+impl SemanticColorPair {
+	/// Const default with no overrides (inherit all).
+	pub const NONE: Self = Self { bg: None, fg: None };
+}
+
+/// Notification-specific color overrides.
+/// All fields are optional; None means inherit from popup/status colors.
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NotificationColors {
+	/// Default/normal notification style
+	pub normal: SemanticColorPair,
+	/// Info notifications (inherits from popup.fg if None)
+	pub info: SemanticColorPair,
+	/// Warning notifications (inherits from status.warning_fg if None)
+	pub warning: SemanticColorPair,
+	/// Error notifications (inherits from status.error_fg if None)
+	pub error: SemanticColorPair,
+	/// Success notifications (inherits from status.success_fg if None)
+	pub success: SemanticColorPair,
+	/// Dim/debug notifications (inherits from status.dim_fg if None)
+	pub dim: SemanticColorPair,
+	/// Border color override (inherits from popup.border if None)
+	pub border: Option<Color>,
+}
+
+impl NotificationColors {
+	/// Const default with no overrides (inherit all colors from popup/status).
+	pub const INHERITED: Self = Self {
+		normal: SemanticColorPair::NONE,
+		info: SemanticColorPair::NONE,
+		warning: SemanticColorPair::NONE,
+		error: SemanticColorPair::NONE,
+		success: SemanticColorPair::NONE,
+		dim: SemanticColorPair::NONE,
+		border: None,
+	};
+}
+
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub struct ThemeColors {
 	pub ui: UiColors,
 	pub status: StatusColors,
 	pub popup: PopupColors,
+	/// Notification-specific color overrides (optional, inherits from popup/status)
+	pub notification: NotificationColors,
 }
 
 #[non_exhaustive]
@@ -108,10 +157,48 @@ pub static DEFAULT_THEME: Theme = Theme {
 			border: Color::White,
 			title: Color::Yellow,
 		},
+		notification: NotificationColors::INHERITED,
 	},
 	priority: 0,
 	source: tome_manifest::RegistrySource::Builtin,
 };
+
+use ratatui::style::Style;
+use tome_manifest::SemanticStyle;
+
+impl ThemeColors {
+	/// Resolve notification style for a given semantic style.
+	/// Uses notification-specific overrides if set, otherwise inherits from popup/status colors.
+	pub fn notification_style(&self, semantic: SemanticStyle) -> Style {
+		let pair = match semantic {
+			SemanticStyle::Normal => &self.notification.normal,
+			SemanticStyle::Info => &self.notification.info,
+			SemanticStyle::Warning => &self.notification.warning,
+			SemanticStyle::Error => &self.notification.error,
+			SemanticStyle::Success => &self.notification.success,
+			SemanticStyle::Dim => &self.notification.dim,
+		};
+
+		// Resolve background: notification override -> popup.bg
+		let bg = pair.bg.unwrap_or(self.popup.bg);
+
+		// Resolve foreground: notification override -> semantic fallback from status/popup
+		let fg = pair.fg.unwrap_or_else(|| match semantic {
+			SemanticStyle::Normal | SemanticStyle::Info => self.popup.fg,
+			SemanticStyle::Warning => self.status.warning_fg,
+			SemanticStyle::Error => self.status.error_fg,
+			SemanticStyle::Success => self.status.success_fg,
+			SemanticStyle::Dim => self.status.dim_fg,
+		});
+
+		Style::default().bg(bg).fg(fg)
+	}
+
+	/// Resolve notification border color.
+	pub fn notification_border(&self) -> Color {
+		self.notification.border.unwrap_or(self.popup.border)
+	}
+}
 
 pub fn get_theme(name: &str) -> Option<&'static Theme> {
 	let normalize = |s: &str| -> String {

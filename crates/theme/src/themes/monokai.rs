@@ -1,7 +1,7 @@
 use linkme::distributed_slice;
 use ratatui::style::Color;
 
-use crate::{PopupColors, StatusColors, THEMES, Theme, ThemeColors, UiColors};
+use crate::{NotificationColors, PopupColors, StatusColors, THEMES, Theme, ThemeColors, UiColors};
 
 #[distributed_slice(THEMES)]
 pub static MONOKAI: Theme = Theme {
@@ -43,6 +43,7 @@ pub static MONOKAI: Theme = Theme {
 			border: Color::Rgb(117, 113, 94), // #75715E
 			title: Color::Rgb(230, 219, 116), // #E6DB74
 		},
+		notification: NotificationColors::INHERITED,
 	},
 	priority: 0,
 	source: tome_manifest::RegistrySource::Builtin,

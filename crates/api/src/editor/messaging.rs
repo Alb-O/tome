@@ -1,4 +1,3 @@
-use ratatui::style::Style;
 use tome_manifest::completion::{CommandSource, CompletionContext, CompletionSource};
 
 use crate::editor::Editor;
@@ -33,36 +32,11 @@ impl Editor {
 
 		let builder = NotificationBuilder::from_registry(type_name, text);
 
-		// Resolve semantic style from theme
-		let style =
-			if let Some(t) = type_def {
-				use tome_manifest::SemanticStyle;
-				match t.semantic_style {
-					SemanticStyle::Info => Style::default().bg(self.theme.colors.popup.bg).fg(self
-						.theme
-						.colors
-						.popup
-						.fg),
-					SemanticStyle::Warning => Style::default()
-						.bg(self.theme.colors.popup.bg)
-						.fg(self.theme.colors.status.warning_fg),
-					SemanticStyle::Error => Style::default()
-						.bg(self.theme.colors.popup.bg)
-						.fg(self.theme.colors.status.error_fg),
-					SemanticStyle::Success => Style::default()
-						.bg(self.theme.colors.popup.bg)
-						.fg(self.theme.colors.status.success_fg),
-					_ => Style::default().bg(self.theme.colors.popup.bg).fg(self
-						.theme
-						.colors
-						.popup
-						.fg),
-				}
-			} else {
-				Style::default()
-					.bg(self.theme.colors.popup.bg)
-					.fg(self.theme.colors.popup.fg)
-			};
+		// Resolve semantic style from theme (with inheritance)
+		let semantic = type_def
+			.map(|t| t.semantic_style)
+			.unwrap_or(tome_manifest::SemanticStyle::Info);
+		let style = self.theme.colors.notification_style(semantic);
 
 		if let Ok(notif) = builder.style(style).build() {
 			let _ = self.notifications.add(notif);

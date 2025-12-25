@@ -1,6 +1,6 @@
 use ratatui::layout::{Alignment, Rect};
 use ratatui::prelude::*;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::block::Padding;
 use ratatui::widgets::paragraph::Wrap;
@@ -12,16 +12,6 @@ const ICON_WARN: &str = "󰀪";
 const ICON_ERROR: &str = "󰅚";
 const ICON_DEBUG: &str = "󰃭";
 const ICON_TRACE: &str = "󰗋";
-
-const DEFAULT_BLOCK_STYLE: Style = Style::new();
-const DEFAULT_TITLE_STYLE: Style = Style::new().add_modifier(Modifier::BOLD);
-const DEFAULT_BORDER_STYLE: Style = Style::new().fg(Color::DarkGray);
-
-const INFO_BORDER_STYLE: Style = Style::new().fg(Color::Green);
-const WARN_BORDER_STYLE: Style = Style::new().fg(Color::Yellow);
-const ERROR_BORDER_STYLE: Style = Style::new().fg(Color::Red);
-const DEBUG_BORDER_STYLE: Style = Style::new().fg(Color::Blue);
-const TRACE_BORDER_STYLE: Style = Style::new().fg(Color::Magenta);
 
 pub const ICON_CELL_WIDTH: u16 = 2;
 pub const GUTTER_LEFT_PAD: u16 = 0;
@@ -61,40 +51,24 @@ pub fn get_level_icon(level: Option<Level>) -> Option<&'static str> {
 	}
 }
 
+/// Resolve final styles for notification rendering.
+/// The theme always provides styles via block_style; border and title derive from it.
 pub fn resolve_styles(
-	level: Option<Level>,
+	_level: Option<Level>,
 	block_style: Option<Style>,
 	border_style: Option<Style>,
 	title_style: Option<Style>,
 ) -> (Style, Style, Style) {
-	let mut final_block_style = DEFAULT_BLOCK_STYLE;
-	let mut final_border_style = DEFAULT_BORDER_STYLE;
-	let mut final_title_style = DEFAULT_TITLE_STYLE;
+	// Block style from theme (always provided by Editor::notify)
+	let final_block_style = block_style.unwrap_or_default();
 
-	if let Some(lvl) = level {
-		let level_border_style = match lvl {
-			Level::Info => INFO_BORDER_STYLE,
-			Level::Warn => WARN_BORDER_STYLE,
-			Level::Error => ERROR_BORDER_STYLE,
-			Level::Debug => DEBUG_BORDER_STYLE,
-			Level::Trace => TRACE_BORDER_STYLE,
-		};
-		final_border_style = level_border_style;
-		final_title_style = final_title_style.patch(level_border_style);
-	}
+	// Border style: use explicit override, or derive fg from block_style
+	let final_border_style = border_style
+		.unwrap_or_else(|| Style::default().fg(final_block_style.fg.unwrap_or_default()));
 
-	if let Some(bs) = block_style {
-		final_block_style = bs;
-	}
-
-	if let Some(bs) = border_style {
-		final_border_style = bs;
-		final_title_style = final_title_style.patch(bs);
-	}
-
-	if let Some(ts) = title_style {
-		final_title_style = ts;
-	}
+	// Title style: use explicit override, or derive from border + bold
+	let final_title_style =
+		title_style.unwrap_or_else(|| final_border_style.add_modifier(Modifier::BOLD));
 
 	(final_block_style, final_border_style, final_title_style)
 }
