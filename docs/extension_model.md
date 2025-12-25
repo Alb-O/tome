@@ -1,61 +1,92 @@
-# Tome Extension Model
+# Tome Extension Model (Compile-Time Only)
 
-Tome uses a two-tier extension model to preserve orthogonality and maintain a clean boundary between core editing logic and host-specific features (like TUI, GUI, or LSP).
+Tome uses a compile-time extension model with a suckless-ish philosophy: everything is linked in, no dynamic plugins, and crate boundaries are intentionally unstable.
 
-## 1. Core Builtins (`tome-stdlib`)
+## Principles
 
-Core builtins define the **language of the editor**. They are primarily registered via `distributed_slice` at compile-time and are handled by the `RegistryIndex` (in `tome-manifest`).
+- Compile-time extensions only. No ABI, no dynamic loading, no hot reload.
+- Keep core logic free of host or UI dependencies.
+- Push heavy deps (tokio, pty, ratatui) to leaf crates.
+- Accept instability: APIs and crate boundaries may move.
 
-- **Responsibilities**:
-  - **Actions**: High-level editor operations (e.g., `delete_char`, `insert_newline`).
-  - **Commands**: Ex-mode commands (e.g., `:write`, `:quit`).
-  - **Motions**: Selection movement logic (e.g., `move_left`, `next_word_start`).
-  - **Text Objects**: Selection targets (e.g., `word`, `parentheses`).
-  - **File Types**: Detection logic for language-specific settings.
-- **Characteristics**:
-  - **Stateless**: They operate on the provided `ActionContext` or `CommandContext` (defined in `tome-manifest`).
-  - **Portable**: They do not depend on any specific UI or terminal implementation.
-  - **Static Registration**: Collected into static slices (e.g., `ACTIONS`, `COMMANDS`).
+## 1. Core Builtins (tome-stdlib)
 
-## 2. Host Extensions (`tome-extensions`)
+Core builtins define the language of the editor and are registered at compile time.
 
-Host extensions define the **environment of the editor**. They handle stateful services, UI components, and integration with the host operating system. These depend on `tome-api`.
+- Responsibilities:
+  - Actions: high-level editor operations (delete, insert, transform).
+  - Commands: ex-style commands (write, quit, etc.).
+  - Motions: cursor/selection movement logic.
+  - Text Objects: selection targets (word, paragraph, brackets).
+  - File types: language detection helpers.
+- Characteristics:
+  - Stateless: operate on ActionContext/CommandContext.
+  - Portable: no UI or host-specific types.
+  - Static registration via linkme/distributed_slice.
+- Dependencies:
+  - Targets tome-manifest-core and tome-extension-api, not the app.
 
-- **Responsibilities**:
-  - **State Management**: Storing persistent data (e.g., ACP chat history, LSP client state) using the `ExtensionMap`.
-  - **UI Panels**: Registering custom views (e.g., Chat panel, File tree).
-  - **Lifecycle**: Hooking into the editor heartbeat via `TICK_EXTENSIONS`.
-  - **Initialization**: Populating the `ExtensionMap` during `Editor` creation.
-- **Characteristics**:
-  - **Stateful**: They inject their own types into the `Editor.extensions` TypeMap.
-  - **Host-Specific**: They depend on the editor Engine API (`tome-api`).
-  - **Modular**: Built as a separate crate to avoid circular dependencies with the CLI runner.
+## 2. Host Extensions (tome-extensions)
 
-## 3. Dependency Direction & Coupling
+Host extensions define the environment of the editor and are also registered at compile time.
 
-To maintain stability and testability, dependency directions are strictly enforced:
+- Responsibilities:
+  - Stateful services (LSP, agentfs, background tasks).
+  - UI panels and host-specific UI glue.
+  - Editor lifecycle hooks (ticks, startup registration).
+- Characteristics:
+  - Stateful: store data in ExtensionMap.
+  - Host-specific: depend on the app/runtime/UI layers.
+  - Built as a separate crate to avoid circular dependencies.
 
-1. **Runner -> Extensions -> API -> Stdlib -> Manifest -> Input -> Base**: `tome-term` (the runner in `crates/term`) depends on `tome-extensions` (in `crates/extensions`), which depends on `tome-api` (the engine in `crates/api`), which depends on the core crates.
-1. **Core Crates -X API -X Extensions**: Core crates like `tome-base` or `tome-manifest` must **never** depend on higher-level crates.
-1. **Internal Decoupling**: The `Editor` struct (in `tome-api`) does not know about specific extensions. It only knows about the `ExtensionMap`. Extensions register themselves via the `EXTENSIONS` registry defined in `tome-api`.
+## 3. Extension API Boundary (tome-extension-api)
 
-### Summary Table
+The extension API is a small, unstable boundary that unifies registries and contexts.
 
-| Feature        | Core Builtin Extension    | Host Plugin                            |
-| -------------- | ------------------------- | -------------------------------------- |
-| **Crate**      | `tome-stdlib`             | `tome-extensions`                      |
-| **API Crate**  | `tome-manifest`           | `tome-api`                             |
-| **Logic Type** | Functional / Pure         | Stateful / Side-effectful              |
-| **Discovery**  | `linkme` (Global)         | `linkme` (Local to host)               |
-| **Examples**   | `move_line_down`, `:quit` | `AcpManager`, `LspClient`, `ChatPanel` |
+- Owns the registries for actions, commands, and host extensions.
+- Defines the ExtensionMap and tick hooks used by host extensions.
+- Exposes context types for builtin operations.
+- Remains intentionally unstable; it is not a public SDK.
 
-## 4. Stable Interface (`tome-api`)
+## 4. Dependency Direction (Target Graph)
 
-The `tome-api` crate serves as the bridge between the editor engine and its extensions. It contains:
+The target graph is layered to keep the core small and buildable without UI/runtime deps.
 
-- The `Editor` struct and its public operations.
-- UI traits like `Panel`.
-- Theme definitions.
-- The `ExtensionMap` and registration slices (`EXTENSIONS`, `TICK_EXTENSIONS`).
+```
+[tome-term] (bin)
+  -> [tome-app] (integration)
+       -> [tome-ui] (ratatui adapter)
+       -> [tome-runtime] (tokio, pty, ipc)
+       -> [tome-extensions]
+       -> [tome-stdlib]
+       -> [tome-render]
+       -> [tome-extension-api]
+       -> [tome-input]
+       -> [tome-language]
+       -> [tome-theme]
+       -> [tome-manifest-core]
+       -> [tome-core]
+       -> [tome-macro]
+```
 
-This decoupling ensures that adding a new UI panel to an extension doesn't require modifying the core engine or the CLI runner.
+Rules:
+
+1. Core crates never depend on UI or runtime crates.
+1. UI crates depend only on render/core, not runtime.
+1. Runtime crates depend on core but not UI.
+1. Extensions depend on extension-api and higher layers only.
+
+## 5. Summary Table
+
+| Feature      | Core Builtins                 | Host Extensions                     |
+| ------------ | ----------------------------- | ----------------------------------- |
+| Crate        | tome-stdlib                   | tome-extensions                     |
+| API Boundary | tome-extension-api + manifest | tome-extension-api + app/runtime/UI |
+| Logic Type   | Functional / pure             | Stateful / side-effectful           |
+| Discovery    | linkme (compile-time)         | linkme (compile-time)               |
+| Examples     | move_line_down, :quit         | LspClient, ChatPanel                |
+
+## 6. Transitional Notes
+
+- The current codebase still uses tome-api as a monolith. The target is to split it into tome-render, tome-runtime, tome-app, and tome-extension-api.
+- This document describes the intended end state and should guide refactors and new work.
