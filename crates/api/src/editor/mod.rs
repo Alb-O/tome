@@ -15,10 +15,12 @@ use agentfs_sdk::{FileSystem, HostFS};
 use tome_base::range::CharIdx;
 use tome_base::{Rope, Selection, Transaction};
 use tome_input::InputHandler;
-use tome_manifest::{HookContext, Mode, emit_hook, syntax::SyntaxStyles};
+use tome_language::LanguageLoader;
+use tome_language::syntax::Syntax;
+use tome_manifest::syntax::SyntaxStyles;
+use tome_manifest::{HookContext, Mode, emit_hook};
 use tome_stdlib::movement;
 use tome_stdlib::notifications::{Notifications, Overflow};
-use tome_language::{LanguageLoader, syntax::Syntax};
 use tome_theme::Theme;
 pub use types::{HistoryEntry, Message, MessageKind, Registers};
 
@@ -387,7 +389,10 @@ impl Editor {
 	pub fn collect_highlight_spans(
 		&self,
 		area: ratatui::layout::Rect,
-	) -> Vec<(tome_language::highlight::HighlightSpan, ratatui::style::Style)> {
+	) -> Vec<(
+		tome_language::highlight::HighlightSpan,
+		ratatui::style::Style,
+	)> {
 		let Some(ref syntax) = self.syntax else {
 			return Vec::new();
 		};
@@ -404,10 +409,10 @@ impl Editor {
 		};
 
 		// Create highlight styles from theme to resolve captures to styles
-		let highlight_styles = tome_language::highlight::HighlightStyles::new(
-			SyntaxStyles::scope_names(),
-			|scope| self.theme.colors.syntax.resolve(scope),
-		);
+		let highlight_styles =
+			tome_language::highlight::HighlightStyles::new(SyntaxStyles::scope_names(), |scope| {
+				self.theme.colors.syntax.resolve(scope)
+			});
 
 		// Get highlighter for visible range
 		let highlighter = syntax.highlighter(
@@ -431,7 +436,10 @@ impl Editor {
 	pub fn style_for_byte_pos(
 		&self,
 		byte_pos: usize,
-		spans: &[(tome_language::highlight::HighlightSpan, ratatui::style::Style)],
+		spans: &[(
+			tome_language::highlight::HighlightSpan,
+			ratatui::style::Style,
+		)],
 	) -> Option<ratatui::style::Style> {
 		// Find the innermost span containing this position
 		// Spans are ordered, later spans may be nested inside earlier ones

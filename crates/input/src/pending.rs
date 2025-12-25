@@ -26,11 +26,11 @@ impl InputHandler {
 		match pending {
 			PendingKind::FindChar { inclusive: _ } => match key.code {
 				KeyCode::Char(ch) => {
-				let count = self.effective_count() as usize;
-				let extend = self.extend;
-				let register = self.register;
-				self.reset_params();
-				if let Some(id) = resolve_action_id("find_char") {
+					let count = self.effective_count() as usize;
+					let extend = self.extend;
+					let register = self.register;
+					self.reset_params();
+					if let Some(id) = resolve_action_id("find_char") {
 						KeyResult::ActionByIdWithChar {
 							id,
 							count,
@@ -58,11 +58,11 @@ impl InputHandler {
 
 			PendingKind::FindCharReverse { inclusive: _ } => match key.code {
 				KeyCode::Char(ch) => {
-				let count = self.effective_count() as usize;
-				let extend = self.extend;
-				let register = self.register;
-				self.reset_params();
-				if let Some(id) = resolve_action_id("find_char_reverse") {
+					let count = self.effective_count() as usize;
+					let extend = self.extend;
+					let register = self.register;
+					self.reset_params();
+					if let Some(id) = resolve_action_id("find_char_reverse") {
 						KeyResult::ActionByIdWithChar {
 							id,
 							count,
@@ -90,11 +90,11 @@ impl InputHandler {
 
 			PendingKind::ReplaceChar => match key.code {
 				KeyCode::Char(ch) => {
-				let count = self.effective_count() as usize;
-				let extend = self.extend;
-				let register = self.register;
-				self.reset_params();
-				if let Some(id) = resolve_action_id("replace_char") {
+					let count = self.effective_count() as usize;
+					let extend = self.extend;
+					let register = self.register;
+					self.reset_params();
+					if let Some(id) = resolve_action_id("replace_char") {
 						KeyResult::ActionByIdWithChar {
 							id,
 							count,
@@ -127,14 +127,14 @@ impl InputHandler {
 					let register = self.register;
 					self.reset_params();
 
-				let action_name = match selection {
-					ObjectSelectionKind::Inner => "select_object_inner",
-					ObjectSelectionKind::Around => "select_object_around",
-					ObjectSelectionKind::ToStart => "select_object_to_start",
-					ObjectSelectionKind::ToEnd => "select_object_to_end",
-				};
+					let action_name = match selection {
+						ObjectSelectionKind::Inner => "select_object_inner",
+						ObjectSelectionKind::Around => "select_object_around",
+						ObjectSelectionKind::ToStart => "select_object_to_start",
+						ObjectSelectionKind::ToEnd => "select_object_to_end",
+					};
 
-				if let Some(id) = resolve_action_id(action_name) {
+					if let Some(id) = resolve_action_id(action_name) {
 						KeyResult::ActionByIdWithChar {
 							id,
 							count,

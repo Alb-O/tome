@@ -7,12 +7,11 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
 
+// Re-export tree_house::Language for convenience.
+pub use tree_house::Language as LanguageId;
 use tree_house::{InjectionLanguageMarker, Language, LanguageConfig as TreeHouseConfig};
 
 use crate::language::LanguageData;
-
-// Re-export tree_house::Language for convenience.
-pub use tree_house::Language as LanguageId;
 
 /// The main language loader that implements tree-house's LanguageLoader trait.
 ///
@@ -76,9 +75,10 @@ impl LanguageLoader {
 	pub fn language_for_path(&self, path: &Path) -> Option<Language> {
 		// Check exact filename first
 		if let Some(name) = path.file_name().and_then(|n| n.to_str())
-			&& let Some(&idx) = self.by_filename.get(name) {
-				return Some(Language::new(idx as u32));
-			}
+			&& let Some(&idx) = self.by_filename.get(name)
+		{
+			return Some(Language::new(idx as u32));
+		}
 
 		// Check extension
 		path.extension()
@@ -117,9 +117,10 @@ impl LanguageLoader {
 	fn language_for_injection_match(&self, text: &str) -> Option<Language> {
 		for (idx, lang) in self.languages.iter().enumerate() {
 			if let Some(ref regex) = lang.injection_regex
-				&& regex.is_match(text) {
-					return Some(Language::new(idx as u32));
-				}
+				&& regex.is_match(text)
+			{
+				return Some(Language::new(idx as u32));
+			}
 		}
 		None
 	}

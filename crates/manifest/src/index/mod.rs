@@ -9,6 +9,8 @@ mod diagnostics;
 mod lookups;
 mod types;
 
+use std::sync::OnceLock;
+
 pub use collision::{Collision, CollisionKind};
 pub use diagnostics::{CollisionReport, DiagnosticReport, diagnostics};
 pub use lookups::{
@@ -17,8 +19,6 @@ pub use lookups::{
 	resolve_action_id,
 };
 pub use types::{ActionRegistryIndex, ExtensionRegistry, RegistryIndex};
-
-use std::sync::OnceLock;
 
 static REGISTRY: OnceLock<ExtensionRegistry> = OnceLock::new();
 
