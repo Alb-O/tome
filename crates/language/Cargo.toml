@@ -13,6 +13,7 @@ regex.workspace = true
 ropey.workspace = true
 thiserror.workspace = true
 tome-base.workspace = true
+tome-manifest.workspace = true
 tree-house.workspace = true
 libloading.workspace = true
 

@@ -4,6 +4,7 @@
 //! about a language, including file associations and lazily-loaded syntax config.
 
 use once_cell::sync::OnceCell;
+use tome_manifest::LanguageDef;
 use tree_house::LanguageConfig as TreeHouseConfig;
 
 use crate::grammar::load_grammar;
@@ -98,6 +99,21 @@ impl LanguageData {
 				None
 			}
 		}
+	}
+}
+
+impl From<&LanguageDef> for LanguageData {
+	fn from(def: &LanguageDef) -> Self {
+		Self::new(
+			def.name.to_string(),
+			def.grammar.map(|s: &str| s.to_string()),
+			def.extensions.iter().map(|s: &&str| s.to_string()).collect(),
+			def.filenames.iter().map(|s: &&str| s.to_string()).collect(),
+			def.shebangs.iter().map(|s: &&str| s.to_string()).collect(),
+			def.comment_tokens.iter().map(|s: &&str| s.to_string()).collect(),
+			def.block_comment.map(|(s, e): (&str, &str)| (s.to_string(), e.to_string())),
+			def.injection_regex,
+		)
 	}
 }
 

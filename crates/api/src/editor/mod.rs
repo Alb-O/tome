@@ -15,9 +15,10 @@ use agentfs_sdk::{FileSystem, HostFS};
 use tome_base::range::CharIdx;
 use tome_base::{Rope, Selection, Transaction};
 use tome_input::InputHandler;
-use tome_manifest::{HookContext, Mode, emit_hook};
+use tome_manifest::{HookContext, Mode, emit_hook, syntax::SyntaxStyles};
 use tome_stdlib::movement;
 use tome_stdlib::notifications::{Notifications, Overflow};
+use tome_language::{LanguageLoader, syntax::Syntax};
 use tome_theme::Theme;
 pub use types::{HistoryEntry, Message, MessageKind, Registers};
 
@@ -57,6 +58,8 @@ pub struct Editor {
 	pub completions: CompletionState,
 	pub extensions: ExtensionMap,
 	pub fs: Arc<dyn FileSystem>,
+	pub language_loader: LanguageLoader,
+	pub syntax: Option<Syntax>,
 }
 
 // TextAccess is already implemented in capabilities.rs
@@ -141,10 +144,26 @@ impl Editor {
 	}
 
 	pub fn from_content(fs: Arc<dyn FileSystem>, content: String, path: Option<PathBuf>) -> Self {
-		// TODO: Implement detect_file_type in tome_manifest or tome_stdlib
-		let file_type: Option<String> = None;
-
 		let doc = Rope::from(content.as_str());
+
+		// Initialize language loader and detect file type
+		let mut language_loader = LanguageLoader::new();
+		for lang in tome_manifest::LANGUAGES.iter() {
+			language_loader.register(lang.into());
+		}
+
+		let (file_type, syntax) = if let Some(ref p) = path {
+			if let Some(lang_id) = language_loader.language_for_path(p) {
+				let lang_data = language_loader.get(lang_id);
+				let file_type = lang_data.map(|l| l.name.clone());
+				let syntax = Syntax::new(doc.slice(..), lang_id, &language_loader).ok();
+				(file_type, syntax)
+			} else {
+				(None, None)
+			}
+		} else {
+			(None, None)
+		};
 
 		let scratch_path = PathBuf::from("[scratch]");
 		let hook_path = path.as_ref().unwrap_or(&scratch_path);
@@ -197,6 +216,8 @@ impl Editor {
 				map
 			},
 			fs,
+			language_loader,
+			syntax,
 		}
 	}
 
@@ -358,5 +379,67 @@ impl Editor {
 
 	pub fn set_filesystem(&mut self, fs: Arc<dyn FileSystem>) {
 		self.fs = fs;
+	}
+
+	/// Collects syntax highlight spans for the visible viewport.
+	///
+	/// Returns an empty vector if no syntax tree is available.
+	pub fn collect_highlight_spans(
+		&self,
+		area: ratatui::layout::Rect,
+	) -> Vec<(tome_language::highlight::HighlightSpan, ratatui::style::Style)> {
+		let Some(ref syntax) = self.syntax else {
+			return Vec::new();
+		};
+
+		// Calculate byte range for visible viewport
+		let start_line = self.scroll_line;
+		let end_line = (start_line + area.height as usize).min(self.doc.len_lines());
+
+		let start_byte = self.doc.line_to_byte(start_line) as u32;
+		let end_byte = if end_line < self.doc.len_lines() {
+			self.doc.line_to_byte(end_line) as u32
+		} else {
+			self.doc.len_bytes() as u32
+		};
+
+		// Create highlight styles from theme to resolve captures to styles
+		let highlight_styles = tome_language::highlight::HighlightStyles::new(
+			SyntaxStyles::scope_names(),
+			|scope| self.theme.colors.syntax.resolve(scope),
+		);
+
+		// Get highlighter for visible range
+		let highlighter = syntax.highlighter(
+			self.doc.slice(..),
+			&self.language_loader,
+			start_byte..end_byte,
+		);
+
+		// Collect spans with resolved styles
+		highlighter
+			.map(|span| {
+				let style = highlight_styles.style_for_highlight(span.highlight);
+				(span, style)
+			})
+			.collect()
+	}
+
+	/// Gets the syntax highlighting style for a byte position.
+	///
+	/// Looks up the innermost highlight span containing this position.
+	pub fn style_for_byte_pos(
+		&self,
+		byte_pos: usize,
+		spans: &[(tome_language::highlight::HighlightSpan, ratatui::style::Style)],
+	) -> Option<ratatui::style::Style> {
+		// Find the innermost span containing this position
+		// Spans are ordered, later spans may be nested inside earlier ones
+		for (span, style) in spans.iter().rev() {
+			if byte_pos >= span.start as usize && byte_pos < span.end as usize {
+				return Some(*style);
+			}
+		}
+		None
 	}
 }
