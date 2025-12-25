@@ -17,3 +17,6 @@ serde.workspace = true
 strsim.workspace = true
 thiserror.workspace = true
 tome-base.workspace = true
+
+[dev-dependencies]
+tome-stdlib.workspace = true

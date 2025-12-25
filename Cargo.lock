@@ -3417,6 +3417,7 @@ dependencies = [
  "serde",
  "tome-base",
  "tome-manifest",
+ "tome-stdlib",
 ]
 
 [[package]]
@@ -3464,6 +3465,7 @@ dependencies = [
  "strsim",
  "thiserror 2.0.17",
  "tome-base",
+ "tome-stdlib",
 ]
 
 [[package]]

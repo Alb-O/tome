@@ -465,17 +465,16 @@ impl Editor {
 		tx.apply(&mut self.doc);
 
 		// Incrementally update syntax tree if present
-		if let Some(ref mut syntax) = self.syntax {
-			if let Err(e) = syntax.update_from_changeset(
+		if let Some(ref mut syntax) = self.syntax
+			&& let Err(e) = syntax.update_from_changeset(
 				old_doc.slice(..),
 				self.doc.slice(..),
 				tx.changes(),
 				&self.language_loader,
 			) {
-				// Log error but don't fail - syntax highlighting is non-critical
-				// In the future, could fall back to full reparse
-				eprintln!("Syntax update error: {e}");
-			}
+			// Log error but don't fail - syntax highlighting is non-critical
+			// In the future, could fall back to full reparse
+			eprintln!("Syntax update error: {e}");
 		}
 
 		self.modified = true;

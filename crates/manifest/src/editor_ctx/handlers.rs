@@ -200,31 +200,4 @@ macro_rules! result_handler {
 	};
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_handlers_registered() {
-		// Ensure common variants have at least one handler registered.
-		assert!(!RESULT_OK_HANDLERS.is_empty());
-		assert!(!RESULT_QUIT_HANDLERS.is_empty());
-		assert!(!RESULT_ERROR_HANDLERS.is_empty());
-	}
-
-	#[test]
-	fn test_handler_coverage_counts() {
-		let total = RESULT_OK_HANDLERS.len()
-			+ RESULT_MODE_CHANGE_HANDLERS.len()
-			+ RESULT_CURSOR_MOVE_HANDLERS.len()
-			+ RESULT_MOTION_HANDLERS.len()
-			+ RESULT_INSERT_WITH_MOTION_HANDLERS.len()
-			+ RESULT_EDIT_HANDLERS.len()
-			+ RESULT_QUIT_HANDLERS.len()
-			+ RESULT_ERROR_HANDLERS.len();
-		assert!(
-			total >= 8,
-			"expected handlers registered for major variants"
-		);
-	}
-}
+// Integration tests that require tome-stdlib are in tests/registry.rs

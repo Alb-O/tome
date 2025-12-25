@@ -270,10 +270,10 @@ impl SyntaxStyles {
 		// Try exact match first, then progressively shorter prefixes
 		let mut current = scope;
 		loop {
-			if let Some(style) = self.get_by_scope(current) {
-				if style.fg.is_some() || style.bg.is_some() || !style.modifiers.is_empty() {
-					return style.to_style();
-				}
+			if let Some(style) = self.get_by_scope(current)
+				&& (style.fg.is_some() || style.bg.is_some() || !style.modifiers.is_empty())
+			{
+				return style.to_style();
 			}
 
 			match current.rfind('.') {

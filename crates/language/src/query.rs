@@ -29,7 +29,11 @@ pub fn read_query(lang: &str, filename: &str) -> String {
 }
 
 /// Query for computing indentation.
+///
+/// The capture fields are reserved for future indentation computation
+/// but are stored during construction for when that feature is implemented.
 #[derive(Debug)]
+#[allow(dead_code, reason = "captures reserved for future indentation feature")]
 pub struct IndentQuery {
 	query: Query,
 	indent_capture: Option<tree_house::tree_sitter::Capture>,
@@ -46,11 +50,12 @@ impl IndentQuery {
 		let query = Query::new(grammar, source, |_pattern, predicate| {
 			// Allow common indent predicates
 			match predicate {
-				UserPredicate::SetProperty { key, .. } => match key {
-					"indent.begin" | "indent.end" | "indent.dedent" | "indent.branch"
-					| "indent.ignore" | "indent.align" => Ok(()),
-					_ => Err(InvalidPredicateError::unknown(predicate)),
-				},
+				UserPredicate::SetProperty {
+					key:
+						"indent.begin" | "indent.end" | "indent.dedent" | "indent.branch"
+						| "indent.ignore" | "indent.align",
+					..
+				} => Ok(()),
 				_ => Err(InvalidPredicateError::unknown(predicate)),
 			}
 		})?;
@@ -241,13 +246,4 @@ impl RainbowQuery {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use super::read_query;
-
-	// Query tests require actual grammars, which are tested in integration tests
-	#[test]
-	fn test_captured_node_range() {
-		// This would require a real node, tested in integration
-	}
-}
+// Query tests require actual grammars, which are tested in integration tests
