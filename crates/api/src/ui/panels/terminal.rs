@@ -222,9 +222,10 @@ impl Panel for TerminalPanel {
 		}
 
 		frame.render_widget(Clear, area);
-		let base_style = Style::default()
-			.bg(theme.colors.popup.bg)
-			.fg(theme.colors.popup.fg);
+		let base_style =
+			Style::default()
+				.bg(theme.colors.popup.bg.into())
+				.fg(theme.colors.popup.fg.into());
 		frame.render_widget(Block::default().style(base_style), area);
 
 		if let Some(term) = &mut self.terminal {

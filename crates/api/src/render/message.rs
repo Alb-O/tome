@@ -7,8 +7,8 @@ impl Editor {
 	pub fn render_message_line(&self) -> impl Widget + '_ {
 		if let Some((prompt, input)) = self.input.command_line() {
 			return Paragraph::new(format!("{}{}", prompt, input))
-				.style(Style::default().fg(self.theme.colors.ui.command_input_fg));
+				.style(Style::default().fg(self.theme.colors.ui.command_input_fg.into()));
 		}
-		Paragraph::new("").style(Style::default().fg(self.theme.colors.ui.message_fg))
+		Paragraph::new("").style(Style::default().fg(self.theme.colors.ui.message_fg.into()))
 	}
 }

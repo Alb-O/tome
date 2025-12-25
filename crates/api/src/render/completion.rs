@@ -41,20 +41,22 @@ impl Editor {
 
 				let base_style = if is_selected {
 					Style::default()
-						.bg(self.theme.colors.ui.selection_bg)
-						.fg(self.theme.colors.ui.selection_fg)
+						.bg(self.theme.colors.ui.selection_bg.into())
+						.fg(self.theme.colors.ui.selection_fg.into())
 				} else {
 					Style::default()
-						.bg(self.theme.colors.popup.bg)
-						.fg(self.theme.colors.popup.fg)
+						.bg(self.theme.colors.popup.bg.into())
+						.fg(self.theme.colors.popup.fg.into())
 				};
 
 				let icon_style = if is_selected {
-					base_style.fg(kind_color).add_modifier(Modifier::BOLD)
+					base_style
+						.fg(kind_color.into())
+						.add_modifier(Modifier::BOLD)
 				} else {
 					Style::default()
-						.fg(kind_color)
-						.bg(self.theme.colors.popup.bg)
+						.fg(kind_color.into())
+						.bg(self.theme.colors.popup.bg.into())
 				};
 
 				let label_style = if is_selected {
@@ -73,11 +75,9 @@ impl Editor {
 				let dim_style = if is_selected {
 					base_style
 				} else {
-					Style::default().fg(self.theme.colors.status.dim_fg).bg(self
-						.theme
-						.colors
-						.popup
-						.bg)
+					Style::default()
+						.fg(self.theme.colors.status.dim_fg.into())
+						.bg(self.theme.colors.popup.bg.into())
 				};
 
 				let line = Line::from(vec![
@@ -93,7 +93,7 @@ impl Editor {
 			})
 			.collect();
 
-		let stripe_style = Style::default().fg(self.theme.colors.status.normal_bg);
+		let stripe_style = Style::default().fg(self.theme.colors.status.normal_bg.into());
 		let border_set = ratatui::symbols::border::Set {
 			top_left: "▏",
 			vertical_left: "▏",
@@ -102,7 +102,7 @@ impl Editor {
 		};
 
 		let block = Block::default()
-			.style(Style::default().bg(self.theme.colors.popup.bg))
+			.style(Style::default().bg(self.theme.colors.popup.bg.into()))
 			.borders(Borders::LEFT)
 			.border_set(border_set)
 			.border_style(stripe_style);

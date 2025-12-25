@@ -20,9 +20,9 @@
 //! // Returns keyword.control.import style, or falls back to keyword.control, then keyword
 //! ```
 
-// Re-export from ratatui for convenience when defining themes
-use ratatui::style::Style;
-pub use ratatui::style::{Color, Modifier};
+// Re-export abstract color types from tome-base
+use tome_base::Style;
+pub use tome_base::color::{Color, Modifier};
 
 /// A syntax style with optional foreground, background, and modifiers.
 #[derive(Clone, Copy, Debug, Default)]
@@ -60,19 +60,13 @@ impl SyntaxStyle {
 		self
 	}
 
-	/// Convert to ratatui Style.
+	/// Convert to abstract Style.
 	pub fn to_style(self) -> Style {
-		let mut style = Style::default();
-		if let Some(fg) = self.fg {
-			style = style.fg(fg);
+		Style {
+			fg: self.fg,
+			bg: self.bg,
+			modifiers: self.modifiers,
 		}
-		if let Some(bg) = self.bg {
-			style = style.bg(bg);
-		}
-		if !self.modifiers.is_empty() {
-			style = style.add_modifier(self.modifiers);
-		}
-		style
 	}
 }
 
@@ -282,7 +276,7 @@ impl SyntaxStyles {
 			}
 		}
 
-		Style::default()
+		Style::new()
 	}
 
 	/// Get style by exact scope name (with dots converted to underscores).
