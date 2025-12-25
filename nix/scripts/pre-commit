@@ -16,19 +16,6 @@ if [ -z "$staged_files" ]; then
     exit 0
 fi
 
-# Run treefmt on staged files
-echo "Running treefmt on staged files..."
-echo "$staged_files" | xargs treefmt --no-cache
-
-# Re-add any files that were modified by treefmt
-echo "$staged_files" | while read -r file; do
-    if [ -f "$file" ]; then
-        git add "$file"
-    fi
-done
-
-echo "Formatting complete."
-
 # Run Rust check
 if command -v cargo &> /dev/null; then
     echo "Running cargo check..."
@@ -44,14 +31,23 @@ fi
 # Run consolidated lint scan
 if command -v lint &> /dev/null; then
     echo "Running lint scan..."
-    lint_output=$(lint)
-    
-    if [ -n "$lint_output" ]; then
-        echo "$lint_output"
+    if ! lint; then
         echo "Lint scan found issues. Please fix them before committing."
         exit 1
     fi
-    echo "Lint scan passed."
 else
     echo "Warning: lint command not found, skipping lint scan."
 fi
+
+# Run treefmt on staged files
+echo "Running treefmt on staged files..."
+echo "$staged_files" | xargs treefmt --no-cache
+
+# Re-add any files that were modified by treefmt
+echo "$staged_files" | while read -r file; do
+    if [ -f "$file" ]; then
+        git add "$file"
+    fi
+done
+
+echo "Formatting complete."

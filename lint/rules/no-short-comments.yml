@@ -4,15 +4,13 @@ severity: info
 message: "Short single-line comments may not be necessary. Code should be self-explanatory."
 note: "Consider moving important context to function docstrings with examples, or removing if truly trivial."
 files:
-  - bin/**/*.rs
-  - lib/**/*.rs
-  - extensions/**/*.rs
+  - "crates/**/*.rs"
 ignores:
-  - bin/tome-term/src/themes/**/*.rs
-  - lib/ratatui/**/*.rs
-  - bin/tome-term/tests/**/*.rs
-  - bin/tome-term/src/tests.rs
-  - lib/core/benches/**/*.rs
+  - "crates/ratatui/**/*.rs"
+  - "crates/term/tests/**/*.rs"
+  - "crates/term/src/tests.rs"
+  - "crates/**/benches/**/*.rs"
+  - "vendor/**/*.rs"
 rule:
   all:
     - kind: line_comment

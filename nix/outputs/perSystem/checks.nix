@@ -19,7 +19,6 @@
       self',
       treefmt-nix,
       imp-fmt-lib,
-      rust-overlay,
       rootSrc,
       ...
     }:
@@ -29,6 +28,7 @@
         excludes = [
           "target/*"
           "**/target/*"
+          "vendor/*"
         ];
         rust.enable = true;
       };

@@ -4,9 +4,10 @@ severity: warning
 message: "Avoid conversational filler or spontaneous thoughts in comments."
 note: "Phrases like 'wait,' or 'hold on,' are noise and should be cleaned up. Be precise and technical in comments."
 files:
-  - bin/**/*.rs
-  - lib/**/*.rs
-  - extensions/**/*.rs
+  - "crates/**/*.rs"
+ignores:
+  - "crates/ratatui/**/*.rs"
+  - "vendor/**/*.rs"
 rule:
   any:
     - kind: line_comment
