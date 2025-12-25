@@ -40,6 +40,7 @@
           pkgs.pkg-config
           pkgs.openssl
           pkgs.ast-grep
+          pkgs.yq-go
           lint-summary
           self'.formatter
         ];
