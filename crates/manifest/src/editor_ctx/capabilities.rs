@@ -1,11 +1,11 @@
 //! Fine-grained capability traits for editor operations.
 
 use ropey::RopeSlice;
+use tome_base::range::CharIdx;
+use tome_base::selection::Selection;
 
 use crate::Mode;
 use crate::actions::EditAction;
-use tome_base::range::CharIdx;
-use tome_base::selection::Selection;
 
 /// Cursor position access.
 pub trait CursorAccess {
@@ -34,6 +34,7 @@ pub trait ModeAccess {
 /// Message display and notifications.
 pub trait MessageAccess {
 	fn show_message(&mut self, msg: &str);
+	fn show_warning(&mut self, msg: &str);
 	fn show_error(&mut self, msg: &str);
 	fn notify(&mut self, type_name: &str, msg: &str);
 	fn clear_message(&mut self);
@@ -99,9 +100,14 @@ pub trait FileOpsAccess {
 	/// Check if the buffer has unsaved changes.
 	fn is_modified(&self) -> bool;
 	/// Save the buffer to its current file path.
-	fn save(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), crate::CommandError>> + '_>>;
+	fn save(
+		&mut self,
+	) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), crate::CommandError>> + '_>>;
 	/// Save the buffer to a specific file path.
-	fn save_as(&mut self, path: std::path::PathBuf) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), crate::CommandError>> + '_>>;
+	fn save_as(
+		&mut self,
+		path: std::path::PathBuf,
+	) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), crate::CommandError>> + '_>>;
 }
 
 /// Combined trait for command handlers - provides all common editor operations.

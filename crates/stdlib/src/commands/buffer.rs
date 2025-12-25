@@ -1,7 +1,7 @@
 use futures::future::LocalBoxFuture;
+use tome_manifest::{CommandContext, CommandError, CommandOutcome};
 
 use crate::command;
-use tome_manifest::{CommandContext, CommandError, CommandOutcome};
 
 command!(buffer, { aliases: &["b"], description: "Switch to buffer" }, handler: cmd_buffer);
 
@@ -12,7 +12,7 @@ fn cmd_buffer<'a>(
 		if ctx.args.is_empty() {
 			return Err(CommandError::MissingArgument("buffer name or number"));
 		}
-		ctx.message(&format!("buffer {} - not yet implemented", ctx.args[0]));
+		ctx.warning(&format!("buffer {} - not yet implemented", ctx.args[0]));
 		Ok(CommandOutcome::Ok)
 	})
 }
@@ -23,7 +23,7 @@ fn cmd_buffer_next<'a>(
 	ctx: &'a mut CommandContext<'a>,
 ) -> LocalBoxFuture<'a, Result<CommandOutcome, CommandError>> {
 	Box::pin(async move {
-		ctx.message("buffer-next - not yet implemented");
+		ctx.warning("buffer-next - not yet implemented");
 		Ok(CommandOutcome::Ok)
 	})
 }
@@ -34,7 +34,7 @@ fn cmd_buffer_prev<'a>(
 	ctx: &'a mut CommandContext<'a>,
 ) -> LocalBoxFuture<'a, Result<CommandOutcome, CommandError>> {
 	Box::pin(async move {
-		ctx.message("buffer-previous - not yet implemented");
+		ctx.warning("buffer-previous - not yet implemented");
 		Ok(CommandOutcome::Ok)
 	})
 }
@@ -45,7 +45,7 @@ fn cmd_delete_buffer<'a>(
 	ctx: &'a mut CommandContext<'a>,
 ) -> LocalBoxFuture<'a, Result<CommandOutcome, CommandError>> {
 	Box::pin(async move {
-		ctx.message("delete-buffer - not yet implemented");
+		ctx.warning("delete-buffer - not yet implemented");
 		Ok(CommandOutcome::Ok)
 	})
 }

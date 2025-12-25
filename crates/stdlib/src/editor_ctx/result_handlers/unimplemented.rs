@@ -10,7 +10,7 @@ macro_rules! unimplemented_handler {
 	($slice:ident, $static_name:ident, $name:literal, $variant:pat, $msg:literal) => {
 		result_handler!($slice, $static_name, $name, |r, ctx, _| {
 			if matches!(r, $variant) {
-				ctx.message($msg);
+				ctx.warning($msg);
 			}
 			HandleOutcome::Handled
 		});
@@ -27,7 +27,7 @@ result_handler!(
 			ops.split_lines();
 			HandleOutcome::Handled
 		} else {
-			ctx.message("Split lines not available");
+			ctx.warning("Split lines not available");
 			HandleOutcome::Handled
 		}
 	}

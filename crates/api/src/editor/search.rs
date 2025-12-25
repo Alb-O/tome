@@ -19,14 +19,14 @@ impl Editor {
 					}
 				}
 				Ok(None) => {
-					self.show_message("Pattern not found");
+					self.show_warning("Pattern not found");
 				}
 				Err(e) => {
 					self.show_error(format!("Regex error: {}", e));
 				}
 			}
 		} else {
-			self.show_message("No search pattern");
+			self.show_warning("No search pattern");
 		}
 		false
 	}
@@ -46,14 +46,14 @@ impl Editor {
 					}
 				}
 				Ok(None) => {
-					self.show_message("Pattern not found");
+					self.show_warning("Pattern not found");
 				}
 				Err(e) => {
 					self.show_error(format!("Regex error: {}", e));
 				}
 			}
 		} else {
-			self.show_message("No search pattern");
+			self.show_warning("No search pattern");
 		}
 		false
 	}
@@ -72,14 +72,14 @@ impl Editor {
 					self.selection = Selection::single(range.min(), range.max());
 				}
 				Ok(None) => {
-					self.show_message("No more matches");
+					self.show_warning("No more matches");
 				}
 				Err(e) => {
 					self.show_error(format!("Regex error: {}", e));
 				}
 			}
 		} else {
-			self.show_message("No selection");
+			self.show_warning("No selection");
 		}
 		false
 	}
@@ -89,7 +89,7 @@ impl Editor {
 		let from = primary.min();
 		let to = primary.max();
 		if from >= to {
-			self.show_message("No selection to search in");
+			self.show_warning("No selection to search in");
 			return false;
 		}
 
@@ -103,7 +103,7 @@ impl Editor {
 				self.show_message(format!("{} matches", self.selection.len()));
 			}
 			Ok(_) => {
-				self.show_message("No matches found");
+				self.show_warning("No matches found");
 			}
 			Err(e) => {
 				self.show_error(format!("Regex error: {}", e));
@@ -117,7 +117,7 @@ impl Editor {
 		let from = primary.min();
 		let to = primary.max();
 		if from >= to {
-			self.show_message("No selection to split");
+			self.show_warning("No selection to split");
 			return false;
 		}
 
@@ -139,11 +139,11 @@ impl Editor {
 					self.selection = Selection::from_vec(new_ranges, 0);
 					self.show_message(format!("{} splits", self.selection.len()));
 				} else {
-					self.show_message("Split produced no ranges");
+					self.show_warning("Split produced no ranges");
 				}
 			}
 			Ok(_) => {
-				self.show_message("No matches found to split on");
+				self.show_warning("No matches found to split on");
 			}
 			Err(e) => {
 				self.show_error(format!("Regex error: {}", e));
@@ -157,7 +157,7 @@ impl Editor {
 		let from = primary.min();
 		let to = primary.max();
 		if from >= to {
-			self.show_message("No selection to split");
+			self.show_warning("No selection to split");
 			return false;
 		}
 
@@ -210,7 +210,7 @@ impl Editor {
 		}
 
 		if kept_ranges.is_empty() {
-			self.show_message("No selections remain");
+			self.show_warning("No selections remain");
 		} else {
 			let count = kept_ranges.len();
 			self.selection = Selection::from_vec(kept_ranges, 0);

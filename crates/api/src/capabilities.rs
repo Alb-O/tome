@@ -56,6 +56,10 @@ impl MessageAccess for Editor {
 		self.show_message(msg);
 	}
 
+	fn show_warning(&mut self, msg: &str) {
+		self.show_warning(msg);
+	}
+
 	fn show_error(&mut self, msg: &str) {
 		self.show_error(msg);
 	}
