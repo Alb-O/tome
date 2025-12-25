@@ -11,7 +11,9 @@ use thiserror::Error;
 use tree_house::tree_sitter::{InputEdit, Node, Tree};
 use tree_house::{Layer, TreeCursor};
 
-use crate::config::{LanguageId, LanguageLoader};
+use tree_house::Language;
+
+use crate::config::LanguageLoader;
 use crate::highlight::Highlighter;
 
 /// Default parse timeout (500ms).
@@ -46,7 +48,7 @@ impl Syntax {
 	/// Creates a new Syntax for the given source and language.
 	pub fn new(
 		source: RopeSlice,
-		language: LanguageId,
+		language: Language,
 		loader: &LanguageLoader,
 	) -> Result<Self, SyntaxError> {
 		let inner = tree_house::Syntax::new(source, language, PARSE_TIMEOUT, loader)?;
@@ -97,12 +99,12 @@ impl Syntax {
 	}
 
 	/// Returns the language of the root layer.
-	pub fn root_language(&self) -> LanguageId {
+	pub fn root_language(&self) -> Language {
 		self.layer(self.root_layer()).language
 	}
 
 	/// Gets data for a specific layer.
-	pub fn layer(&self, layer: Layer) -> &tree_house::LayerData<LanguageId> {
+	pub fn layer(&self, layer: Layer) -> &tree_house::LayerData {
 		self.inner.layer(layer)
 	}
 

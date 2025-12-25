@@ -7,9 +7,14 @@ license.workspace = true
 
 [dependencies]
 log.workspace = true
+once_cell.workspace = true
 ratatui.workspace = true
 regex.workspace = true
+ropey.workspace = true
 thiserror.workspace = true
+tome-base.workspace = true
+tree-house.workspace = true
+libloading.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
