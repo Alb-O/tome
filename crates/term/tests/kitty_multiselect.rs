@@ -1,6 +1,10 @@
-use std::path::PathBuf;
+mod helpers;
+
 use std::time::Duration;
 
+use helpers::{
+	insert_lines, insert_text, reset_test_file, tome_cmd_with_file_named, workspace_dir,
+};
 use kitty_test_harness::{
 	kitty_send_keys, pause_briefly, require_kitty, run_with_timeout, wait_for_clean_contains,
 	wait_for_screen_text_clean, with_kitty_capture,
@@ -8,23 +12,6 @@ use kitty_test_harness::{
 use termwiz::input::KeyCode;
 
 const TEST_TIMEOUT: Duration = Duration::from_secs(15);
-
-fn tome_cmd() -> String {
-	env!("CARGO_BIN_EXE_tome").to_string()
-}
-
-fn tome_cmd_with_file_named(name: &str) -> String {
-	format!("{} {}", tome_cmd(), name)
-}
-
-fn workspace_dir() -> PathBuf {
-	PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-}
-
-fn reset_test_file(name: &str) {
-	let path = workspace_dir().join(name);
-	let _ = std::fs::remove_file(&path);
-}
 
 #[serial_test::serial]
 #[test]
@@ -38,32 +25,7 @@ fn harness_can_insert_and_capture() {
 	run_with_timeout(TEST_TIMEOUT, || {
 		with_kitty_capture(&workspace_dir(), &tome_cmd_with_file_named(file), |kitty| {
 			pause_briefly();
-
-			kitty_send_keys!(
-				kitty,
-				KeyCode::Char('i'),
-				KeyCode::Char('h'),
-				KeyCode::Char('e'),
-				KeyCode::Char('l'),
-				KeyCode::Char('l'),
-				KeyCode::Char('o'),
-				KeyCode::Char(' '),
-				KeyCode::Char('k'),
-				KeyCode::Char('i'),
-				KeyCode::Char('t'),
-				KeyCode::Char('t'),
-				KeyCode::Char('y'),
-				KeyCode::Char(' '),
-				KeyCode::Char('h'),
-				KeyCode::Char('a'),
-				KeyCode::Char('r'),
-				KeyCode::Char('n'),
-				KeyCode::Char('e'),
-				KeyCode::Char('s'),
-				KeyCode::Char('s'),
-				KeyCode::Enter,
-			);
-			kitty_send_keys!(kitty, KeyCode::Escape);
+			insert_text(kitty, "hello kitty harness\n");
 
 			let (_raw, clean) =
 				wait_for_screen_text_clean(kitty, Duration::from_secs(3), |_r, clean| {
@@ -87,16 +49,7 @@ fn harness_macro_keys_handle_newlines() {
 	run_with_timeout(TEST_TIMEOUT, || {
 		with_kitty_capture(&workspace_dir(), &tome_cmd_with_file_named(file), |kitty| {
 			pause_briefly();
-
-			kitty_send_keys!(kitty, KeyCode::Char('i'));
-			kitty_send_keys!(
-				kitty,
-				KeyCode::Char('A'),
-				KeyCode::Char('B'),
-				KeyCode::Enter,
-				KeyCode::Char('C')
-			);
-			kitty_send_keys!(kitty, KeyCode::Escape);
+			insert_text(kitty, "AB\nC");
 
 			let (_raw, clean) =
 				wait_for_screen_text_clean(kitty, Duration::from_secs(3), |_r, clean| {
@@ -121,27 +74,7 @@ fn split_lines_adds_multi_selection_highlights() {
 	run_with_timeout(TEST_TIMEOUT, || {
 		with_kitty_capture(&workspace_dir(), &tome_cmd_with_file_named(file), |kitty| {
 			pause_briefly();
-
-			// Populate a small buffer via key events.
-			kitty_send_keys!(
-				kitty,
-				KeyCode::Char('i'),
-				KeyCode::Char('o'),
-				KeyCode::Char('n'),
-				KeyCode::Char('e'),
-				KeyCode::Enter,
-				KeyCode::Char('t'),
-				KeyCode::Char('w'),
-				KeyCode::Char('o'),
-				KeyCode::Enter,
-				KeyCode::Char('t'),
-				KeyCode::Char('h'),
-				KeyCode::Char('r'),
-				KeyCode::Char('e'),
-				KeyCode::Char('e'),
-				KeyCode::Enter,
-			);
-			kitty_send_keys!(kitty, KeyCode::Escape);
+			insert_lines(kitty, &["one", "two", "three"]);
 			pause_briefly();
 
 			// Ensure the text actually landed before proceeding.
@@ -186,29 +119,7 @@ fn duplicate_down_then_delete_removes_adjacent_line() {
 	run_with_timeout(TEST_TIMEOUT, || {
 		with_kitty_capture(&workspace_dir(), &tome_cmd_with_file_named(file), |kitty| {
 			pause_briefly();
-
-			kitty_send_keys!(
-				kitty,
-				KeyCode::Char('i'),
-				KeyCode::Char('a'),
-				KeyCode::Char('l'),
-				KeyCode::Char('p'),
-				KeyCode::Char('h'),
-				KeyCode::Char('a'),
-				KeyCode::Enter,
-				KeyCode::Char('b'),
-				KeyCode::Char('e'),
-				KeyCode::Char('t'),
-				KeyCode::Char('a'),
-				KeyCode::Enter,
-				KeyCode::Char('g'),
-				KeyCode::Char('a'),
-				KeyCode::Char('m'),
-				KeyCode::Char('m'),
-				KeyCode::Char('a'),
-				KeyCode::Enter,
-			);
-			kitty_send_keys!(kitty, KeyCode::Escape);
+			insert_lines(kitty, &["alpha", "beta", "gamma"]);
 			pause_briefly();
 
 			let clean_initial = wait_for_clean_contains(kitty, Duration::from_secs(3), "gamma");
@@ -252,27 +163,7 @@ fn insert_mode_types_at_all_cursors() {
 	run_with_timeout(TEST_TIMEOUT, || {
 		with_kitty_capture(&workspace_dir(), &tome_cmd_with_file_named(file), |kitty| {
 			pause_briefly();
-
-			// Seed three lines via key events.
-			kitty_send_keys!(
-				kitty,
-				KeyCode::Char('i'),
-				KeyCode::Char('o'),
-				KeyCode::Char('n'),
-				KeyCode::Char('e'),
-				KeyCode::Enter,
-				KeyCode::Char('t'),
-				KeyCode::Char('w'),
-				KeyCode::Char('o'),
-				KeyCode::Enter,
-				KeyCode::Char('t'),
-				KeyCode::Char('h'),
-				KeyCode::Char('r'),
-				KeyCode::Char('e'),
-				KeyCode::Char('e'),
-				KeyCode::Enter,
-			);
-			kitty_send_keys!(kitty, KeyCode::Escape);
+			insert_lines(kitty, &["one", "two", "three"]);
 			pause_briefly();
 
 			// Select all, split per line, and enter insert mode to type 'X'.
@@ -306,16 +197,7 @@ fn insert_i_inserts_before_cursor_position() {
 	run_with_timeout(TEST_TIMEOUT, || {
 		with_kitty_capture(&workspace_dir(), &tome_cmd_with_file_named(file), |kitty| {
 			pause_briefly();
-
-			// Seed a single line.
-			kitty_send_keys!(
-				kitty,
-				KeyCode::Char('i'),
-				KeyCode::Char('a'),
-				KeyCode::Char('b'),
-				KeyCode::Char('c'),
-			);
-			kitty_send_keys!(kitty, KeyCode::Escape);
+			insert_text(kitty, "abc");
 
 			let _ = wait_for_clean_contains(kitty, Duration::from_secs(3), "abc");
 
@@ -355,16 +237,7 @@ fn insert_a_inserts_after_cursor_position() {
 	run_with_timeout(TEST_TIMEOUT, || {
 		with_kitty_capture(&workspace_dir(), &tome_cmd_with_file_named(file), |kitty| {
 			pause_briefly();
-
-			// Seed a single line.
-			kitty_send_keys!(
-				kitty,
-				KeyCode::Char('i'),
-				KeyCode::Char('a'),
-				KeyCode::Char('b'),
-				KeyCode::Char('c'),
-			);
-			kitty_send_keys!(kitty, KeyCode::Escape);
+			insert_text(kitty, "abc");
 
 			let _ = wait_for_clean_contains(kitty, Duration::from_secs(3), "abc");
 
@@ -404,27 +277,7 @@ fn insert_a_appends_after_each_cursor_across_selections() {
 	run_with_timeout(TEST_TIMEOUT, || {
 		with_kitty_capture(&workspace_dir(), &tome_cmd_with_file_named(file), |kitty| {
 			pause_briefly();
-
-			// Seed three lines via key events.
-			kitty_send_keys!(
-				kitty,
-				KeyCode::Char('i'),
-				KeyCode::Char('o'),
-				KeyCode::Char('n'),
-				KeyCode::Char('e'),
-				KeyCode::Enter,
-				KeyCode::Char('t'),
-				KeyCode::Char('w'),
-				KeyCode::Char('o'),
-				KeyCode::Enter,
-				KeyCode::Char('t'),
-				KeyCode::Char('h'),
-				KeyCode::Char('r'),
-				KeyCode::Char('e'),
-				KeyCode::Char('e'),
-				KeyCode::Enter,
-			);
-			kitty_send_keys!(kitty, KeyCode::Escape);
+			insert_lines(kitty, &["one", "two", "three"]);
 			pause_briefly();
 
 			let clean_initial = wait_for_clean_contains(kitty, Duration::from_secs(3), "three");

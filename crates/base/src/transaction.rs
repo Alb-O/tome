@@ -1,338 +1,19 @@
-use crate::range::{CharIdx, CharLen};
+mod changeset;
+#[cfg(test)]
+mod tests;
+mod types;
+
+pub use changeset::ChangeSet;
+pub use types::{Bias, Change, Insertion, Operation, Tendril};
+
+use crate::range::CharIdx;
 use crate::{Range, Rope, RopeSlice, Selection};
 
-pub type Tendril = String;
-
-pub struct Change {
-	pub start: CharIdx,
-	pub end: CharIdx,
-	pub replacement: Option<Tendril>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Bias {
-	Left,
-	Right,
-}
-
-/// A text insertion with cached character length.
+/// A document transformation combining changes with optional selection updates.
 ///
-/// Storing the character count avoids repeated O(n) `.chars().count()` calls
-/// in hot paths like `apply()`, `map_pos()`, and `compose()`.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Insertion {
-	pub text: Tendril,
-	pub char_len: CharLen,
-}
-
-impl Insertion {
-	/// Create a new insertion, computing the character length once.
-	#[inline]
-	pub fn new(text: Tendril) -> Self {
-		let char_len = text.chars().count();
-		Self { text, char_len }
-	}
-
-	/// Create an insertion from a substring, using pre-computed length.
-	#[inline]
-	pub fn from_chars(text: Tendril, char_len: CharLen) -> Self {
-		debug_assert_eq!(text.chars().count(), char_len);
-		Self { text, char_len }
-	}
-
-	/// Returns true if this insertion is empty.
-	#[inline]
-	pub fn is_empty(&self) -> bool {
-		self.char_len == 0
-	}
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Operation {
-	Retain(CharLen),
-	Delete(CharLen),
-	Insert(Insertion),
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct ChangeSet {
-	changes: Vec<Operation>,
-	len: usize,
-	len_after: usize,
-}
-
-impl ChangeSet {
-	pub fn new(_doc: RopeSlice) -> Self {
-		Self {
-			changes: Vec::new(),
-			len: 0,
-			len_after: 0,
-		}
-	}
-
-	pub fn len(&self) -> usize {
-		self.len
-	}
-
-	pub fn len_after(&self) -> usize {
-		self.len_after
-	}
-
-	pub fn is_empty(&self) -> bool {
-		self.changes.is_empty()
-	}
-
-	pub fn changes(&self) -> &[Operation] {
-		&self.changes
-	}
-
-	pub(crate) fn retain(&mut self, n: CharLen) {
-		if n == 0 {
-			return;
-		}
-
-		self.len += n;
-		self.len_after += n;
-
-		if let Some(Operation::Retain(count)) = self.changes.last_mut() {
-			*count += n;
-		} else {
-			self.changes.push(Operation::Retain(n));
-		}
-	}
-
-	pub(crate) fn delete(&mut self, n: CharLen) {
-		if n == 0 {
-			return;
-		}
-
-		self.len += n;
-
-		if let Some(Operation::Delete(count)) = self.changes.last_mut() {
-			*count += n;
-		} else {
-			self.changes.push(Operation::Delete(n));
-		}
-	}
-
-	pub(crate) fn insert(&mut self, text: Tendril) {
-		if text.is_empty() {
-			return;
-		}
-
-		let ins = Insertion::new(text);
-		self.len_after += ins.char_len;
-
-		match self.changes.as_mut_slice() {
-			[.., Operation::Insert(prev)] | [.., Operation::Insert(prev), Operation::Delete(_)] => {
-				prev.text.push_str(&ins.text);
-				prev.char_len += ins.char_len;
-			}
-			[.., last @ Operation::Delete(_)] => {
-				let del = std::mem::replace(last, Operation::Insert(ins));
-				self.changes.push(del);
-			}
-			_ => {
-				self.changes.push(Operation::Insert(ins));
-			}
-		}
-	}
-
-	pub fn apply(&self, doc: &mut Rope) {
-		if self.changes.is_empty() {
-			return;
-		}
-
-		let mut pos = 0;
-		for op in &self.changes {
-			match op {
-				Operation::Retain(n) => {
-					pos += n;
-				}
-				Operation::Delete(n) => {
-					doc.remove(pos..pos + n);
-				}
-				Operation::Insert(ins) => {
-					doc.insert(pos, &ins.text);
-					pos += ins.char_len;
-				}
-			}
-		}
-	}
-
-	/// Invert this changeset to create one that undoes its effects.
-	/// Must be called with the original document (before apply).
-	pub fn invert(&self, doc: &Rope) -> ChangeSet {
-		let mut result = ChangeSet {
-			changes: Vec::new(),
-			len: self.len_after,
-			len_after: self.len,
-		};
-
-		let mut pos = 0;
-		for op in &self.changes {
-			match op {
-				Operation::Retain(n) => {
-					result.retain(*n);
-					pos += n;
-				}
-				Operation::Delete(n) => {
-					// To undo a delete, we insert what was deleted
-					let deleted_text: String = doc.slice(pos..pos + n).chars().collect();
-					result.insert(deleted_text);
-					pos += n;
-				}
-				Operation::Insert(ins) => {
-					// To undo an insert, we delete what was inserted
-					result.delete(ins.char_len);
-				}
-			}
-		}
-
-		result
-	}
-
-	pub fn map_pos(&self, pos: CharIdx, bias: Bias) -> CharIdx {
-		let mut old_pos = 0;
-		let mut new_pos = 0;
-
-		for op in &self.changes {
-			if old_pos > pos {
-				break;
-			}
-
-			match op {
-				Operation::Retain(n) => {
-					if old_pos + n > pos {
-						return new_pos + (pos - old_pos);
-					}
-					old_pos += n;
-					new_pos += n;
-				}
-				Operation::Delete(n) => {
-					if old_pos + n > pos {
-						return new_pos;
-					}
-					old_pos += n;
-				}
-				Operation::Insert(ins) => {
-					if old_pos == pos && bias == Bias::Left {
-						// Position is exactly at insert point, stay before
-					} else {
-						new_pos += ins.char_len;
-					}
-				}
-			}
-		}
-
-		new_pos + (pos - old_pos)
-	}
-
-	pub fn compose(self, other: ChangeSet) -> ChangeSet {
-		debug_assert_eq!(self.len_after, other.len);
-
-		let mut result = ChangeSet {
-			changes: Vec::new(),
-			len: self.len,
-			len_after: other.len_after,
-		};
-
-		let mut a_iter = self.changes.into_iter().peekable();
-		let mut b_iter = other.changes.into_iter().peekable();
-
-		let mut a_remaining = 0usize;
-		let mut b_remaining = 0usize;
-
-		loop {
-			let a = if a_remaining > 0 {
-				Some(match a_iter.peek() {
-					Some(Operation::Retain(_)) => Operation::Retain(a_remaining),
-					Some(Operation::Delete(_)) => Operation::Delete(a_remaining),
-					Some(Operation::Insert(ins)) => {
-						// Take first a_remaining chars from the insertion
-						let text: String = ins.text.chars().take(a_remaining).collect();
-						Operation::Insert(Insertion::from_chars(text, a_remaining))
-					}
-					None => break,
-				})
-			} else {
-				a_iter.next()
-			};
-
-			let b = if b_remaining > 0 {
-				Some(match b_iter.peek() {
-					Some(Operation::Retain(_)) => Operation::Retain(b_remaining),
-					Some(Operation::Delete(_)) => Operation::Delete(b_remaining),
-					Some(Operation::Insert(ins)) => {
-						// Take first b_remaining chars from the insertion
-						let text: String = ins.text.chars().take(b_remaining).collect();
-						Operation::Insert(Insertion::from_chars(text, b_remaining))
-					}
-					None => break,
-				})
-			} else {
-				b_iter.next()
-			};
-
-			a_remaining = 0;
-			b_remaining = 0;
-
-			match (a, b) {
-				(None, None) => break,
-				(None, Some(Operation::Insert(ins))) => result.insert(ins.text),
-				(Some(Operation::Delete(n)), None) => result.delete(n),
-				(Some(Operation::Delete(n)), b) => {
-					result.delete(n);
-					if let Some(op) = b {
-						b_remaining = match op {
-							Operation::Retain(m) => m,
-							Operation::Delete(m) => m,
-							Operation::Insert(ins) => ins.char_len,
-						};
-					}
-				}
-				(a, Some(Operation::Insert(ins))) => {
-					result.insert(ins.text);
-					if let Some(op) = a {
-						a_remaining = match op {
-							Operation::Retain(m) => m,
-							Operation::Delete(m) => m,
-							Operation::Insert(ins) => ins.char_len,
-						};
-					}
-				}
-				(Some(Operation::Retain(n)), Some(Operation::Retain(m))) => {
-					let len = n.min(m);
-					result.retain(len);
-					a_remaining = n - len;
-					b_remaining = m - len;
-				}
-				(Some(Operation::Insert(ins)), Some(Operation::Delete(m))) => {
-					let len = ins.char_len.min(m);
-					a_remaining = ins.char_len - len;
-					b_remaining = m - len;
-				}
-				(Some(Operation::Insert(ins)), Some(Operation::Retain(m))) => {
-					let len = ins.char_len.min(m);
-					let text: String = ins.text.chars().take(len).collect();
-					result.insert(text);
-					a_remaining = ins.char_len - len;
-					b_remaining = m - len;
-				}
-				(Some(Operation::Retain(n)), Some(Operation::Delete(m))) => {
-					let len = n.min(m);
-					result.delete(len);
-					a_remaining = n - len;
-					b_remaining = m - len;
-				}
-				_ => unreachable!(),
-			}
-		}
-
-		result
-	}
-}
-
+/// Transaction wraps a [`ChangeSet`] with an optional [`Selection`], providing
+/// a high-level API for common editing operations like insert, delete, and change.
+/// Transactions can be inverted for undo/redo and composed for efficient batching.
 #[derive(Debug, Clone)]
 pub struct Transaction {
 	changes: ChangeSet,
@@ -340,6 +21,13 @@ pub struct Transaction {
 }
 
 impl Transaction {
+	/// Creates a new empty transaction for the given document.
+	///
+	/// # Parameters
+	/// - `doc`: The document slice
+	///
+	/// # Returns
+	/// An empty [`Transaction`] with no changes or selection.
 	pub fn new(doc: RopeSlice) -> Self {
 		Self {
 			changes: ChangeSet::new(doc),
@@ -347,6 +35,17 @@ impl Transaction {
 		}
 	}
 
+	/// Creates a transaction from an iterator of changes.
+	///
+	/// Changes must be non-overlapping and sorted by start position. This function
+	/// converts the high-level change representation into a low-level [`ChangeSet`].
+	///
+	/// # Parameters
+	/// - `doc`: The document slice
+	/// - `changes`: Iterator of non-overlapping, sorted changes
+	///
+	/// # Returns
+	/// A new [`Transaction`] representing the changes.
 	pub fn change<I>(doc: RopeSlice, changes: I) -> Self
 	where
 		I: IntoIterator<Item = Change>,
@@ -387,6 +86,18 @@ impl Transaction {
 		}
 	}
 
+	/// Creates a transaction that inserts text at each selection range.
+	///
+	/// For each range in the selection, replaces the range `[min, max)` with the
+	/// provided text. This enables multi-cursor editing.
+	///
+	/// # Parameters
+	/// - `doc`: The document slice
+	/// - `selection`: The ranges where text should be inserted
+	/// - `text`: The text to insert at each range
+	///
+	/// # Returns
+	/// A new [`Transaction`] representing the insertions.
 	pub fn insert(doc: RopeSlice, selection: &Selection, text: Tendril) -> Self {
 		Self::change(
 			doc,
@@ -398,6 +109,16 @@ impl Transaction {
 		)
 	}
 
+	/// Creates a transaction that deletes each selection range.
+	///
+	/// For each range in the selection, deletes the text in `[min, max)`.
+	///
+	/// # Parameters
+	/// - `doc`: The document slice
+	/// - `selection`: The ranges to delete
+	///
+	/// # Returns
+	/// A new [`Transaction`] representing the deletions.
 	pub fn delete(doc: RopeSlice, selection: &Selection) -> Self {
 		Self::change(
 			doc,
@@ -409,26 +130,49 @@ impl Transaction {
 		)
 	}
 
+	/// Attaches a selection to this transaction.
+	///
+	/// The selection will be returned when the transaction is applied.
+	///
+	/// # Parameters
+	/// - `selection`: The selection to attach
+	///
+	/// # Returns
+	/// This transaction with the selection attached.
 	pub fn with_selection(mut self, selection: Selection) -> Self {
 		self.selection = Some(selection);
 		self
 	}
 
+	/// Returns a reference to this transaction's changeset.
 	pub fn changes(&self) -> &ChangeSet {
 		&self.changes
 	}
 
+	/// Returns a reference to this transaction's selection, if any.
 	pub fn selection(&self) -> Option<&Selection> {
 		self.selection.as_ref()
 	}
 
+	/// Applies this transaction to a document, modifying it in place.
+	///
+	/// # Parameters
+	/// - `doc`: The document to modify
+	///
+	/// # Returns
+	/// The attached selection, if any.
 	pub fn apply(&self, doc: &mut Rope) -> Option<Selection> {
 		self.changes.apply(doc);
 		self.selection.clone()
 	}
 
-	/// Create a transaction that undoes this one.
-	/// Must be called with the original document (before apply).
+	/// Creates a transaction that undoes this one.
+	///
+	/// # Parameters
+	/// - `doc`: The original document (before this transaction was applied)
+	///
+	/// # Returns
+	/// A new [`Transaction`] that undoes this transaction's changes.
 	pub fn invert(&self, doc: &Rope) -> Self {
 		Self {
 			changes: self.changes.invert(doc),
@@ -436,6 +180,16 @@ impl Transaction {
 		}
 	}
 
+	/// Maps a selection through this transaction's changes.
+	///
+	/// Transforms each range in the selection by mapping its anchor and head
+	/// positions through the changeset, preserving the range direction.
+	///
+	/// # Parameters
+	/// - `selection`: The selection to transform
+	///
+	/// # Returns
+	/// A new [`Selection`] with ranges mapped through this transaction.
 	pub fn map_selection(&self, selection: &Selection) -> Selection {
 		selection.transform(|range| {
 			Range::new(
@@ -443,98 +197,5 @@ impl Transaction {
 				self.changes.map_pos(range.head, Bias::Right),
 			)
 		})
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_changeset_retain() {
-		let doc = Rope::from("hello");
-		let mut cs = ChangeSet::new(doc.slice(..));
-		cs.retain(5);
-		assert_eq!(cs.len(), 5);
-		assert_eq!(cs.len_after(), 5);
-	}
-
-	#[test]
-	fn test_changeset_delete() {
-		let doc = Rope::from("hello");
-		let mut cs = ChangeSet::new(doc.slice(..));
-		cs.delete(2);
-		cs.retain(3);
-		assert_eq!(cs.len(), 5);
-		assert_eq!(cs.len_after(), 3);
-	}
-
-	#[test]
-	fn test_changeset_insert() {
-		let doc = Rope::from("hello");
-		let mut cs = ChangeSet::new(doc.slice(..));
-		cs.insert("world".into());
-		cs.retain(5);
-		assert_eq!(cs.len(), 5);
-		assert_eq!(cs.len_after(), 10);
-	}
-
-	#[test]
-	fn test_changeset_apply() {
-		let mut doc = Rope::from("hello");
-		let mut cs = ChangeSet::new(doc.slice(..));
-		cs.delete(2);
-		cs.insert("aa".into());
-		cs.retain(3);
-		cs.apply(&mut doc);
-		assert_eq!(doc.to_string(), "aallo");
-	}
-
-	#[test]
-	fn test_transaction_insert() {
-		let mut doc = Rope::from("hello world");
-		let sel = Selection::single(5, 5);
-		let tx = Transaction::insert(doc.slice(..), &sel, ",".into());
-		tx.apply(&mut doc);
-		assert_eq!(doc.to_string(), "hello, world");
-	}
-
-	#[test]
-	fn test_transaction_delete() {
-		let mut doc = Rope::from("hello world");
-		let sel = Selection::single(5, 6);
-		let tx = Transaction::delete(doc.slice(..), &sel);
-		tx.apply(&mut doc);
-		assert_eq!(doc.to_string(), "helloworld");
-	}
-
-	#[test]
-	fn test_transaction_change() {
-		let mut doc = Rope::from("hello world");
-		let changes = vec![Change {
-			start: 0,
-			end: 5,
-			replacement: Some("hi".into()),
-		}];
-		let tx = Transaction::change(doc.slice(..), changes);
-		tx.apply(&mut doc);
-		assert_eq!(doc.to_string(), "hi world");
-	}
-
-	#[test]
-	fn test_map_selection() {
-		let doc = Rope::from("hello world");
-		let sel = Selection::single(6, 11);
-		let tx = Transaction::change(
-			doc.slice(..),
-			vec![Change {
-				start: 0,
-				end: 0,
-				replacement: Some("!! ".into()),
-			}],
-		);
-		let mapped = tx.map_selection(&sel);
-		assert_eq!(mapped.primary().anchor, 9);
-		assert_eq!(mapped.primary().head, 14);
 	}
 }
