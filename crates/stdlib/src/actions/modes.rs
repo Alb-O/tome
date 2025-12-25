@@ -1,7 +1,8 @@
 //! Mode-changing actions.
 
-use crate::action;
 use tome_manifest::actions::{ActionContext, ActionMode, ActionResult};
+
+use crate::action;
 
 action!(goto_mode, { description: "Enter goto mode" }, handler: action_goto_mode);
 

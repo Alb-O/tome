@@ -1,9 +1,9 @@
 //! Default keybindings for goto mode.
 
 use linkme::distributed_slice;
+use tome_base::key::Key;
 
 use crate::keybindings::{BindingMode, KEYBINDINGS_GOTO, KeyBindingDef};
-use tome_base::key::Key;
 
 const DEFAULT_PRIORITY: i16 = 100;
 

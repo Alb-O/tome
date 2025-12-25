@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use futures::future::LocalBoxFuture;
+use tome_manifest::{CommandContext, CommandError, CommandOutcome};
 
 use crate::command;
-use tome_manifest::{CommandContext, CommandError, CommandOutcome};
 
 command!(write, { aliases: &["w"], description: "Write buffer to file" }, handler: cmd_write);
 

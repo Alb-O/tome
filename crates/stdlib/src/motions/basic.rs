@@ -1,6 +1,7 @@
+use tome_base::range::Direction;
+
 use crate::motion;
 use crate::movement::move_horizontally;
-use tome_base::range::Direction;
 
 motion!(move_left, { description: "Move left" }, |text, range, count, extend| {
 	move_horizontally(text, range, Direction::Backward, count, extend)

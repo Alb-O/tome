@@ -1,7 +1,8 @@
 //! Search-related actions.
 
-use crate::action;
 use tome_manifest::actions::{ActionMode, ActionResult};
+
+use crate::action;
 
 action!(
 	search_forward,

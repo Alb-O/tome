@@ -4,6 +4,7 @@
 //! They are registered at compile-time using `linkme`.
 
 use linkme::distributed_slice;
+
 use crate::RegistrySource;
 
 /// Registry of all option definitions.

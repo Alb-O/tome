@@ -1,7 +1,8 @@
 //! Delete actions for insert mode.
 
-use crate::action;
 use tome_manifest::actions::ActionResult;
+
+use crate::action;
 
 action!(delete_word_back, { description: "Delete word before cursor" }, |ctx| {
 	// This would delete backward to word start

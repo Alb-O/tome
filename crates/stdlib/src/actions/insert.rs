@@ -1,8 +1,9 @@
 //! Insert mode entry actions.
 
-use crate::action;
 use tome_manifest::actions::{ActionContext, ActionMode, ActionResult};
 use tome_manifest::find_motion;
+
+use crate::action;
 
 action!(
 	insert_before,

@@ -1,7 +1,6 @@
 //! Number text object.
 
 use ropey::RopeSlice;
-
 use tome_base::range::Range;
 
 fn is_digit_or_separator(ch: char) -> bool {

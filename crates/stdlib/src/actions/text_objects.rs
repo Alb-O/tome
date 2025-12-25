@@ -1,8 +1,8 @@
 //! Text object selection actions.
 
+use tome_base::range::Range;
 use tome_manifest::actions::{ActionResult, ObjectSelectionKind, PendingAction, PendingKind};
 use tome_manifest::{TextObjectDef, find_text_object_by_trigger};
-use tome_base::range::Range;
 
 fn select_object_with_trigger(
 	ctx: &tome_manifest::actions::ActionContext,

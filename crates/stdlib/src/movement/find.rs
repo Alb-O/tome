@@ -1,9 +1,9 @@
 //! Character find functions (Kakoune's f, t, F, T commands).
 
 use ropey::RopeSlice;
+use tome_base::range::Range;
 
 use super::make_range_select;
-use tome_base::range::Range;
 
 /// Find character forward (Kakoune's `f` and `t` commands).
 ///

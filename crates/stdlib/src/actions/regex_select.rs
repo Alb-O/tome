@@ -1,7 +1,8 @@
 //! Regex-based selection manipulation actions.
 
-use crate::action;
 use tome_manifest::actions::{ActionMode, ActionResult};
+
+use crate::action;
 
 action!(
 	select_regex,

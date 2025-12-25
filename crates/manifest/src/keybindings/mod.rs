@@ -9,11 +9,10 @@ mod normal;
 mod view;
 
 use linkme::distributed_slice;
-
-use crate::Mode;
-use crate::ActionId;
-use crate::index::resolve_action_id;
 use tome_base::key::Key;
+
+use crate::index::resolve_action_id;
+use crate::{ActionId, Mode};
 
 macro_rules! keybinding_slices {
     ($($slice:ident),+ $(,)?) => {

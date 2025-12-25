@@ -1,11 +1,8 @@
 //! Editing actions (delete, yank, paste, undo, redo, etc.).
 
 use linkme::distributed_slice;
-
 use tome_manifest::ACTIONS;
-use tome_manifest::actions::{
-	ActionDef, ActionResult, EditAction, PendingAction, PendingKind,
-};
+use tome_manifest::actions::{ActionDef, ActionResult, EditAction, PendingAction, PendingKind};
 
 macro_rules! edit_action {
 	($static_name:ident, $action_name:expr, $description:expr, $edit:expr) => {

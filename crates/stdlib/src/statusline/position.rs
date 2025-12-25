@@ -1,6 +1,7 @@
 //! Cursor position segment.
 
 use tome_manifest::statusline::{RenderedSegment, SegmentPosition, SegmentStyle};
+
 use crate::statusline_segment;
 
 statusline_segment!(

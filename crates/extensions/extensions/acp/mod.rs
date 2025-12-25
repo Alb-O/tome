@@ -20,8 +20,9 @@ mod state;
 pub mod types;
 
 use linkme::distributed_slice;
-
-use tome_api::editor::extensions::{EXTENSIONS, ExtensionInitDef, ExtensionTickDef, TICK_EXTENSIONS};
+use tome_api::editor::extensions::{
+	EXTENSIONS, ExtensionInitDef, ExtensionTickDef, TICK_EXTENSIONS,
+};
 
 #[distributed_slice(EXTENSIONS)]
 static ACP_INIT: ExtensionInitDef = ExtensionInitDef {

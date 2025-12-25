@@ -4,6 +4,7 @@
 //! in order based on their position and priority.
 
 use linkme::distributed_slice;
+
 use crate::RegistrySource;
 
 /// Registry of all statusline segment definitions.

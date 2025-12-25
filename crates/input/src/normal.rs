@@ -1,7 +1,8 @@
-use crate::InputHandler;
-use crate::types::KeyResult;
 use tome_base::key::Key;
 use tome_manifest::{BindingMode, find_binding_resolved};
+
+use crate::InputHandler;
+use crate::types::KeyResult;
 
 impl InputHandler {
 	pub(crate) fn handle_normal_key(&mut self, key: Key) -> KeyResult {
