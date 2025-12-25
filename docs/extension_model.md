@@ -2,9 +2,9 @@
 
 Tome uses a two-tier extension model to preserve orthogonality and maintain a clean boundary between core editing logic and host-specific features (like TUI, GUI, or LSP).
 
-## 1. Core Builtins (`tome-core`)
+## 1. Core Builtins (`tome-stdlib`)
 
-Core builtins define the **language of the editor**. They are primarily registered via `distributed_slice` at compile-time and are handled by the `RegistryIndex`.
+Core builtins define the **language of the editor**. They are primarily registered via `distributed_slice` at compile-time and are handled by the `RegistryIndex` (in `tome-manifest`).
 
 - **Responsibilities**:
   - **Actions**: High-level editor operations (e.g., `delete_char`, `insert_newline`).
@@ -13,7 +13,7 @@ Core builtins define the **language of the editor**. They are primarily register
   - **Text Objects**: Selection targets (e.g., `word`, `parentheses`).
   - **File Types**: Detection logic for language-specific settings.
 - **Characteristics**:
-  - **Stateless**: They operate on the provided `ActionContext` or `CommandContext`.
+  - **Stateless**: They operate on the provided `ActionContext` or `CommandContext` (defined in `tome-manifest`).
   - **Portable**: They do not depend on any specific UI or terminal implementation.
   - **Static Registration**: Collected into static slices (e.g., `ACTIONS`, `COMMANDS`).
 
@@ -35,16 +35,16 @@ Host extensions define the **environment of the editor**. They handle stateful s
 
 To maintain stability and testability, dependency directions are strictly enforced:
 
-1. **Runner -> Extensions -> API -> Core**: `tome-term` (the runner in `crates/term`) depends on `tome-extensions` (in `crates/extensions`), which depends on `tome-api` (the engine in `crates/api`), which depends on `tome-core` (in `crates/core`).
-1. **Core -X API -X Extensions**: `tome-core` must **never** depend on higher-level crates.
+1. **Runner -> Extensions -> API -> Stdlib -> Manifest -> Input -> Base**: `tome-term` (the runner in `crates/term`) depends on `tome-extensions` (in `crates/extensions`), which depends on `tome-api` (the engine in `crates/api`), which depends on the core crates.
+1. **Core Crates -X API -X Extensions**: Core crates like `tome-base` or `tome-manifest` must **never** depend on higher-level crates.
 1. **Internal Decoupling**: The `Editor` struct (in `tome-api`) does not know about specific extensions. It only knows about the `ExtensionMap`. Extensions register themselves via the `EXTENSIONS` registry defined in `tome-api`.
 
 ### Summary Table
 
 | Feature        | Core Builtin Extension    | Host Plugin                            |
 | -------------- | ------------------------- | -------------------------------------- |
-| **Crate**      | `tome-core`               | `tome-extensions`                      |
-| **API Crate**  | N/A                       | `tome-api`                             |
+| **Crate**      | `tome-stdlib`             | `tome-extensions`                      |
+| **API Crate**  | `tome-manifest`           | `tome-api`                             |
 | **Logic Type** | Functional / Pure         | Stateful / Side-effectful              |
 | **Discovery**  | `linkme` (Global)         | `linkme` (Local to host)               |
 | **Examples**   | `move_line_down`, `:quit` | `AcpManager`, `LspClient`, `ChatPanel` |
