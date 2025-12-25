@@ -22,6 +22,6 @@ pub mod config;
 pub mod grammar;
 pub mod highlight;
 
-pub use config::{LanguageConfig, LanguageLoader};
+pub use config::{LanguageData, LanguageId, LanguageLoader};
 pub use grammar::{GrammarError, GrammarSource};
-pub use highlight::HighlightStyles;
+pub use highlight::{Highlight, HighlightEvent, HighlightSpan, HighlightStyles, Highlighter};
