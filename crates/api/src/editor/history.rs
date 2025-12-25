@@ -39,6 +39,8 @@ impl Editor {
 
 			self.doc = entry.doc;
 			self.selection = entry.selection;
+			// Full reparse after document swap since we don't have incremental edit info
+			self.reparse_syntax();
 			self.notify("info", "Undo");
 		} else {
 			self.notify("warn", "Nothing to undo");
@@ -55,6 +57,8 @@ impl Editor {
 
 			self.doc = entry.doc;
 			self.selection = entry.selection;
+			// Full reparse after document swap since we don't have incremental edit info
+			self.reparse_syntax();
 			self.notify("info", "Redo");
 		} else {
 			self.notify("warn", "Nothing to redo");
