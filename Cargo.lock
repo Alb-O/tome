@@ -3417,6 +3417,7 @@ dependencies = [
  "linkme",
  "paste",
  "tome-api",
+ "tome-language",
  "tome-manifest",
  "tome-stdlib",
 ]
