@@ -217,7 +217,13 @@ impl Editor {
 					let byte_pos = self.doc.char_to_byte(doc_pos);
 					let syntax_style = self.style_for_byte_pos(byte_pos, &highlight_spans);
 					let non_cursor_style = if in_selection {
-						styles.selection
+						// Invert: syntax fg becomes bg, use theme's dark color as fg
+						let base = syntax_style.unwrap_or(styles.base);
+						let syntax_fg = base.fg.unwrap_or(self.theme.colors.ui.fg.into());
+						Style::default()
+							.bg(syntax_fg)
+							.fg(self.theme.colors.ui.bg.into())
+							.add_modifier(base.add_modifier)
 					} else {
 						syntax_style.unwrap_or(styles.base)
 					};
