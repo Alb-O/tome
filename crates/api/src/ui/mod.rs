@@ -3,7 +3,6 @@ mod focus;
 pub mod keymap;
 mod manager;
 pub mod panel;
-pub mod panels;
 mod split_buffer_panel;
 
 pub use focus::FocusTarget;

@@ -53,20 +53,6 @@ impl Editor {
 		self.buffer_mut().handle_mouse_scroll(direction, count);
 	}
 
-	/// Scrolls viewport up by one visual line.
-	///
-	/// Delegates to Buffer.
-	pub(crate) fn scroll_viewport_up(&mut self) {
-		self.buffer_mut().scroll_viewport_up();
-	}
-
-	/// Scrolls viewport down by one visual line.
-	///
-	/// Delegates to Buffer.
-	pub(crate) fn scroll_viewport_down(&mut self) {
-		self.buffer_mut().scroll_viewport_down();
-	}
-
 	/// Converts screen coordinates to document position.
 	///
 	/// Delegates to Buffer.
