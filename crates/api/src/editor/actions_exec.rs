@@ -44,7 +44,14 @@ impl Editor {
 				register,
 				args: ActionArgs::default(),
 			};
-			(action.handler)(&ctx)
+			let result = (action.handler)(&ctx);
+
+			// Reject text-editing results when terminal is focused
+			if !Self::is_terminal_safe_result(&result) {
+				self.notify("warn", "Action not available in terminal");
+				return false;
+			}
+			result
 		} else {
 			let ctx = ActionContext {
 				text: self.buffer().doc.slice(..),
@@ -103,7 +110,14 @@ impl Editor {
 					string: None,
 				},
 			};
-			(action.handler)(&ctx)
+			let result = (action.handler)(&ctx);
+
+			// Reject text-editing results when terminal is focused
+			if !Self::is_terminal_safe_result(&result) {
+				self.notify("warn", "Action not available in terminal");
+				return false;
+			}
+			result
 		} else {
 			let ctx = ActionContext {
 				text: self.buffer().doc.slice(..),
@@ -121,6 +135,33 @@ impl Editor {
 		};
 
 		self.apply_action_result(result, extend)
+	}
+
+	/// Checks if an action result is safe to apply when a terminal is focused.
+	///
+	/// Only workspace-level operations (buffer/split management, quit, etc.) are safe.
+	/// Text-editing operations would corrupt buffer state since they run on a dummy context.
+	fn is_terminal_safe_result(result: &ActionResult) -> bool {
+		matches!(
+			result,
+			ActionResult::Ok
+				| ActionResult::Quit
+				| ActionResult::ForceQuit
+				| ActionResult::Error(_)
+				| ActionResult::ForceRedraw
+				| ActionResult::SplitHorizontal
+				| ActionResult::SplitVertical
+				| ActionResult::SplitTerminalHorizontal
+				| ActionResult::SplitTerminalVertical
+				| ActionResult::BufferNext
+				| ActionResult::BufferPrev
+				| ActionResult::CloseBuffer
+				| ActionResult::CloseOtherBuffers
+				| ActionResult::FocusLeft
+				| ActionResult::FocusRight
+				| ActionResult::FocusUp
+				| ActionResult::FocusDown
+		)
 	}
 
 	pub(crate) fn apply_action_result(&mut self, result: ActionResult, extend: bool) -> bool {
