@@ -30,6 +30,7 @@ impl Editor {
 					CompletionKind::File => "󰈔",
 					CompletionKind::Buffer => "󰈙",
 					CompletionKind::Snippet => "󰘦",
+					CompletionKind::Theme => "󰏘",
 				};
 
 				let kind_color = match item.kind {
@@ -37,6 +38,7 @@ impl Editor {
 					CompletionKind::File => self.theme.colors.status.normal_bg,
 					CompletionKind::Buffer => self.theme.colors.status.view_bg,
 					CompletionKind::Snippet => self.theme.colors.status.goto_bg,
+					CompletionKind::Theme => self.theme.colors.status.view_bg,
 				};
 
 				let base_style = if is_selected {
@@ -70,6 +72,7 @@ impl Editor {
 					CompletionKind::File => "File",
 					CompletionKind::Buffer => "Buf",
 					CompletionKind::Snippet => "Snip",
+					CompletionKind::Theme => "Theme",
 				};
 
 				let dim_style = if is_selected {

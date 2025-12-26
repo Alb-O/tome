@@ -1,4 +1,5 @@
 use tome_manifest::completion::{CommandSource, CompletionContext, CompletionSource};
+use tome_theme::ThemeSource;
 
 use crate::editor::Editor;
 use crate::editor::types::{Message, MessageKind};
@@ -51,13 +52,31 @@ impl Editor {
 				prompt,
 			};
 
-			let mut items = CommandSource.complete(&ctx);
+			// Query completion sources in priority order
+			// First source with results wins (determines replace_start)
+			let sources: &[&dyn CompletionSource] = &[&ThemeSource, &CommandSource];
 
-			items.sort_by(|a, b| a.label.cmp(&b.label));
-			items.dedup_by(|a, b| a.label == b.label);
+			let mut result = None;
+			for source in sources {
+				let r = source.complete(&ctx);
+				if !r.is_empty() {
+					result = Some(r);
+					break;
+				}
+			}
 
-			self.completions.items = items;
-			self.completions.active = !self.completions.items.is_empty();
+			if let Some(r) = result {
+				self.completions.replace_start = r.start;
+				self.completions.items = r.items;
+				self.completions.items.sort_by(|a, b| a.label.cmp(&b.label));
+				self.completions.items.dedup_by(|a, b| a.label == b.label);
+				self.completions.active = true;
+			} else {
+				self.completions.active = false;
+				self.completions.items.clear();
+				self.completions.replace_start = 0;
+			}
+
 			// Keep selection if still valid, otherwise reset
 			if let Some(idx) = self.completions.selected_idx
 				&& idx >= self.completions.items.len()
@@ -68,6 +87,7 @@ impl Editor {
 			self.completions.active = false;
 			self.completions.items.clear();
 			self.completions.selected_idx = None;
+			self.completions.replace_start = 0;
 		}
 	}
 }

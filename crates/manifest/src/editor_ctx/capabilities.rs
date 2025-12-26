@@ -110,6 +110,12 @@ pub trait FileOpsAccess {
 	) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), crate::CommandError>> + '_>>;
 }
 
+/// Theme operations (get/set editor theme).
+pub trait ThemeAccess {
+	/// Set the editor theme by name.
+	fn set_theme(&mut self, name: &str) -> Result<(), crate::CommandError>;
+}
+
 /// Combined trait for command handlers - provides all common editor operations.
 /// This is a convenience trait that combines the most commonly used capabilities.
-pub trait EditorOps: TextAccess + MessageAccess + FileOpsAccess {}
+pub trait EditorOps: TextAccess + MessageAccess + FileOpsAccess + ThemeAccess {}

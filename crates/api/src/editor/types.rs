@@ -31,4 +31,7 @@ pub struct CompletionState {
 	pub items: Vec<CompletionItem>,
 	pub selected_idx: Option<usize>,
 	pub active: bool,
+	/// Start position in the input where replacement begins.
+	/// When a completion is accepted, text from this position to cursor is replaced.
+	pub replace_start: usize,
 }

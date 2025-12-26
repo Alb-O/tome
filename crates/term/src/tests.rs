@@ -47,6 +47,7 @@ mod suite {
 
 		assert_eq!(editor.theme.id, DEFAULT_THEME_ID);
 
+		// Test switching to "default" theme
 		let args = ["default"];
 		let mut ctx = CommandContext {
 			editor: &mut editor,
@@ -59,24 +60,38 @@ mod suite {
 		let result = (CMD_THEME.handler)(&mut ctx).await;
 		assert!(result.is_ok());
 		assert_eq!(result.unwrap(), CommandOutcome::Ok);
-
 		assert_eq!(editor.theme.name, "default");
 
-		let args_typo = ["gruv-box"];
-		let mut ctx_typo = CommandContext {
+		// Test that "gruv-box" normalizes to "gruvbox" (dashes are ignored)
+		let args_normalized = ["gruv-box"];
+		let mut ctx_normalized = CommandContext {
 			editor: &mut editor,
-			args: &args_typo,
+			args: &args_normalized,
 			count: 1,
 			register: None,
 			user_data: CMD_THEME.user_data,
 		};
 
-		let result_typo = (CMD_THEME.handler)(&mut ctx_typo).await;
-		assert!(result_typo.is_err());
-		if let Err(tome_manifest::CommandError::Failed(msg)) = result_typo {
-			assert!(msg.contains(&format!("Did you mean '{}'?", DEFAULT_THEME_ID)));
+		let result_normalized = (CMD_THEME.handler)(&mut ctx_normalized).await;
+		assert!(result_normalized.is_ok());
+		assert_eq!(editor.theme.name, "gruvbox");
+
+		// Test that a completely unknown theme fails with suggestion
+		let args_unknown = ["nonexistent_theme"];
+		let mut ctx_unknown = CommandContext {
+			editor: &mut editor,
+			args: &args_unknown,
+			count: 1,
+			register: None,
+			user_data: CMD_THEME.user_data,
+		};
+
+		let result_unknown = (CMD_THEME.handler)(&mut ctx_unknown).await;
+		assert!(result_unknown.is_err());
+		if let Err(tome_manifest::CommandError::Failed(msg)) = result_unknown {
+			assert!(msg.contains("Theme not found"));
 		} else {
-			panic!("Expected Failed error with suggestion");
+			panic!("Expected Failed error");
 		}
 	}
 

@@ -68,3 +68,59 @@ fn command_completion_shows_menu() {
 		});
 	});
 }
+
+#[serial_test::serial]
+#[test]
+fn theme_completion_appends_to_command() {
+	if !require_kitty() {
+		return;
+	}
+
+	run_with_timeout(TEST_TIMEOUT, || {
+		with_kitty_capture(&workspace_dir(), &tome_cmd(), |kitty| {
+			pause_briefly();
+
+			// Type ':theme ' (with space) to trigger argument completion
+			kitty_send_keys!(
+				kitty,
+				KeyCode::Char(':'),
+				KeyCode::Char('t'),
+				KeyCode::Char('h'),
+				KeyCode::Char('e'),
+				KeyCode::Char('m'),
+				KeyCode::Char('e'),
+				KeyCode::Char(' '),
+			);
+
+			// Should show theme completions with 'Theme' kind
+			let (_raw, clean) =
+				wait_for_screen_text_clean(kitty, Duration::from_secs(3), |_r, clean| {
+					clean.contains("gruvbox") && clean.contains("Theme")
+				});
+
+			assert!(
+				clean.contains("gruvbox"),
+				"Completion menu should show 'gruvbox'. Clean: {clean:?}"
+			);
+			assert!(
+				clean.contains("Theme"),
+				"Completion menu should show 'Theme' kind. Clean: {clean:?}"
+			);
+
+			// Tab to select first theme
+			kitty_send_keys!(kitty, KeyCode::Tab);
+
+			// Command line should have 'theme <themename>' - the command should be preserved
+			let (_raw, clean) =
+				wait_for_screen_text_clean(kitty, Duration::from_secs(3), |_r, clean| {
+					// The command line should contain ':theme ' followed by a theme name
+					clean.contains(":theme ")
+				});
+
+			assert!(
+				clean.contains(":theme "),
+				"Command line should preserve 'theme ' prefix. Clean: {clean:?}"
+			);
+		});
+	});
+}
