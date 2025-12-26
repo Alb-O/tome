@@ -2,7 +2,7 @@ use linkme::distributed_slice;
 
 use crate::{
 	Color, Modifier, NotificationColors, PopupColors, StatusColors, SyntaxStyle, SyntaxStyles,
-	THEMES, Theme, ThemeColors, UiColors,
+	THEMES, Theme, ThemeColors, ThemeVariant, UiColors,
 };
 
 #[distributed_slice(THEMES)]
@@ -10,6 +10,7 @@ pub static SOLARIZED_DARK: Theme = Theme {
 	id: "solarized_dark",
 	name: "solarized_dark",
 	aliases: &["solarized"],
+	variant: ThemeVariant::Dark,
 	colors: ThemeColors {
 		ui: UiColors {
 			bg: Color::Rgb(0, 43, 54),                   // base03
