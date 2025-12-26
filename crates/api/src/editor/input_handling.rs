@@ -155,11 +155,19 @@ impl Editor {
 			KeyResult::Unhandled => false,
 			KeyResult::Quit => true,
 			KeyResult::MouseClick { row, col, extend } => {
-				self.handle_mouse_click(row, col, extend);
+				// Keyboard-triggered mouse events use screen coordinates relative to
+				// the focused buffer's area. Translate them to view-local coordinates.
+				let view_area = self.focused_view_area();
+				let local_row = row.saturating_sub(view_area.y);
+				let local_col = col.saturating_sub(view_area.x);
+				self.handle_mouse_click_local(local_row, local_col, extend);
 				false
 			}
 			KeyResult::MouseDrag { row, col } => {
-				self.handle_mouse_drag(row, col);
+				let view_area = self.focused_view_area();
+				let local_row = row.saturating_sub(view_area.y);
+				let local_col = col.saturating_sub(view_area.x);
+				self.handle_mouse_drag_local(local_row, local_col);
 				false
 			}
 			KeyResult::MouseScroll { direction, count } => {
@@ -256,9 +264,9 @@ impl Editor {
 		};
 
 		let mut ui = std::mem::take(&mut self.ui);
-		let layout = ui.compute_layout(main_area);
+		let dock_layout = ui.compute_layout(main_area);
 
-		if ui.handle_mouse(self, mouse, &layout) {
+		if ui.handle_mouse(self, mouse, &dock_layout) {
 			if ui.take_wants_redraw() {
 				self.needs_redraw = true;
 			}
@@ -270,23 +278,59 @@ impl Editor {
 		}
 		self.ui = ui;
 
-		self.handle_mouse_active(mouse).await
+		// Get the document area (excluding panels/docks)
+		let doc_area = dock_layout.doc_area;
+
+		self.handle_mouse_in_doc_area(mouse, doc_area).await
 	}
 
-	pub(crate) async fn handle_mouse_active(&mut self, mouse: termina::event::MouseEvent) -> bool {
+	/// Handles mouse events within the document area (where splits live).
+	///
+	/// This method:
+	/// 1. Determines which view the mouse is over
+	/// 2. Focuses that view if it's different from the current focus
+	/// 3. Translates screen coordinates to view-local coordinates
+	/// 4. Dispatches the mouse event to the appropriate handler
+	pub(crate) async fn handle_mouse_in_doc_area(
+		&mut self,
+		mouse: termina::event::MouseEvent,
+		doc_area: ratatui::layout::Rect,
+	) -> bool {
+		let mouse_x = mouse.column;
+		let mouse_y = mouse.row;
+
+		// Find which view the mouse is over
+		let Some((target_view, view_area)) =
+			self.layout.view_at_position(doc_area, mouse_x, mouse_y)
+		else {
+			// Mouse is outside all views (e.g., on a separator)
+			return false;
+		};
+
+		// Focus the target view if different from current
+		if target_view != self.focused_view() {
+			self.focus_view(target_view);
+		}
+
 		// Terminal views don't handle mouse events through the input system
 		if self.is_terminal_focused() {
 			return false;
 		}
 
+		// Translate screen coordinates to view-local coordinates
+		let local_row = mouse_y.saturating_sub(view_area.y);
+		let local_col = mouse_x.saturating_sub(view_area.x);
+
+		// Process the mouse event through the input handler
 		let result = self.buffer_mut().input.handle_mouse(mouse.into());
 		match result {
-			KeyResult::MouseClick { row, col, extend } => {
-				self.handle_mouse_click(row, col, extend);
+			KeyResult::MouseClick { extend, .. } => {
+				// Use local coordinates instead of the ones from KeyResult
+				self.handle_mouse_click_local(local_row, local_col, extend);
 				false
 			}
-			KeyResult::MouseDrag { row, col } => {
-				self.handle_mouse_drag(row, col);
+			KeyResult::MouseDrag { .. } => {
+				self.handle_mouse_drag_local(local_row, local_col);
 				false
 			}
 			KeyResult::MouseScroll { direction, count } => {
@@ -297,13 +341,9 @@ impl Editor {
 		}
 	}
 
-	pub(crate) fn handle_mouse_click(&mut self, screen_row: u16, screen_col: u16, extend: bool) {
-		// Terminal views don't support mouse click positioning
-		if self.is_terminal_focused() {
-			return;
-		}
-
-		if let Some(doc_pos) = self.buffer().screen_to_doc_position(screen_row, screen_col) {
+	/// Handles a mouse click with view-local coordinates.
+	pub(crate) fn handle_mouse_click_local(&mut self, local_row: u16, local_col: u16, extend: bool) {
+		if let Some(doc_pos) = self.buffer().screen_to_doc_position(local_row, local_col) {
 			let buffer = self.buffer_mut();
 			if extend {
 				let anchor = buffer.selection.primary().anchor;
@@ -315,18 +355,45 @@ impl Editor {
 		}
 	}
 
-	pub(crate) fn handle_mouse_drag(&mut self, screen_row: u16, screen_col: u16) {
-		// Terminal views don't support mouse drag positioning
-		if self.is_terminal_focused() {
-			return;
-		}
-
-		if let Some(doc_pos) = self.buffer().screen_to_doc_position(screen_row, screen_col) {
+	/// Handles mouse drag with view-local coordinates.
+	pub(crate) fn handle_mouse_drag_local(&mut self, local_row: u16, local_col: u16) {
+		if let Some(doc_pos) = self.buffer().screen_to_doc_position(local_row, local_col) {
 			let buffer = self.buffer_mut();
 			let anchor = buffer.selection.primary().anchor;
 			buffer.selection = Selection::single(anchor, doc_pos);
 			buffer.cursor = buffer.selection.primary().head;
 		}
+	}
+
+	/// Returns the screen area of the currently focused view.
+	///
+	/// This computes the document area (excluding status line and panels)
+	/// and then finds the focused view's rectangle within that area.
+	fn focused_view_area(&self) -> ratatui::layout::Rect {
+		let width = self.window_width.unwrap_or(80);
+		let height = self.window_height.unwrap_or(24);
+		let main_height = height.saturating_sub(1);
+		let main_area = ratatui::layout::Rect {
+			x: 0,
+			y: 0,
+			width,
+			height: main_height,
+		};
+
+		// Compute dock layout to get doc_area
+		let dock_layout = self.ui.compute_layout(main_area);
+		let doc_area = dock_layout.doc_area;
+
+		// Find the focused view's area within the layout
+		let focused = self.focused_view();
+		for (view, area) in self.layout.compute_view_areas(doc_area) {
+			if view == focused {
+				return area;
+			}
+		}
+
+		// Fallback to entire doc area if view not found
+		doc_area
 	}
 }
 
