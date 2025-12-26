@@ -10,8 +10,8 @@ use tome_manifest::{SplitAttrs, SplitBuffer, SplitColor};
 
 use super::buffer_render::{BufferRenderContext, ensure_buffer_cursor_visible};
 use super::types::RenderResult;
-use crate::buffer::{BufferView, SplitDirection};
 use crate::Editor;
+use crate::buffer::{BufferView, SplitDirection};
 
 impl Editor {
 	/// Renders the complete editor frame.

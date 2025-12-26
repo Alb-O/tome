@@ -112,8 +112,7 @@ impl ActionResult {
 		matches!(
 			self,
 			Self::Ok
-				| Self::Quit
-				| Self::ForceQuit
+				| Self::Quit | Self::ForceQuit
 				| Self::Error(_)
 				| Self::ForceRedraw
 				| Self::SplitHorizontal

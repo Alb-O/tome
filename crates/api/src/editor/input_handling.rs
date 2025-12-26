@@ -31,11 +31,11 @@ impl Editor {
 		if let BufferView::Terminal(terminal_id) = self.focused_view() {
 			// Ctrl+w enters window mode - use first buffer's input handler
 			if key.code == KeyCode::Char('w') && key.modifiers.contains(Modifiers::CONTROL) {
-				if let Some(first_buffer_id) = self.layout.first_buffer() {
-					if let Some(buffer) = self.buffers.get_mut(&first_buffer_id) {
-						buffer.input.set_mode(Mode::Window);
-						self.needs_redraw = true;
-					}
+				if let Some(first_buffer_id) = self.layout.first_buffer()
+					&& let Some(buffer) = self.buffers.get_mut(&first_buffer_id)
+				{
+					buffer.input.set_mode(Mode::Window);
+					self.needs_redraw = true;
 				}
 				return false;
 			}
@@ -63,12 +63,12 @@ impl Editor {
 			}
 
 			// Route all other keys to the terminal
-			if let Some(split_key) = convert_termina_key(&key) {
-				if let Some(terminal) = self.terminals.get_mut(&terminal_id) {
-					let result = terminal.handle_key(split_key);
-					if result.needs_redraw {
-						self.needs_redraw = true;
-					}
+			if let Some(split_key) = convert_termina_key(&key)
+				&& let Some(terminal) = self.terminals.get_mut(&terminal_id)
+			{
+				let result = terminal.handle_key(split_key);
+				if result.needs_redraw {
+					self.needs_redraw = true;
 				}
 			}
 			return false;
