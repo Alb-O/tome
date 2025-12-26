@@ -1,6 +1,6 @@
 use ratatui::layout::{Position, Rect};
 
-use crate::notifications::types::Anchor;
+use tome_manifest::notifications::Anchor;
 
 /// Calculate the anchor position within a frame area.
 pub fn calculate_anchor_position(anchor: Anchor, frame_area: Rect) -> Position {

@@ -6,9 +6,10 @@ use ratatui::symbols::border;
 use ratatui::widgets::block::Padding;
 use ratatui::widgets::{Block, BorderType, Borders, Clear};
 
-use crate::notifications::stacking::{StackableNotification, calculate_stacking_positions};
-use crate::notifications::types::{Anchor, AnimationPhase, Level};
-use crate::notifications::ui::{
+use tome_manifest::notifications::{Anchor, Animation, AnimationPhase, Level};
+
+use crate::render::notifications::stacking::{StackableNotification, calculate_stacking_positions};
+use crate::render::notifications::ui::{
 	get_level_icon, gutter_layout, render_body, render_icon_gutter, resolve_styles, split_inner,
 };
 
@@ -18,7 +19,7 @@ pub trait RenderableNotification: StackableNotification {
 	fn content(&self) -> Text<'static>;
 	fn border_type(&self) -> BorderType;
 	fn fade_effect(&self) -> bool;
-	fn animation_type(&self) -> crate::notifications::types::Animation;
+	fn animation_type(&self) -> Animation;
 	fn animation_progress(&self) -> f32;
 	fn block_style(&self) -> Option<Style>;
 	fn border_style(&self) -> Option<Style>;
@@ -151,7 +152,7 @@ fn apply_fade_if_needed<T: RenderableNotification>(
 	base_border_style: Style,
 	base_title_style: Style,
 ) -> (Style, Style, Style, Style) {
-	use crate::notifications::types::Animation;
+	use tome_manifest::notifications::Animation;
 
 	let apply_fade = state.fade_effect() || matches!(state.animation_type(), Animation::Fade);
 	let is_in_anim_phase = matches!(

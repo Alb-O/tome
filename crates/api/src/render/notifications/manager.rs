@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use ratatui::prelude::{Frame, Rect};
+use tome_manifest::notifications::{Anchor, AnimationPhase, NotificationError, Overflow};
+use tome_stdlib::notifications::Notification;
 
-use crate::notifications::notification::Notification;
-use crate::notifications::render::render_notifications;
-use crate::notifications::state::{ManagerDefaults, NotificationState};
-use crate::notifications::types::{Anchor, NotificationError, Overflow};
+use crate::render::notifications::render::render_notifications;
+use crate::render::notifications::state::{ManagerDefaults, NotificationState};
 
 #[derive(Debug)]
 pub struct Notifications {
@@ -84,7 +84,7 @@ impl Notifications {
 			.states
 			.iter()
 			.filter_map(|(id, state)| {
-				if state.current_phase == crate::notifications::types::AnimationPhase::Finished {
+				if state.current_phase == AnimationPhase::Finished {
 					Some(*id)
 				} else {
 					None

@@ -3,8 +3,8 @@ use std::time::Instant;
 
 use ratatui::prelude::*;
 
-use crate::notifications::layout::{calculate_anchor_position, calculate_rect};
-use crate::notifications::types::{Anchor, AnimationPhase};
+use crate::render::notifications::layout::{calculate_anchor_position, calculate_rect};
+use tome_manifest::notifications::{Anchor, AnimationPhase};
 
 const STACKING_VERTICAL_SPACING: u16 = 1;
 

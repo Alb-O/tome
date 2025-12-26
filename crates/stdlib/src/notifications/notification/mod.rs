@@ -1,51 +1,79 @@
-use ratatui::prelude::*;
-use ratatui::widgets::BorderType;
-use ratatui::widgets::block::Padding;
+//! Notification data model.
+//!
+//! This module defines the abstract `Notification` struct that represents
+//! notification content and configuration. It uses abstract types from
+//! `tome_base` and `tome_manifest` to avoid UI library dependencies.
+//!
+//! Actual rendering is handled by `tome_api`.
 
-use crate::notifications::types::{
-	Anchor, Animation, AutoDismiss, Level, SizeConstraint, SlideDirection, Timing,
+use tome_base::{BorderKind, Padding, Position, Style};
+use tome_manifest::notifications::{
+	Anchor, Animation, AutoDismiss, Level, NotificationError, SizeConstraint, SlideDirection,
+	Timing,
 };
 
 mod builder;
-mod codegen;
-mod layout;
-
-#[cfg(test)]
-mod tests;
 
 pub use builder::NotificationBuilder;
-pub use codegen::generate_code;
-pub use layout::calculate_size;
 
+/// Maximum allowed characters in notification content.
+pub const MAX_CONTENT_CHARS: usize = 1000;
+
+/// A notification to be displayed to the user.
+///
+/// This is the abstract data model for notifications. It contains all the
+/// configuration needed to display a notification, but no UI-specific types.
+/// The rendering layer converts this to UI-specific state.
 #[derive(Debug, Clone)]
 pub struct Notification {
-	pub(crate) content: Text<'static>,
-	pub(crate) title: Option<Line<'static>>,
-	pub(crate) level: Option<Level>,
-	pub(crate) anchor: Anchor,
-	pub(crate) animation: Animation,
-	pub(crate) slide_direction: SlideDirection,
-	pub(crate) slide_in_timing: Timing,
-	pub(crate) dwell_timing: Timing,
-	pub(crate) slide_out_timing: Timing,
-	pub(crate) auto_dismiss: AutoDismiss,
-	pub(crate) max_width: Option<SizeConstraint>,
-	pub(crate) max_height: Option<SizeConstraint>,
-	pub(crate) padding: Padding,
-	pub(crate) exterior_margin: u16,
-	pub(crate) block_style: Option<Style>,
-	pub(crate) border_style: Option<Style>,
-	pub(crate) title_style: Option<Style>,
-	pub(crate) border_type: Option<BorderType>,
-	pub(crate) custom_entry_position: Option<Position>,
-	pub(crate) custom_exit_position: Option<Position>,
-	pub(crate) fade_effect: bool,
+	/// The main text content of the notification.
+	pub content: String,
+	/// Optional title displayed at the top.
+	pub title: Option<String>,
+	/// Severity level (info, warn, error, etc.).
+	pub level: Option<Level>,
+	/// Screen position where the notification appears.
+	pub anchor: Anchor,
+	/// Animation style for entry/exit.
+	pub animation: Animation,
+	/// Direction for slide animations.
+	pub slide_direction: SlideDirection,
+	/// Duration of the entry animation.
+	pub slide_in_timing: Timing,
+	/// Duration of the dwell phase.
+	pub dwell_timing: Timing,
+	/// Duration of the exit animation.
+	pub slide_out_timing: Timing,
+	/// When to automatically dismiss.
+	pub auto_dismiss: AutoDismiss,
+	/// Maximum width constraint.
+	pub max_width: Option<SizeConstraint>,
+	/// Maximum height constraint.
+	pub max_height: Option<SizeConstraint>,
+	/// Internal padding around content.
+	pub padding: Padding,
+	/// External margin around the notification box.
+	pub exterior_margin: u16,
+	/// Style for the notification background.
+	pub block_style: Option<Style>,
+	/// Style for the border.
+	pub border_style: Option<Style>,
+	/// Style for the title text.
+	pub title_style: Option<Style>,
+	/// Border type/style.
+	pub border_kind: BorderKind,
+	/// Custom entry animation start position.
+	pub custom_entry_position: Option<Position>,
+	/// Custom exit animation end position.
+	pub custom_exit_position: Option<Position>,
+	/// Whether to apply fade effect during animations.
+	pub fade_effect: bool,
 }
 
 impl Default for Notification {
 	fn default() -> Self {
 		Self {
-			content: Text::from(""),
+			content: String::new(),
 			title: None,
 			level: Some(Level::Info),
 			anchor: Anchor::default(),
@@ -62,7 +90,7 @@ impl Default for Notification {
 			block_style: None,
 			border_style: None,
 			title_style: None,
-			border_type: Some(BorderType::Padded),
+			border_kind: BorderKind::Padded,
 			custom_entry_position: None,
 			custom_exit_position: None,
 			fade_effect: false,
@@ -71,79 +99,20 @@ impl Default for Notification {
 }
 
 impl Notification {
-	pub fn builder(content: impl Into<Text<'static>>) -> NotificationBuilder {
+	/// Creates a new notification builder with the given content.
+	pub fn builder(content: impl Into<String>) -> NotificationBuilder {
 		NotificationBuilder::new(content)
 	}
 
-	pub fn content(&self) -> &Text<'static> {
-		&self.content
-	}
-
-	pub fn title(&self) -> Option<&Line<'static>> {
-		self.title.as_ref()
-	}
-
-	pub fn level(&self) -> Option<Level> {
-		self.level
-	}
-
-	pub fn anchor(&self) -> Anchor {
-		self.anchor
-	}
-
-	pub fn animation(&self) -> Animation {
-		self.animation
-	}
-
-	pub fn slide_direction(&self) -> SlideDirection {
-		self.slide_direction
-	}
-
-	pub fn slide_in_timing(&self) -> Timing {
-		self.slide_in_timing
-	}
-
-	pub fn dwell_timing(&self) -> Timing {
-		self.dwell_timing
-	}
-
-	pub fn slide_out_timing(&self) -> Timing {
-		self.slide_out_timing
-	}
-
-	pub fn auto_dismiss(&self) -> AutoDismiss {
-		self.auto_dismiss
-	}
-
-	pub fn max_width(&self) -> Option<SizeConstraint> {
-		self.max_width
-	}
-
-	pub fn max_height(&self) -> Option<SizeConstraint> {
-		self.max_height
-	}
-
-	pub fn padding(&self) -> Padding {
-		self.padding
-	}
-
-	pub fn exterior_margin(&self) -> u16 {
-		self.exterior_margin
-	}
-
-	pub fn border_type(&self) -> Option<BorderType> {
-		self.border_type
-	}
-
-	pub fn custom_entry_position(&self) -> Option<Position> {
-		self.custom_entry_position
-	}
-
-	pub fn custom_exit_position(&self) -> Option<Position> {
-		self.custom_exit_position
-	}
-
-	pub fn fade_effect(&self) -> bool {
-		self.fade_effect
+	/// Validates the notification configuration.
+	pub fn validate(&self) -> Result<(), NotificationError> {
+		let char_count = self.content.chars().count();
+		if char_count > MAX_CONTENT_CHARS {
+			return Err(NotificationError::ContentTooLarge(
+				char_count,
+				MAX_CONTENT_CHARS,
+			));
+		}
+		Ok(())
 	}
 }
