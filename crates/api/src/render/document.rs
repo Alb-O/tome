@@ -93,6 +93,8 @@ impl Editor {
 		self.notifications.render(frame, notifications_area);
 
 		if self.completions.active {
+			use crate::editor::types::CompletionState;
+
 			let max_label_len = self
 				.completions
 				.items
@@ -101,7 +103,8 @@ impl Editor {
 				.max()
 				.unwrap_or(0);
 			let menu_width = (max_label_len + 10) as u16;
-			let menu_height = (self.completions.items.len() as u16).min(10);
+			let visible_count = self.completions.items.len().min(CompletionState::MAX_VISIBLE);
+			let menu_height = visible_count as u16;
 
 			let menu_area = Rect {
 				x: chunks[1].x,

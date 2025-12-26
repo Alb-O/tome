@@ -36,36 +36,51 @@ impl Editor {
 		let old_mode = self.mode();
 		let key: Key = key.into();
 
+		// Handle completion menu navigation (Tab, Shift+Tab, Up, Down)
 		if let Mode::Command { .. } = self.mode()
 			&& self.completions.active
-			&& let KeyCode::Special(SpecialKey::Tab) = key.code
 		{
-			let len = self.completions.items.len();
-			if len > 0 {
-				let new_idx = if key.modifiers.shift {
-					match self.completions.selected_idx {
-						Some(idx) => (idx + len - 1) % len,
-						None => len - 1,
+			let is_nav_key = matches!(
+				key.code,
+				KeyCode::Special(SpecialKey::Tab)
+					| KeyCode::Special(SpecialKey::Up)
+					| KeyCode::Special(SpecialKey::Down)
+			);
+
+			if is_nav_key {
+				let len = self.completions.items.len();
+				if len > 0 {
+					let go_up = matches!(key.code, KeyCode::Special(SpecialKey::Up))
+						|| (matches!(key.code, KeyCode::Special(SpecialKey::Tab))
+							&& key.modifiers.shift);
+
+					let new_idx = if go_up {
+						match self.completions.selected_idx {
+							Some(idx) => (idx + len - 1) % len,
+							None => len - 1,
+						}
+					} else {
+						match self.completions.selected_idx {
+							Some(idx) => (idx + 1) % len,
+							None => 0,
+						}
+					};
+					self.completions.selected_idx = Some(new_idx);
+					self.completions.ensure_selected_visible();
+
+					let item = self.completions.items[new_idx].clone();
+					if let Mode::Command { prompt, input } = self.input.mode() {
+						// Replace from stored start position to end of input
+						let start = self.completions.replace_start.min(input.len());
+						let prefix = &input[..start];
+						let new_input = format!("{}{}", prefix, item.insert_text);
+						self.input.set_mode(Mode::Command {
+							prompt,
+							input: new_input,
+						});
 					}
-				} else {
-					match self.completions.selected_idx {
-						Some(idx) => (idx + 1) % len,
-						None => 0,
-					}
-				};
-				self.completions.selected_idx = Some(new_idx);
-				let item = self.completions.items[new_idx].clone();
-				if let Mode::Command { prompt, input } = self.input.mode() {
-					// Replace from stored start position to end of input
-					let start = self.completions.replace_start.min(input.len());
-					let prefix = &input[..start];
-					let new_input = format!("{}{}", prefix, item.insert_text);
-					self.input.set_mode(Mode::Command {
-						prompt,
-						input: new_input,
-					});
+					return false;
 				}
-				return false;
 			}
 		}
 
