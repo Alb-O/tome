@@ -1,19 +1,25 @@
+//! Notification size calculation.
+//!
+//! Calculates the dimensions needed to render a notification.
+
 use ratatui::buffer::Buffer;
 use ratatui::prelude::*;
 use ratatui::widgets::paragraph::Wrap;
-use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph};
+use tome_stdlib::notifications::Notification;
+use tome_manifest::notifications::SizeConstraint;
 
-use crate::notifications::notification::Notification;
-use crate::notifications::types::SizeConstraint;
-use crate::notifications::ui::{gutter_layout, padding_with_gutter};
+use crate::render::notifications::ui::{gutter_layout, padding_with_gutter};
 
+/// Calculates the width and height needed to display a notification.
 pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u16) {
-	let border_type = notification.border_type.unwrap_or(BorderType::Plain);
+	let border_type: ratatui::widgets::BorderType = notification.border_kind.into();
 	let border_v_offset: u16 = 2;
 	let border_h_offset: u16 = 2;
 
 	let gutter = gutter_layout(notification.level);
-	let effective_padding = padding_with_gutter(notification.padding, gutter);
+	let padding: ratatui::widgets::block::Padding = notification.padding.into();
+	let effective_padding = padding_with_gutter(padding, gutter);
 
 	let h_padding = effective_padding.left + effective_padding.right;
 	let v_padding = effective_padding.top + effective_padding.bottom;
@@ -43,15 +49,19 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 		.unwrap_or(frame_area.height)
 		.max(min_height);
 
-	let content_max_line_width = notification
-		.content
+	// Convert content string to Text for measurement
+	let content_text = Text::raw(&notification.content);
+	let content_max_line_width = content_text
 		.lines
 		.iter()
-		.map(|l: &Line| l.width())
+		.map(|l| l.width())
 		.max()
 		.unwrap_or(0) as u16;
 
-	let title_width = notification.title.as_ref().map_or(0, |t: &Line| t.width()) as u16;
+	let title_width = notification
+		.title
+		.as_ref()
+		.map_or(0, |t| t.chars().count()) as u16;
 	let title_padding = notification.padding.left + notification.padding.right;
 
 	let width_for_body = (content_max_line_width + border_h_offset + h_padding).max(min_width);
@@ -64,14 +74,14 @@ pub fn calculate_size(notification: &Notification, frame_area: Rect) -> (u16, u1
 		.borders(Borders::ALL)
 		.border_type(border_type)
 		.padding(effective_padding);
-	if let Some(title) = &notification.title {
-		temp_block = temp_block.title(title.clone());
+	if let Some(ref title) = notification.title {
+		temp_block = temp_block.title(Line::raw(title.as_str()));
 	}
 
 	let buffer_height = max_height_constraint;
 	let mut buffer = Buffer::empty(Rect::new(0, 0, final_width, buffer_height));
 
-	let paragraph = Paragraph::new(notification.content.clone())
+	let paragraph = Paragraph::new(content_text.clone())
 		.wrap(Wrap { trim: true })
 		.block(temp_block.clone());
 	paragraph.render(buffer.area, &mut buffer);

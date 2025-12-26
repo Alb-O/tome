@@ -1,7 +1,7 @@
 use ratatui::prelude::*;
 
-use crate::notifications::types::AnimationPhase;
-use crate::notifications::utils::{color_to_rgb, ease_in_quad, ease_out_quad, lerp};
+use tome_manifest::notifications::AnimationPhase;
+use crate::render::notifications::utils::{color_to_rgb, ease_in_quad, ease_out_quad, lerp};
 
 /// Target color when fully faded out (black).
 const FADED_OUT_COLOR: Option<Color> = Some(Color::Black);

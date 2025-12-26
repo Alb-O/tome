@@ -20,8 +20,9 @@ use tome_language::syntax::Syntax;
 use tome_manifest::syntax::SyntaxStyles;
 use tome_manifest::{HookContext, Mode, emit_hook};
 use tome_stdlib::movement;
-use tome_stdlib::notifications::{Notifications, Overflow};
 use tome_theme::Theme;
+
+use crate::render::{Notifications, Overflow};
 pub use types::{HistoryEntry, Message, MessageKind, Registers};
 
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap};

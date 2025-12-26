@@ -5,7 +5,7 @@ use ratatui::widgets::Paragraph;
 use ratatui::widgets::block::Padding;
 use ratatui::widgets::paragraph::Wrap;
 
-use crate::notifications::types::Level;
+use tome_manifest::notifications::Level;
 
 const ICON_INFO: &str = "󰋼";
 const ICON_WARN: &str = "󰀪";

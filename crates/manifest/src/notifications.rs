@@ -86,6 +86,74 @@ pub enum NotificationError {
 	ContentTooLarge(usize, usize),
 }
 
+/// Animation phase tracking for notification lifecycle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AnimationPhase {
+	/// Notification is queued but not yet visible.
+	#[default]
+	Pending,
+	/// Sliding into view.
+	SlidingIn,
+	/// Expanding from anchor point.
+	Expanding,
+	/// Fading into visibility.
+	FadingIn,
+	/// Fully visible and waiting.
+	Dwelling,
+	/// Sliding out of view.
+	SlidingOut,
+	/// Collapsing back to anchor point.
+	Collapsing,
+	/// Fading out of visibility.
+	FadingOut,
+	/// Animation complete, ready for removal.
+	Finished,
+}
+
+/// Behavior when notification limit is reached.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum Overflow {
+	/// Remove the oldest notification to make room.
+	#[default]
+	DiscardOldest,
+	/// Reject new notifications when at capacity.
+	DiscardNewest,
+}
+
+/// Constraint on notification dimensions.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SizeConstraint {
+	/// Fixed size in terminal cells.
+	Absolute(u16),
+	/// Percentage of available space (0.0 to 1.0).
+	Percentage(f32),
+}
+
+/// Direction from which a notification slides in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[non_exhaustive]
+pub enum SlideDirection {
+	/// Infer direction from anchor position.
+	#[default]
+	Default,
+	/// Slide from the top edge.
+	FromTop,
+	/// Slide from the bottom edge.
+	FromBottom,
+	/// Slide from the left edge.
+	FromLeft,
+	/// Slide from the right edge.
+	FromRight,
+	/// Slide from top-left corner.
+	FromTopLeft,
+	/// Slide from top-right corner.
+	FromTopRight,
+	/// Slide from bottom-left corner.
+	FromBottomLeft,
+	/// Slide from bottom-right corner.
+	FromBottomRight,
+}
+
 pub struct NotificationTypeDef {
 	pub id: &'static str,
 	pub name: &'static str,

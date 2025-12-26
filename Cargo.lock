@@ -2478,12 +2478,10 @@ name = "tome-stdlib"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "crossterm",
  "futures",
  "linkme",
  "log",
  "paste",
- "ratatui 0.30.0-hackable",
  "regex",
  "ropey",
  "serde",

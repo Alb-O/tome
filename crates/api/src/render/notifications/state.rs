@@ -4,14 +4,15 @@ use ratatui::prelude::*;
 use ratatui::widgets::block::Padding;
 use ratatui::widgets::{Block, BorderType};
 
-use crate::notifications::animation::{
+use tome_manifest::notifications::{Animation, AnimationPhase, AutoDismiss, Level, Timing};
+use tome_stdlib::notifications::Notification;
+
+use crate::render::notifications::animation::{
 	FadeHandler, expand_calculate_rect, fade_calculate_rect, slide_apply_border_effect,
 	slide_calculate_rect,
 };
-use crate::notifications::notification::{Notification, calculate_size};
-use crate::notifications::types::{
-	Animation, AnimationPhase, AutoDismiss, Level, SlideParams, Timing,
-};
+use crate::render::notifications::notification::calculate_size;
+use crate::render::notifications::types::SlideParams;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ManagerDefaults {
@@ -151,7 +152,7 @@ impl NotificationState {
 	}
 }
 
-impl crate::notifications::stacking::StackableNotification for NotificationState {
+impl crate::render::notifications::stacking::StackableNotification for NotificationState {
 	fn id(&self) -> u64 {
 		self.id
 	}
@@ -172,18 +173,21 @@ impl crate::notifications::stacking::StackableNotification for NotificationState
 	}
 }
 
-impl crate::notifications::render::RenderableNotification for NotificationState {
+impl crate::render::notifications::render::RenderableNotification for NotificationState {
 	fn level(&self) -> Option<Level> {
 		self.notification.level
 	}
 	fn title(&self) -> Option<Line<'static>> {
-		self.notification.title.clone()
+		self.notification
+			.title
+			.as_ref()
+			.map(|t| Line::raw(t.clone()))
 	}
 	fn content(&self) -> Text<'static> {
-		self.notification.content.clone()
+		Text::raw(self.notification.content.clone())
 	}
 	fn border_type(&self) -> BorderType {
-		self.notification.border_type.unwrap_or(BorderType::Plain)
+		self.notification.border_kind.into()
 	}
 	fn fade_effect(&self) -> bool {
 		self.notification.fade_effect
@@ -195,16 +199,16 @@ impl crate::notifications::render::RenderableNotification for NotificationState 
 		self.animation_progress
 	}
 	fn block_style(&self) -> Option<Style> {
-		self.notification.block_style
+		self.notification.block_style.map(Into::into)
 	}
 	fn border_style(&self) -> Option<Style> {
-		self.notification.border_style
+		self.notification.border_style.map(Into::into)
 	}
 	fn title_style(&self) -> Option<Style> {
-		self.notification.title_style
+		self.notification.title_style.map(Into::into)
 	}
 	fn padding(&self) -> Padding {
-		self.notification.padding
+		self.notification.padding.into()
 	}
 	fn set_full_rect(&mut self, rect: Rect) {
 		self.full_rect = rect;
@@ -292,11 +296,11 @@ impl crate::notifications::render::RenderableNotification for NotificationState 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::notifications::types::{AutoDismiss, Timing};
+	use tome_manifest::notifications::{AutoDismiss, Timing};
 
 	fn create_test_notification() -> Notification {
 		Notification {
-			content: Text::raw("Test notification"),
+			content: "Test notification".to_string(),
 			..Default::default()
 		}
 	}
@@ -417,7 +421,7 @@ mod tests {
 
 	#[test]
 	fn test_custom_positions_copied_from_notification() {
-		use ratatui::layout::Position;
+		use tome_base::Position;
 
 		let defaults = ManagerDefaults::default();
 		let mut notification = create_test_notification();

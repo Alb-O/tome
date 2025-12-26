@@ -1,4 +1,4 @@
-use crate::notifications::types::SlideDirection;
+use tome_manifest::notifications::SlideDirection;
 
 /// Calculates when border effects should be triggered during slide animation.
 ///
@@ -52,7 +52,7 @@ pub fn calculate_triggers(
 			let cy = actual_start_y + height > frame_y2 || actual_end_y + height > frame_y2;
 			if cx || cy { (0.0, 1.0) } else { (2.0, 0.0) }
 		}
-		SlideDirection::Default => (2.0, 0.0),
+		SlideDirection::Default | _ => (2.0, 0.0),
 	}
 }
 

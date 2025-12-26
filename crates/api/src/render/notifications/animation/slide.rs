@@ -1,10 +1,11 @@
 use ratatui::prelude::*;
 use ratatui::symbols::border;
 use ratatui::widgets::Block;
+use tome_manifest::notifications::{Anchor, AnimationPhase, SlideDirection};
 
 use super::border::calculate_triggers;
-use crate::notifications::types::{Anchor, AnimationPhase, SlideDirection, SlideParams};
-use crate::notifications::utils::{clip_rect_to_frame, lerp};
+use crate::render::notifications::types::SlideParams;
+use crate::render::notifications::utils::{clip_rect_to_frame, lerp};
 
 /// Calculates the rectangle for slide animation at a given progress.
 ///
