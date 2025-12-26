@@ -2,7 +2,7 @@ use linkme::distributed_slice;
 
 use crate::{
 	Color, Modifier, NotificationColors, PopupColors, StatusColors, SyntaxStyle, SyntaxStyles,
-	THEMES, Theme, ThemeColors, UiColors,
+	THEMES, Theme, ThemeColors, ThemeVariant, UiColors,
 };
 
 #[distributed_slice(THEMES)]
@@ -10,6 +10,7 @@ pub static ONE_DARK: Theme = Theme {
 	id: "one_dark",
 	name: "one_dark",
 	aliases: &["atom_one_dark", "one"],
+	variant: ThemeVariant::Dark,
 	colors: ThemeColors {
 		ui: UiColors {
 			bg: Color::Rgb(40, 44, 52),                  // #282C34

@@ -2,7 +2,7 @@ use linkme::distributed_slice;
 
 use crate::{
 	Color, Modifier, NotificationColors, PopupColors, StatusColors, SyntaxStyle, SyntaxStyles,
-	THEMES, Theme, ThemeColors, UiColors,
+	THEMES, Theme, ThemeColors, ThemeVariant, UiColors,
 };
 
 #[distributed_slice(THEMES)]
@@ -10,6 +10,7 @@ pub static MONOKAI: Theme = Theme {
 	id: "monokai",
 	name: "monokai",
 	aliases: &["monokai_extended"],
+	variant: ThemeVariant::Dark,
 	colors: ThemeColors {
 		ui: UiColors {
 			bg: Color::Rgb(39, 40, 34),                  // #272822

@@ -6,6 +6,14 @@ pub mod themes;
 pub use tome_base::color::{Color, Modifier};
 pub use tome_manifest::syntax::{SyntaxStyle, SyntaxStyles};
 
+/// Whether a theme uses a light or dark background.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum ThemeVariant {
+	#[default]
+	Dark,
+	Light,
+}
+
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub struct UiColors {
@@ -100,6 +108,7 @@ pub struct Theme {
 	pub id: &'static str,
 	pub name: &'static str,
 	pub aliases: &'static [&'static str],
+	pub variant: ThemeVariant,
 	pub colors: ThemeColors,
 	pub priority: i16,
 	pub source: tome_manifest::RegistrySource,
@@ -113,6 +122,7 @@ pub static DEFAULT_THEME: Theme = Theme {
 	id: "default",
 	name: "default",
 	aliases: &[],
+	variant: ThemeVariant::Dark,
 	colors: ThemeColors {
 		ui: UiColors {
 			bg: Color::Reset,
