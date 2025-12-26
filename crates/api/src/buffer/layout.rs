@@ -378,6 +378,28 @@ impl Layout {
 		ids[prev_idx]
 	}
 
+	/// Finds the view at the given screen coordinates.
+	///
+	/// Returns the view and its screen area if the coordinates fall within
+	/// any view's bounds.
+	pub fn view_at_position(
+		&self,
+		area: ratatui::layout::Rect,
+		x: u16,
+		y: u16,
+	) -> Option<(BufferView, ratatui::layout::Rect)> {
+		for (view, rect) in self.compute_view_areas(area) {
+			if x >= rect.x
+				&& x < rect.x + rect.width
+				&& y >= rect.y
+				&& y < rect.y + rect.height
+			{
+				return Some((view, rect));
+			}
+		}
+		None
+	}
+
 	/// Computes the rectangular areas for each view in the layout.
 	///
 	/// Returns a vec of (BufferView, Rect) pairs representing the screen area
