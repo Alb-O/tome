@@ -214,8 +214,7 @@ impl From<BorderKind> for ratatui::widgets::BorderType {
 			BorderKind::Rounded => Self::Rounded,
 			BorderKind::Double => Self::Double,
 			BorderKind::Thick => Self::Thick,
-			// Padded maps to Plain in ratatui; actual rendering handles it specially
-			BorderKind::Padded => Self::Plain,
+			BorderKind::Padded => Self::Padded,
 		}
 	}
 }
@@ -228,6 +227,7 @@ impl From<ratatui::widgets::BorderType> for BorderKind {
 			ratatui::widgets::BorderType::Rounded => Self::Rounded,
 			ratatui::widgets::BorderType::Double => Self::Double,
 			ratatui::widgets::BorderType::Thick => Self::Thick,
+			ratatui::widgets::BorderType::Padded => Self::Padded,
 			// QuadrantInside/Outside don't have direct mappings
 			_ => Self::Plain,
 		}
