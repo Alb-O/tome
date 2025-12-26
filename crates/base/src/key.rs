@@ -266,6 +266,8 @@ pub enum MouseEvent {
 		col: u16,
 		modifiers: Modifiers,
 	},
+	/// Mouse moved (no button pressed).
+	Move { row: u16, col: u16 },
 }
 
 /// Scroll direction.
@@ -284,6 +286,7 @@ impl MouseEvent {
 			MouseEvent::Release { row, .. } => *row,
 			MouseEvent::Drag { row, .. } => *row,
 			MouseEvent::Scroll { row, .. } => *row,
+			MouseEvent::Move { row, .. } => *row,
 		}
 	}
 
@@ -293,6 +296,7 @@ impl MouseEvent {
 			MouseEvent::Release { col, .. } => *col,
 			MouseEvent::Drag { col, .. } => *col,
 			MouseEvent::Scroll { col, .. } => *col,
+			MouseEvent::Move { col, .. } => *col,
 		}
 	}
 
@@ -302,6 +306,7 @@ impl MouseEvent {
 			MouseEvent::Release { .. } => Modifiers::NONE,
 			MouseEvent::Drag { modifiers, .. } => *modifiers,
 			MouseEvent::Scroll { modifiers, .. } => *modifiers,
+			MouseEvent::Move { .. } => Modifiers::NONE,
 		}
 	}
 }
@@ -364,7 +369,7 @@ impl From<termina::event::MouseEvent> for MouseEvent {
 				col: event.column,
 				modifiers,
 			},
-			MouseEventKind::Moved => MouseEvent::Release {
+			MouseEventKind::Moved => MouseEvent::Move {
 				row: event.row,
 				col: event.column,
 			},

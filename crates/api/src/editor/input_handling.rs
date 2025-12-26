@@ -287,17 +287,56 @@ impl Editor {
 	/// Handles mouse events within the document area (where splits live).
 	///
 	/// This method:
-	/// 1. Determines which view the mouse is over
-	/// 2. Focuses that view if it's different from the current focus
-	/// 3. Translates screen coordinates to view-local coordinates
-	/// 4. Dispatches the mouse event to the appropriate handler
+	/// 1. Checks if mouse is over a separator (for hover/resize feedback)
+	/// 2. Determines which view the mouse is over
+	/// 3. Focuses that view if it's different from the current focus
+	/// 4. Translates screen coordinates to view-local coordinates
+	/// 5. Dispatches the mouse event to the appropriate handler
 	pub(crate) async fn handle_mouse_in_doc_area(
 		&mut self,
 		mouse: termina::event::MouseEvent,
 		doc_area: ratatui::layout::Rect,
 	) -> bool {
+		use termina::event::MouseEventKind;
+
 		let mouse_x = mouse.column;
 		let mouse_y = mouse.row;
+
+		// Check if mouse is over a separator
+		let separator = self.layout.separator_at_position(doc_area, mouse_x, mouse_y);
+
+		// Update hover state based on mouse event type
+		match mouse.kind {
+			MouseEventKind::Moved => {
+				// Update hover state
+				let old_hover = self.hovered_separator.take();
+				self.hovered_separator = separator;
+
+				// Request redraw if hover state changed
+				if old_hover != self.hovered_separator {
+					self.needs_redraw = true;
+				}
+
+				// Mouse move over separator doesn't need further processing
+				if self.hovered_separator.is_some() {
+					return false;
+				}
+			}
+			MouseEventKind::Down(_) | MouseEventKind::Drag(_) => {
+				// Clear hover when clicking/dragging (will be used for resize later)
+				if self.hovered_separator.is_some() {
+					self.hovered_separator = None;
+					self.needs_redraw = true;
+				}
+			}
+			_ => {
+				// For other events (scroll, release), clear hover if not on separator
+				if separator.is_none() && self.hovered_separator.is_some() {
+					self.hovered_separator = None;
+					self.needs_redraw = true;
+				}
+			}
+		}
 
 		// Find which view the mouse is over
 		let Some((target_view, view_area)) =

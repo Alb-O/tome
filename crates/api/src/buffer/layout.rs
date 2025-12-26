@@ -482,6 +482,24 @@ impl Layout {
 		}
 	}
 
+	/// Finds the separator at the given screen coordinates.
+	///
+	/// Returns the separator's direction and rectangle if the coordinates
+	/// fall within a separator's bounds.
+	pub fn separator_at_position(
+		&self,
+		area: ratatui::layout::Rect,
+		x: u16,
+		y: u16,
+	) -> Option<(SplitDirection, ratatui::layout::Rect)> {
+		for (direction, _pos, rect) in self.separator_positions(area) {
+			if x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height {
+				return Some((direction, rect));
+			}
+		}
+		None
+	}
+
 	/// Returns the separator positions for rendering.
 	///
 	/// Each separator is represented as (direction, position) where position

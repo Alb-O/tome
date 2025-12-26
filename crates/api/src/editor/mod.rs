@@ -20,7 +20,7 @@ use tome_manifest::{HookContext, Mode, emit_hook};
 use tome_theme::Theme;
 pub use types::{HistoryEntry, Message, MessageKind, Registers};
 
-use crate::buffer::{Buffer, BufferId, BufferView, Layout, TerminalId};
+use crate::buffer::{Buffer, BufferId, BufferView, Layout, SplitDirection, TerminalId};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
 use crate::render::{Notifications, Overflow};
@@ -132,6 +132,12 @@ pub struct Editor {
 
 	/// Style overlays for rendering modifications.
 	pub style_overlays: StyleOverlays,
+
+	/// Currently hovered separator (for visual feedback during resize).
+	///
+	/// Contains the separator's direction and screen rectangle when the mouse
+	/// is hovering over a split boundary.
+	pub hovered_separator: Option<(SplitDirection, ratatui::layout::Rect)>,
 }
 
 // Buffer and terminal access - provides convenient access to the focused view
@@ -402,6 +408,7 @@ impl Editor {
 			fs,
 			language_loader,
 			style_overlays: StyleOverlays::new(),
+			hovered_separator: None,
 		}
 	}
 
