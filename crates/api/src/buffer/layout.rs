@@ -18,18 +18,35 @@ pub enum SplitDirection {
 }
 
 /// Unique identifier for a terminal buffer.
+///
+/// Terminal IDs are assigned sequentially starting from 1 when terminals
+/// are created via [`Editor::split_horizontal_terminal`] or
+/// [`Editor::split_vertical_terminal`].
+///
+/// [`Editor::split_horizontal_terminal`]: crate::Editor::split_horizontal_terminal
+/// [`Editor::split_vertical_terminal`]: crate::Editor::split_vertical_terminal
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TerminalId(pub u64);
 
 /// A view in the layout - either a text buffer or a terminal.
 ///
-/// This allows the layout system to manage heterogeneous content types
-/// in splits without requiring a common trait object.
+/// This enum enables the layout system to manage heterogeneous content types
+/// in splits. The editor tracks the focused view via this type, allowing
+/// seamless navigation between text editing and terminal sessions.
+///
+/// # Focus Handling
+///
+/// When a terminal is focused, text-editing operations are unavailable.
+/// Use [`Editor::is_text_focused`] or [`Editor::is_terminal_focused`] to
+/// check focus type before operations.
+///
+/// [`Editor::is_text_focused`]: crate::Editor::is_text_focused
+/// [`Editor::is_terminal_focused`]: crate::Editor::is_terminal_focused
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BufferView {
-	/// A text buffer (document editing).
+	/// A text buffer for document editing.
 	Text(BufferId),
-	/// A terminal emulator.
+	/// An embedded terminal emulator.
 	Terminal(TerminalId),
 }
 
@@ -75,21 +92,43 @@ impl From<TerminalId> for BufferView {
 
 /// Layout tree for buffer arrangement.
 ///
-/// Each node is either a single view (text buffer or terminal) or a split
-/// containing two child layouts.
+/// Represents how views (text buffers and terminals) are arranged in splits.
+/// The layout is a binary tree where leaves are single views and internal
+/// nodes are splits.
+///
+/// # Structure
+///
+/// ```text
+/// Layout::Split
+/// ├── first: Layout::Single(BufferView::Text(1))
+/// └── second: Layout::Split
+///     ├── first: Layout::Single(BufferView::Text(2))
+///     └── second: Layout::Single(BufferView::Terminal(1))
+/// ```
+///
+/// # Creating Layouts
+///
+/// Use the constructor methods rather than building variants directly:
+///
+/// ```ignore
+/// let layout = Layout::hsplit(
+///     Layout::text(buffer_id),
+///     Layout::terminal(terminal_id),
+/// );
+/// ```
 #[derive(Debug, Clone)]
 pub enum Layout {
 	/// A single buffer view (text or terminal).
 	Single(BufferView),
-	/// A split containing two layouts.
+	/// A split containing two child layouts.
 	Split {
-		/// Direction of the split.
+		/// Direction of the split (horizontal or vertical).
 		direction: SplitDirection,
-		/// Position of the split (0.0 to 1.0).
+		/// Ratio of space given to first child (0.0 to 1.0).
 		ratio: f32,
-		/// First child (left or top).
+		/// First child (left for horizontal, top for vertical).
 		first: Box<Layout>,
-		/// Second child (right or bottom).
+		/// Second child (right for horizontal, bottom for vertical).
 		second: Box<Layout>,
 	},
 }

@@ -1,4 +1,39 @@
 //! Fine-grained capability traits for editor operations.
+//!
+//! Each trait represents a specific category of editor functionality. This allows
+//! actions and commands to declare exactly what capabilities they need, and enables
+//! graceful degradation when features aren't available.
+//!
+//! # Required Traits
+//!
+//! These must be implemented by all [`EditorCapabilities`] implementors:
+//!
+//! - [`CursorAccess`] - Get/set cursor position
+//! - [`SelectionAccess`] - Get/set selections
+//! - [`TextAccess`] - Read document content
+//! - [`ModeAccess`] - Get/set editor mode
+//! - [`MessageAccess`] - Display notifications
+//!
+//! # Optional Traits
+//!
+//! These extend functionality when implemented:
+//!
+//! - [`EditAccess`] - Text modification (delete, yank, paste)
+//! - [`SearchAccess`] - Pattern search and navigation
+//! - [`UndoAccess`] - Undo/redo history
+//! - [`SelectionOpsAccess`] - Selection manipulation
+//! - [`BufferOpsAccess`] - Buffer/split management
+//! - [`FileOpsAccess`] - Save/load operations
+//!
+//! # Not Yet Wired
+//!
+//! These traits are defined but not yet connected to [`EditorCapabilities`]:
+//!
+//! - [`TransformAccess`] - Text transformations (align, trim)
+//! - [`JumpAccess`] - Jump list navigation
+//! - [`MacroAccess`] - Macro recording/playback
+//!
+//! [`EditorCapabilities`]: super::EditorCapabilities
 
 use ropey::RopeSlice;
 use tome_base::range::CharIdx;
@@ -7,134 +42,217 @@ use tome_base::selection::Selection;
 use crate::Mode;
 use crate::actions::EditAction;
 
-/// Cursor position access.
+/// Cursor position access (required).
+///
+/// Provides read/write access to the primary cursor position in the document.
+/// The cursor is a character index (not byte offset).
 pub trait CursorAccess {
+	/// Returns the current cursor position as a character index.
 	fn cursor(&self) -> CharIdx;
+	/// Sets the cursor position.
 	fn set_cursor(&mut self, pos: CharIdx);
 }
 
-/// Selection access.
+/// Selection access (required).
+///
+/// Provides access to the editor's selection state. Tome uses Kakoune-style
+/// selections where multiple selections are supported and the cursor is
+/// always part of a selection.
 pub trait SelectionAccess {
+	/// Returns a reference to the current selection.
 	fn selection(&self) -> &Selection;
+	/// Returns a mutable reference to the current selection.
 	fn selection_mut(&mut self) -> &mut Selection;
+	/// Replaces the current selection.
 	fn set_selection(&mut self, sel: Selection);
 }
 
-/// Document text access (read-only).
+/// Document text access (required, read-only).
+///
+/// Provides read-only access to the document content via [`ropey`]'s rope slice.
+/// This is used by actions to compute motions and text objects.
 pub trait TextAccess {
+	/// Returns a read-only slice of the document text.
 	fn text(&self) -> RopeSlice<'_>;
 }
 
-/// Mode access.
+/// Mode access (required).
+///
+/// Controls the editor mode (Normal, Insert, Visual, etc.). The mode determines
+/// how key input is interpreted.
 pub trait ModeAccess {
+	/// Returns the current editor mode.
 	fn mode(&self) -> Mode;
+	/// Changes the editor mode.
 	fn set_mode(&mut self, mode: Mode);
 }
 
-/// Message display and notifications.
+/// Message display and notifications (required).
+///
+/// Provides a way to display messages to the user in the status bar or
+/// notification system.
 pub trait MessageAccess {
-	/// Generic notification entry point.
+	/// Displays a notification of the given type.
+	///
+	/// Common `type_id` values: "info", "warning", "error", "success".
 	fn notify(&mut self, type_id: &str, msg: &str);
 
-	/// Clear the current message.
+	/// Clears the current status message.
 	fn clear_message(&mut self);
 }
 
-/// Search operations.
+/// Search operations (optional).
+///
+/// Enables pattern-based search and navigation. Supports multi-selection
+/// search where each match can be added to the selection.
 pub trait SearchAccess {
+	/// Finds the next match. If `add_selection` is true, adds to selections.
+	/// If `extend` is true, extends the current selection to include the match.
 	fn search_next(&mut self, add_selection: bool, extend: bool) -> bool;
+	/// Finds the previous match.
 	fn search_prev(&mut self, add_selection: bool, extend: bool) -> bool;
+	/// Uses the current selection text as the search pattern.
 	fn use_selection_as_pattern(&mut self) -> bool;
+	/// Returns the current search pattern, if any.
 	fn pattern(&self) -> Option<&str>;
+	/// Sets the search pattern.
 	fn set_pattern(&mut self, pattern: &str);
 }
 
-/// Undo/redo operations.
+/// Undo/redo operations (optional).
+///
+/// Provides access to the buffer's history stack for undoing and redoing changes.
 pub trait UndoAccess {
-	/// Save current state to undo stack.
+	/// Saves the current state to the undo stack.
 	fn save_state(&mut self);
-	/// Undo the last change.
+	/// Undoes the last change.
 	fn undo(&mut self);
-	/// Redo the last undone change.
+	/// Redoes the last undone change.
 	fn redo(&mut self);
-	/// Check if undo is available.
+	/// Returns true if undo is available.
 	fn can_undo(&self) -> bool;
-	/// Check if redo is available.
+	/// Returns true if redo is available.
 	fn can_redo(&self) -> bool;
 }
 
-/// Selection manipulation operations.
+/// Selection manipulation operations (optional).
 ///
-/// Note: `duplicate_down` and `duplicate_up` are handled via action result handlers
-/// (see `unimplemented.rs`) and don't need trait methods since they operate on
-/// the selection directly via `EditorContext`.
+/// Provides operations that modify how selections are structured rather than
+/// what text they contain. Note that `duplicate_down` and `duplicate_up` are
+/// handled via action result handlers since they operate directly on the selection.
 pub trait SelectionOpsAccess {
-	/// Split the primary selection into per-line selections.
+	/// Splits the primary selection into per-line selections.
+	///
+	/// For a selection spanning lines 1-3, creates three separate selections.
 	fn split_lines(&mut self) -> bool;
-	/// Merge overlapping and adjacent selections.
+	/// Merges overlapping and adjacent selections into single selections.
 	fn merge_selections(&mut self);
 }
 
-/// Text transformation operations.
+/// Text transformation operations (not yet wired).
 ///
-/// NOTE: Not yet wired into `EditorCapabilities`. Add to `Capability` enum
-/// and implement `transform()` accessor when ready.
+/// Provides structural text transformations that operate on selections.
+/// Add to [`Capability`] enum and implement `transform()` accessor when ready.
+///
+/// [`Capability`]: crate::Capability
 pub trait TransformAccess {
+	/// Aligns selections to a common column.
 	fn align(&mut self);
+	/// Copies indentation from the previous line.
 	fn copy_indent(&mut self);
+	/// Converts tabs to spaces in selections.
 	fn tabs_to_spaces(&mut self);
+	/// Converts spaces to tabs in selections.
 	fn spaces_to_tabs(&mut self);
+	/// Trims whitespace from selection boundaries.
 	fn trim_selections(&mut self);
 }
 
-/// Jump list operations.
+/// Jump list operations (not yet wired).
 ///
-/// NOTE: Not yet wired into `EditorCapabilities`. Add to `Capability` enum
-/// and implement `jump()` accessor when ready.
+/// Provides navigation through the jump history. Jumps are saved automatically
+/// when making large cursor movements. Add to [`Capability`] enum and implement
+/// `jump()` accessor when ready.
+///
+/// [`Capability`]: crate::Capability
 pub trait JumpAccess {
+	/// Jumps forward in the jump list.
 	fn jump_forward(&mut self) -> bool;
+	/// Jumps backward in the jump list.
 	fn jump_backward(&mut self) -> bool;
+	/// Saves the current position to the jump list.
 	fn save_jump(&mut self);
 }
 
-/// Macro recording/playback.
+/// Macro recording/playback (not yet wired).
 ///
-/// NOTE: Not yet wired into `EditorCapabilities`. Add to `Capability` enum
-/// and implement `macros()` accessor when ready.
+/// Enables recording sequences of actions and replaying them. Add to
+/// [`Capability`] enum and implement `macros()` accessor when ready.
+///
+/// [`Capability`]: crate::Capability
 pub trait MacroAccess {
+	/// Starts recording a macro.
 	fn record(&mut self);
+	/// Stops recording the current macro.
 	fn stop_recording(&mut self);
+	/// Plays the recorded macro.
 	fn play(&mut self);
+	/// Returns true if currently recording a macro.
 	fn is_recording(&self) -> bool;
 }
 
-/// Edit operations (delete, yank, paste, etc.).
+/// Edit operations (optional).
+///
+/// Provides text modification capabilities including delete, yank, paste,
+/// and case changes. Edit actions never trigger application quit; use
+/// [`ActionResult::Quit`] for that.
+///
+/// [`ActionResult::Quit`]: crate::ActionResult::Quit
 pub trait EditAccess {
-	/// Execute an edit action.
+	/// Executes an edit action on the current selection.
 	///
-	/// Edit actions modify the document content (delete, yank, paste, case changes, etc.)
-	/// but never trigger application quit - use `ActionResult::Quit` for that.
+	/// If `extend` is true, the selection is extended rather than replaced
+	/// during the operation.
 	fn execute_edit(&mut self, action: &EditAction, extend: bool);
 }
 
-/// File operations (save, check modified state, etc.).
+/// File operations (optional).
+///
+/// Provides save/load capabilities for buffers. Operations are async to support
+/// non-blocking I/O.
+///
+/// # Errors
+///
+/// Save operations return [`CommandError::Io`] on filesystem errors,
+/// [`CommandError::InvalidArgument`] for path issues.
+///
+/// [`CommandError::Io`]: crate::CommandError::Io
+/// [`CommandError::InvalidArgument`]: crate::CommandError::InvalidArgument
 pub trait FileOpsAccess {
-	/// Check if the buffer has unsaved changes.
+	/// Returns true if the buffer has unsaved changes.
 	fn is_modified(&self) -> bool;
-	/// Save the buffer to its current file path.
+	/// Saves the buffer to its current file path.
 	fn save(
 		&mut self,
 	) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), crate::CommandError>> + '_>>;
-	/// Save the buffer to a specific file path.
+	/// Saves the buffer to a specific file path, updating the buffer's path.
 	fn save_as(
 		&mut self,
 		path: std::path::PathBuf,
 	) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), crate::CommandError>> + '_>>;
 }
 
-/// Theme operations (get/set editor theme).
+/// Theme operations (optional).
+///
+/// Controls the editor's visual theme.
 pub trait ThemeAccess {
-	/// Set the editor theme by name.
+	/// Sets the editor theme by name.
+	///
+	/// # Errors
+	///
+	/// Returns [`CommandError::Failed`] if the theme is not found.
+	///
+	/// [`CommandError::Failed`]: crate::CommandError::Failed
 	fn set_theme(&mut self, name: &str) -> Result<(), crate::CommandError>;
 }
 
@@ -185,6 +303,9 @@ pub trait BufferOpsAccess {
 	fn focus_down(&mut self);
 }
 
-/// Combined trait for command handlers - provides all common editor operations.
-/// This is a convenience trait that combines the most commonly used capabilities.
+/// Combined trait for command handlers.
+///
+/// Convenience trait that combines the most commonly used capabilities for
+/// command implementations. Commands can use this as a bound instead of
+/// listing individual traits.
 pub trait EditorOps: TextAccess + MessageAccess + FileOpsAccess + ThemeAccess {}

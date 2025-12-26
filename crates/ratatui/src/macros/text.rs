@@ -30,8 +30,8 @@
 /// let text = text![line!["hello", "world"], span!(Modifier::BOLD; "goodbye {}", "world")];
 /// ```
 ///
-/// [`span!`]: crate::span
-/// [`text!`]: crate::text
+/// [`span!`]: crate::span!
+/// [`text!`]: crate::text!
 /// [`Text`]: crate::text::Text
 /// [`Line`]: crate::text::Line
 /// [`Span`]: crate::text::Span

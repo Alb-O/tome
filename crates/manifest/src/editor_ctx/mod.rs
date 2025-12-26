@@ -1,4 +1,21 @@
 //! Editor context and capability traits for action result handling.
+//!
+//! This module provides the bridge between action results and editor state.
+//! When an action returns an [`ActionResult`], the editor uses [`EditorContext`]
+//! to apply the result.
+//!
+//! # Capability System
+//!
+//! The editor's capabilities are split into fine-grained traits:
+//!
+//! - **Required**: [`CursorAccess`], [`SelectionAccess`], [`TextAccess`], [`ModeAccess`], [`MessageAccess`]
+//! - **Optional**: [`SearchAccess`], [`UndoAccess`], [`EditAccess`], [`SelectionOpsAccess`], etc.
+//!
+//! [`EditorCapabilities`] combines the required traits and provides accessors
+//! for optional capabilities. This allows actions to gracefully degrade when
+//! certain features aren't available.
+//!
+//! [`ActionResult`]: crate::ActionResult
 
 mod capabilities;
 mod handlers;
@@ -11,9 +28,34 @@ use tome_base::selection::Selection;
 
 use crate::{Capability, CommandError, Mode};
 
-/// Context passed to action result handlers.
+/// Context for applying action results to editor state.
+///
+/// Wraps an [`EditorCapabilities`] implementor and provides convenient methods
+/// for common operations. Used by the result dispatch system to translate
+/// [`ActionResult`] variants into editor mutations.
+///
+/// # Capability Checking
+///
+/// Use [`check_capability`] or `require_*` methods to safely access
+/// optional capabilities:
+///
+/// ```ignore
+/// // Optional access - returns None if unavailable
+/// if let Some(search) = ctx.search() {
+///     search.search_next(false, false);
+/// }
+///
+/// // Required access - returns error if unavailable
+/// let edit = ctx.require_edit()?;
+/// edit.execute_edit(&action, false);
+/// ```
+///
+/// [`ActionResult`]: crate::ActionResult
+/// [`check_capability`]: Self::check_capability
 pub struct EditorContext<'a> {
-	/// The capability provider (typically Editor from tome-term).
+	/// The capability provider (typically [`Editor`] from tome-api).
+	///
+	/// [`Editor`]: crate::Editor
 	inner: &'a mut dyn EditorCapabilities,
 }
 
@@ -130,6 +172,32 @@ impl<'a> EditorContext<'a> {
 }
 
 /// Core capabilities that all editors must provide.
+///
+/// This trait combines required capability traits and provides optional accessors
+/// for extended features. The base traits are always available:
+///
+/// - [`CursorAccess`] - Cursor position get/set
+/// - [`SelectionAccess`] - Selection state management
+/// - [`TextAccess`] - Read-only document access
+/// - [`ModeAccess`] - Editor mode (Normal, Insert, etc.)
+/// - [`MessageAccess`] - Status messages and notifications
+///
+/// Optional capabilities default to `None` but can be overridden by implementors.
+/// Check availability with [`EditorContext::check_capability`] before use.
+///
+/// # Implementing
+///
+/// Implement the required traits, then override the optional methods for
+/// any additional capabilities your editor supports:
+///
+/// ```ignore
+/// impl EditorCapabilities for MyEditor {
+///     fn search(&mut self) -> Option<&mut dyn SearchAccess> {
+///         Some(self)  // MyEditor also implements SearchAccess
+///     }
+///     // ... other overrides
+/// }
+/// ```
 pub trait EditorCapabilities:
 	CursorAccess + SelectionAccess + TextAccess + ModeAccess + MessageAccess
 {

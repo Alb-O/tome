@@ -40,10 +40,10 @@
 /// ];
 /// ```
 ///
-/// [`text!`]: crate::text
-/// [`line!`]: crate::line
-/// [`span!`]: crate::span
-/// [`row!`]: crate::row
+/// [`text!`]: crate::text!
+/// [`line!`]: crate::line!
+/// [`span!`]: crate::span!
+/// [`row!`]: crate::row!
 /// [`Row`]: crate::widgets::table::Row
 /// [`Cell`]: crate::widgets::table::Cell
 /// [`vec!`]: alloc::vec!
