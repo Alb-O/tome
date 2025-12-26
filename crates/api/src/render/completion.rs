@@ -17,11 +17,13 @@ impl Editor {
 			.max()
 			.unwrap_or(0);
 
+		let visible_range = self.completions.visible_range();
 		let items: Vec<ListItem> = self
 			.completions
 			.items
 			.iter()
 			.enumerate()
+			.filter(|(i, _)| visible_range.contains(i))
 			.map(|(i, item)| {
 				let is_selected = Some(i) == self.completions.selected_idx;
 

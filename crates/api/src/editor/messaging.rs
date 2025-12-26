@@ -82,12 +82,14 @@ impl Editor {
 				&& idx >= self.completions.items.len()
 			{
 				self.completions.selected_idx = None;
+				self.completions.scroll_offset = 0;
 			}
 		} else {
 			self.completions.active = false;
 			self.completions.items.clear();
 			self.completions.selected_idx = None;
 			self.completions.replace_start = 0;
+			self.completions.scroll_offset = 0;
 		}
 	}
 }
