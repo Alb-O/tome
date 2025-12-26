@@ -51,19 +51,28 @@ pub trait SearchAccess {
 
 /// Undo/redo operations.
 pub trait UndoAccess {
+	/// Save current state to undo stack.
 	fn save_state(&mut self);
-	fn undo(&mut self) -> bool;
-	fn redo(&mut self) -> bool;
+	/// Undo the last change.
+	fn undo(&mut self);
+	/// Redo the last undone change.
+	fn redo(&mut self);
+	/// Check if undo is available.
 	fn can_undo(&self) -> bool;
+	/// Check if redo is available.
 	fn can_redo(&self) -> bool;
 }
 
 /// Selection manipulation operations.
+///
+/// Note: `duplicate_down` and `duplicate_up` are handled via action result handlers
+/// (see `unimplemented.rs`) and don't need trait methods since they operate on
+/// the selection directly via `EditorContext`.
 pub trait SelectionOpsAccess {
+	/// Split the primary selection into per-line selections.
 	fn split_lines(&mut self) -> bool;
+	/// Merge overlapping and adjacent selections.
 	fn merge_selections(&mut self);
-	fn duplicate_down(&mut self);
-	fn duplicate_up(&mut self);
 }
 
 /// Text transformation operations.
@@ -92,7 +101,11 @@ pub trait MacroAccess {
 
 /// Edit operations (delete, yank, paste, etc.).
 pub trait EditAccess {
-	fn execute_edit(&mut self, action: &EditAction, extend: bool) -> bool;
+	/// Execute an edit action.
+	///
+	/// Edit actions modify the document content (delete, yank, paste, case changes, etc.)
+	/// but never trigger application quit - use `ActionResult::Quit` for that.
+	fn execute_edit(&mut self, action: &EditAction, extend: bool);
 }
 
 /// File operations (save, check modified state, etc.).

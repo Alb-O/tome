@@ -12,12 +12,8 @@ result_handler!(
 		if let ActionResult::Edit(action) = r
 			&& let Some(edit) = ctx.edit()
 		{
-			let quit = edit.execute_edit(action, extend);
-			return if quit {
-				HandleOutcome::Quit
-			} else {
-				HandleOutcome::Handled
-			};
+			edit.execute_edit(action, extend);
+			return HandleOutcome::Handled;
 		}
 		HandleOutcome::NotHandled
 	}

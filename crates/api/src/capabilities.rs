@@ -88,14 +88,12 @@ impl UndoAccess for Editor {
 		self.save_undo_state();
 	}
 
-	fn undo(&mut self) -> bool {
+	fn undo(&mut self) {
 		self.undo();
-		false
 	}
 
-	fn redo(&mut self) -> bool {
+	fn redo(&mut self) {
 		self.redo();
-		false
 	}
 
 	fn can_undo(&self) -> bool {
@@ -108,8 +106,8 @@ impl UndoAccess for Editor {
 }
 
 impl EditAccess for Editor {
-	fn execute_edit(&mut self, action: &EditAction, extend: bool) -> bool {
-		self.do_execute_edit_action(action.clone(), extend)
+	fn execute_edit(&mut self, action: &EditAction, extend: bool) {
+		self.do_execute_edit_action(action.clone(), extend);
 	}
 }
 
@@ -120,14 +118,6 @@ impl SelectionOpsAccess for Editor {
 
 	fn merge_selections(&mut self) {
 		self.selection.merge_overlaps_and_adjacent();
-	}
-
-	fn duplicate_down(&mut self) {
-		// TODO: implement
-	}
-
-	fn duplicate_up(&mut self) {
-		// TODO: implement
 	}
 }
 
