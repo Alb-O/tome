@@ -595,12 +595,12 @@ impl Editor {
 	pub fn mode(&self) -> Mode {
 		if self.is_terminal_focused() {
 			// Check if we're in window mode (using first buffer's input handler)
-			if let Some(first_buffer_id) = self.layout.first_buffer() {
-				if let Some(buffer) = self.buffers.get(&first_buffer_id) {
-					let mode = buffer.input.mode();
-					if matches!(mode, Mode::Window) {
-						return mode;
-					}
+			if let Some(first_buffer_id) = self.layout.first_buffer()
+				&& let Some(buffer) = self.buffers.get(&first_buffer_id)
+			{
+				let mode = buffer.input.mode();
+				if matches!(mode, Mode::Window) {
+					return mode;
 				}
 			}
 			Mode::Insert // Terminal is always in "insert" mode effectively
@@ -612,12 +612,11 @@ impl Editor {
 	pub fn mode_name(&self) -> &'static str {
 		if self.is_terminal_focused() {
 			// Check if we're in window mode (using first buffer's input handler)
-			if let Some(first_buffer_id) = self.layout.first_buffer() {
-				if let Some(buffer) = self.buffers.get(&first_buffer_id) {
-					if matches!(buffer.input.mode(), Mode::Window) {
-						return buffer.input.mode_name();
-					}
-				}
+			if let Some(first_buffer_id) = self.layout.first_buffer()
+				&& let Some(buffer) = self.buffers.get(&first_buffer_id)
+				&& matches!(buffer.input.mode(), Mode::Window)
+			{
+				return buffer.input.mode_name();
 			}
 			"TERMINAL"
 		} else {

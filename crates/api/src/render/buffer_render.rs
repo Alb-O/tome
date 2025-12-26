@@ -65,9 +65,10 @@ impl<'a> BufferRenderContext<'a> {
 				.add_modifier(Modifier::BOLD)
 		};
 
-		let base_style = Style::default()
-			.fg(self.theme.colors.ui.fg.into())
-			.bg(self.theme.colors.ui.bg.into());
+		let base_style =
+			Style::default()
+				.fg(self.theme.colors.ui.fg.into())
+				.bg(self.theme.colors.ui.bg.into());
 
 		let selection_style = Style::default()
 			.bg(self.theme.colors.ui.selection_bg.into())
@@ -119,10 +120,9 @@ impl<'a> BufferRenderContext<'a> {
 			buffer.doc.len_bytes() as u32
 		};
 
-		let highlight_styles =
-			HighlightStyles::new(SyntaxStyles::scope_names(), |scope| {
-				self.theme.colors.syntax.resolve(scope)
-			});
+		let highlight_styles = HighlightStyles::new(SyntaxStyles::scope_names(), |scope| {
+			self.theme.colors.syntax.resolve(scope)
+		});
 
 		let highlighter = syntax.highlighter(
 			buffer.doc.slice(..),
@@ -202,7 +202,12 @@ impl<'a> BufferRenderContext<'a> {
 	/// - `buffer`: The buffer to render
 	/// - `area`: The rectangular area to render into
 	/// - `use_block_cursor`: Whether to render block-style cursors
-	pub fn render_buffer(&self, buffer: &Buffer, area: Rect, use_block_cursor: bool) -> RenderResult {
+	pub fn render_buffer(
+		&self,
+		buffer: &Buffer,
+		area: Rect,
+		use_block_cursor: bool,
+	) -> RenderResult {
 		let total_lines = buffer.doc.len_lines();
 		let gutter_width = buffer.gutter_width();
 		let text_width = area.width.saturating_sub(gutter_width) as usize;
@@ -462,7 +467,12 @@ pub fn ensure_buffer_cursor_visible(buffer: &mut Buffer, area: Rect) {
 		buffer.scroll_line = total_lines.saturating_sub(1);
 		buffer.scroll_segment = 0;
 	}
-	buffer.scroll_segment = clamp_segment_for_line(buffer, buffer.scroll_line, buffer.scroll_segment, text_width);
+	buffer.scroll_segment = clamp_segment_for_line(
+		buffer,
+		buffer.scroll_line,
+		buffer.scroll_segment,
+		text_width,
+	);
 
 	let cursor_pos: CharIdx = buffer.cursor;
 	let cursor_line = buffer.cursor_line();
@@ -510,7 +520,12 @@ pub fn ensure_buffer_cursor_visible(buffer: &mut Buffer, area: Rect) {
 }
 
 /// Clamps a segment index to valid range for a given line.
-fn clamp_segment_for_line(buffer: &Buffer, line: usize, segment: usize, text_width: usize) -> usize {
+fn clamp_segment_for_line(
+	buffer: &Buffer,
+	line: usize,
+	segment: usize,
+	text_width: usize,
+) -> usize {
 	let total_lines = buffer.doc.len_lines();
 	if line >= total_lines {
 		return 0;

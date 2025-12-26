@@ -122,11 +122,12 @@ impl Buffer {
 	/// Initializes syntax highlighting for this buffer.
 	pub fn init_syntax(&mut self, language_loader: &LanguageLoader) {
 		if let Some(ref p) = self.path
-			&& let Some(lang_id) = language_loader.language_for_path(p) {
-				let lang_data = language_loader.get(lang_id);
-				self.file_type = lang_data.map(|l| l.name.clone());
-				self.syntax = Syntax::new(self.doc.slice(..), lang_id, language_loader).ok();
-			}
+			&& let Some(lang_id) = language_loader.language_for_path(p)
+		{
+			let lang_data = language_loader.get(lang_id);
+			self.file_type = lang_data.map(|l| l.name.clone());
+			self.syntax = Syntax::new(self.doc.slice(..), lang_id, language_loader).ok();
+		}
 	}
 
 	/// Returns the current editing mode.
