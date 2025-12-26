@@ -55,10 +55,14 @@ impl Editor {
 				};
 				self.completions.selected_idx = Some(new_idx);
 				let item = self.completions.items[new_idx].clone();
-				if let Mode::Command { prompt, .. } = self.input.mode() {
+				if let Mode::Command { prompt, input } = self.input.mode() {
+					// Replace from stored start position to end of input
+					let start = self.completions.replace_start.min(input.len());
+					let prefix = &input[..start];
+					let new_input = format!("{}{}", prefix, item.insert_text);
 					self.input.set_mode(Mode::Command {
 						prompt,
-						input: item.insert_text,
+						input: new_input,
 					});
 				}
 				return false;

@@ -257,6 +257,9 @@ pub fn suggest_theme(name: &str) -> Option<&'static str> {
 }
 
 use futures::future::LocalBoxFuture;
+use tome_manifest::completion::{
+	CompletionContext, CompletionItem, CompletionKind, CompletionResult, CompletionSource,
+};
 use tome_manifest::editor_ctx::MessageAccess;
 use tome_manifest::{
 	COMMANDS, CommandContext, CommandDef, CommandError, CommandOutcome, OPTIONS, OptionDef,
@@ -284,11 +287,8 @@ fn cmd_theme<'a>(
 			.args
 			.first()
 			.ok_or(CommandError::MissingArgument("theme name"))?;
-		// TODO: Implement theme access trait in EditorOps
-		ctx.notify(
-			"info",
-			&format!("Theme command not yet implemented: {}", theme_name),
-		);
+		ctx.editor.set_theme(theme_name)?;
+		ctx.notify("info", &format!("Theme set to '{}'", theme_name));
 		Ok(CommandOutcome::Ok)
 	})
 }
@@ -306,3 +306,147 @@ pub static CMD_THEME: CommandDef = CommandDef {
 	required_caps: &[],
 	flags: tome_manifest::flags::NONE,
 };
+
+/// Completion source for theme names.
+/// Provides completions when typing `:theme <arg>` or `:colorscheme <arg>`.
+pub struct ThemeSource;
+
+impl CompletionSource for ThemeSource {
+	fn complete(&self, ctx: &CompletionContext) -> CompletionResult {
+		if ctx.prompt != ':' {
+			return CompletionResult::empty();
+		}
+
+		// Parse the command line to check if we're completing theme arguments
+		let parts: Vec<&str> = ctx.input.split_whitespace().collect();
+
+		// Only complete if the command is "theme" or "colorscheme" and we have an argument position
+		let is_theme_cmd = match parts.first() {
+			Some(&"theme") | Some(&"colorscheme") => true,
+			_ => false,
+		};
+
+		if !is_theme_cmd {
+			return CompletionResult::empty();
+		}
+
+		// Get the partial theme name (if any)
+		let prefix = parts.get(1).copied().unwrap_or("");
+
+		// Check if we're still typing the command name vs. the argument
+		// If the input doesn't end with a space and we only have 1 part, we're still typing the command
+		if parts.len() == 1 && !ctx.input.ends_with(' ') {
+			return CompletionResult::empty();
+		}
+
+		// Calculate where the argument starts (after "theme " or "colorscheme ")
+		let cmd_name = parts.first().unwrap();
+		let arg_start = cmd_name.len() + 1; // +1 for the space
+
+		let items: Vec<_> = THEMES
+			.iter()
+			.filter(|theme| {
+				theme.name.starts_with(prefix)
+					|| theme.aliases.iter().any(|a| a.starts_with(prefix))
+			})
+			.map(|theme| {
+				let variant_str = match theme.variant {
+					ThemeVariant::Dark => "dark",
+					ThemeVariant::Light => "light",
+				};
+				CompletionItem {
+					label: theme.name.to_string(),
+					insert_text: theme.name.to_string(),
+					detail: Some(format!("{} theme", variant_str)),
+					filter_text: None,
+					kind: CompletionKind::Theme,
+				}
+			})
+			.collect();
+
+		CompletionResult::new(arg_start, items)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_theme_completion_replace_start() {
+		let ctx = CompletionContext {
+			input: "theme ".to_string(),
+			cursor: 6,
+			prompt: ':',
+		};
+
+		let result = ThemeSource.complete(&ctx);
+		assert!(!result.is_empty(), "Should have theme completions");
+		assert_eq!(result.start, 6, "Theme completion should start at position 6");
+
+		for item in &result.items {
+			assert_eq!(item.kind, CompletionKind::Theme);
+		}
+	}
+
+	#[test]
+	fn test_theme_completion_with_partial_arg() {
+		let ctx = CompletionContext {
+			input: "theme gr".to_string(),
+			cursor: 8,
+			prompt: ':',
+		};
+
+		let result = ThemeSource.complete(&ctx);
+		assert_eq!(result.start, 6, "Should replace from position 6");
+
+		// Should filter to themes starting with "gr"
+		assert!(
+			result.items.iter().any(|i| i.label == "gruvbox"),
+			"Should include gruvbox"
+		);
+	}
+
+	#[test]
+	fn test_colorscheme_alias_completion() {
+		let ctx = CompletionContext {
+			input: "colorscheme ".to_string(),
+			cursor: 12,
+			prompt: ':',
+		};
+
+		let result = ThemeSource.complete(&ctx);
+		assert!(!result.is_empty(), "Should have theme completions for colorscheme alias");
+		assert_eq!(
+			result.start, 12,
+			"Colorscheme completion should start at position 12"
+		);
+	}
+
+	#[test]
+	fn test_no_completion_for_other_commands() {
+		let ctx = CompletionContext {
+			input: "write ".to_string(),
+			cursor: 6,
+			prompt: ':',
+		};
+
+		let result = ThemeSource.complete(&ctx);
+		assert!(result.is_empty(), "Should not complete for non-theme commands");
+	}
+
+	#[test]
+	fn test_no_completion_while_typing_command() {
+		let ctx = CompletionContext {
+			input: "them".to_string(),
+			cursor: 4,
+			prompt: ':',
+		};
+
+		let result = ThemeSource.complete(&ctx);
+		assert!(
+			result.is_empty(),
+			"Should not complete while still typing command name"
+		);
+	}
+}

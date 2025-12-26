@@ -29,16 +29,9 @@ mod defaults;
 mod notification;
 mod types;
 
-// Re-export notification data model
 pub use notification::{MAX_CONTENT_CHARS, Notification, NotificationBuilder};
-
-// Re-export convenience traits from defaults
 pub use defaults::{
 	NotifyDEBUGExt, NotifyERRORExt, NotifyINFOExt, NotifySUCCESSExt, NotifyWARNExt,
 };
-
-// Re-export types from manifest
 pub use types::*;
-
-// Re-export registry lookup
 pub use tome_manifest::notifications::{NOTIFICATION_TYPES, NotificationTypeDef, find_notification_type};

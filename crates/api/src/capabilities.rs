@@ -5,7 +5,7 @@ use tome_base::Selection;
 use tome_base::range::CharIdx;
 use tome_manifest::editor_ctx::{
 	CursorAccess, EditAccess, EditorCapabilities, MessageAccess, ModeAccess, SearchAccess,
-	SelectionAccess, SelectionOpsAccess, TextAccess, UndoAccess,
+	SelectionAccess, SelectionOpsAccess, TextAccess, ThemeAccess, UndoAccess,
 };
 use tome_manifest::{EditAction, Mode};
 
@@ -128,6 +128,12 @@ impl SelectionOpsAccess for Editor {
 
 	fn duplicate_up(&mut self) {
 		// TODO: implement
+	}
+}
+
+impl ThemeAccess for Editor {
+	fn set_theme(&mut self, name: &str) -> Result<(), tome_manifest::CommandError> {
+		Editor::set_theme(self, name)
 	}
 }
 
