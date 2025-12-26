@@ -139,11 +139,30 @@ pub trait ThemeAccess {
 }
 
 /// Buffer and split management operations.
+///
+/// # Split Semantics
+///
+/// Currently, `split_horizontal` and `split_vertical` create a **copy** of the
+/// current buffer's content, not a second view of the same buffer. This means:
+/// - Each split has independent undo history, cursor, and selection
+/// - Edits in one split don't affect the other
+/// - Both splits initially share the same file path (potential conflict on save)
+///
+/// Future versions may introduce a proper view layer where splits share the
+/// underlying buffer content while maintaining per-view state (scroll, cursor).
 pub trait BufferOpsAccess {
-	/// Split the current view horizontally.
+	/// Split horizontally, creating a copy of the current buffer.
+	///
+	/// Note: This creates an independent buffer copy, not a shared view.
+	/// See trait-level docs for details.
 	fn split_horizontal(&mut self);
-	/// Split the current view vertically.
+
+	/// Split vertically, creating a copy of the current buffer.
+	///
+	/// Note: This creates an independent buffer copy, not a shared view.
+	/// See trait-level docs for details.
 	fn split_vertical(&mut self);
+
 	/// Open a terminal in a horizontal split.
 	fn split_terminal_horizontal(&mut self);
 	/// Open a terminal in a vertical split.

@@ -26,6 +26,10 @@ The Editor (Workspace) now supports multiple buffers with split views.
 - [x] Buffer commands: `split_horizontal`, `split_vertical`, `buffer_next`, `buffer_prev`, `close_buffer`
 - [x] Status line shows buffer count `[1/2]` when multiple buffers open
 
+**Note on split semantics:** Currently `split_horizontal`/`split_vertical` create a
+*copy* of the buffer content, not a shared view. Each split has independent undo
+history, cursor, and selection. This is a known limitation - see Phase 4.
+
 ### Phase 3: Split Rendering ✓ COMPLETE
 
 - [x] Created `BufferRenderContext` for buffer-agnostic rendering
@@ -34,6 +38,21 @@ The Editor (Workspace) now supports multiple buffers with split views.
 - [x] Separator lines rendered between splits (│ for horizontal, ─ for vertical)
 - [x] Each buffer renders independently with its own cursor and selection
 - [x] Only focused buffer shows active cursor style
+
+### Phase 4: View Layer (TODO)
+
+Introduce a proper view layer so splits can share the same buffer:
+
+- [ ] Add `ViewId` type distinct from `BufferId`
+- [ ] Layout contains `ViewId` references, not `BufferId`
+- [ ] Each view has per-view state: scroll position, cursor, selection
+- [ ] Multiple views can reference the same `BufferId`
+- [ ] Edits in one view update all views of the same buffer
+- [ ] Undo/redo is per-buffer (shared across views)
+- [ ] Close view vs close buffer distinction
+
+This would make splits behave like Vim/Helix where `:split` shows the same file
+in two windows, and edits sync between them.
 
 ### Cleanup Status
 
