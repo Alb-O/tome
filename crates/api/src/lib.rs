@@ -1,3 +1,31 @@
+//! Editor engine and terminal UI infrastructure.
+//!
+//! This crate provides the core editor implementation, buffer management,
+//! and terminal rendering. It ties together [`tome_manifest`] (registry definitions)
+//! and [`tome_stdlib`] (implementations) into a working editor.
+//!
+//! # Main Types
+//!
+//! - [`Editor`] - The main editor/workspace containing buffers and state
+//! - [`Buffer`] - A text buffer with undo history, syntax highlighting, and selections
+//! - [`TerminalBuffer`] - Embedded terminal emulator for shell integration
+//! - [`UiManager`] - Panel and dock management for the UI
+//!
+//! # Architecture
+//!
+//! The editor supports heterogeneous views through [`buffer::BufferView`]:
+//!
+//! ```text
+//! Editor
+//! ├── buffers: HashMap<BufferId, Buffer>      // Text editing
+//! ├── terminals: HashMap<TerminalId, TerminalBuffer>  // Shell integration
+//! ├── layout: Layout                          // Split arrangement
+//! └── focused_view: BufferView                // Current focus
+//! ```
+//!
+//! Views can be split horizontally or vertically, with each split containing
+//! either a text buffer or a terminal.
+
 pub mod buffer;
 pub mod capabilities;
 pub mod editor;

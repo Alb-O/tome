@@ -6,8 +6,48 @@ use crate::{Capability, RegistrySource};
 
 /// Result of executing an action.
 ///
-/// Each variant is marked as either terminal-safe or not. Terminal-safe results
-/// can be applied when a terminal view is focused; others require a text buffer.
+/// Actions return this enum to indicate what the editor should do next.
+/// Variants are split into two categories based on whether they can be
+/// applied when a terminal view is focused.
+///
+/// # Terminal-Safe Results
+///
+/// These operate at the workspace level and don't require text buffer context:
+/// - [`Ok`], [`Quit`], [`ForceQuit`], [`Error`], [`ForceRedraw`]
+/// - Split/buffer management: [`SplitHorizontal`], [`BufferNext`], [`CloseBuffer`], etc.
+/// - Focus navigation: [`FocusLeft`], [`FocusRight`], [`FocusUp`], [`FocusDown`]
+///
+/// # Text Buffer Results
+///
+/// These require cursor, selection, or document access:
+/// - Mode/cursor: [`ModeChange`], [`CursorMove`], [`Motion`]
+/// - Editing: [`Edit`], [`SearchNext`], [`SplitLines`]
+/// - State: [`JumpForward`], [`RecordMacro`], [`SaveSelections`]
+///
+/// Use [`is_terminal_safe`] to check at runtime.
+///
+/// [`Ok`]: Self::Ok
+/// [`Quit`]: Self::Quit
+/// [`ForceQuit`]: Self::ForceQuit
+/// [`Error`]: Self::Error
+/// [`ForceRedraw`]: Self::ForceRedraw
+/// [`SplitHorizontal`]: Self::SplitHorizontal
+/// [`BufferNext`]: Self::BufferNext
+/// [`CloseBuffer`]: Self::CloseBuffer
+/// [`FocusLeft`]: Self::FocusLeft
+/// [`FocusRight`]: Self::FocusRight
+/// [`FocusUp`]: Self::FocusUp
+/// [`FocusDown`]: Self::FocusDown
+/// [`ModeChange`]: Self::ModeChange
+/// [`CursorMove`]: Self::CursorMove
+/// [`Motion`]: Self::Motion
+/// [`Edit`]: Self::Edit
+/// [`SearchNext`]: Self::SearchNext
+/// [`SplitLines`]: Self::SplitLines
+/// [`JumpForward`]: Self::JumpForward
+/// [`RecordMacro`]: Self::RecordMacro
+/// [`SaveSelections`]: Self::SaveSelections
+/// [`is_terminal_safe`]: Self::is_terminal_safe
 #[derive(Debug, Clone)]
 pub enum ActionResult {
 	// === Terminal-safe: workspace-level operations ===
@@ -224,34 +264,80 @@ pub enum ObjectSelectionKind {
 	ToEnd,
 }
 
+/// Context passed to action handlers.
+///
+/// Provides read-only access to buffer state needed for computing action results.
+/// Actions should not mutate state directly; instead, they return an [`ActionResult`]
+/// that the editor applies.
 pub struct ActionContext<'a> {
+	/// Document text (read-only slice).
 	pub text: RopeSlice<'a>,
+	/// Current cursor position (char index).
 	pub cursor: CharIdx,
+	/// Current selection state.
 	pub selection: &'a Selection,
+	/// Repeat count (from numeric prefix, e.g., `3w` for 3 words).
 	pub count: usize,
+	/// Whether to extend the selection (shift held).
 	pub extend: bool,
+	/// Named register (e.g., `"a` for register 'a').
 	pub register: Option<char>,
+	/// Additional arguments from pending actions.
 	pub args: ActionArgs,
 }
 
+/// Additional arguments for actions requiring extra input.
+///
+/// Used by pending actions that wait for user input (e.g., `f` waits for
+/// a character to find, `r` waits for a replacement character).
 #[derive(Debug, Clone, Default)]
 pub struct ActionArgs {
+	/// Single character argument (e.g., for `f`, `t`, `r` commands).
 	pub char: Option<char>,
+	/// String argument (e.g., for search patterns).
 	pub string: Option<String>,
 }
 
+/// Definition of a registered action.
+///
+/// Actions are the fundamental unit of editor behavior. They're registered
+/// at compile time via [`linkme`] distributed slices and looked up by keybindings.
+///
+/// # Registration
+///
+/// Use the `#[action]` proc macro in `tome-stdlib` to register actions:
+///
+/// ```ignore
+/// #[action(id = "move_line_down", name = "Move Line Down")]
+/// fn move_line_down(ctx: &ActionContext) -> ActionResult {
+///     // ...
+/// }
+/// ```
 pub struct ActionDef {
+	/// Unique identifier (e.g., "tome-stdlib::move_line_down").
 	pub id: &'static str,
+	/// Human-readable name for UI display.
 	pub name: &'static str,
+	/// Alternative names for command lookup.
 	pub aliases: &'static [&'static str],
+	/// Description for help text.
 	pub description: &'static str,
+	/// The function that executes this action.
 	pub handler: ActionHandler,
+	/// Priority for conflict resolution (higher wins).
 	pub priority: i16,
+	/// Where this action was defined.
 	pub source: RegistrySource,
+	/// Capabilities required to execute this action.
 	pub required_caps: &'static [Capability],
+	/// Bitflags for additional behavior hints.
 	pub flags: u32,
 }
 
+/// Function signature for action handlers.
+///
+/// Takes an immutable [`ActionContext`] and returns an [`ActionResult`]
+/// describing what the editor should do.
 pub type ActionHandler = fn(&ActionContext) -> ActionResult;
 
 impl crate::RegistryMetadata for ActionDef {

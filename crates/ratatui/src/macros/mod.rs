@@ -26,7 +26,7 @@
 //!
 //! # Text Macros
 //!
-//! The [`span!`] macro creates raw or styled [`Span`]s.
+//! The `span!` macro creates raw or styled [`Span`]s.
 //!
 //! ```rust
 //! # use ratatui::style::{Color, Modifier, Style, Stylize};
@@ -38,8 +38,8 @@
 //! let modified_greeting = span!(Modifier::BOLD; "hello {name}");
 //! ```
 //!
-//! The [`line!`] macro creates a [`Line`] that contains a sequence of [`Span`]s. It is similar to
-//! the [`vec!`] macro. Each element is converted into a [`Span`] using [`Into::into`].
+//! The `line!` macro creates a [`Line`] that contains a sequence of [`Span`]s. It is similar to
+//! the `vec!` macro. Each element is converted into a [`Span`] using [`Into::into`].
 //!
 //! ```rust
 //! # use ratatui::style::{Color, Stylize};
@@ -51,8 +51,8 @@
 //! let line = line!["bye"; 2];
 //! ```
 //!
-//! The [`text!`] macro creates a [`Text`] that contains a sequence of [`Line`]. It is similar to
-//! the [`vec!`] macro. Each element is converted to a [`Line`] using [`Into::into`].
+//! The `text!` macro creates a [`Text`] that contains a sequence of [`Line`]. It is similar to
+//! the `vec!` macro. Each element is converted to a [`Line`] using [`Into::into`].
 //!
 //! ```rust
 //! # use ratatui::style::{Modifier, Stylize};
@@ -69,7 +69,7 @@
 //! If you are new to Ratatui, check out the [Layout concepts] article on the Ratatui website before
 //! proceeding.
 //!
-//! The [`constraints!`] macro defines an array of [`Constraint`]s:
+//! The `constraints!` macro defines an array of [`Constraint`]s:
 //!
 //! ```rust
 //! # use ratatui::layout::Layout;
@@ -77,7 +77,7 @@
 //! let layout = Layout::horizontal(constraints![==50, ==30%, >=3, <=1, ==1/2, *=1]);
 //! ```
 //!
-//! The [`constraint!`] macro defines individual [`Constraint`]s:
+//! The `constraint!` macro defines individual [`Constraint`]s:
 //!
 //! ```rust
 //! # use ratatui::layout::Layout;
@@ -85,7 +85,7 @@
 //! let layout = Layout::horizontal([constraint!(==50)]);
 //! ```
 //!
-//! The [`vertical!`] and [`horizontal!`] macros are a shortcut to defining a [`Layout`]:
+//! The `vertical!` and `horizontal!` macros are a shortcut to defining a [`Layout`]:
 //!
 //! ```rust
 //! # use ratatui::layout::Rect;
@@ -97,8 +97,8 @@
 //!
 //! # Table Macros
 //!
-//! The [`row!`] macro creates a [`Row`] for a [`Table`] that contains a sequence of [`Cell`]s. It
-//! is similar to the [`vec!`] macro.
+//! The `row!` macro creates a [`Row`] for a [`Table`] that contains a sequence of [`Cell`]s. It
+//! is similar to the `vec!` macro.
 //!
 //! ```rust
 //! # use ratatui::style::{Modifier, Stylize};

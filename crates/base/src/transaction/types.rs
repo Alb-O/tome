@@ -83,7 +83,7 @@ impl Insertion {
 
 /// A single operation in a changeset.
 ///
-/// Operations are the atomic units that make up a [`ChangeSet`]. They represent
+/// Operations are the atomic units that make up a `ChangeSet`. They represent
 /// basic text transformations: retaining existing text, deleting text, or inserting
 /// new text.
 #[derive(Debug, Clone, PartialEq, Eq)]

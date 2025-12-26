@@ -1,6 +1,6 @@
 //! This module provides strategies for merging symbols in a layout.
 //!
-//! It defines the [`MergeStrategy`] enum, which allows for different behaviors when combining
+//! It defines the `MergeStrategy` enum, which allows for different behaviors when combining
 //! symbols, such as replacing the previous symbol, merging them if an exact match exists, or using
 //! a fuzzy match to find the closest representation.
 //!

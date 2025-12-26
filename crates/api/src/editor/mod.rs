@@ -29,8 +29,44 @@ use crate::ui::UiManager;
 
 /// The main editor/workspace structure.
 ///
-/// Contains one or more buffers and manages the workspace-level state
-/// like theme, UI, notifications, and extensions.
+/// Contains text buffers, terminals, and manages workspace-level state including
+/// theme, UI panels, notifications, and extensions. Supports split views with
+/// heterogeneous content (text buffers and terminals in the same layout).
+///
+/// # View System
+///
+/// The editor tracks focus via [`BufferView`], which can be either a text buffer
+/// or a terminal. The layout tree arranges views in splits:
+///
+/// ```text
+/// ┌────────────────┬────────────────┐
+/// │  Text Buffer   │   Terminal     │
+/// │   (focused)    │                │
+/// └────────────────┴────────────────┘
+/// ```
+///
+/// # Creating an Editor
+///
+/// ```ignore
+/// // Open a file
+/// let editor = Editor::new(PathBuf::from("src/main.rs")).await?;
+///
+/// // Create a scratch buffer
+/// let editor = Editor::new_scratch();
+/// ```
+///
+/// # Focus and Navigation
+///
+/// - [`focused_view`] - Current focus (text or terminal)
+/// - [`focus_buffer`] / [`focus_terminal`] - Focus by ID
+/// - [`focus_next_view`] / [`focus_prev_view`] - Cycle through views
+///
+/// [`BufferView`]: crate::buffer::BufferView
+/// [`focused_view`]: Self::focused_view
+/// [`focus_buffer`]: Self::focus_buffer
+/// [`focus_terminal`]: Self::focus_terminal
+/// [`focus_next_view`]: Self::focus_next_view
+/// [`focus_prev_view`]: Self::focus_prev_view
 pub struct Editor {
 	/// All open text buffers, keyed by BufferId.
 	buffers: HashMap<BufferId, Buffer>,
