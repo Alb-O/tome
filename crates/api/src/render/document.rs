@@ -1,5 +1,3 @@
-mod cursor;
-mod viewport;
 mod wrapping;
 
 use std::time::{Duration, SystemTime};

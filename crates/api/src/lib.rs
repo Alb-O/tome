@@ -6,7 +6,6 @@ pub mod paths;
 pub mod render;
 pub mod styles;
 pub mod terminal_buffer;
-pub mod terminal_panel;
 pub mod ui;
 
 pub use buffer::{Buffer, BufferId, HistoryResult};
