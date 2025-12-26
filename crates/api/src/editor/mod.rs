@@ -98,8 +98,14 @@ impl tome_manifest::editor_ctx::FileOpsAccess for Editor {
 				content.extend_from_slice(chunk.as_bytes());
 			}
 
+			let virtual_path = self.path_to_virtual(&path_owned).ok_or_else(|| {
+				tome_manifest::CommandError::Io(format!(
+					"Path contains invalid UTF-8: {}",
+					path_owned.display()
+				))
+			})?;
 			self.fs
-				.write_file(path_owned.to_str().unwrap_or(""), &content)
+				.write_file(&virtual_path, &content)
 				.await
 				.map_err(|e| tome_manifest::CommandError::Io(e.to_string()))?;
 
@@ -127,18 +133,34 @@ impl tome_manifest::EditorOps for Editor {}
 
 impl Editor {
 	pub async fn new(path: PathBuf) -> anyhow::Result<Self> {
-		let fs = Arc::new(HostFS::new(std::env::current_dir()?)?);
-		let content = if fs.stat(path.to_str().unwrap_or("")).await?.is_some() {
-			let bytes = fs
-				.read_file(path.to_str().unwrap_or(""))
-				.await?
-				.unwrap_or_default();
+		let cwd = std::env::current_dir()?;
+		let fs = Arc::new(HostFS::new(cwd.clone())?);
+
+		// Convert path to virtual path for HostFS
+		let virtual_path = Self::compute_virtual_path(&path, &cwd)
+			.ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", path.display()))?;
+
+		let content = if fs.stat(&virtual_path).await?.is_some() {
+			let bytes = fs.read_file(&virtual_path).await?.unwrap_or_default();
 			String::from_utf8_lossy(&bytes).to_string()
 		} else {
 			String::new()
 		};
 
 		Ok(Self::from_content(fs, content, Some(path)))
+	}
+
+	/// Computes virtual path for HostFS (static version for use before Editor is constructed).
+	fn compute_virtual_path(path: &PathBuf, cwd: &PathBuf) -> Option<String> {
+		let path_str = path.to_str()?;
+
+		if path.is_absolute() {
+			if let Ok(relative) = path.strip_prefix(cwd) {
+				return relative.to_str().map(String::from);
+			}
+		}
+
+		Some(path_str.to_string())
 	}
 
 	pub fn new_scratch() -> Self {
@@ -466,17 +488,17 @@ impl Editor {
 		// Apply the transaction to the document
 		tx.apply(&mut self.doc);
 
-		// Incrementally update syntax tree if present
-		if let Some(ref mut syntax) = self.syntax
-			&& let Err(e) = syntax.update_from_changeset(
+		// Incrementally update syntax tree if present.
+		// Errors are silently ignored since syntax highlighting is non-critical
+		// and eprintln! would corrupt the TUI. A future improvement would be to
+		// fall back to a full reparse on error.
+		if let Some(ref mut syntax) = self.syntax {
+			let _ = syntax.update_from_changeset(
 				old_doc.slice(..),
 				self.doc.slice(..),
 				tx.changes(),
 				&self.language_loader,
-			) {
-			// Log error but don't fail - syntax highlighting is non-critical
-			// In the future, could fall back to full reparse
-			eprintln!("Syntax update error: {e}");
+			);
 		}
 
 		self.modified = true;
@@ -491,5 +513,17 @@ impl Editor {
 			let lang_id = self.syntax.as_ref().unwrap().root_language();
 			self.syntax = Syntax::new(self.doc.slice(..), lang_id, &self.language_loader).ok();
 		}
+	}
+
+	/// Converts a filesystem path to a virtual path for HostFS.
+	///
+	/// HostFS treats paths as relative to its root directory. This method:
+	/// - For absolute paths: attempts to make them relative to cwd, or uses the
+	///   full path as-is (HostFS will strip the leading /)
+	/// - For relative paths: uses them directly
+	/// - Returns None if the path contains non-UTF8 characters
+	fn path_to_virtual(&self, path: &PathBuf) -> Option<String> {
+		let cwd = std::env::current_dir().ok()?;
+		Self::compute_virtual_path(path, &cwd)
 	}
 }

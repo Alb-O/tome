@@ -6,7 +6,7 @@ use tome_stdlib::movement;
 use super::Editor;
 
 impl Editor {
-	pub(crate) fn do_execute_edit_action(&mut self, action: EditAction, _extend: bool) -> bool {
+	pub(crate) fn do_execute_edit_action(&mut self, action: EditAction, _extend: bool) {
 		match action {
 			EditAction::Delete { yank } => {
 				if yank {
@@ -155,9 +155,9 @@ impl Editor {
 					ranges.push(Range::new(range.head - 1, range.head));
 				}
 
-				if ranges.is_empty() {
-					return false;
-				}
+			if ranges.is_empty() {
+				return;
+			}
 
 				if matches!(self.mode(), Mode::Insert) {
 					self.save_insert_undo_state();
@@ -253,7 +253,6 @@ impl Editor {
 				self.selection = Selection::point(current_pos + 1);
 			}
 		}
-		false
 	}
 
 	pub(crate) fn apply_case_conversion<F>(&mut self, char_mapper: F)

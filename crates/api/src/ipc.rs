@@ -30,14 +30,28 @@ impl IpcServer {
 			let _ = fs::remove_file(&socket_path);
 		}
 
+		// Bind the socket synchronously on the current thread so we can report bind errors.
+		// This is converted to a tokio listener inside the background thread.
+		let std_listener = std::os::unix::net::UnixListener::bind(&socket_path)?;
+		std_listener.set_nonblocking(true)?;
+
 		std::thread::spawn(move || {
-			let rt = tokio::runtime::Builder::new_current_thread()
+			// Build the tokio runtime inside the spawned thread to avoid issues with
+			// dropping runtimes in async contexts (e.g., during tests).
+			let rt = match tokio::runtime::Builder::new_current_thread()
 				.enable_all()
 				.build()
-				.unwrap();
+			{
+				Ok(rt) => rt,
+				Err(_) => return, // Silently exit if runtime creation fails
+			};
 
 			rt.block_on(async {
-				let listener = UnixListener::bind(&socket_path).unwrap();
+				// Convert std listener to tokio listener
+				let listener = match UnixListener::from_std(std_listener) {
+					Ok(l) => l,
+					Err(_) => return, // Silently exit thread on conversion error
+				};
 				loop {
 					if let Ok((mut stream, _)) = listener.accept().await {
 						let sender = sender.clone();
