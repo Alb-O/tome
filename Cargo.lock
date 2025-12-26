@@ -3339,6 +3339,7 @@ version = "0.1.0"
 dependencies = [
  "agent-client-protocol",
  "anyhow",
+ "async-trait",
  "futures",
  "linkme",
  "parking_lot",
