@@ -142,12 +142,24 @@ impl Editor {
 
 		// Render separators between splits
 		let separators = self.layout.separator_positions(doc_area);
+		let hovered_rect = self.hovered_separator.map(|(_, rect)| rect);
+
 		for (direction, _pos, sep_rect) in separators {
+			let is_hovered = hovered_rect == Some(sep_rect);
+
 			let sep_char = match direction {
 				SplitDirection::Horizontal => "\u{2502}", // Vertical line │
 				SplitDirection::Vertical => "\u{2500}",   // Horizontal line ─
 			};
-			let sep_style = Style::default().fg(self.theme.colors.ui.gutter_fg.into());
+
+			// Use a highlighted style when hovered
+			let sep_style = if is_hovered {
+				Style::default()
+					.fg(self.theme.colors.ui.cursor_fg.into())
+					.bg(self.theme.colors.ui.selection_bg.into())
+			} else {
+				Style::default().fg(self.theme.colors.ui.gutter_fg.into())
+			};
 
 			// Build separator lines
 			let lines: Vec<Line> = match direction {
