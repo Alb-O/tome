@@ -137,7 +137,11 @@ impl BufferOpsAccess for Editor {
 			return;
 		}
 
-		// Create a new buffer with the same content as current
+		// TODO: Implement proper view layer where splits share the same buffer.
+		// Currently we copy the buffer content, which means:
+		// - Independent undo history per split
+		// - Edits don't sync between splits
+		// - Same path on both (potential save conflict)
 		let current = self.buffer();
 		let content: String = current.doc.slice(..).into();
 		let path = current.path.clone();
@@ -151,7 +155,8 @@ impl BufferOpsAccess for Editor {
 			return;
 		}
 
-		// Create a new buffer with the same content as current
+		// TODO: Implement proper view layer where splits share the same buffer.
+		// Currently we copy the buffer content (see split_horizontal comment).
 		let current = self.buffer();
 		let content: String = current.doc.slice(..).into();
 		let path = current.path.clone();
