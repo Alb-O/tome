@@ -276,19 +276,17 @@ impl Editor {
 			.bg(self.theme.colors.popup.bg.into())
 			.fg(self.theme.colors.popup.fg.into());
 
-		// Fill background
 		frame.render_widget(Block::default().style(base_style), area);
 
-		// Render terminal cells
-		let buf = frame.buffer_mut();
+		let mut cells_to_render = Vec::new();
 		terminal.for_each_cell(|row, col, cell| {
-			if row >= area.height || col >= area.width {
-				return;
+			if row < area.height && col < area.width && !cell.wide_continuation {
+				cells_to_render.push((row, col, cell.clone(), terminal.is_selected(row, col)));
 			}
-			if cell.wide_continuation {
-				return;
-			}
+		});
 
+		let buf = frame.buffer_mut();
+		for (row, col, cell, selected) in cells_to_render {
 			let x = area.x + col;
 			let y = area.y + row;
 
@@ -313,7 +311,7 @@ impl Editor {
 			}
 			style = style.add_modifier(mods);
 
-			if cell.attrs.contains(SplitAttrs::INVERSE) {
+			if cell.attrs.contains(SplitAttrs::INVERSE) != selected {
 				let fg = style.fg;
 				let bg = style.bg;
 				style = style.fg(bg.unwrap_or(Color::Reset));
@@ -327,15 +325,13 @@ impl Editor {
 			} else {
 				out.set_symbol(&cell.symbol);
 			}
-		});
+		}
 
-		if is_focused {
-			if let Some(cursor) = terminal.cursor() {
-				let x = area.x + cursor.col;
-				let y = area.y + cursor.row;
-				if x < area.x + area.width && y < area.y + area.height {
-					frame.set_cursor_position(tome_tui::layout::Position { x, y });
-				}
+		if is_focused && let Some(cursor) = terminal.cursor() {
+			let x = area.x + cursor.col;
+			let y = area.y + cursor.row;
+			if x < area.x + area.width && y < area.y + area.height {
+				frame.set_cursor_position(tome_tui::layout::Position { x, y });
 			}
 		}
 	}

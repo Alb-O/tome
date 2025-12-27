@@ -13,7 +13,8 @@ use std::time::{Duration, Instant};
 use portable_pty::{CommandBuilder, MasterPty, NativePtySystem, PtySize, PtySystem};
 use tome_manifest::{
 	SplitAttrs, SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle,
-	SplitDockPreference, SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitSize,
+	SplitDockPreference, SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse,
+	SplitMouseAction, SplitMouseButton, SplitSize,
 };
 use tome_tui::widgets::terminal::vt100::{self, Parser};
 
@@ -352,6 +353,54 @@ pub struct TerminalBuffer {
 	input_buffer: Vec<u8>,
 	current_size: SplitSize,
 	ipc_env: Option<Arc<TerminalIpcEnv>>,
+	selection: Option<TerminalSelection>,
+}
+
+/// Selection state for terminal text.
+#[derive(Debug, Clone, Copy)]
+struct TerminalSelection {
+	anchor_row: u16,
+	anchor_col: u16,
+	cursor_row: u16,
+	cursor_col: u16,
+}
+
+impl TerminalSelection {
+	/// Returns (start_row, start_col, end_row, end_col) in normalized order.
+	fn bounds(&self) -> (u16, u16, u16, u16) {
+		if (self.anchor_row, self.anchor_col) <= (self.cursor_row, self.cursor_col) {
+			(
+				self.anchor_row,
+				self.anchor_col,
+				self.cursor_row,
+				self.cursor_col,
+			)
+		} else {
+			(
+				self.cursor_row,
+				self.cursor_col,
+				self.anchor_row,
+				self.anchor_col,
+			)
+		}
+	}
+
+	/// Returns true if the given cell is within the selection.
+	fn contains(&self, row: u16, col: u16) -> bool {
+		let (start_row, start_col, end_row, end_col) = self.bounds();
+		if row < start_row || row > end_row {
+			return false;
+		}
+		if row == start_row && row == end_row {
+			col >= start_col && col <= end_col
+		} else if row == start_row {
+			col >= start_col
+		} else if row == end_row {
+			col <= end_col
+		} else {
+			true
+		}
+	}
 }
 
 impl Default for TerminalBuffer {
@@ -371,6 +420,7 @@ impl TerminalBuffer {
 			input_buffer: Vec::new(),
 			current_size: SplitSize::new(80, 24),
 			ipc_env: None,
+			selection: None,
 		}
 	}
 
@@ -382,6 +432,7 @@ impl TerminalBuffer {
 			input_buffer: Vec::new(),
 			current_size: SplitSize::new(80, 24),
 			ipc_env: Some(ipc_env),
+			selection: None,
 		}
 	}
 
@@ -390,6 +441,31 @@ impl TerminalBuffer {
 	/// This is useful for extensions that need direct access to terminal state.
 	pub fn screen(&self) -> Option<&vt100::Screen> {
 		self.terminal.as_ref().map(|t| t.screen())
+	}
+
+	/// Returns true if the cell at (row, col) is selected.
+	///
+	/// Trailing whitespace (empty cells at end of line) is excluded from selection
+	/// to match text editor behavior.
+	pub fn is_selected(&self, row: u16, col: u16) -> bool {
+		let Some(sel) = self.selection else {
+			return false;
+		};
+		if !sel.contains(row, col) {
+			return false;
+		}
+		let Some(screen) = self.screen() else {
+			return true;
+		};
+		let (_, cols) = screen.size();
+		for c in (col..cols).rev() {
+			if let Some(cell) = screen.cell(row, c)
+				&& cell.has_contents()
+			{
+				return c >= col;
+			}
+		}
+		false
 	}
 
 	fn start_prewarm(&mut self) {
@@ -567,6 +643,38 @@ impl SplitBuffer for TerminalBuffer {
 			self.input_buffer.extend_from_slice(text.as_bytes());
 		}
 		SplitEventResult::consumed()
+	}
+
+	fn handle_mouse(&mut self, mouse: SplitMouse) -> SplitEventResult {
+		use SplitMouseAction::*;
+		use SplitMouseButton::*;
+
+		let (row, col) = (mouse.position.y, mouse.position.x);
+
+		match mouse.action {
+			Press(Left) => {
+				self.selection = Some(TerminalSelection {
+					anchor_row: row,
+					anchor_col: col,
+					cursor_row: row,
+					cursor_col: col,
+				});
+				SplitEventResult::consumed()
+			}
+			Drag(Left) => {
+				if let Some(sel) = &mut self.selection {
+					sel.cursor_row = row;
+					sel.cursor_col = col;
+				}
+				SplitEventResult::consumed()
+			}
+			Release(Left) => SplitEventResult::consumed(),
+			Press(Right | Middle) => {
+				self.selection = None;
+				SplitEventResult::consumed()
+			}
+			_ => SplitEventResult::ignored(),
+		}
 	}
 
 	fn size(&self) -> SplitSize {
