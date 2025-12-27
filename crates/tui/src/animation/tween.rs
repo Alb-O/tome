@@ -186,11 +186,26 @@ pub struct ToggleTween<T: Animatable> {
 }
 
 impl<T: Animatable> ToggleTween<T> {
-    /// Creates a new toggle tween, initially inactive.
+    /// Creates a new toggle tween, initially inactive (starting at `off` value).
     pub fn new(off: T, on: T, duration: Duration) -> Self {
         Self {
             tween: Tween::new(off.clone(), off.clone(), duration),
             active: false,
+            off_value: off,
+            on_value: on,
+        }
+    }
+
+    /// Creates a new toggle tween starting at a specific value.
+    ///
+    /// This is useful when you need to create an animation that starts from
+    /// a known position (e.g., creating a fade-out animation that should
+    /// start from fully visible).
+    pub fn new_at(off: T, on: T, duration: Duration, start_value: T, active: bool) -> Self {
+        let target = if active { on.clone() } else { off.clone() };
+        Self {
+            tween: Tween::new(start_value, target, duration),
+            active,
             off_value: off,
             on_value: on,
         }

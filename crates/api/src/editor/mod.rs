@@ -262,6 +262,26 @@ impl SeparatorHoverAnimation {
 		Self { rect, tween }
 	}
 
+	/// Creates a new hover animation starting at a specific intensity.
+	///
+	/// This is useful for creating fade-out animations that should start
+	/// from a fully hovered state (intensity 1.0).
+	pub fn new_at_intensity(
+		rect: tome_tui::layout::Rect,
+		intensity: f32,
+		hovering: bool,
+	) -> Self {
+		let tween = tome_tui::animation::ToggleTween::new_at(
+			0.0f32,
+			1.0f32,
+			Self::FADE_DURATION,
+			intensity,
+			hovering,
+		)
+		.with_easing(tome_tui::animation::Easing::EaseOut);
+		Self { rect, tween }
+	}
+
 	/// Returns whether we're animating toward hovered state.
 	pub fn hovering(&self) -> bool {
 		self.tween.is_active()

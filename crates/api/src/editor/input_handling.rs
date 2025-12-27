@@ -527,8 +527,19 @@ impl Editor {
 				self.separator_hover_animation = Some(SeparatorHoverAnimation::new(rect, true));
 			}
 			(Some((_, old_rect)), None) => {
-				// Stopped hovering - animate out
-				self.separator_hover_animation = Some(SeparatorHoverAnimation::new(old_rect, false));
+				// Stopped hovering - animate out from current position
+				// If we have an existing animation for this rect, toggle it off
+				// Otherwise create a new one starting from fully hovered
+				if let Some(ref mut anim) = self.separator_hover_animation {
+					if anim.rect == old_rect {
+						// Same separator - just toggle the existing animation
+						anim.set_hovering(false);
+						return;
+					}
+				}
+				// Different separator or no existing animation - create new one at full intensity
+				self.separator_hover_animation =
+					Some(SeparatorHoverAnimation::new_at_intensity(old_rect, 1.0, false));
 			}
 			(Some((_, old_rect)), Some((_, new_rect))) if old_rect != new_rect => {
 				// Moved to a different separator - start fresh animation

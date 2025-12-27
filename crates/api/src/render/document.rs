@@ -202,18 +202,23 @@ impl Editor {
 			};
 
 			// Calculate separator style with animation
+			// Priority: dragging > animating > hovered > normal
+			// Note: We check is_animating before is_hovered because we want the
+			// smooth fade-in animation even when hovered (intensity goes 0.0 -> 1.0).
+			// The animation handles both fade-in and fade-out correctly via intensity.
 			let sep_style = if is_dragging {
 				// High contrast when actively dragging
 				Style::default().fg(drag_fg).bg(drag_bg)
-			} else if is_hovered {
-				// Highlighted when hovered (but not dragging)
-				Style::default().fg(hover_fg).bg(hover_bg)
 			} else if is_animating {
-				// Animating - lerp between states
+				// Animating - lerp between normal and hover states
+				// This handles both fade-in (hovering) and fade-out (leaving)
 				use tome_tui::animation::Animatable;
 				let fg = normal_fg.lerp(&hover_fg, anim_intensity);
 				let bg = normal_bg.lerp(&hover_bg, anim_intensity);
 				Style::default().fg(fg).bg(bg)
+			} else if is_hovered {
+				// Fully hovered (animation complete or no animation)
+				Style::default().fg(hover_fg).bg(hover_bg)
 			} else {
 				// Normal state
 				Style::default().fg(normal_fg)
