@@ -162,6 +162,20 @@ pub enum BorderType {
 	/// ```
 	#[default]
 	Padded,
+	/// A border with a solid colored stripe on the left edge only.
+	///
+	/// This style is useful for notification toasts and callout boxes where a thin accent bar
+	/// on the left indicates the notification level or type. The left edge uses a full block
+	/// character that can be styled with a foreground color.
+	///
+	/// # Example
+	///
+	/// ```plain
+	/// █xxxxxxx
+	/// █x     x
+	/// █xxxxxxx
+	/// ```
+	Stripe,
 }
 
 impl BorderType {
@@ -181,6 +195,7 @@ impl BorderType {
 			Self::QuadrantInside => border::QUADRANT_INSIDE,
 			Self::QuadrantOutside => border::QUADRANT_OUTSIDE,
 			Self::Padded => border::EMPTY,
+			Self::Stripe => border::STRIPE,
 		}
 	}
 

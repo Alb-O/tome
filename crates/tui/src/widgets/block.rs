@@ -1558,12 +1558,28 @@ mod tests {
 	}
 
 	#[test]
+	fn render_stripe_border() {
+		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
+		Block::bordered()
+			.border_type(BorderType::Stripe)
+			.render(buffer.area, &mut buffer);
+		#[rustfmt::skip]
+        let expected = Buffer::with_lines([
+            "▏         ",
+            "▏         ",
+            "▏         ",
+        ]);
+		assert_eq!(buffer, expected);
+	}
+
+	#[test]
 	fn border_type_to_string() {
 		assert_eq!(format!("{}", BorderType::Plain), "Plain");
 		assert_eq!(format!("{}", BorderType::Rounded), "Rounded");
 		assert_eq!(format!("{}", BorderType::Double), "Double");
 		assert_eq!(format!("{}", BorderType::Thick), "Thick");
 		assert_eq!(format!("{}", BorderType::Padded), "Padded");
+		assert_eq!(format!("{}", BorderType::Stripe), "Stripe");
 		assert_eq!(
 			format!("{}", BorderType::LightDoubleDashed),
 			"LightDoubleDashed"
@@ -1597,6 +1613,7 @@ mod tests {
 		assert_eq!("Double".parse(), Ok(BorderType::Double));
 		assert_eq!("Thick".parse(), Ok(BorderType::Thick));
 		assert_eq!("Padded".parse(), Ok(BorderType::Padded));
+		assert_eq!("Stripe".parse(), Ok(BorderType::Stripe));
 		assert_eq!(
 			"LightDoubleDashed".parse(),
 			Ok(BorderType::LightDoubleDashed)
