@@ -66,8 +66,3 @@ bind!(
 	Key::special(SpecialKey::PageDown),
 	"scroll_page_down"
 );
-
-bind!(KB_INS_CTRL_W, Key::ctrl('w'), "delete_word_back");
-bind!(KB_INS_ALT_D, Key::alt('d'), "delete_word_forward");
-bind!(KB_INS_CTRL_K, Key::ctrl('k'), "delete_to_line_end");
-bind!(KB_INS_CTRL_U, Key::ctrl('u'), "delete_to_line_start");

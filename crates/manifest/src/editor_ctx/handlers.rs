@@ -71,11 +71,6 @@ result_slices!(
 	RESULT_DUPLICATE_SELECTIONS_DOWN_HANDLERS,
 	RESULT_DUPLICATE_SELECTIONS_UP_HANDLERS,
 	RESULT_MERGE_SELECTIONS_HANDLERS,
-	RESULT_ALIGN_HANDLERS,
-	RESULT_COPY_INDENT_HANDLERS,
-	RESULT_TABS_TO_SPACES_HANDLERS,
-	RESULT_SPACES_TO_TABS_HANDLERS,
-	RESULT_TRIM_SELECTIONS_HANDLERS,
 	// Buffer/split management
 	RESULT_SPLIT_HORIZONTAL_HANDLERS,
 	RESULT_SPLIT_VERTICAL_HANDLERS,
@@ -186,16 +181,25 @@ pub fn dispatch_result(result: &ActionResult, ctx: &mut EditorContext, extend: b
 		ActionResult::MergeSelections => {
 			run_handlers(&RESULT_MERGE_SELECTIONS_HANDLERS, result, ctx, extend)
 		}
-		ActionResult::Align => run_handlers(&RESULT_ALIGN_HANDLERS, result, ctx, extend),
-		ActionResult::CopyIndent => run_handlers(&RESULT_COPY_INDENT_HANDLERS, result, ctx, extend),
+		ActionResult::Align => {
+			ctx.notify("warn", "Align not yet implemented");
+			false
+		}
+		ActionResult::CopyIndent => {
+			ctx.notify("warn", "Copy indent not yet implemented");
+			false
+		}
 		ActionResult::TabsToSpaces => {
-			run_handlers(&RESULT_TABS_TO_SPACES_HANDLERS, result, ctx, extend)
+			ctx.notify("warn", "Tabs to spaces not yet implemented");
+			false
 		}
 		ActionResult::SpacesToTabs => {
-			run_handlers(&RESULT_SPACES_TO_TABS_HANDLERS, result, ctx, extend)
+			ctx.notify("warn", "Spaces to tabs not yet implemented");
+			false
 		}
 		ActionResult::TrimSelections => {
-			run_handlers(&RESULT_TRIM_SELECTIONS_HANDLERS, result, ctx, extend)
+			ctx.notify("warn", "Trim selections not yet implemented");
+			false
 		}
 		// Buffer/split management
 		ActionResult::SplitHorizontal => {

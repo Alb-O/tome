@@ -4,54 +4,6 @@ use super::{ActionResult, EditAction};
 use crate::action;
 
 action!(
-	jump_forward,
-	{ description: "Jump forward in jump list" },
-	result: ActionResult::JumpForward
-);
-
-action!(
-	jump_backward,
-	{ description: "Jump backward in jump list" },
-	result: ActionResult::JumpBackward
-);
-
-action!(
-	save_jump,
-	{ description: "Save current position to jump list" },
-	result: ActionResult::SaveJump
-);
-
-action!(
-	record_macro,
-	{ description: "Start/stop recording macro" },
-	result: ActionResult::RecordMacro
-);
-
-action!(
-	play_macro,
-	{ description: "Play recorded macro" },
-	result: ActionResult::PlayMacro
-);
-
-action!(
-	save_selections,
-	{ description: "Save current selections to mark" },
-	result: ActionResult::SaveSelections
-);
-
-action!(
-	restore_selections,
-	{ description: "Restore selections from mark" },
-	result: ActionResult::RestoreSelections
-);
-
-action!(
-	force_redraw,
-	{ description: "Force screen redraw" },
-	result: ActionResult::ForceRedraw
-);
-
-action!(
 	add_line_below,
 	{ description: "Add empty line below cursor" },
 	result: ActionResult::Edit(EditAction::AddLineBelow)
@@ -61,18 +13,6 @@ action!(
 	add_line_above,
 	{ description: "Add empty line above cursor" },
 	result: ActionResult::Edit(EditAction::AddLineAbove)
-);
-
-action!(
-	repeat_last_insert,
-	{ description: "Repeat the last insert/change action" },
-	result: ActionResult::RepeatLastInsert
-);
-
-action!(
-	repeat_last_object,
-	{ description: "Repeat the last object/find operation" },
-	result: ActionResult::RepeatLastObject
 );
 
 action!(

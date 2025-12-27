@@ -29,7 +29,6 @@
 pub mod buffer;
 pub mod capabilities;
 pub mod editor;
-pub mod ipc;
 pub mod paths;
 pub mod render;
 pub mod styles;

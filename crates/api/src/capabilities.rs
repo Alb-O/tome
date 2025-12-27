@@ -57,9 +57,7 @@ impl MessageAccess for Editor {
 		self.notify(type_id, msg);
 	}
 
-	fn clear_message(&mut self) {
-		self.message = None;
-	}
+	fn clear_message(&mut self) {}
 }
 
 impl SearchAccess for Editor {

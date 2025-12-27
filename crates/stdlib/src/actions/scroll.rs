@@ -52,18 +52,6 @@ action!(scroll_page_down, { description: "Scroll page down" }, |ctx| {
 	})
 });
 
-action!(center_cursor, { description: "Center cursor in view" }, result: ActionResult::Ok); // TODO: Needs viewport info
-action!(
-	cursor_to_top,
-	{ description: "Move view so cursor is at top" },
-	result: ActionResult::Ok
-); // TODO: Needs viewport info
-action!(
-	cursor_to_bottom,
-	{ description: "Move view so cursor is at bottom" },
-	result: ActionResult::Ok
-); // TODO: Needs viewport info
-
 action!(move_up_visual, { description: "Move up (visual lines)" }, |ctx| {
 	ActionResult::Edit(EditAction::MoveVisual {
 		direction: VisualDirection::Up,

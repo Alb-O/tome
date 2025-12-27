@@ -80,8 +80,6 @@ impl Editor {
 	pub(crate) async fn handle_key_active(&mut self, key: termina::event::KeyEvent) -> bool {
 		use tome_manifest::{HookContext, emit_hook, find_action_by_id};
 
-		self.message = None;
-
 		let old_mode = self.mode();
 		let key: Key = key.into();
 
@@ -131,16 +129,12 @@ impl Editor {
 				char_arg,
 			} => self.execute_action_with_char(name, count, extend, register, char_arg),
 			KeyResult::ModeChange(new_mode) => {
-				let is_normal = matches!(new_mode, Mode::Normal);
 				let leaving_insert = !matches!(new_mode, Mode::Insert);
 				if new_mode != old_mode {
 					emit_hook(&HookContext::ModeChange {
 						old_mode,
 						new_mode: new_mode.clone(),
 					});
-				}
-				if is_normal {
-					self.message = None;
 				}
 				if leaving_insert {
 					self.buffer_mut().insert_undo_active = false;
