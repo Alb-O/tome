@@ -278,6 +278,13 @@ fn default_slide_direction(anchor: Anchor) -> super::types::SlideDirection {
 }
 
 fn render_toast(state: &ToastState, rect: Rect, buf: &mut Buffer) {
+	let opacity = calculate_opacity(state);
+	let bg_colors = if opacity < 1.0 {
+		Some(sample_background(rect, buf))
+	} else {
+		None
+	};
+
 	Clear.render(rect, buf);
 
 	let block = state.toast.to_block();
@@ -305,9 +312,8 @@ fn render_toast(state: &ToastState, rect: Rect, buf: &mut Buffer) {
 		.wrap(Wrap { trim: true })
 		.render(content_area, buf);
 
-	let opacity = calculate_opacity(state);
-	if opacity < 1.0 {
-		apply_opacity(rect, buf, opacity);
+	if let Some(bg) = bg_colors {
+		apply_opacity(rect, buf, opacity, &bg);
 	}
 }
 
@@ -324,13 +330,29 @@ fn calculate_opacity(state: &ToastState) -> f32 {
 	}
 }
 
-fn apply_opacity(rect: Rect, buf: &mut Buffer, opacity: f32) {
-	let black = Color::Black;
+fn sample_background(rect: Rect, buf: &Buffer) -> Vec<Color> {
+	let mut colors = Vec::with_capacity((rect.width as usize) * (rect.height as usize));
 	for y in rect.y..rect.bottom() {
 		for x in rect.x..rect.right() {
+			let color = buf
+				.cell(Position::new(x, y))
+				.map(|c| c.bg)
+				.unwrap_or(Color::Reset);
+			colors.push(color);
+		}
+	}
+	colors
+}
+
+fn apply_opacity(rect: Rect, buf: &mut Buffer, opacity: f32, bg_colors: &[Color]) {
+	let width = rect.width as usize;
+	for y in rect.y..rect.bottom() {
+		for x in rect.x..rect.right() {
+			let idx = ((y - rect.y) as usize) * width + ((x - rect.x) as usize);
+			let bg = bg_colors.get(idx).copied().unwrap_or(Color::Reset);
 			if let Some(cell) = buf.cell_mut(Position::new(x, y)) {
-				cell.fg = black.lerp(&cell.fg, opacity);
-				cell.bg = black.lerp(&cell.bg, opacity);
+				cell.fg = bg.lerp(&cell.fg, opacity);
+				cell.bg = bg.lerp(&cell.bg, opacity);
 			}
 		}
 	}
