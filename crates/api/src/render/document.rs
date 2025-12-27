@@ -268,7 +268,7 @@ impl Editor {
 	fn render_terminal(
 		&self,
 		frame: &mut tome_tui::Frame,
-		terminal: &crate::terminal_buffer::TerminalBuffer,
+		terminal: &crate::terminal::TerminalBuffer,
 		area: Rect,
 		is_focused: bool,
 	) {
