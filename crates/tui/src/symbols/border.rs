@@ -391,6 +391,35 @@ pub const EMPTY: Set = Set {
 	horizontal_bottom: " ",
 };
 
+/// Stripe border set
+///
+/// A border with a thin colored stripe on the left edge only, with empty space on all other
+/// sides. This is useful for notification toasts and callout boxes where a thin accent bar
+/// indicates the notification level or type.
+///
+/// The left edge uses a left one-eighth block character (▏) which can be styled with a
+/// foreground color to create the stripe effect. This block element connects seamlessly
+/// when stacked vertically. All other borders are spaces, using the block's background style.
+///
+/// ```text
+/// ░░░░░░░░
+/// ░▏    ░░
+/// ░▏ ░░ ░░
+/// ░▏ ░░ ░░
+/// ░▏    ░░
+/// ░░░░░░░░
+/// ```
+pub const STRIPE: Set = Set {
+	top_left: block::ONE_EIGHTH,
+	top_right: " ",
+	bottom_left: block::ONE_EIGHTH,
+	bottom_right: " ",
+	vertical_left: block::ONE_EIGHTH,
+	vertical_right: " ",
+	horizontal_top: " ",
+	horizontal_bottom: " ",
+};
+
 #[cfg(test)]
 mod tests {
 	use alloc::format;
@@ -730,6 +759,21 @@ mod tests {
                  ░ ░░ ░
                  ░ ░░ ░
                  ░    ░
+                 ░░░░░░"
+			)
+		);
+	}
+
+	#[test]
+	fn stripe() {
+		assert_eq!(
+			render(STRIPE),
+			indoc!(
+				"░░░░░░
+                 ░▏   ░
+                 ░▏░░ ░
+                 ░▏░░ ░
+                 ░▏   ░
                  ░░░░░░"
 			)
 		);

@@ -75,7 +75,7 @@ impl Default for Toast {
             style: Style::default(),
             border_style: Style::default(),
             title_style: Style::default(),
-            border_type: BorderType::Rounded,
+            border_type: BorderType::Stripe,
             fade_effect: false,
         }
     }
