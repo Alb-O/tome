@@ -1166,7 +1166,8 @@ mod tests {
 	use rstest::rstest;
 
 	use super::*;
-	use crate::{enum_display_from_str_tests, style::{Modifier, Stylize}};
+	use crate::enum_display_from_str_tests;
+	use crate::style::{Modifier, Stylize};
 
 	struct LegendTestCase {
 		chart_area: Rect,
@@ -1213,9 +1214,18 @@ mod tests {
 			.add_modifier(Modifier::BOLD)
 			.remove_modifier(Modifier::DIM);
 
-		assert_eq!(Axis::default().black().on_white().bold().not_dim().style, expected_style);
-		assert_eq!(Dataset::default().black().on_white().bold().not_dim().style, expected_style);
-		assert_eq!(Chart::new(vec![]).black().on_white().bold().not_dim().style, expected_style);
+		assert_eq!(
+			Axis::default().black().on_white().bold().not_dim().style,
+			expected_style
+		);
+		assert_eq!(
+			Dataset::default().black().on_white().bold().not_dim().style,
+			expected_style
+		);
+		assert_eq!(
+			Chart::new(vec![]).black().on_white().bold().not_dim().style,
+			expected_style
+		);
 	}
 
 	#[test]

@@ -1121,10 +1121,8 @@ mod tests {
 	use rstest::rstest;
 
 	use super::*;
-	use crate::{
-		enum_display_from_str_tests, render_test,
-		style::{Color, Modifier, Stylize},
-	};
+	use crate::style::{Color, Modifier, Stylize};
+	use crate::{enum_display_from_str_tests, render_test};
 
 	#[test]
 	fn create_with_all_borders() {
@@ -1576,22 +1574,25 @@ mod tests {
 
 	#[test]
 	fn border_type_display_and_from_str() {
-		enum_display_from_str_tests!(BorderType, [
-			Plain,
-			Rounded,
-			Double,
-			Thick,
-			Padded,
-			Stripe,
-			QuadrantInside,
-			QuadrantOutside,
-			LightDoubleDashed,
-			HeavyDoubleDashed,
-			LightTripleDashed,
-			HeavyTripleDashed,
-			LightQuadrupleDashed,
-			HeavyQuadrupleDashed,
-		]);
+		enum_display_from_str_tests!(
+			BorderType,
+			[
+				Plain,
+				Rounded,
+				Double,
+				Thick,
+				Padded,
+				Stripe,
+				QuadrantInside,
+				QuadrantOutside,
+				LightDoubleDashed,
+				HeavyDoubleDashed,
+				LightTripleDashed,
+				HeavyTripleDashed,
+				LightQuadrupleDashed,
+				HeavyQuadrupleDashed,
+			]
+		);
 	}
 
 	#[test]
@@ -1605,18 +1606,54 @@ mod tests {
 			);
 		}
 
-		check_border(BorderType::Plain, ["┌────────┐", "│        │", "└────────┘"]);
-		check_border(BorderType::Rounded, ["╭────────╮", "│        │", "╰────────╯"]);
-		check_border(BorderType::Double, ["╔════════╗", "║        ║", "╚════════╝"]);
-		check_border(BorderType::QuadrantInside, ["▗▄▄▄▄▄▄▄▄▖", "▐        ▌", "▝▀▀▀▀▀▀▀▀▘"]);
-		check_border(BorderType::QuadrantOutside, ["▛▀▀▀▀▀▀▀▀▜", "▌        ▐", "▙▄▄▄▄▄▄▄▄▟"]);
-		check_border(BorderType::Thick, ["┏━━━━━━━━┓", "┃        ┃", "┗━━━━━━━━┛"]);
-		check_border(BorderType::LightDoubleDashed, ["┌╌╌╌╌╌╌╌╌┐", "╎        ╎", "└╌╌╌╌╌╌╌╌┘"]);
-		check_border(BorderType::HeavyDoubleDashed, ["┏╍╍╍╍╍╍╍╍┓", "╏        ╏", "┗╍╍╍╍╍╍╍╍┛"]);
-		check_border(BorderType::LightTripleDashed, ["┌┄┄┄┄┄┄┄┄┐", "┆        ┆", "└┄┄┄┄┄┄┄┄┘"]);
-		check_border(BorderType::HeavyTripleDashed, ["┏┅┅┅┅┅┅┅┅┓", "┇        ┇", "┗┅┅┅┅┅┅┅┅┛"]);
-		check_border(BorderType::LightQuadrupleDashed, ["┌┈┈┈┈┈┈┈┈┐", "┊        ┊", "└┈┈┈┈┈┈┈┈┘"]);
-		check_border(BorderType::HeavyQuadrupleDashed, ["┏┉┉┉┉┉┉┉┉┓", "┋        ┋", "┗┉┉┉┉┉┉┉┉┛"]);
+		check_border(
+			BorderType::Plain,
+			["┌────────┐", "│        │", "└────────┘"],
+		);
+		check_border(
+			BorderType::Rounded,
+			["╭────────╮", "│        │", "╰────────╯"],
+		);
+		check_border(
+			BorderType::Double,
+			["╔════════╗", "║        ║", "╚════════╝"],
+		);
+		check_border(
+			BorderType::QuadrantInside,
+			["▗▄▄▄▄▄▄▄▄▖", "▐        ▌", "▝▀▀▀▀▀▀▀▀▘"],
+		);
+		check_border(
+			BorderType::QuadrantOutside,
+			["▛▀▀▀▀▀▀▀▀▜", "▌        ▐", "▙▄▄▄▄▄▄▄▄▟"],
+		);
+		check_border(
+			BorderType::Thick,
+			["┏━━━━━━━━┓", "┃        ┃", "┗━━━━━━━━┛"],
+		);
+		check_border(
+			BorderType::LightDoubleDashed,
+			["┌╌╌╌╌╌╌╌╌┐", "╎        ╎", "└╌╌╌╌╌╌╌╌┘"],
+		);
+		check_border(
+			BorderType::HeavyDoubleDashed,
+			["┏╍╍╍╍╍╍╍╍┓", "╏        ╏", "┗╍╍╍╍╍╍╍╍┛"],
+		);
+		check_border(
+			BorderType::LightTripleDashed,
+			["┌┄┄┄┄┄┄┄┄┐", "┆        ┆", "└┄┄┄┄┄┄┄┄┘"],
+		);
+		check_border(
+			BorderType::HeavyTripleDashed,
+			["┏┅┅┅┅┅┅┅┅┓", "┇        ┇", "┗┅┅┅┅┅┅┅┅┛"],
+		);
+		check_border(
+			BorderType::LightQuadrupleDashed,
+			["┌┈┈┈┈┈┈┈┈┐", "┊        ┊", "└┈┈┈┈┈┈┈┈┘"],
+		);
+		check_border(
+			BorderType::HeavyQuadrupleDashed,
+			["┏┉┉┉┉┉┉┉┉┓", "┋        ┋", "┗┉┉┉┉┉┉┉┉┛"],
+		);
 	}
 
 	#[test]
