@@ -24,7 +24,7 @@ const TEST_TIMEOUT: Duration = Duration::from_secs(20);
 /// Structured test event from the editor.
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
-#[allow(dead_code)]
+#[allow(dead_code, reason = "variants constructed by serde deserialization")]
 enum TestEvent {
 	#[serde(rename = "separator_animation_start")]
 	AnimationStart { direction: String },
