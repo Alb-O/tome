@@ -12,6 +12,8 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
+#[cfg(feature = "std")]
+pub mod animation;
 pub mod backend;
 pub mod buffer;
 pub mod init;

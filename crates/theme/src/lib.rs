@@ -216,20 +216,11 @@ pub fn get_theme(name: &str) -> Option<&'static Theme> {
 }
 
 /// Blend two colors with the given alpha (0.0 = bg, 1.0 = fg).
-/// Only works with RGB colors; returns fg unchanged for non-RGB.
+///
+/// This is a convenience wrapper around `Color::blend`.
+#[inline]
 pub fn blend_colors(fg: Color, bg: Color, alpha: f32) -> Color {
-	let Color::Rgb(fg_r, fg_g, fg_b) = fg else {
-		return fg;
-	};
-	let Color::Rgb(bg_r, bg_g, bg_b) = bg else {
-		return fg;
-	};
-
-	let r = (fg_r as f32 * alpha + bg_r as f32 * (1.0 - alpha)) as u8;
-	let g = (fg_g as f32 * alpha + bg_g as f32 * (1.0 - alpha)) as u8;
-	let b = (fg_b as f32 * alpha + bg_b as f32 * (1.0 - alpha)) as u8;
-
-	Color::Rgb(r, g, b)
+	fg.blend(bg, alpha)
 }
 
 pub fn suggest_theme(name: &str) -> Option<&'static str> {

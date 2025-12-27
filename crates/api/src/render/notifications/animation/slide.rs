@@ -1,3 +1,4 @@
+use ratatui::animation::Animatable;
 use ratatui::prelude::*;
 use ratatui::symbols::border;
 use ratatui::widgets::Block;
@@ -5,7 +6,7 @@ use tome_manifest::notifications::{Anchor, AnimationPhase, SlideDirection};
 
 use super::border::calculate_triggers;
 use crate::render::notifications::types::SlideParams;
-use crate::render::notifications::utils::{clip_rect_to_frame, lerp};
+use crate::render::notifications::utils::clip_rect_to_frame;
 
 /// Calculates the rectangle for slide animation at a given progress.
 ///
@@ -40,8 +41,8 @@ pub fn calculate_rect(params: SlideParams) -> Rect {
 		_ => return params.full_rect,
 	};
 
-	let current_x_f32 = lerp(start_x_f32, end_x_f32, progress);
-	let current_y_f32 = lerp(start_y_f32, end_y_f32, progress);
+	let current_x_f32 = start_x_f32.lerp(&end_x_f32, progress);
+	let current_y_f32 = start_y_f32.lerp(&end_y_f32, progress);
 
 	clip_rect_to_frame(
 		current_x_f32,

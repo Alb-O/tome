@@ -1,10 +1,11 @@
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::ops::Range;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use linkme::distributed_slice;
-use tome_base::color::Color;
+use ratatui::animation::Animatable;
+use ratatui::style::Color;
 
 /// Modification to apply to a style.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -18,44 +19,20 @@ pub enum StyleMod {
 	Bg(Color),
 }
 
-impl StyleMod {
-	/// Linearly interpolate between two style modifications.
-	///
-	/// Returns `self` blended toward `target` by `t` (0.0 = self, 1.0 = target).
-	/// Only works for compatible modifications (same variant).
-	pub fn lerp(self, target: Self, t: f32) -> Self {
+impl Animatable for StyleMod {
+	fn lerp(&self, target: &Self, t: f32) -> Self {
 		let t = t.clamp(0.0, 1.0);
 		match (self, target) {
-			(StyleMod::Dim(a), StyleMod::Dim(b)) => StyleMod::Dim(a + (b - a) * t),
-			(StyleMod::Fg(a), StyleMod::Fg(b)) => StyleMod::Fg(lerp_color(a, b, t)),
-			(StyleMod::Bg(a), StyleMod::Bg(b)) => StyleMod::Bg(lerp_color(a, b, t)),
+			(StyleMod::Dim(a), StyleMod::Dim(b)) => StyleMod::Dim(a.lerp(b, t)),
+			(StyleMod::Fg(a), StyleMod::Fg(b)) => StyleMod::Fg(a.lerp(b, t)),
+			(StyleMod::Bg(a), StyleMod::Bg(b)) => StyleMod::Bg(a.lerp(b, t)),
 			// Incompatible types - snap to target
 			_ => {
 				if t > 0.5 {
-					target
+					*target
 				} else {
-					self
+					*self
 				}
-			}
-		}
-	}
-}
-
-/// Lerp between two colors.
-fn lerp_color(a: Color, b: Color, t: f32) -> Color {
-	match (a, b) {
-		(Color::Rgb(r1, g1, b1), Color::Rgb(r2, g2, b2)) => {
-			let r = (r1 as f32 + (r2 as f32 - r1 as f32) * t) as u8;
-			let g = (g1 as f32 + (g2 as f32 - g1 as f32) * t) as u8;
-			let b = (b1 as f32 + (b2 as f32 - b1 as f32) * t) as u8;
-			Color::Rgb(r, g, b)
-		}
-		// Non-RGB colors can't be lerped, snap to target
-		_ => {
-			if t > 0.5 {
-				b
-			} else {
-				a
 			}
 		}
 	}
@@ -74,54 +51,16 @@ pub struct StyleOverlay {
 	pub source: &'static str,
 }
 
-/// Easing function for animations.
-#[derive(Clone, Copy, Debug, Default)]
-pub enum Easing {
-	/// Linear interpolation (constant speed).
-	#[default]
-	Linear,
-	/// Ease out - starts fast, slows down at end.
-	EaseOut,
-	/// Ease in - starts slow, speeds up at end.
-	EaseIn,
-	/// Ease in-out - slow at both ends.
-	EaseInOut,
-}
-
-impl Easing {
-	/// Apply the easing function to a linear progress value (0.0 to 1.0).
-	pub fn apply(self, t: f32) -> f32 {
-		let t = t.clamp(0.0, 1.0);
-		match self {
-			Easing::Linear => t,
-			Easing::EaseOut => 1.0 - (1.0 - t).powi(2),
-			Easing::EaseIn => t.powi(2),
-			Easing::EaseInOut => {
-				if t < 0.5 {
-					2.0 * t * t
-				} else {
-					1.0 - (-2.0 * t + 2.0).powi(2) / 2.0
-				}
-			}
-		}
-	}
-}
+// Re-export Easing from ratatui::animation for convenience
+pub use ratatui::animation::Easing;
 
 /// An animated style transition for a byte range.
 #[derive(Clone, Debug)]
 pub struct AnimatedOverlay {
 	/// Byte range this overlay applies to.
 	pub range: Range<usize>,
-	/// Starting style modification.
-	pub from: StyleMod,
-	/// Target style modification.
-	pub to: StyleMod,
-	/// When the animation started.
-	pub start_time: Instant,
-	/// Total animation duration.
-	pub duration: Duration,
-	/// Easing function.
-	pub easing: Easing,
+	/// The underlying tween for the style modification.
+	tween: ratatui::animation::Tween<StyleMod>,
 	/// Priority (higher priority overlays are applied last).
 	pub priority: i16,
 	/// Identifier for the extension that created this overlay.
@@ -129,17 +68,52 @@ pub struct AnimatedOverlay {
 }
 
 impl AnimatedOverlay {
+	/// Creates a new animated overlay.
+	pub fn new(
+		range: Range<usize>,
+		from: StyleMod,
+		to: StyleMod,
+		duration: Duration,
+		easing: Easing,
+		priority: i16,
+		source: &'static str,
+	) -> Self {
+		Self {
+			range,
+			tween: ratatui::animation::Tween::new(from, to, duration).with_easing(easing),
+			priority,
+			source,
+		}
+	}
+
+	/// Returns the starting style modification.
+	pub fn from(&self) -> StyleMod {
+		self.tween.start
+	}
+
+	/// Returns the target style modification.
+	pub fn to(&self) -> StyleMod {
+		self.tween.end
+	}
+
+	/// Returns the animation duration.
+	pub fn duration(&self) -> Duration {
+		self.tween.duration
+	}
+
+	/// Returns the easing function.
+	pub fn easing(&self) -> Easing {
+		self.tween.easing
+	}
+
 	/// Returns the current interpolated style modification.
 	pub fn current_modification(&self) -> StyleMod {
-		let elapsed = self.start_time.elapsed();
-		let linear_t = (elapsed.as_secs_f32() / self.duration.as_secs_f32()).min(1.0);
-		let eased_t = self.easing.apply(linear_t);
-		self.from.lerp(self.to, eased_t)
+		self.tween.value()
 	}
 
 	/// Returns true if the animation has completed.
 	pub fn is_complete(&self) -> bool {
-		self.start_time.elapsed() >= self.duration
+		self.tween.is_complete()
 	}
 }
 
@@ -212,33 +186,29 @@ impl StyleOverlays {
 		source: &'static str,
 		doc_len: usize,
 	) {
-		let now = Instant::now();
-
 		// Add animated overlay for everything before the focus range
 		if focus_range.start > 0 {
-			self.add_animated(AnimatedOverlay {
-				range: 0..focus_range.start,
-				from: StyleMod::Dim(from_factor),
-				to: StyleMod::Dim(to_factor),
-				start_time: now,
+			self.add_animated(AnimatedOverlay::new(
+				0..focus_range.start,
+				StyleMod::Dim(from_factor),
+				StyleMod::Dim(to_factor),
 				duration,
 				easing,
-				priority: 0,
+				0,
 				source,
-			});
+			));
 		}
 		// Add animated overlay for everything after the focus range
 		if focus_range.end < doc_len {
-			self.add_animated(AnimatedOverlay {
-				range: focus_range.end..doc_len,
-				from: StyleMod::Dim(from_factor),
-				to: StyleMod::Dim(to_factor),
-				start_time: now,
+			self.add_animated(AnimatedOverlay::new(
+				focus_range.end..doc_len,
+				StyleMod::Dim(from_factor),
+				StyleMod::Dim(to_factor),
 				duration,
 				easing,
-				priority: 0,
+				0,
 				source,
-			});
+			));
 		}
 	}
 

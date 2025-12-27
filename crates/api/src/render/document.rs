@@ -210,8 +210,9 @@ impl Editor {
 				Style::default().fg(hover_fg).bg(hover_bg)
 			} else if is_animating {
 				// Animating - lerp between states
-				let fg = lerp_color(normal_fg, hover_fg, anim_intensity);
-				let bg = lerp_color(normal_bg, hover_bg, anim_intensity);
+				use ratatui::animation::Animatable;
+				let fg = normal_fg.lerp(&hover_fg, anim_intensity);
+				let bg = normal_bg.lerp(&hover_bg, anim_intensity);
 				Style::default().fg(fg).bg(bg)
 			} else {
 				// Normal state
@@ -343,26 +344,4 @@ fn convert_split_color(color: SplitColor) -> Color {
 	}
 }
 
-/// Linearly interpolates between two colors.
-///
-/// Returns a color that is `t` percent of the way from `a` to `b`,
-/// where `t` is clamped to [0.0, 1.0].
-fn lerp_color(a: Color, b: Color, t: f32) -> Color {
-	let t = t.clamp(0.0, 1.0);
-	match (a, b) {
-		(Color::Rgb(r1, g1, b1), Color::Rgb(r2, g2, b2)) => {
-			let r = (r1 as f32 + (r2 as f32 - r1 as f32) * t) as u8;
-			let g = (g1 as f32 + (g2 as f32 - g1 as f32) * t) as u8;
-			let b = (b1 as f32 + (b2 as f32 - b1 as f32) * t) as u8;
-			Color::Rgb(r, g, b)
-		}
-		// Non-RGB colors can't be lerped - snap at midpoint
-		_ => {
-			if t > 0.5 {
-				b
-			} else {
-				a
-			}
-		}
-	}
-}
+

@@ -1,7 +1,6 @@
+use ratatui::animation::Animatable;
 use ratatui::prelude::*;
 use tome_manifest::notifications::AnimationPhase;
-
-use crate::render::notifications::utils::lerp;
 
 /// Minimum width for expand/collapse animation to remain visible.
 const MIN_WIDTH: u16 = 3;
@@ -46,8 +45,8 @@ pub fn calculate_rect(
 		_ => return full_rect,
 	};
 
-	let current_width_f32 = lerp(start_width, end_width, progress);
-	let current_height_f32 = lerp(start_height, end_height, progress);
+	let current_width_f32 = start_width.lerp(&end_width, progress);
+	let current_height_f32 = start_height.lerp(&end_height, progress);
 
 	let current_width = (current_width_f32.round() as u16).max(if progress > 0.0 { 1 } else { 0 });
 	let current_height =
