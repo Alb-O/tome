@@ -81,6 +81,23 @@ pub struct Buffer {
 	/// Text width for wrapping calculations.
 	pub text_width: usize,
 
+	/// Last rendered viewport height (in rows).
+	///
+	/// Used to detect viewport shrinking during split resize. When the viewport
+	/// shrinks and the cursor would go off-screen below, we avoid auto-scrolling
+	/// to preserve the visual position of the viewport's top edge.
+	pub last_viewport_height: usize,
+
+	/// Cursor position observed during the last render.
+	///
+	/// Used to distinguish user-driven cursor moves from resize-only changes.
+	pub last_rendered_cursor: CharIdx,
+
+	/// Whether to suppress auto-scroll down to keep the cursor visible.
+	///
+	/// Set when the viewport shrinks and the cursor would go off-screen below.
+	pub suppress_scroll_down: bool,
+
 	/// Detected file type (e.g., "rust", "python").
 	pub file_type: Option<String>,
 
@@ -108,6 +125,9 @@ impl Buffer {
 			scroll_line: 0,
 			scroll_segment: 0,
 			text_width: 80,
+			last_viewport_height: 0,
+			last_rendered_cursor: 0,
+			suppress_scroll_down: false,
 			file_type: None,
 			syntax: None,
 			insert_undo_active: false,
