@@ -143,6 +143,20 @@ impl Editor {
 		// Render separators between splits
 		let separators = self.layout.separator_positions(doc_area);
 
+		// Check if mouse has slowed down over a separator that was previously suppressed
+		// This handles the case where mouse was moving fast, then stopped over a separator
+		if self.hovered_separator.is_none()
+			&& self.separator_under_mouse.is_some()
+			&& !self.mouse_velocity.is_fast()
+		{
+			let old_hover = self.hovered_separator.take();
+			self.hovered_separator = self.separator_under_mouse;
+			if old_hover != self.hovered_separator {
+				self.update_separator_hover_animation(old_hover, self.hovered_separator);
+				self.needs_redraw = true;
+			}
+		}
+
 		// Check for hovered separator
 		let hovered_rect = self.hovered_separator.map(|(_, rect)| rect);
 
@@ -153,24 +167,55 @@ impl Editor {
 				.map(|(_, rect)| rect)
 		});
 
+		// Get animation state for fading
+		let (anim_rect, anim_intensity) = self
+			.separator_hover_animation
+			.as_ref()
+			.map(|anim| (Some(anim.rect), anim.intensity()))
+			.unwrap_or((None, 0.0));
+
+		// Request redraw if animation is in progress (including debounce period)
+		if let Some(anim) = &self.separator_hover_animation {
+			if anim.needs_redraw() {
+				self.needs_redraw = true;
+			}
+		}
+
+		// Define colors for lerping
+		let normal_fg: Color = self.theme.colors.ui.gutter_fg.into();
+		let hover_fg: Color = self.theme.colors.ui.cursor_fg.into();
+		let hover_bg: Color = self.theme.colors.ui.selection_bg.into();
+		let normal_bg: Color = self.theme.colors.ui.bg.into();
+		// High contrast colors for active drag - use main text fg/bg for maximum visibility
+		let drag_fg: Color = self.theme.colors.ui.bg.into();
+		let drag_bg: Color = self.theme.colors.ui.fg.into();
+
 		for (direction, _pos, sep_rect) in separators {
 			// Highlight if hovered or being dragged
 			let is_hovered = hovered_rect == Some(sep_rect);
 			let is_dragging = dragging_rect == Some(sep_rect);
-			let is_highlighted = is_hovered || is_dragging;
+			let is_animating = anim_rect == Some(sep_rect);
 
 			let sep_char = match direction {
 				SplitDirection::Horizontal => "\u{2502}", // Vertical line │
 				SplitDirection::Vertical => "\u{2500}",   // Horizontal line ─
 			};
 
-			// Use a highlighted style when hovered or dragging
-			let sep_style = if is_highlighted {
-				Style::default()
-					.fg(self.theme.colors.ui.cursor_fg.into())
-					.bg(self.theme.colors.ui.selection_bg.into())
+			// Calculate separator style with animation
+			let sep_style = if is_dragging {
+				// High contrast when actively dragging
+				Style::default().fg(drag_fg).bg(drag_bg)
+			} else if is_hovered {
+				// Highlighted when hovered (but not dragging)
+				Style::default().fg(hover_fg).bg(hover_bg)
+			} else if is_animating {
+				// Animating - lerp between states
+				let fg = lerp_color(normal_fg, hover_fg, anim_intensity);
+				let bg = lerp_color(normal_bg, hover_bg, anim_intensity);
+				Style::default().fg(fg).bg(bg)
 			} else {
-				Style::default().fg(self.theme.colors.ui.gutter_fg.into())
+				// Normal state
+				Style::default().fg(normal_fg)
 			};
 
 			// Build separator lines
@@ -295,5 +340,29 @@ fn convert_split_color(color: SplitColor) -> Color {
 	match color {
 		SplitColor::Indexed(i) => Color::Indexed(i),
 		SplitColor::Rgb(r, g, b) => Color::Rgb(r, g, b),
+	}
+}
+
+/// Linearly interpolates between two colors.
+///
+/// Returns a color that is `t` percent of the way from `a` to `b`,
+/// where `t` is clamped to [0.0, 1.0].
+fn lerp_color(a: Color, b: Color, t: f32) -> Color {
+	let t = t.clamp(0.0, 1.0);
+	match (a, b) {
+		(Color::Rgb(r1, g1, b1), Color::Rgb(r2, g2, b2)) => {
+			let r = (r1 as f32 + (r2 as f32 - r1 as f32) * t) as u8;
+			let g = (g1 as f32 + (g2 as f32 - g1 as f32) * t) as u8;
+			let b = (b1 as f32 + (b2 as f32 - b1 as f32) * t) as u8;
+			Color::Rgb(r, g, b)
+		}
+		// Non-RGB colors can't be lerped - snap at midpoint
+		_ => {
+			if t > 0.5 {
+				b
+			} else {
+				a
+			}
+		}
 	}
 }
