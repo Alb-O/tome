@@ -1,21 +1,34 @@
+use tome_manifest::notifications as manifest;
+use tome_stdlib::notifications::find_notification_type;
+use tome_tui::widgets::notifications::{self as notif, Toast};
+
 use crate::editor::Editor;
 
 impl Editor {
 	pub fn notify(&mut self, type_name: &str, text: impl Into<String>) {
-		use tome_stdlib::notifications::{NotificationBuilder, find_notification_type};
 		let text = text.into();
-
 		let type_def = find_notification_type(type_name);
-		let builder = NotificationBuilder::from_registry(type_name, text);
 
-		// Resolve semantic style from theme (with inheritance)
 		let semantic = type_def
 			.map(|t| t.semantic)
 			.unwrap_or(tome_manifest::SEMANTIC_INFO);
-		let style = self.theme.colors.notification_style(semantic);
+		let style: tome_tui::style::Style = self.theme.colors.notification_style(semantic).into();
 
-		if let Ok(notif) = builder.style(style).build() {
-			let _ = self.notifications.add(notif);
+		let mut toast = Toast::new(text).style(style).border_style(style);
+
+		if let Some(def) = type_def {
+			toast = toast
+				.animation(match def.animation {
+					manifest::Animation::Slide => notif::Animation::Slide,
+					manifest::Animation::ExpandCollapse => notif::Animation::ExpandCollapse,
+					manifest::Animation::Fade => notif::Animation::Fade,
+				})
+				.auto_dismiss(match def.auto_dismiss {
+					manifest::AutoDismiss::Never => notif::AutoDismiss::Never,
+					manifest::AutoDismiss::After(d) => notif::AutoDismiss::After(d),
+				});
 		}
+
+		self.notifications.push(toast);
 	}
 }

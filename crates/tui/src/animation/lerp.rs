@@ -127,6 +127,18 @@ impl Animatable for (u16, u16, u16, u16) {
 	}
 }
 
+impl Animatable for crate::layout::Rect {
+	#[inline]
+	fn lerp(&self, target: &Self, t: f32) -> Self {
+		Self {
+			x: self.x.lerp(&target.x, t),
+			y: self.y.lerp(&target.y, t),
+			width: self.width.lerp(&target.width, t),
+			height: self.height.lerp(&target.height, t),
+		}
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
