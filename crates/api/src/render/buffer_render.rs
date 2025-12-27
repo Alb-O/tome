@@ -76,10 +76,7 @@ impl<'a> BufferRenderContext<'a> {
 				.add_modifier(Modifier::BOLD)
 		};
 
-		let base_style =
-			Style::default()
-				.fg(self.theme.colors.ui.fg.into())
-				.bg(self.theme.colors.ui.bg.into());
+		let base_style = Style::default().fg(self.theme.colors.ui.fg.into());
 
 		let selection_style = Style::default()
 			.bg(self.theme.colors.ui.selection_bg.into())
@@ -208,11 +205,13 @@ impl<'a> BufferRenderContext<'a> {
 	/// - `buffer`: The buffer to render
 	/// - `area`: The rectangular area to render into
 	/// - `use_block_cursor`: Whether to render block-style cursors
+	/// - `is_focused`: Whether this buffer is the focused/active buffer
 	pub fn render_buffer(
 		&self,
 		buffer: &Buffer,
 		area: Rect,
 		use_block_cursor: bool,
+		is_focused: bool,
 	) -> RenderResult {
 		let total_lines = buffer.doc.len_lines();
 		let gutter_width = buffer.gutter_width();
@@ -227,8 +226,9 @@ impl<'a> BufferRenderContext<'a> {
 		let blink_on = self.cursor_blink_visible(buffer.mode());
 		let styles = self.make_cursor_styles();
 
-		// Collect syntax highlight spans for the visible viewport
 		let highlight_spans = self.collect_highlight_spans(buffer, area);
+		let cursor_line = buffer.cursor_line();
+		let cursorline_bg: tome_tui::style::Color = self.theme.colors.ui.cursorline_bg.into();
 
 		let mut output_lines: Vec<Line> = Vec::new();
 		let mut current_line_idx = buffer.scroll_line;
@@ -236,6 +236,7 @@ impl<'a> BufferRenderContext<'a> {
 		let viewport_height = area.height as usize;
 
 		while output_lines.len() < viewport_height && current_line_idx < total_lines {
+			let is_cursor_line = is_focused && current_line_idx == cursor_line;
 			let line_start: CharIdx = buffer.doc.line_to_char(current_line_idx);
 			let line_end: CharIdx = if current_line_idx + 1 < total_lines {
 				buffer.doc.line_to_char(current_line_idx + 1)
@@ -268,7 +269,12 @@ impl<'a> BufferRenderContext<'a> {
 					format!("{:>width$} ", "\u{2506}", width = gutter_width as usize - 1)
 				};
 				let gutter_style = if is_first_segment {
-					Style::default().fg(self.theme.colors.ui.gutter_fg.into())
+					let style = Style::default().fg(self.theme.colors.ui.gutter_fg.into());
+					if is_cursor_line {
+						style.bg(cursorline_bg)
+					} else {
+						style
+					}
 				} else {
 					let dim_color = self
 						.theme
@@ -276,7 +282,12 @@ impl<'a> BufferRenderContext<'a> {
 						.ui
 						.gutter_fg
 						.blend(self.theme.colors.ui.bg, 0.5);
-					Style::default().fg(dim_color.into())
+					let style = Style::default().fg(dim_color.into());
+					if is_cursor_line {
+						style.bg(cursorline_bg)
+					} else {
+						style
+					}
 				};
 
 				let mut spans = vec![Span::styled(line_num_str, gutter_style)];
@@ -321,7 +332,12 @@ impl<'a> BufferRenderContext<'a> {
 							.fg(text_fg.into())
 							.add_modifier(base.add_modifier)
 					} else {
-						syntax_style.unwrap_or(styles.base)
+						let base = syntax_style.unwrap_or(styles.base);
+						if is_cursor_line && base.bg.is_none() {
+							base.bg(cursorline_bg)
+						} else {
+							base
+						}
 					};
 					let style = if is_cursor && use_block_cursor {
 						if blink_on { cursor_style } else { styles.base }
@@ -367,10 +383,11 @@ impl<'a> BufferRenderContext<'a> {
 						.ui
 						.gutter_fg
 						.blend(self.theme.colors.ui.bg, 0.5);
-					spans.push(Span::styled(
-						" ".repeat(fill_count),
-						Style::default().fg(dim_color.into()),
-					));
+					let mut fill_style = Style::default().fg(dim_color.into());
+					if is_cursor_line {
+						fill_style = fill_style.bg(cursorline_bg);
+					}
+					spans.push(Span::styled(" ".repeat(fill_count), fill_style));
 				}
 
 				if is_last_segment {
@@ -397,7 +414,15 @@ impl<'a> BufferRenderContext<'a> {
 								styles.secondary
 							};
 							spans.push(Span::styled(" ", cursor_style));
+							seg_col += 1;
 						}
+					}
+
+					if is_cursor_line && seg_col < text_width {
+						spans.push(Span::styled(
+							" ".repeat(text_width - seg_col),
+							Style::default().bg(cursorline_bg),
+						));
 					}
 				}
 
@@ -413,7 +438,10 @@ impl<'a> BufferRenderContext<'a> {
 					current_line_idx + 1,
 					width = gutter_width as usize - 1
 				);
-				let gutter_style = Style::default().fg(self.theme.colors.ui.gutter_fg.into());
+				let mut gutter_style = Style::default().fg(self.theme.colors.ui.gutter_fg.into());
+				if is_cursor_line {
+					gutter_style = gutter_style.bg(cursorline_bg);
+				}
 				let mut spans = vec![Span::styled(line_num_str, gutter_style)];
 
 				let is_last_doc_line = current_line_idx + 1 >= total_lines;
@@ -424,21 +452,27 @@ impl<'a> BufferRenderContext<'a> {
 						*pos >= line_start && *pos < line_end
 					}
 				});
-				if cursor_at_eol {
+				let mut cols_used = 0;
+				if cursor_at_eol && use_block_cursor && blink_on {
 					let primary_here = if is_last_doc_line {
 						primary_cursor >= line_start && primary_cursor <= line_end
 					} else {
 						primary_cursor >= line_start && primary_cursor < line_end
 					};
+					let cursor_style = if primary_here {
+						styles.primary
+					} else {
+						styles.secondary
+					};
+					spans.push(Span::styled(" ", cursor_style));
+					cols_used = 1;
+				}
 
-					if use_block_cursor && blink_on {
-						let cursor_style = if primary_here {
-							styles.primary
-						} else {
-							styles.secondary
-						};
-						spans.push(Span::styled(" ", cursor_style));
-					}
+				if is_cursor_line && cols_used < text_width {
+					spans.push(Span::styled(
+						" ".repeat(text_width - cols_used),
+						Style::default().bg(cursorline_bg),
+					));
 				}
 
 				output_lines.push(Line::from(spans));
