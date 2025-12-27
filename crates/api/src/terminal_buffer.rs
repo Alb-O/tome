@@ -4,8 +4,8 @@
 //! emulator and exposes it via the `SplitBuffer` trait for use in split panels.
 
 use std::io::{Read, Write};
-use std::sync::mpsc::{Receiver, TryRecvError, channel};
 use std::sync::Arc;
+use std::sync::mpsc::{Receiver, TryRecvError, channel};
 use std::thread;
 use std::time::Duration;
 
@@ -207,7 +207,11 @@ impl TerminalBuffer {
 			return;
 		}
 		let size = self.current_size;
-		let env_vars = self.ipc_env.as_ref().map(|env| env.env_vars()).unwrap_or_default();
+		let env_vars = self
+			.ipc_env
+			.as_ref()
+			.map(|env| env.env_vars())
+			.unwrap_or_default();
 		let (tx, rx) = channel();
 		self.prewarm = Some(rx);
 		thread::spawn(move || {

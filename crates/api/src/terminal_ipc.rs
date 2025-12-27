@@ -22,9 +22,9 @@ use std::io::{BufRead, BufReader};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
-use std::sync::Arc;
 use std::thread;
 
 static IPC_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -65,8 +65,14 @@ impl TerminalIpcEnv {
 	pub fn env_vars(&self) -> Vec<(String, String)> {
 		let current_path = std::env::var("PATH").unwrap_or_default();
 		vec![
-			("PATH".to_string(), format!("{}:{}", self.bin_dir.display(), current_path)),
-			("TOME_SOCKET".to_string(), self.socket_path.display().to_string()),
+			(
+				"PATH".to_string(),
+				format!("{}:{}", self.bin_dir.display(), current_path),
+			),
+			(
+				"TOME_SOCKET".to_string(),
+				self.socket_path.display().to_string(),
+			),
 		]
 	}
 }
@@ -105,7 +111,10 @@ impl TerminalIpc {
 		thread::spawn(move || run_listener(listener, tx));
 
 		Ok(Self {
-			env: Arc::new(TerminalIpcEnv { bin_dir, socket_path }),
+			env: Arc::new(TerminalIpcEnv {
+				bin_dir,
+				socket_path,
+			}),
 			receiver: rx,
 			pending: VecDeque::new(),
 		})
@@ -172,10 +181,10 @@ fn run_listener(listener: UnixListener, tx: Sender<IpcRequest>) {
 	loop {
 		match listener.accept() {
 			Ok((stream, _)) => {
-				if let Some(req) = parse_request(stream) {
-					if tx.send(req).is_err() {
-						break;
-					}
+				if let Some(req) = parse_request(stream)
+					&& tx.send(req).is_err()
+				{
+					break;
 				}
 			}
 			Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
@@ -221,7 +230,11 @@ mod tests {
 		assert!(ipc.env.socket_path.exists());
 
 		let env_vars = ipc.env.env_vars();
-		assert!(env_vars.iter().any(|(k, v)| k == "PATH" && v.contains("tome-")));
+		assert!(
+			env_vars
+				.iter()
+				.any(|(k, v)| k == "PATH" && v.contains("tome-"))
+		);
 		assert!(env_vars.iter().any(|(k, _)| k == "TOME_SOCKET"));
 	}
 

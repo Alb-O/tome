@@ -386,9 +386,7 @@ mod tests {
 	fn test_enum_display_from_str() {
 		use crate::widgets::BorderType;
 
-		enum_display_from_str_tests!(BorderType, [
-			Plain, Rounded, Double, Thick, Padded, Stripe,
-		]);
+		enum_display_from_str_tests!(BorderType, [Plain, Rounded, Double, Thick, Padded, Stripe,]);
 	}
 
 	#[test]
@@ -397,10 +395,6 @@ mod tests {
 			assert_eq!(a + b, expected);
 		}
 
-		run_cases!(check_add, [
-			(1, 2, 3),
-			(10, 20, 30),
-			(-5, 5, 0),
-		]);
+		run_cases!(check_add, [(1, 2, 3), (10, 20, 30), (-5, 5, 0),]);
 	}
 }

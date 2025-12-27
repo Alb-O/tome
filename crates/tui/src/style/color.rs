@@ -1,4 +1,7 @@
-#![allow(clippy::unreadable_literal, reason = "hex color literals are more readable without underscores")]
+#![allow(
+	clippy::unreadable_literal,
+	reason = "hex color literals are more readable without underscores"
+)]
 
 use core::fmt;
 use core::str::FromStr;

@@ -180,7 +180,11 @@ impl Element {
 		self.size() | EQ(strength) | (f64::from(size) * FLOAT_PRECISION_MULTIPLIER)
 	}
 
-	pub fn has_size<E: Into<Expression>>(&self, size: E, strength: Strength) -> kasuari::Constraint {
+	pub fn has_size<E: Into<Expression>>(
+		&self,
+		size: E,
+		strength: Strength,
+	) -> kasuari::Constraint {
 		self.size() | EQ(strength) | size.into()
 	}
 
