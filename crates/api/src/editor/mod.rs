@@ -136,8 +136,22 @@ pub struct Editor {
 	/// Currently hovered separator (for visual feedback during resize).
 	///
 	/// Contains the separator's direction and screen rectangle when the mouse
-	/// is hovering over a split boundary.
+	/// is hovering over a split boundary. Only set when velocity is low enough.
 	pub hovered_separator: Option<(SplitDirection, ratatui::layout::Rect)>,
+
+	/// Separator the mouse is currently over (regardless of velocity).
+	///
+	/// This tracks the physical position even when hover is suppressed due to
+	/// fast mouse movement, allowing us to activate hover when mouse slows down.
+	pub separator_under_mouse: Option<(SplitDirection, ratatui::layout::Rect)>,
+
+	/// Animation state for separator hover fade effects.
+	///
+	/// Tracks ongoing hover animations for smooth visual transitions.
+	pub separator_hover_animation: Option<SeparatorHoverAnimation>,
+
+	/// Tracks mouse velocity to suppress hover effects during fast movement.
+	pub mouse_velocity: MouseVelocityTracker,
 
 	/// Active separator drag state for resizing splits.
 	///
@@ -154,6 +168,120 @@ pub struct DragState {
 	pub direction: SplitDirection,
 	/// Path to the split in the layout tree.
 	pub path: SplitPath,
+}
+
+/// Tracks mouse velocity to determine if hover effects should be suppressed.
+///
+/// Fast mouse movement indicates the user is just passing through, not intending
+/// to interact with separators. We suppress hover effects in this case to reduce
+/// visual noise.
+#[derive(Debug, Clone, Default)]
+pub struct MouseVelocityTracker {
+	/// Last known mouse position.
+	last_position: Option<(u16, u16)>,
+	/// When the last position was recorded.
+	last_time: Option<std::time::Instant>,
+	/// Smoothed velocity in cells per second.
+	velocity: f32,
+}
+
+impl MouseVelocityTracker {
+	/// Velocity threshold above which hover effects are suppressed (cells/second).
+	const FAST_THRESHOLD: f32 = 60.0;
+
+	/// Time after which velocity is considered zero (mouse is idle).
+	const IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(100);
+
+	/// Updates the tracker with a new mouse position and returns current velocity.
+	pub fn update(&mut self, x: u16, y: u16) -> f32 {
+		let now = std::time::Instant::now();
+
+		if let (Some((lx, ly)), Some(lt)) = (self.last_position, self.last_time) {
+			let dx = (x as f32 - lx as f32).abs();
+			let dy = (y as f32 - ly as f32).abs();
+			let distance = (dx * dx + dy * dy).sqrt();
+			let dt = now.duration_since(lt).as_secs_f32();
+
+			if dt > 0.0 && dt < 0.5 {
+				// Ignore stale readings (> 500ms gap)
+				let instant_velocity = distance / dt;
+				// Exponential moving average for smoothing
+				self.velocity = self.velocity * 0.6 + instant_velocity * 0.4;
+			}
+		}
+
+		self.last_position = Some((x, y));
+		self.last_time = Some(now);
+		self.velocity
+	}
+
+	/// Returns true if the mouse is moving fast enough to suppress hover effects.
+	///
+	/// Accounts for idle time - if mouse hasn't moved recently, velocity is zero.
+	pub fn is_fast(&self) -> bool {
+		// If mouse has been idle, velocity is effectively zero
+		if let Some(lt) = self.last_time {
+			if lt.elapsed() > Self::IDLE_TIMEOUT {
+				return false;
+			}
+		}
+		self.velocity > Self::FAST_THRESHOLD
+	}
+
+	/// Returns the current smoothed velocity, accounting for idle time.
+	pub fn velocity(&self) -> f32 {
+		if let Some(lt) = self.last_time {
+			if lt.elapsed() > Self::IDLE_TIMEOUT {
+				return 0.0;
+			}
+		}
+		self.velocity
+	}
+}
+
+/// Animation state for separator hover effects.
+#[derive(Debug, Clone)]
+pub struct SeparatorHoverAnimation {
+	/// The separator rectangle being animated.
+	pub rect: ratatui::layout::Rect,
+	/// When the hover state changed (started or ended).
+	pub state_change: std::time::Instant,
+	/// Whether we're animating toward hovered (true) or unhovered (false).
+	pub hovering: bool,
+}
+
+impl SeparatorHoverAnimation {
+	/// Duration of the hover fade animation.
+	const FADE_DURATION: std::time::Duration = std::time::Duration::from_millis(120);
+
+	/// Returns animation progress (0.0 = start, 1.0 = complete).
+	pub fn progress(&self) -> f32 {
+		let elapsed = self.state_change.elapsed().as_secs_f32();
+		let duration = Self::FADE_DURATION.as_secs_f32();
+		(elapsed / duration).min(1.0)
+	}
+
+	/// Returns the effective hover intensity (0.0 = unhovered, 1.0 = fully hovered).
+	pub fn intensity(&self) -> f32 {
+		let progress = self.progress();
+		// Apply ease-out for smoother feel
+		let eased = 1.0 - (1.0 - progress).powi(2);
+		if self.hovering {
+			eased
+		} else {
+			1.0 - eased
+		}
+	}
+
+	/// Returns true if the animation is complete.
+	pub fn is_complete(&self) -> bool {
+		self.progress() >= 1.0
+	}
+
+	/// Returns true if the animation is still in progress.
+	pub fn needs_redraw(&self) -> bool {
+		!self.is_complete()
+	}
 }
 
 // Buffer and terminal access - provides convenient access to the focused view
@@ -425,6 +553,9 @@ impl Editor {
 			language_loader,
 			style_overlays: StyleOverlays::new(),
 			hovered_separator: None,
+			separator_under_mouse: None,
+			separator_hover_animation: None,
+			mouse_velocity: MouseVelocityTracker::default(),
 			dragging_separator: None,
 		}
 	}
