@@ -35,6 +35,9 @@ pub mod table;
 pub mod tabs;
 pub mod terminal;
 
+#[cfg(feature = "std")]
+pub mod notifications;
+
 #[cfg(not(feature = "std"))]
 mod polyfills;
 mod reflow;

@@ -23,7 +23,6 @@ pub use types::{HistoryEntry, Registers};
 use crate::buffer::{Buffer, BufferId, BufferView, Layout, SplitDirection, SplitPath, TerminalId};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
-use crate::render::{Notifications, Overflow};
 use crate::terminal_buffer::TerminalBuffer;
 use crate::ui::UiManager;
 
@@ -102,7 +101,7 @@ pub struct Editor {
 	pub needs_redraw: bool,
 
 	/// Notification system.
-	pub notifications: Notifications,
+	pub notifications: tome_tui::widgets::notifications::ToastManager,
 
 	/// Last tick timestamp.
 	pub last_tick: std::time::SystemTime,
@@ -542,9 +541,9 @@ impl Editor {
 			window_height: None,
 			ui: UiManager::new(),
 			needs_redraw: false,
-			notifications: Notifications::new()
-				.max_concurrent(Some(5))
-				.overflow(Overflow::DiscardOldest),
+			notifications: tome_tui::widgets::notifications::ToastManager::new()
+				.max_visible(Some(5))
+				.overflow(tome_tui::widgets::notifications::Overflow::DropOldest),
 			last_tick: std::time::SystemTime::now(),
 			completions: CompletionState::default(),
 			extensions: {
