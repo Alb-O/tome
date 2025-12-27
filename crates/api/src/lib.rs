@@ -34,6 +34,7 @@ pub mod paths;
 pub mod render;
 pub mod styles;
 pub mod terminal_buffer;
+pub mod test_events;
 pub mod ui;
 
 pub use buffer::{Buffer, BufferId, HistoryResult};

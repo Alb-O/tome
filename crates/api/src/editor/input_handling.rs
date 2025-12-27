@@ -521,10 +521,12 @@ impl Editor {
 		old: Option<(SplitDirection, tome_tui::layout::Rect)>,
 		new: Option<(SplitDirection, tome_tui::layout::Rect)>,
 	) {
+		use crate::test_events::{AnimationDirection, SeparatorAnimationEvent};
+
 		match (old, new) {
 			(None, Some((_, rect))) => {
 				// Started hovering - animate in
-				self.debug_log("[ANIM] creating fade-in animation");
+				SeparatorAnimationEvent::start(AnimationDirection::FadeIn);
 				self.separator_hover_animation = Some(SeparatorHoverAnimation::new(rect, true));
 			}
 			(Some((_, old_rect)), None) => {
@@ -538,7 +540,7 @@ impl Editor {
 					.unwrap_or(false);
 				if can_toggle {
 					// Same separator - just toggle the existing animation
-					self.debug_log("[ANIM] toggling existing animation to fade-out");
+					SeparatorAnimationEvent::start(AnimationDirection::FadeOut);
 					self.separator_hover_animation
 						.as_mut()
 						.unwrap()
@@ -546,14 +548,14 @@ impl Editor {
 					return;
 				}
 				// Different separator or no existing animation - create new one at full intensity
-				self.debug_log("[ANIM] creating fade-out animation at full intensity");
+				SeparatorAnimationEvent::start(AnimationDirection::FadeOut);
 				self.separator_hover_animation = Some(SeparatorHoverAnimation::new_at_intensity(
 					old_rect, 1.0, false,
 				));
 			}
 			(Some((_, old_rect)), Some((_, new_rect))) if old_rect != new_rect => {
 				// Moved to a different separator - start fresh animation
-				self.debug_log("[ANIM] moving to different separator, creating new animation");
+				SeparatorAnimationEvent::start(AnimationDirection::FadeIn);
 				self.separator_hover_animation = Some(SeparatorHoverAnimation::new(new_rect, true));
 			}
 			_ => {
