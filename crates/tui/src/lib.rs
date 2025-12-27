@@ -6,7 +6,11 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs)]
-#![allow(clippy::module_inception, unfulfilled_lint_expectations)]
+#![allow(
+	clippy::module_inception,
+	unfulfilled_lint_expectations,
+	reason = "module_inception is intentional for re-exports; unfulfilled_lint_expectations may vary by feature flags"
+)]
 
 extern crate alloc;
 #[cfg(feature = "std")]

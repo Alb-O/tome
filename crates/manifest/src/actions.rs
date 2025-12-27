@@ -50,7 +50,8 @@ use crate::{Capability, RegistrySource};
 /// [`is_terminal_safe`]: Self::is_terminal_safe
 #[derive(Debug, Clone)]
 pub enum ActionResult {
-	// === Terminal-safe: workspace-level operations ===
+	// Terminal-safe: workspace-level operations
+	//
 	/// No-op success.
 	Ok,
 	/// Quit the editor.
@@ -86,7 +87,8 @@ pub enum ActionResult {
 	/// Focus split below.
 	FocusDown,
 
-	// === Text buffer required: cursor/selection/edit operations ===
+	// Text buffer required: cursor/selection/edit operations
+	//
 	/// Change editor mode.
 	ModeChange(ActionMode),
 	/// Move cursor to position.

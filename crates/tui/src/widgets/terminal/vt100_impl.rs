@@ -62,7 +62,7 @@ fn fill_buf_cell(screen_cell: &vt100::Cell, buf_cell: &mut crate::buffer::Cell) 
 }
 
 /// Intermediate color type for converting between `vt100::Color` and `tome_tui::style::Color`.
-#[allow(dead_code)]
+#[allow(dead_code, reason = "variants used for color conversion lookup")]
 enum Color {
 	Reset,
 	Black,

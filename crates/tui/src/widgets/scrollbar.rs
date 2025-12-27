@@ -4,7 +4,8 @@
 	clippy::cast_possible_truncation,
 	clippy::cast_precision_loss,
 	clippy::cast_sign_loss,
-	clippy::module_name_repetitions
+	clippy::module_name_repetitions,
+	reason = "scrollbar calculations require numeric casts; module_name_repetitions is acceptable for widget types"
 )]
 
 use core::iter;

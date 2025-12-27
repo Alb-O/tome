@@ -342,7 +342,7 @@ impl BorderSymbol {
 	/// character.
 	#[must_use]
 	fn fuzzy(mut self, other: Self) -> Self {
-		#[allow(clippy::enum_glob_use)]
+		#[allow(clippy::enum_glob_use, reason = "improves readability for pattern matching")]
 		use LineStyle::*;
 
 		// Dashes only include vertical and horizontal lines.

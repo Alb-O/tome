@@ -9,7 +9,7 @@ pub fn tome_cmd() -> String {
 }
 
 /// Returns a command to launch tome with the given file.
-#[allow(dead_code)]
+#[allow(dead_code, reason = "test helper used by individual test files")]
 pub fn tome_cmd_with_file_named(name: &str) -> String {
 	format!("{} {}", tome_cmd(), name)
 }

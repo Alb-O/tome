@@ -113,7 +113,7 @@ where
 	fn drop(&mut self) {
 		// Attempt to restore the cursor state
 		if self.hidden_cursor {
-			#[allow(unused_variables)]
+			#[allow(unused_variables, reason = "err only used with std feature for error reporting")]
 			if let Err(err) = self.show_cursor() {
 				#[cfg(feature = "std")]
 				std::eprintln!("Failed to show the cursor: {err}");
