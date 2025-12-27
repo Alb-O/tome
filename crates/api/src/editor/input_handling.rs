@@ -1,7 +1,10 @@
 use termina::event::{KeyCode, Modifiers};
-use tome_base::{Key, Selection};
+use tome_base::{Key, Position, Selection};
 use tome_input::KeyResult;
-use tome_manifest::{Mode, SplitBuffer, SplitKey, SplitKeyCode, SplitModifiers};
+use tome_manifest::{
+	Mode, SplitBuffer, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction,
+	SplitMouseButton,
+};
 
 use crate::buffer::{BufferView, SplitDirection};
 use crate::editor::{DragState, Editor, SeparatorHoverAnimation};
@@ -420,8 +423,18 @@ impl Editor {
 			self.focus_view(target_view);
 		}
 
-		// Terminal views don't handle mouse events through the input system
-		if self.is_terminal_focused() {
+		if let BufferView::Terminal(terminal_id) = target_view {
+			let local_x = mouse_x.saturating_sub(view_area.x);
+			let local_y = mouse_y.saturating_sub(view_area.y);
+
+			if let Some(split_mouse) = convert_mouse_event(&mouse, local_x, local_y)
+				&& let Some(terminal) = self.get_terminal_mut(terminal_id)
+			{
+				let result = terminal.handle_mouse(split_mouse);
+				if result.needs_redraw {
+					self.needs_redraw = true;
+				}
+			}
 			return false;
 		}
 
@@ -592,4 +605,32 @@ fn convert_termina_key(key: &termina::event::KeyEvent) -> Option<SplitKey> {
 	}
 
 	Some(SplitKey::new(code, modifiers))
+}
+
+fn convert_mouse_event(
+	mouse: &termina::event::MouseEvent,
+	local_x: u16,
+	local_y: u16,
+) -> Option<SplitMouse> {
+	use termina::event::{MouseButton, MouseEventKind};
+
+	let btn = |b: MouseButton| match b {
+		MouseButton::Left => SplitMouseButton::Left,
+		MouseButton::Right => SplitMouseButton::Right,
+		MouseButton::Middle => SplitMouseButton::Middle,
+	};
+
+	let action = match mouse.kind {
+		MouseEventKind::Down(b) => SplitMouseAction::Press(btn(b)),
+		MouseEventKind::Up(b) => SplitMouseAction::Release(btn(b)),
+		MouseEventKind::Drag(b) => SplitMouseAction::Drag(btn(b)),
+		MouseEventKind::ScrollUp => SplitMouseAction::ScrollUp,
+		MouseEventKind::ScrollDown => SplitMouseAction::ScrollDown,
+		_ => return None,
+	};
+
+	Some(SplitMouse {
+		position: Position::new(local_x, local_y),
+		action,
+	})
 }
