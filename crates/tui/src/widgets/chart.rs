@@ -1161,14 +1161,12 @@ impl Styled for Chart<'_> {
 
 #[cfg(test)]
 mod tests {
-	use alloc::string::ToString;
 	use alloc::{format, vec};
 
 	use rstest::rstest;
-	use strum::ParseError;
 
 	use super::*;
-	use crate::style::{Modifier, Stylize};
+	use crate::{enum_display_from_str_tests, style::{Modifier, Stylize}};
 
 	struct LegendTestCase {
 		chart_area: Rect,
@@ -1208,54 +1206,21 @@ mod tests {
 	}
 
 	#[test]
-	fn axis_can_be_stylized() {
-		assert_eq!(
-			Axis::default().black().on_white().bold().not_dim().style,
-			Style::default()
-				.fg(Color::Black)
-				.bg(Color::White)
-				.add_modifier(Modifier::BOLD)
-				.remove_modifier(Modifier::DIM)
-		);
+	fn stylize_implementations() {
+		let expected_style = Style::default()
+			.fg(Color::Black)
+			.bg(Color::White)
+			.add_modifier(Modifier::BOLD)
+			.remove_modifier(Modifier::DIM);
+
+		assert_eq!(Axis::default().black().on_white().bold().not_dim().style, expected_style);
+		assert_eq!(Dataset::default().black().on_white().bold().not_dim().style, expected_style);
+		assert_eq!(Chart::new(vec![]).black().on_white().bold().not_dim().style, expected_style);
 	}
 
 	#[test]
-	fn dataset_can_be_stylized() {
-		assert_eq!(
-			Dataset::default().black().on_white().bold().not_dim().style,
-			Style::default()
-				.fg(Color::Black)
-				.bg(Color::White)
-				.add_modifier(Modifier::BOLD)
-				.remove_modifier(Modifier::DIM)
-		);
-	}
-
-	#[test]
-	fn chart_can_be_stylized() {
-		assert_eq!(
-			Chart::new(vec![]).black().on_white().bold().not_dim().style,
-			Style::default()
-				.fg(Color::Black)
-				.bg(Color::White)
-				.add_modifier(Modifier::BOLD)
-				.remove_modifier(Modifier::DIM)
-		);
-	}
-
-	#[test]
-	fn graph_type_to_string() {
-		assert_eq!(GraphType::Scatter.to_string(), "Scatter");
-		assert_eq!(GraphType::Line.to_string(), "Line");
-		assert_eq!(GraphType::Bar.to_string(), "Bar");
-	}
-
-	#[test]
-	fn graph_type_from_str() {
-		assert_eq!("Scatter".parse::<GraphType>(), Ok(GraphType::Scatter));
-		assert_eq!("Line".parse::<GraphType>(), Ok(GraphType::Line));
-		assert_eq!("Bar".parse::<GraphType>(), Ok(GraphType::Bar));
-		assert_eq!("".parse::<GraphType>(), Err(ParseError::VariantNotFound));
+	fn graph_type_display_and_from_str() {
+		enum_display_from_str_tests!(GraphType, [Scatter, Line, Bar]);
 	}
 
 	#[test]

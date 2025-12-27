@@ -1116,13 +1116,15 @@ impl Styled for Block<'_> {
 
 #[cfg(test)]
 mod tests {
-	use alloc::{format, vec};
+	use alloc::vec;
 
 	use rstest::rstest;
-	use strum::ParseError;
 
 	use super::*;
-	use crate::style::{Color, Modifier, Stylize};
+	use crate::{
+		enum_display_from_str_tests, render_test,
+		style::{Color, Modifier, Stylize},
+	};
 
 	#[test]
 	fn create_with_all_borders() {
@@ -1573,252 +1575,48 @@ mod tests {
 	}
 
 	#[test]
-	fn border_type_to_string() {
-		assert_eq!(format!("{}", BorderType::Plain), "Plain");
-		assert_eq!(format!("{}", BorderType::Rounded), "Rounded");
-		assert_eq!(format!("{}", BorderType::Double), "Double");
-		assert_eq!(format!("{}", BorderType::Thick), "Thick");
-		assert_eq!(format!("{}", BorderType::Padded), "Padded");
-		assert_eq!(format!("{}", BorderType::Stripe), "Stripe");
-		assert_eq!(
-			format!("{}", BorderType::LightDoubleDashed),
-			"LightDoubleDashed"
-		);
-		assert_eq!(
-			format!("{}", BorderType::HeavyDoubleDashed),
-			"HeavyDoubleDashed"
-		);
-		assert_eq!(
-			format!("{}", BorderType::LightTripleDashed),
-			"LightTripleDashed"
-		);
-		assert_eq!(
-			format!("{}", BorderType::HeavyTripleDashed),
-			"HeavyTripleDashed"
-		);
-		assert_eq!(
-			format!("{}", BorderType::LightQuadrupleDashed),
-			"LightQuadrupleDashed"
-		);
-		assert_eq!(
-			format!("{}", BorderType::HeavyQuadrupleDashed),
-			"HeavyQuadrupleDashed"
-		);
+	fn border_type_display_and_from_str() {
+		enum_display_from_str_tests!(BorderType, [
+			Plain,
+			Rounded,
+			Double,
+			Thick,
+			Padded,
+			Stripe,
+			QuadrantInside,
+			QuadrantOutside,
+			LightDoubleDashed,
+			HeavyDoubleDashed,
+			LightTripleDashed,
+			HeavyTripleDashed,
+			LightQuadrupleDashed,
+			HeavyQuadrupleDashed,
+		]);
 	}
 
 	#[test]
-	fn border_type_from_str() {
-		assert_eq!("Plain".parse(), Ok(BorderType::Plain));
-		assert_eq!("Rounded".parse(), Ok(BorderType::Rounded));
-		assert_eq!("Double".parse(), Ok(BorderType::Double));
-		assert_eq!("Thick".parse(), Ok(BorderType::Thick));
-		assert_eq!("Padded".parse(), Ok(BorderType::Padded));
-		assert_eq!("Stripe".parse(), Ok(BorderType::Stripe));
-		assert_eq!(
-			"LightDoubleDashed".parse(),
-			Ok(BorderType::LightDoubleDashed)
-		);
-		assert_eq!(
-			"HeavyDoubleDashed".parse(),
-			Ok(BorderType::HeavyDoubleDashed)
-		);
-		assert_eq!(
-			"LightTripleDashed".parse(),
-			Ok(BorderType::LightTripleDashed)
-		);
-		assert_eq!(
-			"HeavyTripleDashed".parse(),
-			Ok(BorderType::HeavyTripleDashed)
-		);
-		assert_eq!(
-			"LightQuadrupleDashed".parse(),
-			Ok(BorderType::LightQuadrupleDashed)
-		);
-		assert_eq!(
-			"HeavyQuadrupleDashed".parse(),
-			Ok(BorderType::HeavyQuadrupleDashed)
-		);
-		assert_eq!("".parse::<BorderType>(), Err(ParseError::VariantNotFound));
-	}
+	fn render_border_types() {
+		// Test all border type renderings in a single test using a helper
+		fn check_border(border_type: BorderType, expected: [&str; 3]) {
+			render_test!(
+				Block::bordered().border_type(border_type),
+				(10, 3),
+				[expected[0], expected[1], expected[2]]
+			);
+		}
 
-	#[test]
-	fn render_plain_border() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::Plain)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "┌────────┐",
-            "│        │",
-            "└────────┘",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_rounded_border() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::Rounded)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "╭────────╮",
-            "│        │",
-            "╰────────╯",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_double_border() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::Double)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "╔════════╗",
-            "║        ║",
-            "╚════════╝",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_quadrant_inside() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::QuadrantInside)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "▗▄▄▄▄▄▄▄▄▖",
-            "▐        ▌",
-            "▝▀▀▀▀▀▀▀▀▘",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_border_quadrant_outside() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::QuadrantOutside)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "▛▀▀▀▀▀▀▀▀▜",
-            "▌        ▐",
-            "▙▄▄▄▄▄▄▄▄▟",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_solid_border() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::Thick)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "┏━━━━━━━━┓",
-            "┃        ┃",
-            "┗━━━━━━━━┛",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_light_double_dashed_border() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::LightDoubleDashed)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "┌╌╌╌╌╌╌╌╌┐",
-            "╎        ╎",
-            "└╌╌╌╌╌╌╌╌┘",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_heavy_double_dashed_border() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::HeavyDoubleDashed)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "┏╍╍╍╍╍╍╍╍┓",
-            "╏        ╏",
-            "┗╍╍╍╍╍╍╍╍┛",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_light_triple_dashed_border() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::LightTripleDashed)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "┌┄┄┄┄┄┄┄┄┐",
-            "┆        ┆",
-            "└┄┄┄┄┄┄┄┄┘",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_heavy_triple_dashed_border() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::HeavyTripleDashed)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "┏┅┅┅┅┅┅┅┅┓",
-            "┇        ┇",
-            "┗┅┅┅┅┅┅┅┅┛",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_light_quadruple_dashed_border() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::LightQuadrupleDashed)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "┌┈┈┈┈┈┈┈┈┐",
-            "┊        ┊",
-            "└┈┈┈┈┈┈┈┈┘",
-        ]);
-		assert_eq!(buffer, expected);
-	}
-
-	#[test]
-	fn render_heavy_quadruple_dashed_border() {
-		let mut buffer = Buffer::empty(Rect::new(0, 0, 10, 3));
-		Block::bordered()
-			.border_type(BorderType::HeavyQuadrupleDashed)
-			.render(buffer.area, &mut buffer);
-		#[rustfmt::skip]
-        let expected = Buffer::with_lines([
-            "┏┉┉┉┉┉┉┉┉┓",
-            "┋        ┋",
-            "┗┉┉┉┉┉┉┉┉┛",
-        ]);
-		assert_eq!(buffer, expected);
+		check_border(BorderType::Plain, ["┌────────┐", "│        │", "└────────┘"]);
+		check_border(BorderType::Rounded, ["╭────────╮", "│        │", "╰────────╯"]);
+		check_border(BorderType::Double, ["╔════════╗", "║        ║", "╚════════╝"]);
+		check_border(BorderType::QuadrantInside, ["▗▄▄▄▄▄▄▄▄▖", "▐        ▌", "▝▀▀▀▀▀▀▀▀▘"]);
+		check_border(BorderType::QuadrantOutside, ["▛▀▀▀▀▀▀▀▀▜", "▌        ▐", "▙▄▄▄▄▄▄▄▄▟"]);
+		check_border(BorderType::Thick, ["┏━━━━━━━━┓", "┃        ┃", "┗━━━━━━━━┛"]);
+		check_border(BorderType::LightDoubleDashed, ["┌╌╌╌╌╌╌╌╌┐", "╎        ╎", "└╌╌╌╌╌╌╌╌┘"]);
+		check_border(BorderType::HeavyDoubleDashed, ["┏╍╍╍╍╍╍╍╍┓", "╏        ╏", "┗╍╍╍╍╍╍╍╍┛"]);
+		check_border(BorderType::LightTripleDashed, ["┌┄┄┄┄┄┄┄┄┐", "┆        ┆", "└┄┄┄┄┄┄┄┄┘"]);
+		check_border(BorderType::HeavyTripleDashed, ["┏┅┅┅┅┅┅┅┅┓", "┇        ┇", "┗┅┅┅┅┅┅┅┅┛"]);
+		check_border(BorderType::LightQuadrupleDashed, ["┌┈┈┈┈┈┈┈┈┐", "┊        ┊", "└┈┈┈┈┈┈┈┈┘"]);
+		check_border(BorderType::HeavyQuadrupleDashed, ["┏┉┉┉┉┉┉┉┉┓", "┋        ┋", "┗┉┉┉┉┉┉┉┉┛"]);
 	}
 
 	#[test]
