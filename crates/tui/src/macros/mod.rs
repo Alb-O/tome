@@ -156,12 +156,12 @@
 //! [`Cell`]: crate::widgets::table::Cell
 //! [`Table`]: crate::widgets::table::Table
 
-extern crate alloc;
-
 mod layout;
 mod line;
 mod row;
 mod span;
+#[cfg(test)]
+mod testing;
 mod text;
 
 // Re-export the core crate to use the types in macros
