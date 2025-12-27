@@ -6,7 +6,9 @@ mod input_handling;
 mod messaging;
 mod navigation;
 mod search;
+mod separator;
 pub mod types;
+mod views;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -16,16 +18,18 @@ use agentfs_sdk::{FileSystem, HostFS};
 use tome_base::Transaction;
 use tome_language::LanguageLoader;
 use tome_manifest::syntax::SyntaxStyles;
-use tome_manifest::{HookContext, Mode, SplitBuffer, emit_hook};
+use tome_manifest::{HookContext, Mode, emit_hook};
 use tome_theme::Theme;
 pub use types::{HistoryEntry, Registers};
 
-use crate::buffer::{Buffer, BufferId, BufferView, Layout, SplitDirection, SplitPath, TerminalId};
+use crate::buffer::{Buffer, BufferId, BufferView, Layout, SplitDirection, TerminalId};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
-use crate::terminal_buffer::TerminalBuffer;
+use crate::terminal::TerminalBuffer;
 use crate::terminal_ipc::TerminalIpc;
 use crate::ui::UiManager;
+
+pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
 
 /// The main editor/workspace structure.
 ///
@@ -156,249 +160,6 @@ pub struct Editor {
 	///
 	/// Lazily initialized when the first terminal is opened.
 	terminal_ipc: Option<TerminalIpc>,
-}
-
-/// State for an active separator drag operation.
-#[derive(Debug, Clone, PartialEq)]
-pub struct DragState {
-	/// Direction of the split being resized.
-	pub direction: SplitDirection,
-	/// Path to the split in the layout tree.
-	pub path: SplitPath,
-}
-
-/// Tracks mouse velocity to determine if hover effects should be suppressed.
-///
-/// Fast mouse movement indicates the user is just passing through, not intending
-/// to interact with separators. We suppress hover effects in this case to reduce
-/// visual noise.
-#[derive(Debug, Clone, Default)]
-pub struct MouseVelocityTracker {
-	/// Last known mouse position.
-	last_position: Option<(u16, u16)>,
-	/// When the last position was recorded.
-	last_time: Option<std::time::Instant>,
-	/// Smoothed velocity in cells per second.
-	velocity: f32,
-}
-
-impl MouseVelocityTracker {
-	/// Velocity threshold above which hover effects are suppressed (cells/second).
-	const FAST_THRESHOLD: f32 = 60.0;
-
-	/// Time after which velocity is considered zero (mouse is idle).
-	const IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(100);
-
-	/// Updates the tracker with a new mouse position and returns current velocity.
-	pub fn update(&mut self, x: u16, y: u16) -> f32 {
-		let now = std::time::Instant::now();
-
-		if let (Some((lx, ly)), Some(lt)) = (self.last_position, self.last_time) {
-			let dx = (x as f32 - lx as f32).abs();
-			let dy = (y as f32 - ly as f32).abs();
-			let distance = (dx * dx + dy * dy).sqrt();
-			let dt = now.duration_since(lt).as_secs_f32();
-
-			if dt > 0.0 && dt < 0.5 {
-				// Ignore stale readings (> 500ms gap)
-				let instant_velocity = distance / dt;
-				// Exponential moving average for smoothing
-				self.velocity = self.velocity * 0.6 + instant_velocity * 0.4;
-			}
-		}
-
-		self.last_position = Some((x, y));
-		self.last_time = Some(now);
-		self.velocity
-	}
-
-	/// Returns true if the mouse is moving fast enough to suppress hover effects.
-	///
-	/// Accounts for idle time - if mouse hasn't moved recently, velocity is zero.
-	pub fn is_fast(&self) -> bool {
-		// If mouse has been idle, velocity is effectively zero
-		if let Some(lt) = self.last_time
-			&& lt.elapsed() > Self::IDLE_TIMEOUT
-		{
-			return false;
-		}
-		self.velocity > Self::FAST_THRESHOLD
-	}
-
-	/// Returns the current smoothed velocity, accounting for idle time.
-	pub fn velocity(&self) -> f32 {
-		if let Some(lt) = self.last_time
-			&& lt.elapsed() > Self::IDLE_TIMEOUT
-		{
-			return 0.0;
-		}
-		self.velocity
-	}
-}
-
-/// Animation state for separator hover effects.
-///
-/// Uses a `ToggleTween<f32>` internally for smooth fade in/out transitions.
-#[derive(Debug, Clone)]
-pub struct SeparatorHoverAnimation {
-	/// The separator rectangle being animated.
-	pub rect: tome_tui::layout::Rect,
-	/// The hover intensity tween (0.0 = unhovered, 1.0 = fully hovered).
-	tween: tome_tui::animation::ToggleTween<f32>,
-}
-
-impl SeparatorHoverAnimation {
-	/// Duration of the hover fade animation.
-	const FADE_DURATION: std::time::Duration = std::time::Duration::from_millis(120);
-
-	/// Creates a new hover animation for the given separator.
-	pub fn new(rect: tome_tui::layout::Rect, hovering: bool) -> Self {
-		let mut tween = tome_tui::animation::ToggleTween::new(0.0f32, 1.0f32, Self::FADE_DURATION)
-			.with_easing(tome_tui::animation::Easing::EaseOut);
-		tween.set_active(hovering);
-		Self { rect, tween }
-	}
-
-	/// Creates a new hover animation starting at a specific intensity.
-	///
-	/// This is useful for creating fade-out animations that should start
-	/// from a fully hovered state (intensity 1.0).
-	pub fn new_at_intensity(rect: tome_tui::layout::Rect, intensity: f32, hovering: bool) -> Self {
-		let tween = tome_tui::animation::ToggleTween::new_at(
-			0.0f32,
-			1.0f32,
-			Self::FADE_DURATION,
-			intensity,
-			hovering,
-		)
-		.with_easing(tome_tui::animation::Easing::EaseOut);
-		Self { rect, tween }
-	}
-
-	/// Returns whether we're animating toward hovered state.
-	pub fn hovering(&self) -> bool {
-		self.tween.is_active()
-	}
-
-	/// Sets the hover state, returning true if state changed.
-	pub fn set_hovering(&mut self, hovering: bool) -> bool {
-		self.tween.set_active(hovering)
-	}
-
-	/// Returns the effective hover intensity (0.0 = unhovered, 1.0 = fully hovered).
-	pub fn intensity(&self) -> f32 {
-		self.tween.value()
-	}
-
-	/// Returns true if the animation is complete.
-	pub fn is_complete(&self) -> bool {
-		self.tween.is_complete()
-	}
-
-	/// Returns true if the animation is still in progress.
-	pub fn needs_redraw(&self) -> bool {
-		self.tween.is_running()
-	}
-}
-
-// Buffer and terminal access - provides convenient access to the focused view
-impl Editor {
-	/// Returns a reference to the currently focused text buffer.
-	///
-	/// Panics if the focused view is a terminal.
-	#[inline]
-	pub fn buffer(&self) -> &Buffer {
-		match self.focused_view {
-			BufferView::Text(id) => self.buffers.get(&id).expect("focused buffer must exist"),
-			BufferView::Terminal(_) => panic!("focused view is a terminal, not a text buffer"),
-		}
-	}
-
-	/// Returns a mutable reference to the currently focused text buffer.
-	///
-	/// Panics if the focused view is a terminal.
-	#[inline]
-	pub fn buffer_mut(&mut self) -> &mut Buffer {
-		match self.focused_view {
-			BufferView::Text(id) => self
-				.buffers
-				.get_mut(&id)
-				.expect("focused buffer must exist"),
-			BufferView::Terminal(_) => panic!("focused view is a terminal, not a text buffer"),
-		}
-	}
-
-	/// Returns the currently focused view.
-	pub fn focused_view(&self) -> BufferView {
-		self.focused_view
-	}
-
-	/// Returns true if the focused view is a text buffer.
-	pub fn is_text_focused(&self) -> bool {
-		self.focused_view.is_text()
-	}
-
-	/// Returns true if the focused view is a terminal.
-	pub fn is_terminal_focused(&self) -> bool {
-		self.focused_view.is_terminal()
-	}
-
-	/// Returns the ID of the focused text buffer, if one is focused.
-	pub fn focused_buffer_id(&self) -> Option<BufferId> {
-		self.focused_view.as_text()
-	}
-
-	/// Returns the ID of the focused terminal, if one is focused.
-	pub fn focused_terminal_id(&self) -> Option<TerminalId> {
-		self.focused_view.as_terminal()
-	}
-
-	/// Returns all text buffer IDs.
-	pub fn buffer_ids(&self) -> Vec<BufferId> {
-		self.buffers.keys().copied().collect()
-	}
-
-	/// Returns all terminal IDs.
-	pub fn terminal_ids(&self) -> Vec<TerminalId> {
-		self.terminals.keys().copied().collect()
-	}
-
-	/// Returns a reference to a specific buffer by ID.
-	pub fn get_buffer(&self, id: BufferId) -> Option<&Buffer> {
-		self.buffers.get(&id)
-	}
-
-	/// Returns a mutable reference to a specific buffer by ID.
-	pub fn get_buffer_mut(&mut self, id: BufferId) -> Option<&mut Buffer> {
-		self.buffers.get_mut(&id)
-	}
-
-	/// Returns a reference to a specific terminal by ID.
-	pub fn get_terminal(&self, id: TerminalId) -> Option<&TerminalBuffer> {
-		self.terminals.get(&id)
-	}
-
-	/// Returns a mutable reference to a specific terminal by ID.
-	pub fn get_terminal_mut(&mut self, id: TerminalId) -> Option<&mut TerminalBuffer> {
-		self.terminals.get_mut(&id)
-	}
-
-	/// Returns the number of open text buffers.
-	pub fn buffer_count(&self) -> usize {
-		self.buffers.len()
-	}
-
-	/// Returns the number of open terminals.
-	pub fn terminal_count(&self) -> usize {
-		self.terminals.len()
-	}
-
-	/// Returns the cursor style for the focused terminal, if any.
-	pub fn focused_terminal_cursor_style(&self) -> Option<tome_manifest::SplitCursorStyle> {
-		let terminal_id = self.focused_terminal_id()?;
-		let terminal = self.get_terminal(terminal_id)?;
-		terminal.cursor().map(|c| c.style)
-	}
 }
 
 impl tome_manifest::editor_ctx::FileOpsAccess for Editor {
