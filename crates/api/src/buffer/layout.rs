@@ -8,6 +8,16 @@
 
 use super::BufferId;
 
+/// Path to a split in the layout tree.
+///
+/// Each element indicates which branch to take: `false` for first child,
+/// `true` for second child. An empty path refers to the root split.
+///
+/// This provides a stable way to identify splits that doesn't change
+/// when ratios are adjusted during resize operations.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SplitPath(pub Vec<bool>);
+
 /// Direction of a split.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SplitDirection {
@@ -500,6 +510,235 @@ impl Layout {
 		None
 	}
 
+	/// Finds the separator and its path at the given screen coordinates.
+	///
+	/// Returns the separator's direction, rectangle, and the path to its split.
+	/// The path is used to identify the split for resize operations.
+	pub fn separator_with_path_at_position(
+		&self,
+		area: ratatui::layout::Rect,
+		x: u16,
+		y: u16,
+	) -> Option<(SplitDirection, ratatui::layout::Rect, SplitPath)> {
+		self.find_separator_with_path(area, x, y, SplitPath::default())
+	}
+
+	/// Recursive helper to find separator with its path.
+	fn find_separator_with_path(
+		&self,
+		area: ratatui::layout::Rect,
+		x: u16,
+		y: u16,
+		current_path: SplitPath,
+	) -> Option<(SplitDirection, ratatui::layout::Rect, SplitPath)> {
+		match self {
+			Layout::Single(_) => None,
+			Layout::Split {
+				direction,
+				ratio,
+				first,
+				second,
+			} => {
+				let (first_area, second_area, sep_rect) =
+					Self::compute_split_areas(area, *direction, *ratio);
+
+				// Check if point is on this separator
+				if x >= sep_rect.x
+					&& x < sep_rect.x + sep_rect.width
+					&& y >= sep_rect.y
+					&& y < sep_rect.y + sep_rect.height
+				{
+					return Some((*direction, sep_rect, current_path));
+				}
+
+				// Recurse into first child
+				let mut first_path = current_path.clone();
+				first_path.0.push(false);
+				if let Some(result) = first.find_separator_with_path(first_area, x, y, first_path) {
+					return Some(result);
+				}
+
+				// Recurse into second child
+				let mut second_path = current_path;
+				second_path.0.push(true);
+				second.find_separator_with_path(second_area, x, y, second_path)
+			}
+		}
+	}
+
+	/// Resizes the split at the given path.
+	///
+	/// The new ratio is calculated based on the mouse position relative to
+	/// the split's current area.
+	///
+	/// Returns true if a resize was performed.
+	pub fn resize_at_path(
+		&mut self,
+		area: ratatui::layout::Rect,
+		path: &SplitPath,
+		mouse_x: u16,
+		mouse_y: u16,
+	) -> bool {
+		self.do_resize_at_path(area, &path.0, mouse_x, mouse_y)
+	}
+
+	/// Recursive helper to find and resize the split by path.
+	fn do_resize_at_path(
+		&mut self,
+		area: ratatui::layout::Rect,
+		path: &[bool],
+		mouse_x: u16,
+		mouse_y: u16,
+	) -> bool {
+		match self {
+			Layout::Single(_) => false,
+			Layout::Split {
+				direction,
+				ratio,
+				first,
+				second,
+			} => {
+				// If path is empty, this is the target split
+				if path.is_empty() {
+					// Calculate new ratio based on mouse position
+					let new_ratio = match direction {
+						SplitDirection::Horizontal => {
+							// Mouse x position relative to area start
+							let relative_x = mouse_x.saturating_sub(area.x);
+							// Clamp to valid range (leave room for separator)
+							let clamped = relative_x.clamp(1, area.width.saturating_sub(2));
+							clamped as f32 / area.width as f32
+						}
+						SplitDirection::Vertical => {
+							// Mouse y position relative to area start
+							let relative_y = mouse_y.saturating_sub(area.y);
+							// Clamp to valid range
+							let clamped = relative_y.clamp(1, area.height.saturating_sub(2));
+							clamped as f32 / area.height as f32
+						}
+					};
+
+					// Clamp ratio to reasonable bounds
+					*ratio = new_ratio.clamp(0.1, 0.9);
+					return true;
+				}
+
+				// Follow the path
+				let (first_area, second_area, _) =
+					Self::compute_split_areas(area, *direction, *ratio);
+				let remaining_path = &path[1..];
+
+				if path[0] {
+					second.do_resize_at_path(second_area, remaining_path, mouse_x, mouse_y)
+				} else {
+					first.do_resize_at_path(first_area, remaining_path, mouse_x, mouse_y)
+				}
+			}
+		}
+	}
+
+	/// Gets the current separator rect for a split at the given path.
+	///
+	/// Used to determine which separator to highlight during drag.
+	pub fn separator_rect_at_path(
+		&self,
+		area: ratatui::layout::Rect,
+		path: &SplitPath,
+	) -> Option<(SplitDirection, ratatui::layout::Rect)> {
+		self.do_get_separator_at_path(area, &path.0)
+	}
+
+	/// Recursive helper to get separator rect by path.
+	fn do_get_separator_at_path(
+		&self,
+		area: ratatui::layout::Rect,
+		path: &[bool],
+	) -> Option<(SplitDirection, ratatui::layout::Rect)> {
+		match self {
+			Layout::Single(_) => None,
+			Layout::Split {
+				direction,
+				ratio,
+				first,
+				second,
+			} => {
+				let (first_area, second_area, sep_rect) =
+					Self::compute_split_areas(area, *direction, *ratio);
+
+				// If path is empty, return this separator
+				if path.is_empty() {
+					return Some((*direction, sep_rect));
+				}
+
+				// Follow the path
+				let remaining_path = &path[1..];
+				if path[0] {
+					second.do_get_separator_at_path(second_area, remaining_path)
+				} else {
+					first.do_get_separator_at_path(first_area, remaining_path)
+				}
+			}
+		}
+	}
+
+	/// Helper to compute split areas (extracted for reuse).
+	fn compute_split_areas(
+		area: ratatui::layout::Rect,
+		direction: SplitDirection,
+		ratio: f32,
+	) -> (
+		ratatui::layout::Rect,
+		ratatui::layout::Rect,
+		ratatui::layout::Rect,
+	) {
+		match direction {
+			SplitDirection::Horizontal => {
+				let first_width = ((area.width as f32) * ratio).round() as u16;
+				let first_rect = ratatui::layout::Rect {
+					x: area.x,
+					y: area.y,
+					width: first_width,
+					height: area.height,
+				};
+				let second_rect = ratatui::layout::Rect {
+					x: area.x + first_width + 1,
+					y: area.y,
+					width: area.width.saturating_sub(first_width).saturating_sub(1),
+					height: area.height,
+				};
+				let sep = ratatui::layout::Rect {
+					x: area.x + first_width,
+					y: area.y,
+					width: 1,
+					height: area.height,
+				};
+				(first_rect, second_rect, sep)
+			}
+			SplitDirection::Vertical => {
+				let first_height = ((area.height as f32) * ratio).round() as u16;
+				let first_rect = ratatui::layout::Rect {
+					x: area.x,
+					y: area.y,
+					width: area.width,
+					height: first_height,
+				};
+				let second_rect = ratatui::layout::Rect {
+					x: area.x,
+					y: area.y + first_height + 1,
+					width: area.width,
+					height: area.height.saturating_sub(first_height).saturating_sub(1),
+				};
+				let sep = ratatui::layout::Rect {
+					x: area.x,
+					y: area.y + first_height,
+					width: area.width,
+					height: 1,
+				};
+				(first_rect, second_rect, sep)
+			}
+		}
+	}
+
 	/// Returns the separator positions for rendering.
 	///
 	/// Each separator is represented as (direction, position) where position
@@ -516,52 +755,8 @@ impl Layout {
 				first,
 				second,
 			} => {
-				let (first_area, second_area, sep_rect) = match direction {
-					SplitDirection::Horizontal => {
-						let first_width = ((area.width as f32) * ratio).round() as u16;
-						let first_rect = ratatui::layout::Rect {
-							x: area.x,
-							y: area.y,
-							width: first_width,
-							height: area.height,
-						};
-						let second_rect = ratatui::layout::Rect {
-							x: area.x + first_width + 1,
-							y: area.y,
-							width: area.width.saturating_sub(first_width).saturating_sub(1),
-							height: area.height,
-						};
-						let sep = ratatui::layout::Rect {
-							x: area.x + first_width,
-							y: area.y,
-							width: 1,
-							height: area.height,
-						};
-						(first_rect, second_rect, sep)
-					}
-					SplitDirection::Vertical => {
-						let first_height = ((area.height as f32) * ratio).round() as u16;
-						let first_rect = ratatui::layout::Rect {
-							x: area.x,
-							y: area.y,
-							width: area.width,
-							height: first_height,
-						};
-						let second_rect = ratatui::layout::Rect {
-							x: area.x,
-							y: area.y + first_height + 1,
-							width: area.width,
-							height: area.height.saturating_sub(first_height).saturating_sub(1),
-						};
-						let sep = ratatui::layout::Rect {
-							x: area.x,
-							y: area.y + first_height,
-							width: area.width,
-							height: 1,
-						};
-						(first_rect, second_rect, sep)
-					}
-				};
+				let (first_area, second_area, sep_rect) =
+					Self::compute_split_areas(area, *direction, *ratio);
 
 				let mut separators = vec![(*direction, sep_rect.x, sep_rect)];
 				separators.extend(first.separator_positions(first_area));
