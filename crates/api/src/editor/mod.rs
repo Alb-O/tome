@@ -20,7 +20,7 @@ use tome_manifest::{HookContext, Mode, emit_hook};
 use tome_theme::Theme;
 pub use types::{HistoryEntry, Message, MessageKind, Registers};
 
-use crate::buffer::{Buffer, BufferId, BufferView, Layout, SplitDirection, TerminalId};
+use crate::buffer::{Buffer, BufferId, BufferView, Layout, SplitDirection, SplitPath, TerminalId};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
 use crate::render::{Notifications, Overflow};
@@ -138,6 +138,22 @@ pub struct Editor {
 	/// Contains the separator's direction and screen rectangle when the mouse
 	/// is hovering over a split boundary.
 	pub hovered_separator: Option<(SplitDirection, ratatui::layout::Rect)>,
+
+	/// Active separator drag state for resizing splits.
+	///
+	/// When dragging a separator, this contains the separator's direction,
+	/// its current rectangle, and the parent split's area (needed to calculate
+	/// the new ratio based on mouse position).
+	pub dragging_separator: Option<DragState>,
+}
+
+/// State for an active separator drag operation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DragState {
+	/// Direction of the split being resized.
+	pub direction: SplitDirection,
+	/// Path to the split in the layout tree.
+	pub path: SplitPath,
 }
 
 // Buffer and terminal access - provides convenient access to the focused view
@@ -409,6 +425,7 @@ impl Editor {
 			language_loader,
 			style_overlays: StyleOverlays::new(),
 			hovered_separator: None,
+			dragging_separator: None,
 		}
 	}
 

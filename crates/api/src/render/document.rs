@@ -142,18 +142,30 @@ impl Editor {
 
 		// Render separators between splits
 		let separators = self.layout.separator_positions(doc_area);
+
+		// Check for hovered separator
 		let hovered_rect = self.hovered_separator.map(|(_, rect)| rect);
 
+		// Get the current rect of the separator being dragged (if any)
+		let dragging_rect = self.dragging_separator.as_ref().and_then(|drag_state| {
+			self.layout
+				.separator_rect_at_path(doc_area, &drag_state.path)
+				.map(|(_, rect)| rect)
+		});
+
 		for (direction, _pos, sep_rect) in separators {
+			// Highlight if hovered or being dragged
 			let is_hovered = hovered_rect == Some(sep_rect);
+			let is_dragging = dragging_rect == Some(sep_rect);
+			let is_highlighted = is_hovered || is_dragging;
 
 			let sep_char = match direction {
 				SplitDirection::Horizontal => "\u{2502}", // Vertical line │
 				SplitDirection::Vertical => "\u{2500}",   // Horizontal line ─
 			};
 
-			// Use a highlighted style when hovered
-			let sep_style = if is_hovered {
+			// Use a highlighted style when hovered or dragging
+			let sep_style = if is_highlighted {
 				Style::default()
 					.fg(self.theme.colors.ui.cursor_fg.into())
 					.bg(self.theme.colors.ui.selection_bg.into())

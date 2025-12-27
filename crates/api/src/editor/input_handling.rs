@@ -4,7 +4,7 @@ use tome_input::KeyResult;
 use tome_manifest::{Mode, SplitBuffer, SplitKey, SplitKeyCode, SplitModifiers};
 
 use crate::buffer::BufferView;
-use crate::editor::Editor;
+use crate::editor::{DragState, Editor};
 
 impl Editor {
 	pub async fn handle_key(&mut self, key: termina::event::KeyEvent) -> bool {
@@ -287,11 +287,12 @@ impl Editor {
 	/// Handles mouse events within the document area (where splits live).
 	///
 	/// This method:
-	/// 1. Checks if mouse is over a separator (for hover/resize feedback)
-	/// 2. Determines which view the mouse is over
-	/// 3. Focuses that view if it's different from the current focus
-	/// 4. Translates screen coordinates to view-local coordinates
-	/// 5. Dispatches the mouse event to the appropriate handler
+	/// 1. Handles active separator drag (resize) operations
+	/// 2. Checks if mouse is over a separator (for hover/resize feedback)
+	/// 3. Determines which view the mouse is over
+	/// 4. Focuses that view if it's different from the current focus
+	/// 5. Translates screen coordinates to view-local coordinates
+	/// 6. Dispatches the mouse event to the appropriate handler
 	pub(crate) async fn handle_mouse_in_doc_area(
 		&mut self,
 		mouse: termina::event::MouseEvent,
@@ -302,15 +303,39 @@ impl Editor {
 		let mouse_x = mouse.column;
 		let mouse_y = mouse.row;
 
-		// Check if mouse is over a separator
-		let separator = self.layout.separator_at_position(doc_area, mouse_x, mouse_y);
+		// Handle active drag operation
+		if let Some(ref drag_state) = self.dragging_separator {
+			match mouse.kind {
+				MouseEventKind::Drag(_) => {
+					// Continue resizing - use path to identify the split
+					let path = drag_state.path.clone();
+					self.layout.resize_at_path(doc_area, &path, mouse_x, mouse_y);
+					self.needs_redraw = true;
+					return false;
+				}
+				MouseEventKind::Up(_) => {
+					// End drag operation
+					self.dragging_separator = None;
+					self.hovered_separator = None;
+					self.needs_redraw = true;
+					return false;
+				}
+				_ => {}
+			}
+		}
 
-		// Update hover state based on mouse event type
+		// Check if mouse is over a separator
+		let separator_info =
+			self.layout
+				.separator_with_path_at_position(doc_area, mouse_x, mouse_y);
+
+		// Update hover/drag state based on mouse event type
 		match mouse.kind {
 			MouseEventKind::Moved => {
 				// Update hover state
 				let old_hover = self.hovered_separator.take();
-				self.hovered_separator = separator;
+				self.hovered_separator =
+					separator_info.as_ref().map(|(direction, sep_rect, _)| (*direction, *sep_rect));
 
 				// Request redraw if hover state changed
 				if old_hover != self.hovered_separator {
@@ -322,8 +347,25 @@ impl Editor {
 					return false;
 				}
 			}
-			MouseEventKind::Down(_) | MouseEventKind::Drag(_) => {
-				// Clear hover when clicking/dragging (will be used for resize later)
+			MouseEventKind::Down(_) => {
+				// Start drag if clicking on a separator
+				if let Some((direction, separator_rect, path)) = separator_info {
+					self.dragging_separator = Some(DragState {
+						direction,
+						path,
+					});
+					self.hovered_separator = Some((direction, separator_rect));
+					self.needs_redraw = true;
+					return false;
+				}
+				// Clear hover when clicking elsewhere
+				if self.hovered_separator.is_some() {
+					self.hovered_separator = None;
+					self.needs_redraw = true;
+				}
+			}
+			MouseEventKind::Drag(_) => {
+				// Clear hover when dragging (not on separator)
 				if self.hovered_separator.is_some() {
 					self.hovered_separator = None;
 					self.needs_redraw = true;
@@ -331,7 +373,7 @@ impl Editor {
 			}
 			_ => {
 				// For other events (scroll, release), clear hover if not on separator
-				if separator.is_none() && self.hovered_separator.is_some() {
+				if separator_info.is_none() && self.hovered_separator.is_some() {
 					self.hovered_separator = None;
 					self.needs_redraw = true;
 				}
