@@ -303,6 +303,65 @@ impl From<Style> for ratatui::style::Style {
 	}
 }
 
+impl Color {
+	/// Converts the color to RGB values if possible.
+	///
+	/// Returns approximate RGB values for ANSI colors.
+	pub const fn to_rgb(self) -> Option<(u8, u8, u8)> {
+		match self {
+			Color::Black => Some((0, 0, 0)),
+			Color::Red => Some((205, 49, 49)),
+			Color::Green => Some((13, 188, 121)),
+			Color::Yellow => Some((229, 229, 16)),
+			Color::Blue => Some((36, 114, 200)),
+			Color::Magenta => Some((188, 63, 188)),
+			Color::Cyan => Some((17, 168, 205)),
+			Color::Gray => Some((128, 128, 128)),
+			Color::DarkGray => Some((102, 102, 102)),
+			Color::LightRed => Some((241, 76, 76)),
+			Color::LightGreen => Some((35, 209, 139)),
+			Color::LightYellow => Some((245, 245, 67)),
+			Color::LightBlue => Some((59, 142, 234)),
+			Color::LightMagenta => Some((214, 112, 214)),
+			Color::LightCyan => Some((41, 184, 219)),
+			Color::White => Some((229, 229, 229)),
+			Color::Rgb(r, g, b) => Some((r, g, b)),
+			// Indexed colors would need a palette lookup
+			Color::Indexed(_) | Color::Reset => None,
+		}
+	}
+
+	/// Linearly interpolate between two colors.
+	///
+	/// `t=0.0` returns `self`, `t=1.0` returns `target`.
+	/// For RGB colors, performs component-wise interpolation.
+	/// For ANSI colors, converts to RGB first.
+	/// For non-interpolatable colors (Indexed, Reset), snaps at midpoint.
+	pub fn lerp(self, target: Self, t: f32) -> Self {
+		let t = t.clamp(0.0, 1.0);
+		match (self.to_rgb(), target.to_rgb()) {
+			(Some((r1, g1, b1)), Some((r2, g2, b2))) => {
+				let lerp_u8 = |a: u8, b: u8| -> u8 {
+					(a as f32 + (b as f32 - a as f32) * t).round() as u8
+				};
+				Color::Rgb(lerp_u8(r1, r2), lerp_u8(g1, g2), lerp_u8(b1, b2))
+			}
+			_ => {
+				if t > 0.5 { target } else { self }
+			}
+		}
+	}
+
+	/// Blend this color with another using alpha.
+	///
+	/// `alpha=0.0` returns `other`, `alpha=1.0` returns `self`.
+	/// This is equivalent to `other.lerp(self, alpha)`.
+	#[inline]
+	pub fn blend(self, other: Self, alpha: f32) -> Self {
+		other.lerp(self, alpha)
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -334,5 +393,61 @@ mod tests {
 		let ratatui_color: ratatui::style::Color = color.into();
 		let back: Color = ratatui_color.into();
 		assert_eq!(color, back);
+	}
+
+	#[test]
+	fn test_to_rgb() {
+		assert_eq!(Color::Black.to_rgb(), Some((0, 0, 0)));
+		assert_eq!(Color::Rgb(100, 150, 200).to_rgb(), Some((100, 150, 200)));
+		assert_eq!(Color::Indexed(42).to_rgb(), None);
+		assert_eq!(Color::Reset.to_rgb(), None);
+	}
+
+	#[test]
+	fn test_color_lerp_rgb() {
+		let black = Color::Rgb(0, 0, 0);
+		let white = Color::Rgb(255, 255, 255);
+
+		assert_eq!(black.lerp(white, 0.0), Color::Rgb(0, 0, 0));
+		assert_eq!(black.lerp(white, 0.5), Color::Rgb(128, 128, 128));
+		assert_eq!(black.lerp(white, 1.0), Color::Rgb(255, 255, 255));
+	}
+
+	#[test]
+	fn test_color_lerp_ansi() {
+		// ANSI colors are converted to RGB for lerping
+		let black = Color::Black;
+		let white = Color::White;
+		let mid = black.lerp(white, 0.5);
+
+		// Result should be RGB (midpoint between approximate RGB values)
+		match mid {
+			Color::Rgb(_, _, _) => {}
+			_ => panic!("Expected RGB color from lerping ANSI colors"),
+		}
+	}
+
+	#[test]
+	fn test_color_lerp_clamps() {
+		let a = Color::Rgb(0, 0, 0);
+		let b = Color::Rgb(100, 100, 100);
+
+		// t < 0 should clamp to 0
+		assert_eq!(a.lerp(b, -0.5), Color::Rgb(0, 0, 0));
+		// t > 1 should clamp to 1
+		assert_eq!(a.lerp(b, 1.5), Color::Rgb(100, 100, 100));
+	}
+
+	#[test]
+	fn test_color_blend() {
+		let fg = Color::Rgb(255, 255, 255);
+		let bg = Color::Rgb(0, 0, 0);
+
+		// alpha=1.0 returns fg
+		assert_eq!(fg.blend(bg, 1.0), Color::Rgb(255, 255, 255));
+		// alpha=0.0 returns bg
+		assert_eq!(fg.blend(bg, 0.0), Color::Rgb(0, 0, 0));
+		// alpha=0.5 returns midpoint
+		assert_eq!(fg.blend(bg, 0.5), Color::Rgb(128, 128, 128));
 	}
 }

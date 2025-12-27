@@ -521,32 +521,18 @@ impl Editor {
 		old: Option<(SplitDirection, ratatui::layout::Rect)>,
 		new: Option<(SplitDirection, ratatui::layout::Rect)>,
 	) {
-		let now = std::time::Instant::now();
-
 		match (old, new) {
 			(None, Some((_, rect))) => {
 				// Started hovering - animate in
-				self.separator_hover_animation = Some(SeparatorHoverAnimation {
-					rect,
-					state_change: now,
-					hovering: true,
-				});
+				self.separator_hover_animation = Some(SeparatorHoverAnimation::new(rect, true));
 			}
 			(Some((_, old_rect)), None) => {
 				// Stopped hovering - animate out
-				self.separator_hover_animation = Some(SeparatorHoverAnimation {
-					rect: old_rect,
-					state_change: now,
-					hovering: false,
-				});
+				self.separator_hover_animation = Some(SeparatorHoverAnimation::new(old_rect, false));
 			}
 			(Some((_, old_rect)), Some((_, new_rect))) if old_rect != new_rect => {
 				// Moved to a different separator - start fresh animation
-				self.separator_hover_animation = Some(SeparatorHoverAnimation {
-					rect: new_rect,
-					state_change: now,
-					hovering: true,
-				});
+				self.separator_hover_animation = Some(SeparatorHoverAnimation::new(new_rect, true));
 			}
 			_ => {
 				// Same separator or both None - no change needed

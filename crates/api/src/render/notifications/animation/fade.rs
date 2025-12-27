@@ -1,7 +1,6 @@
+use ratatui::animation::{Animatable, ease_in_quad, ease_out_quad};
 use ratatui::prelude::*;
 use tome_manifest::notifications::AnimationPhase;
-
-use crate::render::notifications::utils::{color_to_rgb, ease_in_quad, ease_out_quad, lerp};
 
 /// Target color when fully faded out (black).
 const FADED_OUT_COLOR: Option<Color> = Some(Color::Black);
@@ -43,34 +42,18 @@ pub fn interpolate_color(
 	is_fading_in: bool,
 ) -> Option<Color> {
 	let linear_progress = progress.clamp(0.0, 1.0);
-
-	if let (Some((r1, g1, b1)), Some((r2, g2, b2))) = (color_to_rgb(from), color_to_rgb(to)) {
-		let eased_progress = if is_fading_in {
-			ease_out_quad(linear_progress)
-		} else {
-			ease_in_quad(linear_progress)
-		};
-
-		let r_f = lerp(r1 as f32, r2 as f32, eased_progress);
-		let g_f = lerp(g1 as f32, g2 as f32, eased_progress);
-		let b_f = lerp(b1 as f32, b2 as f32, eased_progress);
-
-		let min_r = r1.min(r2);
-		let max_r = r1.max(r2);
-		let min_g = g1.min(g2);
-		let max_g = g1.max(g2);
-		let min_b = b1.min(b2);
-		let max_b = b1.max(b2);
-
-		let r = (r_f.round() as u8).clamp(min_r, max_r);
-		let g = (g_f.round() as u8).clamp(min_g, max_g);
-		let b = (b_f.round() as u8).clamp(min_b, max_b);
-
-		Some(Color::Rgb(r, g, b))
-	} else if linear_progress < 0.5 {
-		from
+	let eased_progress = if is_fading_in {
+		ease_out_quad(linear_progress)
 	} else {
-		to
+		ease_in_quad(linear_progress)
+	};
+
+	match (from, to) {
+		(Some(from_color), Some(to_color)) => Some(from_color.lerp(&to_color, eased_progress)),
+		(Some(_), None) | (None, Some(_)) => {
+			if linear_progress < 0.5 { from } else { to }
+		}
+		(None, None) => None,
 	}
 }
 

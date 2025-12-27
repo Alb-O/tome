@@ -480,6 +480,107 @@ impl Color {
 
 		Self::Rgb(red, green, blue)
 	}
+
+	/// Converts the color to RGB components.
+	///
+	/// For ANSI colors, returns the standard VGA palette values.
+	/// For `Reset`, returns black (0, 0, 0).
+	/// For `Indexed` colors 0-15, returns standard ANSI colors.
+	/// For `Indexed` colors 16-231, returns the 6x6x6 color cube values.
+	/// For `Indexed` colors 232-255, returns grayscale values.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use ratatui::style::Color;
+	///
+	/// assert_eq!(Color::Red.to_rgb(), (128, 0, 0));
+	/// assert_eq!(Color::Rgb(255, 128, 0).to_rgb(), (255, 128, 0));
+	/// ```
+	pub const fn to_rgb(self) -> (u8, u8, u8) {
+		match self {
+			Color::Reset => (0, 0, 0),
+			Color::Black => (0, 0, 0),
+			Color::Red => (128, 0, 0),
+			Color::Green => (0, 128, 0),
+			Color::Yellow => (128, 128, 0),
+			Color::Blue => (0, 0, 128),
+			Color::Magenta => (128, 0, 128),
+			Color::Cyan => (0, 128, 128),
+			Color::Gray => (192, 192, 192),
+			Color::DarkGray => (128, 128, 128),
+			Color::LightRed => (255, 0, 0),
+			Color::LightGreen => (0, 255, 0),
+			Color::LightYellow => (255, 255, 0),
+			Color::LightBlue => (0, 0, 255),
+			Color::LightMagenta => (255, 0, 255),
+			Color::LightCyan => (0, 255, 255),
+			Color::White => (255, 255, 255),
+			Color::Rgb(r, g, b) => (r, g, b),
+			Color::Indexed(idx) => indexed_to_rgb(idx),
+		}
+	}
+}
+
+/// Converts an indexed color (0-255) to RGB.
+const fn indexed_to_rgb(idx: u8) -> (u8, u8, u8) {
+	match idx {
+		// Standard ANSI colors (0-15)
+		0 => (0, 0, 0),
+		1 => (128, 0, 0),
+		2 => (0, 128, 0),
+		3 => (128, 128, 0),
+		4 => (0, 0, 128),
+		5 => (128, 0, 128),
+		6 => (0, 128, 128),
+		7 => (192, 192, 192),
+		8 => (128, 128, 128),
+		9 => (255, 0, 0),
+		10 => (0, 255, 0),
+		11 => (255, 255, 0),
+		12 => (0, 0, 255),
+		13 => (255, 0, 255),
+		14 => (0, 255, 255),
+		15 => (255, 255, 255),
+		// 6x6x6 color cube (16-231)
+		// Each channel maps to: 0, 95, 135, 175, 215, 255
+		16..=231 => {
+			let idx = idx - 16;
+			let ri = idx / 36;
+			let gi = (idx % 36) / 6;
+			let bi = idx % 6;
+			let r = if ri == 0 { 0 } else { 55 + ri * 40 };
+			let g = if gi == 0 { 0 } else { 55 + gi * 40 };
+			let b = if bi == 0 { 0 } else { 55 + bi * 40 };
+			(r, g, b)
+		}
+		// Grayscale (232-255)
+		232..=255 => {
+			let gray = 8 + (idx - 232) * 10;
+			(gray, gray, gray)
+		}
+	}
+}
+
+#[cfg(feature = "std")]
+impl crate::animation::Animatable for Color {
+	/// Linearly interpolate between two colors.
+	///
+	/// Converts both colors to RGB, interpolates each component,
+	/// and returns a new `Color::Rgb`.
+	fn lerp(&self, target: &Self, t: f32) -> Self {
+		let (r1, g1, b1) = self.to_rgb();
+		let (r2, g2, b2) = target.to_rgb();
+
+		// Use the Animatable impl for u8 directly
+		let t = t.clamp(0.0, 1.0);
+		let lerp_u8 = |a: u8, b: u8| -> u8 {
+			let result = a as f32 + (b as f32 - a as f32) * t;
+			result.round() as u8
+		};
+
+		Color::Rgb(lerp_u8(r1, r2), lerp_u8(g1, g2), lerp_u8(b1, b2))
+	}
 }
 
 impl From<[u8; 3]> for Color {

@@ -240,47 +240,51 @@ impl MouseVelocityTracker {
 }
 
 /// Animation state for separator hover effects.
+///
+/// Uses a `ToggleTween<f32>` internally for smooth fade in/out transitions.
 #[derive(Debug, Clone)]
 pub struct SeparatorHoverAnimation {
 	/// The separator rectangle being animated.
 	pub rect: ratatui::layout::Rect,
-	/// When the hover state changed (started or ended).
-	pub state_change: std::time::Instant,
-	/// Whether we're animating toward hovered (true) or unhovered (false).
-	pub hovering: bool,
+	/// The hover intensity tween (0.0 = unhovered, 1.0 = fully hovered).
+	tween: ratatui::animation::ToggleTween<f32>,
 }
 
 impl SeparatorHoverAnimation {
 	/// Duration of the hover fade animation.
 	const FADE_DURATION: std::time::Duration = std::time::Duration::from_millis(120);
 
-	/// Returns animation progress (0.0 = start, 1.0 = complete).
-	pub fn progress(&self) -> f32 {
-		let elapsed = self.state_change.elapsed().as_secs_f32();
-		let duration = Self::FADE_DURATION.as_secs_f32();
-		(elapsed / duration).min(1.0)
+	/// Creates a new hover animation for the given separator.
+	pub fn new(rect: ratatui::layout::Rect, hovering: bool) -> Self {
+		let mut tween = ratatui::animation::ToggleTween::new(0.0f32, 1.0f32, Self::FADE_DURATION)
+			.with_easing(ratatui::animation::Easing::EaseOut);
+		tween.set_active(hovering);
+		Self { rect, tween }
+	}
+
+	/// Returns whether we're animating toward hovered state.
+	pub fn hovering(&self) -> bool {
+		self.tween.is_active()
+	}
+
+	/// Sets the hover state, returning true if state changed.
+	pub fn set_hovering(&mut self, hovering: bool) -> bool {
+		self.tween.set_active(hovering)
 	}
 
 	/// Returns the effective hover intensity (0.0 = unhovered, 1.0 = fully hovered).
 	pub fn intensity(&self) -> f32 {
-		let progress = self.progress();
-		// Apply ease-out for smoother feel
-		let eased = 1.0 - (1.0 - progress).powi(2);
-		if self.hovering {
-			eased
-		} else {
-			1.0 - eased
-		}
+		self.tween.value()
 	}
 
 	/// Returns true if the animation is complete.
 	pub fn is_complete(&self) -> bool {
-		self.progress() >= 1.0
+		self.tween.is_complete()
 	}
 
 	/// Returns true if the animation is still in progress.
 	pub fn needs_redraw(&self) -> bool {
-		!self.is_complete()
+		self.tween.is_running()
 	}
 }
 
@@ -1033,7 +1037,7 @@ impl Editor {
 		byte_pos: usize,
 		style: Option<ratatui::style::Style>,
 	) -> Option<ratatui::style::Style> {
-		use tome_theme::blend_colors;
+		use ratatui::animation::Animatable;
 
 		use crate::editor::extensions::StyleMod;
 
@@ -1044,26 +1048,19 @@ impl Editor {
 		let style = style.unwrap_or_default();
 		let modified = match modification {
 			StyleMod::Dim(factor) => {
-				let bg = self.theme.colors.ui.bg;
-				if let Some(ratatui::style::Color::Rgb(r, g, b)) = style.fg {
-					let fg = tome_base::color::Color::Rgb(r, g, b);
-					let dimmed = blend_colors(fg, bg, factor);
-					let tome_base::color::Color::Rgb(dr, dg, db) = dimmed else {
-						return Some(style);
-					};
-					style.fg(ratatui::style::Color::Rgb(dr, dg, db))
+				// Convert theme bg color to ratatui color for blending
+				let bg: ratatui::style::Color = self.theme.colors.ui.bg.into();
+				if let Some(fg) = style.fg {
+					// Blend fg toward bg using Animatable::lerp
+					// factor=1.0 means no dimming (full fg), factor=0.0 means full bg
+					let dimmed = bg.lerp(&fg, factor);
+					style.fg(dimmed)
 				} else {
 					style.fg(ratatui::style::Color::DarkGray)
 				}
 			}
-			StyleMod::Fg(color) => {
-				let ratatui_color: ratatui::style::Color = color.into();
-				style.fg(ratatui_color)
-			}
-			StyleMod::Bg(color) => {
-				let ratatui_color: ratatui::style::Color = color.into();
-				style.bg(ratatui_color)
-			}
+			StyleMod::Fg(color) => style.fg(color),
+			StyleMod::Bg(color) => style.bg(color),
 		};
 
 		Some(modified)

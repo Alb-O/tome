@@ -16,7 +16,7 @@ use tome_language::LanguageLoader;
 use tome_language::highlight::{HighlightSpan, HighlightStyles};
 use tome_manifest::Mode;
 use tome_manifest::syntax::SyntaxStyles;
-use tome_theme::{Theme, ThemeVariant, blend_colors};
+use tome_theme::{Theme, ThemeVariant};
 
 use super::types::{RenderResult, WrapSegment, wrap_line};
 use crate::buffer::Buffer;
@@ -57,8 +57,8 @@ impl<'a> BufferRenderContext<'a> {
 			.add_modifier(Modifier::BOLD);
 
 		let secondary_cursor_style = {
-			let bg = blend_colors(self.theme.colors.ui.cursor_bg, self.theme.colors.ui.bg, 0.4);
-			let fg = blend_colors(self.theme.colors.ui.cursor_fg, self.theme.colors.ui.fg, 0.4);
+			let bg = self.theme.colors.ui.cursor_bg.blend(self.theme.colors.ui.bg, 0.4);
+			let fg = self.theme.colors.ui.cursor_fg.blend(self.theme.colors.ui.fg, 0.4);
 			Style::default()
 				.bg(bg.into())
 				.fg(fg.into())
@@ -155,6 +155,8 @@ impl<'a> BufferRenderContext<'a> {
 
 	/// Applies style overlay modifications (e.g., zen mode dimming).
 	pub fn apply_style_overlay(&self, byte_pos: usize, style: Option<Style>) -> Option<Style> {
+		use ratatui::animation::Animatable;
+
 		use crate::editor::extensions::StyleMod;
 
 		let Some(modification) = self.style_overlays.modification_at(byte_pos) else {
@@ -164,26 +166,19 @@ impl<'a> BufferRenderContext<'a> {
 		let style = style.unwrap_or_default();
 		let modified = match modification {
 			StyleMod::Dim(factor) => {
-				let bg = self.theme.colors.ui.bg;
-				if let Some(ratatui::style::Color::Rgb(r, g, b)) = style.fg {
-					let fg = tome_base::color::Color::Rgb(r, g, b);
-					let dimmed = blend_colors(fg, bg, factor);
-					let tome_base::color::Color::Rgb(dr, dg, db) = dimmed else {
-						return Some(style);
-					};
-					style.fg(ratatui::style::Color::Rgb(dr, dg, db))
+				// Convert theme bg color to ratatui color for blending
+				let bg: ratatui::style::Color = self.theme.colors.ui.bg.into();
+				if let Some(fg) = style.fg {
+					// Blend fg toward bg using Animatable::lerp
+					// factor=1.0 means no dimming (full fg), factor=0.0 means full bg
+					let dimmed = bg.lerp(&fg, factor);
+					style.fg(dimmed)
 				} else {
 					style.fg(ratatui::style::Color::DarkGray)
 				}
 			}
-			StyleMod::Fg(color) => {
-				let ratatui_color: ratatui::style::Color = color.into();
-				style.fg(ratatui_color)
-			}
-			StyleMod::Bg(color) => {
-				let ratatui_color: ratatui::style::Color = color.into();
-				style.bg(ratatui_color)
-			}
+			StyleMod::Fg(color) => style.fg(color),
+			StyleMod::Bg(color) => style.bg(color),
 		};
 
 		Some(modified)
@@ -264,8 +259,8 @@ impl<'a> BufferRenderContext<'a> {
 				let gutter_style = if is_first_segment {
 					Style::default().fg(self.theme.colors.ui.gutter_fg.into())
 				} else {
-					let bg_color = self.theme.colors.ui.bg;
-					let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
+					let dim_color =
+						self.theme.colors.ui.gutter_fg.blend(self.theme.colors.ui.bg, 0.5);
 					Style::default().fg(dim_color.into())
 				};
 
@@ -351,8 +346,8 @@ impl<'a> BufferRenderContext<'a> {
 
 				if !is_last_segment && seg_col < text_width {
 					let fill_count = text_width - seg_col;
-					let bg_color = self.theme.colors.ui.bg;
-					let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
+					let dim_color =
+						self.theme.colors.ui.gutter_fg.blend(self.theme.colors.ui.bg, 0.5);
 					spans.push(Span::styled(
 						" ".repeat(fill_count),
 						Style::default().fg(dim_color.into()),
@@ -436,8 +431,7 @@ impl<'a> BufferRenderContext<'a> {
 
 		while output_lines.len() < viewport_height {
 			let line_num_str = format!("{:>width$} ", "~", width = gutter_width as usize - 1);
-			let bg_color = self.theme.colors.ui.bg;
-			let dim_color = blend_colors(self.theme.colors.ui.gutter_fg, bg_color, 0.5);
+			let dim_color = self.theme.colors.ui.gutter_fg.blend(self.theme.colors.ui.bg, 0.5);
 			output_lines.push(Line::from(vec![Span::styled(
 				line_num_str,
 				Style::default().fg(dim_color.into()),
