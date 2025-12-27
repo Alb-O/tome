@@ -194,13 +194,13 @@ mod tests {
 
 	#[test]
 	fn test_view_mode_bindings_registered() {
-		let c = find_binding(BindingMode::View, Key::char('c'));
-		assert!(c.is_some());
-		assert_eq!(c.unwrap().action, "center_cursor");
-
 		let j = find_binding(BindingMode::View, Key::char('j'));
 		assert!(j.is_some());
 		assert_eq!(j.unwrap().action, "scroll_down");
+
+		let k = find_binding(BindingMode::View, Key::char('k'));
+		assert!(k.is_some());
+		assert_eq!(k.unwrap().action, "scroll_up");
 	}
 
 	#[test]
@@ -212,7 +212,7 @@ mod tests {
 		assert!(goto_bindings.len() >= 5);
 
 		let view_bindings: Vec<_> = bindings_for_mode(BindingMode::View).collect();
-		assert!(view_bindings.len() >= 4);
+		assert!(view_bindings.len() >= 2);
 
 		let insert_bindings: Vec<_> = bindings_for_mode(BindingMode::Insert).collect();
 		assert!(

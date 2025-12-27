@@ -100,13 +100,13 @@ bind!(
 bind!(KB_SEMI, Key::char(';'), "collapse_selection");
 bind!(KB_SEMI_ALT, Key::alt(';'), "flip_selection");
 bind!(KB_COLON_ALT, Key::alt(':'), "ensure_forward");
-bind!(KB_COMMA, Key::char(','), "keep_primary_selection");
+bind!(KB_COMMA, Key::char(','), "remove_selections_except_primary");
 bind!(KB_COMMA_ALT, Key::alt(','), "remove_primary_selection");
 bind!(KB_PAREN_CLOSE, Key::char(')'), "rotate_selections_forward");
 bind!(KB_PAREN_OPEN, Key::char('('), "rotate_selections_backward");
 
 bind!(KB_X, Key::char('x'), "select_line");
-bind!(KB_X_ALT, Key::alt('x'), "trim_to_line");
+bind!(KB_X_ALT, Key::alt('x'), "expand_to_line");
 bind!(KB_PERCENT, Key::char('%'), "select_all");
 
 bind!(KB_GT, Key::char('>'), "indent");
@@ -138,21 +138,6 @@ bind!(KB_BRACKET_OPEN, Key::char('['), "select_object_to_start");
 bind!(KB_BRACKET_CLOSE, Key::char(']'), "select_object_to_end");
 bind!(KB_BRACE_OPEN, Key::char('{'), "select_object_to_start");
 bind!(KB_BRACE_CLOSE, Key::char('}'), "select_object_to_end");
-
-bind!(KB_CTRL_I, Key::ctrl('i'), "jump_forward");
-bind!(KB_CTRL_O, Key::ctrl('o'), "jump_backward");
-bind!(KB_CTRL_S, Key::ctrl('s'), "save_jump");
-
-bind!(KB_Q_UPPER, Key::char('Q'), "record_macro");
-bind!(KB_Q, Key::char('q'), "play_macro");
-
-bind!(KB_Z_UPPER, Key::char('Z'), "save_selections");
-bind!(KB_Z, Key::char('z'), "restore_selections");
-
-bind!(KB_CTRL_L, Key::ctrl('l'), "force_redraw");
-
-bind!(KB_DOT, Key::char('.'), "repeat_last_insert");
-bind!(KB_DOT_ALT, Key::alt('.'), "repeat_last_object");
 
 bind!(KB_PLUS_DUP, Key::char('+'), "duplicate_selections_down");
 bind!(KB_C_DUP, Key::char('C'), "duplicate_selections_down");

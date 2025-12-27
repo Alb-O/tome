@@ -1,6 +1,5 @@
 //! Notification-specific rendering helpers.
 
-mod codegen;
 mod layout;
 
 #[cfg(test)]

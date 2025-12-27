@@ -19,9 +19,5 @@ macro_rules! bind {
 	};
 }
 
-bind!(KB_VIEW_V, Key::char('v'), "center_cursor");
-bind!(KB_VIEW_C, Key::char('c'), "center_cursor");
-bind!(KB_VIEW_T, Key::char('t'), "cursor_to_top");
-bind!(KB_VIEW_B, Key::char('b'), "cursor_to_bottom");
 bind!(KB_VIEW_J, Key::char('j'), "scroll_down");
 bind!(KB_VIEW_K, Key::char('k'), "scroll_up");

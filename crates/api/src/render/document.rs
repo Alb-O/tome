@@ -9,7 +9,6 @@ use tome_tui::text::{Line, Span};
 use tome_tui::widgets::{Block, Clear, Paragraph};
 
 use super::buffer_render::{BufferRenderContext, ensure_buffer_cursor_visible};
-use super::types::RenderResult;
 use crate::Editor;
 use crate::buffer::{BufferView, SplitDirection};
 
@@ -324,35 +323,6 @@ impl Editor {
 				out.set_symbol(&cell.symbol);
 			}
 		});
-	}
-
-	/// Renders the document with cursor tracking and visual effects.
-	///
-	/// This function handles the core document rendering logic including:
-	/// - Line wrapping and viewport positioning
-	/// - Cursor rendering (primary and secondary)
-	/// - Selection highlighting
-	/// - Gutter with line numbers
-	/// - Cursor blinking in insert mode
-	///
-	/// # Parameters
-	/// - `area`: The rectangular area to render the document into
-	/// - `use_block_cursor`: Whether to render block-style cursors (normal mode)
-	///   or rely on terminal cursor (insert mode)
-	///
-	/// # Returns
-	/// A [`RenderResult`] containing the rendered paragraph widget.
-	///
-	/// # Note
-	/// This method renders only the focused buffer. For split views, use
-	/// `render_split_buffers` instead which handles multiple buffers.
-	pub fn render_document_with_cursor(&self, area: Rect, use_block_cursor: bool) -> RenderResult {
-		let ctx = BufferRenderContext {
-			theme: self.theme,
-			language_loader: &self.language_loader,
-			style_overlays: &self.style_overlays,
-		};
-		ctx.render_buffer(self.buffer(), area, use_block_cursor)
 	}
 }
 

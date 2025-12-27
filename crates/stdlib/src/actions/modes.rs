@@ -21,9 +21,3 @@ action!(window_mode, { description: "Enter window mode" }, handler: action_windo
 fn action_window_mode(_ctx: &ActionContext) -> ActionResult {
 	ActionResult::ModeChange(ActionMode::Window)
 }
-
-action!(insert_mode, { description: "Enter insert mode" }, handler: action_insert_mode);
-
-fn action_insert_mode(_ctx: &ActionContext) -> ActionResult {
-	ActionResult::ModeChange(ActionMode::Insert)
-}

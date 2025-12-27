@@ -18,7 +18,7 @@ use tome_language::LanguageLoader;
 use tome_manifest::syntax::SyntaxStyles;
 use tome_manifest::{HookContext, Mode, emit_hook};
 use tome_theme::Theme;
-pub use types::{HistoryEntry, Message, MessageKind, Registers};
+pub use types::{HistoryEntry, Registers};
 
 use crate::buffer::{Buffer, BufferId, BufferView, Layout, SplitDirection, SplitPath, TerminalId};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
@@ -85,10 +85,6 @@ pub struct Editor {
 
 	/// Layout of buffer views (for splits).
 	pub layout: Layout,
-
-	/// Workspace-level message (shown in status line).
-	pub message: Option<Message>,
-
 	/// Workspace-level registers (yank buffer, etc.).
 	pub registers: Registers,
 
@@ -110,13 +106,6 @@ pub struct Editor {
 
 	/// Last tick timestamp.
 	pub last_tick: std::time::SystemTime,
-
-	/// IPC server for external communication.
-	#[allow(
-		dead_code,
-		reason = "IPC server currently only used for internal messaging, but field is read via debug tools"
-	)]
-	pub ipc: Option<crate::ipc::IpcServer>,
 
 	/// Completion state.
 	pub completions: CompletionState,
@@ -546,7 +535,6 @@ impl Editor {
 			next_terminal_id: 1,
 			focused_view: BufferView::Text(buffer_id),
 			layout: Layout::text(buffer_id),
-			message: None,
 			registers: Registers::default(),
 			theme: tome_theme::get_theme(tome_theme::DEFAULT_THEME_ID)
 				.unwrap_or(&tome_theme::DEFAULT_THEME),
@@ -558,7 +546,6 @@ impl Editor {
 				.max_concurrent(Some(5))
 				.overflow(Overflow::DiscardOldest),
 			last_tick: std::time::SystemTime::now(),
-			ipc: crate::ipc::IpcServer::start().ok(),
 			completions: CompletionState::default(),
 			extensions: {
 				let mut map = ExtensionMap::new();

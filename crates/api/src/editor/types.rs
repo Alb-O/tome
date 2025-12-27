@@ -1,19 +1,6 @@
 use tome_base::{Rope, Selection};
 use tome_manifest::CompletionItem;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum MessageKind {
-	Info,
-	Warning,
-	Error,
-}
-
-#[derive(Clone, Debug)]
-pub struct Message {
-	pub text: String,
-	pub kind: MessageKind,
-}
-
 /// A history entry for undo/redo.
 #[derive(Clone)]
 pub struct HistoryEntry {

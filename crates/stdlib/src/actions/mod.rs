@@ -13,7 +13,6 @@
 //! - Name-to-ID resolution happens once during registry initialization
 
 mod buffer;
-mod delete;
 mod editing;
 mod find;
 mod insert;
