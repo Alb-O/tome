@@ -18,7 +18,6 @@ futures.workspace = true
 home.workspace = true
 linkme.workspace = true
 parking_lot.workspace = true
-tome-tui.workspace = true
 serde.workspace = true
 termina.workspace = true
 thiserror.workspace = true
@@ -32,6 +31,7 @@ tome-language.workspace = true
 tome-manifest.workspace = true
 tome-stdlib.workspace = true
 tome-theme.workspace = true
+tome-tui.workspace = true
 toml.workspace = true
 
 [dev-dependencies]
