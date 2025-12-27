@@ -39,6 +39,9 @@ const CURSOR_FG: Color = Color::Rgb(50, 50, 50);
 /// Cursor background - RGB(255, 255, 0) pure yellow
 const CURSOR_BG: Color = Color::Rgb(255, 255, 0);
 
+/// Cursorline background - RGB(30, 30, 30) slightly lighter than bg
+const CURSORLINE_BG: Color = Color::Rgb(30, 30, 30);
+
 /// Selection background - RGB(0, 0, 200) blue
 /// Also used for hovered separator background.
 const SELECTION_BG: Color = Color::Rgb(0, 0, 200);
@@ -77,6 +80,7 @@ pub static DEBUG: Theme = Theme {
 			gutter_fg: GUTTER,
 			cursor_bg: CURSOR_BG,
 			cursor_fg: CURSOR_FG,
+			cursorline_bg: CURSORLINE_BG,
 			selection_bg: SELECTION_BG,
 			selection_fg: SELECTION_FG,
 			message_fg: WARNING,
@@ -128,6 +132,9 @@ pub mod colors {
 
 	/// Cursor background: RGB(255, 255, 0)
 	pub const CURSOR_BG: (u8, u8, u8) = (255, 255, 0);
+
+	/// Cursorline background: RGB(30, 30, 30)
+	pub const CURSORLINE_BG: (u8, u8, u8) = (30, 30, 30);
 
 	/// Selection background (hovered separator bg): RGB(0, 0, 200)
 	pub const SELECTION_BG: (u8, u8, u8) = (0, 0, 200);

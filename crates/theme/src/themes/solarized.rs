@@ -18,6 +18,7 @@ pub static SOLARIZED_DARK: Theme = Theme {
 			gutter_fg: Color::Rgb(88, 110, 117),         // base01
 			cursor_bg: Color::Rgb(147, 161, 161),        // base1
 			cursor_fg: Color::Rgb(0, 43, 54),            // base03
+			cursorline_bg: Color::Rgb(7, 54, 66),        // base02 (one step lighter)
 			selection_bg: Color::Rgb(7, 54, 66),         // base02
 			selection_fg: Color::Rgb(147, 161, 161),     // base1
 			message_fg: Color::Rgb(181, 137, 0),         // yellow

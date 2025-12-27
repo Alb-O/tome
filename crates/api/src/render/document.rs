@@ -134,8 +134,12 @@ impl Editor {
 			match view {
 				BufferView::Text(buffer_id) => {
 					if let Some(buffer) = self.get_buffer(*buffer_id) {
-						let result =
-							ctx.render_buffer(buffer, *area, use_block_cursor && is_focused);
+						let result = ctx.render_buffer(
+							buffer,
+							*area,
+							use_block_cursor && is_focused,
+							is_focused,
+						);
 						frame.render_widget(result.widget, *area);
 					}
 				}
