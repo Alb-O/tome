@@ -16,9 +16,33 @@ use kitty_test_harness::{
 	read_test_log, require_kitty, run_with_timeout, send_mouse_move, wait_for_log_line,
 	wait_for_screen_text_clean, with_kitty_capture,
 };
+use serde::Deserialize;
 use termwiz::input::{KeyCode, Modifiers};
 
 const TEST_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// Structured test event from the editor.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+#[allow(dead_code)]
+enum TestEvent {
+	#[serde(rename = "separator_animation_start")]
+	AnimationStart { direction: String },
+	#[serde(rename = "separator_animation_frame")]
+	AnimationFrame {
+		intensity: f32,
+		fg: (u8, u8, u8),
+		bg: (u8, u8, u8),
+	},
+}
+
+/// Parse test events from log lines.
+fn parse_test_events(lines: &[String]) -> Vec<TestEvent> {
+	lines
+		.iter()
+		.filter_map(|line| serde_json::from_str(line).ok())
+		.collect()
+}
 
 /// Creates a vertical split (Ctrl+w s) - left/right panes with vertical separator.
 fn create_vertical_split(kitty: &kitty_test_harness::KittyHarness) {
@@ -44,45 +68,26 @@ fn is_lerped_color(color: (u8, u8, u8), start: (u8, u8, u8), end: (u8, u8, u8)) 
 	different_from_start && different_from_end && (r_between || g_between || b_between)
 }
 
-fn parse_rgb_triplet(value: &str) -> Option<(u8, u8, u8)> {
-	if value == "none" {
-		return None;
-	}
-	let mut iter = value.split(',');
-	let r = iter.next()?.parse().ok()?;
-	let g = iter.next()?.parse().ok()?;
-	let b = iter.next()?.parse().ok()?;
-	if iter.next().is_some() {
-		return None;
-	}
-	Some((r, g, b))
-}
-
-fn parse_sep_anim_fg(line: &str) -> Option<(u8, u8, u8)> {
-	if !line.starts_with("[SEP_ANIM]") {
-		return None;
-	}
-	let fg = line
-		.split_whitespace()
-		.find(|part| part.starts_with("fg="))?;
-	parse_rgb_triplet(fg.trim_start_matches("fg="))
-}
-
-fn find_log_marker(lines: &[String], markers: &[&str]) -> Option<usize> {
-	lines
+/// Find the index of the first animation start event with the given direction.
+fn find_animation_start(events: &[TestEvent], direction: &str) -> Option<usize> {
+	events
 		.iter()
-		.position(|line| markers.iter().any(|marker| line.contains(marker)))
+		.position(|e| matches!(e, TestEvent::AnimationStart { direction: d } if d == direction))
 }
 
-fn find_lerped_color_after(
-	lines: &[String],
+/// Find a lerped color in animation frame events after the given index.
+fn find_lerped_frame_after(
+	events: &[TestEvent],
 	start: usize,
 	from: (u8, u8, u8),
 	to: (u8, u8, u8),
 ) -> Option<(u8, u8, u8)> {
-	lines[start..]
+	events[start..]
 		.iter()
-		.filter_map(|line| parse_sep_anim_fg(line))
+		.filter_map(|e| match e {
+			TestEvent::AnimationFrame { fg, .. } => Some(*fg),
+			_ => None,
+		})
 		.find(|&color| is_lerped_color(color, from, to))
 }
 
@@ -161,8 +166,9 @@ fn separator_hover_shows_lerped_animation() {
 			// Move to separator - animation starts (120ms duration)
 			send_mouse_move(kitty, sep_col, sep_row);
 
+			// Wait for animation start event in log
 			wait_for_log_line(&log_path_clone, Duration::from_secs(2), |line| {
-				line.contains("[ANIM] creating fade-in animation")
+				line.contains("fade_in")
 			})
 			.expect("Expected fade-in animation to start");
 
@@ -176,12 +182,16 @@ fn separator_hover_shows_lerped_animation() {
 
 			let normal_color = normal_color.expect("Should have normal separator color");
 			let hover_color = hover_color.expect("Should have final hover color");
+
+			// Parse structured events from log
 			let log_lines = read_test_log(&log_path_clone);
-			let anim_start = find_log_marker(&log_lines, &["[ANIM] creating fade-in animation"])
-				.expect("Expected fade-in animation marker in log");
+			let events = parse_test_events(&log_lines);
+
+			let anim_start = find_animation_start(&events, "fade_in")
+				.expect("Expected fade-in animation start event");
 			let during_color =
-				find_lerped_color_after(&log_lines, anim_start, normal_color, hover_color)
-					.expect("Should have lerped separator color in log");
+				find_lerped_frame_after(&events, anim_start, normal_color, hover_color)
+					.expect("Should have lerped separator color in animation frames");
 
 			assert!(
 				is_lerped_color(during_color, normal_color, hover_color),
@@ -264,9 +274,9 @@ fn separator_fadeout_shows_lerped_animation() {
 			// Move away - fade-out animation starts
 			send_mouse_move(kitty, 10, sep_row);
 
+			// Wait for fade-out animation start event
 			wait_for_log_line(&log_path_clone, Duration::from_secs(2), |line| {
-				line.contains("[ANIM] toggling existing animation to fade-out")
-					|| line.contains("[ANIM] creating fade-out animation at full intensity")
+				line.contains("fade_out")
 			})
 			.expect("Expected fade-out animation to start");
 
@@ -274,17 +284,21 @@ fn separator_fadeout_shows_lerped_animation() {
 
 			let normal_color = normal_color.expect("Should have normal separator color");
 			let hover_color = hover_color.expect("Should have hovered separator color");
+
+			// Parse structured events from log
 			let log_lines = read_test_log(&log_path_clone);
-			let fadeout_start = find_log_marker(
-				&log_lines,
-				&[
-					"[ANIM] toggling existing animation to fade-out",
-					"[ANIM] creating fade-out animation at full intensity",
-				],
-			)
-			.expect("Expected fade-out animation marker in log");
+			let events = parse_test_events(&log_lines);
+
+			// Find the LAST fade_out start (there may be a fade_in before it)
+			let fadeout_start = events
+				.iter()
+				.rposition(
+					|e| matches!(e, TestEvent::AnimationStart { direction } if direction == "fade_out"),
+				)
+				.expect("Expected fade-out animation start event");
+
 			let fadeout_color =
-				find_lerped_color_after(&log_lines, fadeout_start, hover_color, normal_color)
+				find_lerped_frame_after(&events, fadeout_start, hover_color, normal_color)
 					.expect("Should have lerped separator color during fadeout");
 
 			assert!(

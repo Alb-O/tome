@@ -34,5 +34,7 @@ toml.workspace = true
 [dev-dependencies]
 insta.workspace = true
 kitty-test-harness.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 serial_test.workspace = true
 termwiz.workspace = true

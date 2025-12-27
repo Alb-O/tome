@@ -220,21 +220,16 @@ impl Editor {
 				// Animating - lerp between normal and hover states
 				// This handles both fade-in (hovering) and fade-out (leaving)
 				use tome_tui::animation::Animatable;
+
+				use crate::test_events::SeparatorAnimationEvent;
+
 				let fg = normal_fg.lerp(&hover_fg, anim_intensity);
 				let bg = normal_bg.lerp(&hover_bg, anim_intensity);
-				if let (Some((fr, fg_g, fb)), Some((br, bg_g, bb))) =
-					(color_to_rgb(fg), color_to_rgb(bg))
-				{
-					self.debug_log(&format!(
-						"[SEP_ANIM] intensity={:.3} fg={},{},{} bg={},{},{}",
-						anim_intensity, fr, fg_g, fb, br, bg_g, bb
-					));
-				} else {
-					self.debug_log(&format!(
-						"[SEP_ANIM] intensity={:.3} fg=none bg=none",
-						anim_intensity
-					));
+
+				if let (Some(fg_rgb), Some(bg_rgb)) = (color_to_rgb(fg), color_to_rgb(bg)) {
+					SeparatorAnimationEvent::frame(anim_intensity, fg_rgb, bg_rgb);
 				}
+
 				Style::default().fg(fg).bg(bg)
 			} else if is_hovered {
 				// Fully hovered (animation complete or no animation)
