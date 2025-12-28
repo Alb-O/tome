@@ -1,5 +1,4 @@
 use futures::future::LocalBoxFuture;
-use ropey::RopeSlice;
 
 use crate::{Capability, CommandError, CommandOutcome, EditorOps, RegistrySource};
 
@@ -37,9 +36,6 @@ impl<'a> crate::editor_ctx::MessageAccess for CommandContext<'a> {
 }
 
 impl<'a> CommandContext<'a> {
-	pub fn text(&self) -> RopeSlice<'_> {
-		self.editor.text()
-	}
 	pub fn require_user_data<T: std::any::Any + Sync>(&self) -> Result<&'static T, CommandError> {
 		self.user_data
 			.and_then(|d| {

@@ -8,21 +8,26 @@
 //!
 //! The editor's capabilities are split into fine-grained traits:
 //!
-//! - **Required**: [`CursorAccess`], [`SelectionAccess`], [`TextAccess`], [`ModeAccess`], [`MessageAccess`]
+//! - **Required**: [`CursorAccess`], [`SelectionAccess`], [`ModeAccess`], [`MessageAccess`]
 //! - **Optional**: [`SearchAccess`], [`UndoAccess`], [`EditAccess`], [`BufferOpsAccess`], etc.
+//!
+//! Note: [`TextAccess`] is intentionally NOT required for result handlers.
+//! Actions receive text through [`ActionContext`] which is built separately
+//! from the buffer before action execution. Result handlers only mutate state;
+//! they don't need to read document content.
 //!
 //! [`EditorCapabilities`] combines the required traits and provides accessors
 //! for optional capabilities. This allows actions to gracefully degrade when
 //! certain features aren't available.
 //!
 //! [`ActionResult`]: crate::ActionResult
+//! [`ActionContext`]: crate::ActionContext
 
 mod capabilities;
 mod handlers;
 
 pub use capabilities::*;
 pub use handlers::*;
-use ropey::RopeSlice;
 use tome_base::range::CharIdx;
 use tome_base::selection::Selection;
 
@@ -90,10 +95,6 @@ impl<'a> EditorContext<'a> {
 		self.inner.set_selection(sel);
 	}
 
-	pub fn text(&self) -> RopeSlice<'_> {
-		self.inner.text()
-	}
-
 	pub fn set_mode(&mut self, mode: Mode) {
 		self.inner.set_mode(mode);
 	}
@@ -141,7 +142,7 @@ impl<'a> EditorContext<'a> {
 	pub fn check_capability(&mut self, cap: Capability) -> bool {
 		use Capability::*;
 		match cap {
-			Text | Cursor | Selection | Mode | Messaging => true, // Basic ones are required by trait
+			Text | Cursor | Selection | Mode | Messaging => true,
 			Edit => self.inner.edit().is_some(),
 			Search => self.inner.search().is_some(),
 			Undo => self.inner.undo().is_some(),
@@ -160,35 +161,23 @@ impl<'a> EditorContext<'a> {
 	}
 }
 
-/// Core capabilities that all editors must provide.
+/// Core capabilities that all editors must provide for result handling.
 ///
-/// This trait combines required capability traits and provides optional accessors
-/// for extended features. The base traits are always available:
-///
-/// - [`CursorAccess`] - Cursor position get/set
-/// - [`SelectionAccess`] - Selection state management
-/// - [`TextAccess`] - Read-only document access
-/// - [`ModeAccess`] - Editor mode (Normal, Insert, etc.)
-/// - [`MessageAccess`] - Status messages and notifications
-///
-/// Optional capabilities default to `None` but can be overridden by implementors.
-/// Check availability with [`EditorContext::check_capability`] before use.
+/// Combines required capability traits ([`CursorAccess`], [`SelectionAccess`],
+/// [`ModeAccess`], [`MessageAccess`]) and provides optional accessors for
+/// extended features. See module docs for why [`TextAccess`] is not required.
 ///
 /// # Implementing
-///
-/// Implement the required traits, then override the optional methods for
-/// any additional capabilities your editor supports:
 ///
 /// ```ignore
 /// impl EditorCapabilities for MyEditor {
 ///     fn search(&mut self) -> Option<&mut dyn SearchAccess> {
-///         Some(self)  // MyEditor also implements SearchAccess
+///         Some(self)
 ///     }
-///     // ... other overrides
 /// }
 /// ```
 pub trait EditorCapabilities:
-	CursorAccess + SelectionAccess + TextAccess + ModeAccess + MessageAccess
+	CursorAccess + SelectionAccess + ModeAccess + MessageAccess
 {
 	/// Access to search operations (optional).
 	fn search(&mut self) -> Option<&mut dyn SearchAccess> {

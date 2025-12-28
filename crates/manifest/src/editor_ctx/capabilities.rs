@@ -284,9 +284,5 @@ pub trait BufferOpsAccess {
 	fn focus_down(&mut self);
 }
 
-/// Combined trait for command handlers.
-///
-/// Convenience trait that combines the most commonly used capabilities for
-/// command implementations. Commands can use this as a bound instead of
-/// listing individual traits.
-pub trait EditorOps: TextAccess + MessageAccess + FileOpsAccess + ThemeAccess {}
+/// Convenience trait combining common capabilities for command handlers.
+pub trait EditorOps: MessageAccess + FileOpsAccess + ThemeAccess {}

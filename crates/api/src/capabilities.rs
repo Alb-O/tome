@@ -1,11 +1,12 @@
-//! Implementation of EditorCapabilities for Editor.
+//! Implementation of [`EditorCapabilities`] for [`Editor`].
+//!
+//! [`EditorCapabilities`]: tome_manifest::editor_ctx::EditorCapabilities
 
-use ropey::RopeSlice;
 use tome_base::Selection;
 use tome_base::range::CharIdx;
 use tome_manifest::editor_ctx::{
 	BufferOpsAccess, CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, MessageAccess,
-	ModeAccess, SearchAccess, SelectionAccess, TextAccess, ThemeAccess, UndoAccess,
+	ModeAccess, SearchAccess, SelectionAccess, ThemeAccess, UndoAccess,
 };
 use tome_manifest::{EditAction, Mode};
 
@@ -32,15 +33,6 @@ impl SelectionAccess for Editor {
 
 	fn set_selection(&mut self, sel: Selection) {
 		self.buffer_mut().selection = sel;
-	}
-}
-
-impl TextAccess for Editor {
-	fn text(&self) -> RopeSlice<'_> {
-		// Note: This returns a slice that borrows from the RwLockReadGuard.
-		// The guard is dropped at end of scope, so we need to restructure.
-		// For now, this will need the caller to hold the lock.
-		todo!("TextAccess needs restructuring for shared Document")
 	}
 }
 

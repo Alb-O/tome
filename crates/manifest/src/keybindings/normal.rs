@@ -92,22 +92,8 @@ bind!(KB_O_UPPER, Key::char('O'), "open_above");
 bind!(KB_O_ALT, Key::alt('o'), "add_line_below");
 bind!(KB_O_ALT_UPPER, Key::alt('O'), "add_line_above");
 
-bind!(
-	KB_ESC,
-	Key::special(SpecialKey::Escape),
-	"collapse_selection"
-);
-bind!(KB_SEMI, Key::char(';'), "collapse_selection");
-bind!(KB_SEMI_ALT, Key::alt(';'), "flip_selection");
-bind!(KB_COLON_ALT, Key::alt(':'), "ensure_forward");
-bind!(KB_COMMA, Key::char(','), "remove_selections_except_primary");
-bind!(KB_COMMA_ALT, Key::alt(','), "remove_primary_selection");
-bind!(KB_PAREN_CLOSE, Key::char(')'), "rotate_selections_forward");
-bind!(KB_PAREN_OPEN, Key::char('('), "rotate_selections_backward");
-
-bind!(KB_X, Key::char('x'), "select_line");
-bind!(KB_X_ALT, Key::alt('x'), "expand_to_line");
-bind!(KB_PERCENT, Key::char('%'), "select_all");
+// Selection ops keybindings are colocated with their actions in
+// tome-stdlib/src/actions/selection_ops.rs using bound_action! macro.
 
 bind!(KB_GT, Key::char('>'), "indent");
 bind!(KB_LT, Key::char('<'), "deindent");
@@ -139,10 +125,9 @@ bind!(KB_BRACKET_CLOSE, Key::char(']'), "select_object_to_end");
 bind!(KB_BRACE_OPEN, Key::char('{'), "select_object_to_start");
 bind!(KB_BRACE_CLOSE, Key::char('}'), "select_object_to_end");
 
-bind!(KB_PLUS_DUP, Key::char('+'), "duplicate_selections_down");
-bind!(KB_C_DUP, Key::char('C'), "duplicate_selections_down");
-bind!(KB_C_ALT_DUP, Key::alt('C'), "duplicate_selections_up");
-bind!(KB_PLUS_ALT_MERGE, Key::alt('+'), "merge_selections");
+// Duplicate/merge selection keybindings are colocated with their actions in
+// tome-stdlib/src/actions/selection_ops.rs using bound_action! macro.
+
 bind!(KB_AMP_ALIGN, Key::char('&'), "align");
 bind!(KB_AMP_ALT_COPY_INDENT, Key::alt('&'), "copy_indent");
 bind!(KB_AT_TABS, Key::char('@'), "tabs_to_spaces");
