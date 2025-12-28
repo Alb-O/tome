@@ -399,7 +399,7 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 		let handler_screaming = to_screaming_snake_case(&handler_name.to_string());
 		let slice_ident = format_ident!("RESULT_{}_HANDLERS", handler_screaming);
 
-		if !slice_names.iter().any(|s| *s == slice_ident) {
+		if !slice_names.contains(&slice_ident) {
 			slice_names.push(slice_ident.clone());
 		}
 

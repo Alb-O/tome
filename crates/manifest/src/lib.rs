@@ -308,10 +308,10 @@ impl RegistryMetadata for LanguageDef {
 pub use actions::{
 	ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, EditAction,
 	ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount, ScrollDir, VisualDirection,
+	dispatch_result,
 };
 pub use commands::{CommandContext, CommandDef, flags};
 pub use completion::{CompletionContext, CompletionItem, CompletionKind, CompletionSource};
-pub use actions::dispatch_result;
 pub use editor_ctx::{EditorCapabilities, EditorContext, EditorOps, HandleOutcome};
 pub use hooks::{
 	BoxFuture as HookBoxFuture, HOOKS, HookAction, HookContext, HookDef, HookEvent, HookEventData,

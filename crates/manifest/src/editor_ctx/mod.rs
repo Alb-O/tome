@@ -176,9 +176,7 @@ impl<'a> EditorContext<'a> {
 ///     }
 /// }
 /// ```
-pub trait EditorCapabilities:
-	CursorAccess + SelectionAccess + ModeAccess + MessageAccess
-{
+pub trait EditorCapabilities: CursorAccess + SelectionAccess + ModeAccess + MessageAccess {
 	/// Access to search operations (optional).
 	fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		None
