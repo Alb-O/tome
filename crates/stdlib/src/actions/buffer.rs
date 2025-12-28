@@ -5,13 +5,13 @@ use crate::action;
 
 action!(
 	split_horizontal,
-	{ description: "Split window horizontally" },
+	{ description: "Split horizontally (new buffer below)" },
 	result: ActionResult::SplitHorizontal
 );
 
 action!(
 	split_vertical,
-	{ description: "Split window vertically" },
+	{ description: "Split vertically (new buffer to right)" },
 	result: ActionResult::SplitVertical
 );
 

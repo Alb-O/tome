@@ -258,32 +258,28 @@ pub trait ThemeAccess {
 
 /// Buffer and split management operations.
 ///
+/// # Split Naming Convention
+///
+/// Split names refer to the orientation of the **split line**, matching Vim/Helix:
+/// - `split_horizontal` = horizontal divider line → windows stacked top/bottom
+/// - `split_vertical` = vertical divider line → windows side-by-side left/right
+///
 /// # Split Semantics
 ///
-/// Currently, `split_horizontal` and `split_vertical` create a **copy** of the
-/// current buffer's content, not a second view of the same buffer. This means:
-/// - Each split has independent undo history, cursor, and selection
-/// - Edits in one split don't affect the other
-/// - Both splits initially share the same file path (potential conflict on save)
-///
-/// Future versions may introduce a proper view layer where splits share the
-/// underlying buffer content while maintaining per-view state (scroll, cursor).
+/// Splits create a new view sharing the same underlying document:
+/// - Edits sync across all views of the same document
+/// - Undo history is shared
+/// - Each view has independent cursor, selection, and scroll position
 pub trait BufferOpsAccess {
-	/// Split horizontally, creating a copy of the current buffer.
-	///
-	/// Note: This creates an independent buffer copy, not a shared view.
-	/// See trait-level docs for details.
+	/// Split horizontally (new buffer below). Matches Vim `:split` / Helix `hsplit`.
 	fn split_horizontal(&mut self);
 
-	/// Split vertically, creating a copy of the current buffer.
-	///
-	/// Note: This creates an independent buffer copy, not a shared view.
-	/// See trait-level docs for details.
+	/// Split vertically (new buffer to right). Matches Vim `:vsplit` / Helix `vsplit`.
 	fn split_vertical(&mut self);
 
-	/// Open a terminal in a horizontal split.
+	/// Open a terminal in a horizontal split (terminal below).
 	fn split_terminal_horizontal(&mut self);
-	/// Open a terminal in a vertical split.
+	/// Open a terminal in a vertical split (terminal to the right).
 	fn split_terminal_vertical(&mut self);
 	/// Switch to the next buffer.
 	fn buffer_next(&mut self);

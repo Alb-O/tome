@@ -11,7 +11,7 @@ use termwiz::input::{KeyCode, Modifiers};
 
 const TEST_TIMEOUT: Duration = Duration::from_secs(20);
 
-/// Creates a horizontal split (Ctrl+w s) - splits vertically (top/bottom).
+/// Creates a horizontal split (Ctrl+w s) - top/bottom panes with horizontal separator.
 fn create_horizontal_split(kitty: &kitty_test_harness::KittyHarness) {
 	kitty_send_keys!(kitty, (KeyCode::Char('w'), Modifiers::CTRL));
 	kitty_send_keys!(kitty, KeyCode::Char('s'));

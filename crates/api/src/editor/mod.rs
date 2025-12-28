@@ -458,14 +458,18 @@ impl Editor {
 		}
 	}
 
-	/// Creates a horizontal split with the current view and a new buffer.
+	/// Creates a horizontal split with the current view and a new buffer below.
+	///
+	/// Matches Vim's `:split` / Helix's `hsplit` (Ctrl+w s).
 	pub fn split_horizontal(&mut self, new_buffer_id: BufferId) {
 		let current_view = self.buffers.focused_view();
 		self.layout.split_horizontal(current_view, new_buffer_id);
 		self.focus_buffer(new_buffer_id);
 	}
 
-	/// Creates a vertical split with the current view and a new buffer.
+	/// Creates a vertical split with the current view and a new buffer to the right.
+	///
+	/// Matches Vim's `:vsplit` / Helix's `vsplit` (Ctrl+w v).
 	pub fn split_vertical(&mut self, new_buffer_id: BufferId) {
 		let current_view = self.buffers.focused_view();
 		self.layout.split_vertical(current_view, new_buffer_id);
@@ -480,7 +484,7 @@ impl Editor {
 		self.buffers.clone_focused_buffer_for_split()
 	}
 
-	/// Opens a new terminal in a horizontal split.
+	/// Opens a new terminal in a horizontal split (terminal below).
 	pub fn split_horizontal_terminal(&mut self) -> TerminalId {
 		let terminal_id = self.create_terminal();
 		let current_view = self.buffers.focused_view();
@@ -490,7 +494,7 @@ impl Editor {
 		terminal_id
 	}
 
-	/// Opens a new terminal in a vertical split.
+	/// Opens a new terminal in a vertical split (terminal to the right).
 	pub fn split_vertical_terminal(&mut self) -> TerminalId {
 		let terminal_id = self.create_terminal();
 		let current_view = self.buffers.focused_view();

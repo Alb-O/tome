@@ -21,7 +21,7 @@ macro_rules! bind {
 	};
 }
 
-// Split creation
+// Split creation (matches Vim/Helix: s=horizontal split below, v=vertical split right)
 bind!(KB_S, Key::char('s'), "split_horizontal");
 bind!(KB_V, Key::char('v'), "split_vertical");
 

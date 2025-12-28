@@ -44,10 +44,18 @@ fn parse_test_events(lines: &[String]) -> Vec<TestEvent> {
 		.collect()
 }
 
-/// Creates a vertical split (Ctrl+w s) - left/right panes with vertical separator.
-fn create_vertical_split(kitty: &kitty_test_harness::KittyHarness) {
+/// Creates a horizontal split (Ctrl+w s) - top/bottom panes with horizontal separator.
+#[allow(dead_code, reason = "available for tests needing horizontal splits")]
+fn create_horizontal_split(kitty: &kitty_test_harness::KittyHarness) {
 	kitty_send_keys!(kitty, (KeyCode::Char('w'), Modifiers::CTRL));
 	kitty_send_keys!(kitty, KeyCode::Char('s'));
+	pause_briefly();
+}
+
+/// Creates a vertical split (Ctrl+w v) - left/right panes with vertical separator.
+fn create_vertical_split(kitty: &kitty_test_harness::KittyHarness) {
+	kitty_send_keys!(kitty, (KeyCode::Char('w'), Modifiers::CTRL));
+	kitty_send_keys!(kitty, KeyCode::Char('v'));
 	pause_briefly();
 }
 
