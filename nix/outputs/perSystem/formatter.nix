@@ -28,5 +28,6 @@
         enable = true;
         package = pkgs.rust-bin.fromRustupToolchainFile (rootSrc + "/rust-toolchain.toml");
       };
+      kdlfmt.enable = true;
     };
 }
