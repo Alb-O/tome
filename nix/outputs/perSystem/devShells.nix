@@ -41,25 +41,31 @@
           pkgs.openssl
           pkgs.ast-grep
           pkgs.yq-go
+          pkgs.sccache
           lint-summary
           self'.formatter
         ];
 
+        env = {
+          RUSTC_WRAPPER = "sccache";
+        };
+
         shellHook = ''
           if [ -t 0 ]; then
-            # Install pre-commit hook
             if [ -d .git ]; then
               cp ${rootSrc}/nix/scripts/pre-commit .git/hooks/pre-commit
               chmod +x .git/hooks/pre-commit
             fi
-          fi
 
-          echo "Rust dev shell"
-          echo "  Rust: $(rustc --version)"
-          echo "  Cargo: $(cargo --version)"
-          echo ""
-          echo "Available commands:"
-          echo "  lint - Run consolidated lint summary"
+            echo "Rust dev shell"
+            echo "  Rust: $(rustc --version)"
+            echo "  Cargo: $(cargo --version)"
+            echo "  sccache: $(sccache --version)"
+            echo ""
+            echo "Available commands:"
+            echo "  lint          - Run consolidated lint summary"
+            echo "  sccache -s    - Show cache statistics"
+          fi
         '';
       };
     };
