@@ -26,6 +26,8 @@ cat > .git/info/sparse-checkout << 'EOF'
 /runtime/queries/
 EOF
 
+# Note: Helix uses runtime/queries/, we use runtime/language/queries/
+
 echo "Fetching from helix-editor/helix..."
 git fetch --depth=1 origin "$REF" -q
 git checkout FETCH_HEAD -q
@@ -38,9 +40,9 @@ echo "Synced from commit: $COMMIT_HASH"
 echo "Commit date: $COMMIT_DATE"
 
 # Sync queries only (languages.toml is maintained separately)
-echo "Copying runtime/queries/..."
-rm -rf "$REPO_ROOT/runtime/queries"
-cp -r runtime/queries "$REPO_ROOT/runtime/"
+echo "Copying runtime/language/queries/..."
+rm -rf "$REPO_ROOT/runtime/language/queries"
+cp -r runtime/queries "$REPO_ROOT/runtime/language/"
 
 # Write provenance file
 cat > "$REPO_ROOT/runtime/.helix-sync" << EOF
@@ -51,8 +53,8 @@ synced_at = "$(date -Iseconds)"
 EOF
 
 # Count what we synced
-LANG_COUNT=$(find "$REPO_ROOT/runtime/queries" -mindepth 1 -maxdepth 1 -type d | wc -l)
-SCM_COUNT=$(find "$REPO_ROOT/runtime/queries" -name "*.scm" | wc -l)
+LANG_COUNT=$(find "$REPO_ROOT/runtime/language/queries" -mindepth 1 -maxdepth 1 -type d | wc -l)
+SCM_COUNT=$(find "$REPO_ROOT/runtime/language/queries" -name "*.scm" | wc -l)
 
 echo ""
 echo "Sync complete!"

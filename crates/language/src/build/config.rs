@@ -31,7 +31,7 @@ pub enum GrammarSource {
 }
 
 /// Embedded grammars.kdl from the runtime directory.
-const GRAMMARS_KDL: &str = include_str!("../../../../runtime/grammars.kdl");
+const GRAMMARS_KDL: &str = include_str!("../../../../runtime/language/grammars.kdl");
 
 /// Loads grammar configurations from the embedded `grammars.kdl`.
 pub fn load_grammar_configs() -> super::Result<Vec<GrammarConfig>> {

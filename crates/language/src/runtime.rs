@@ -10,8 +10,8 @@ use include_dir::{Dir, include_dir};
 
 use crate::grammar::runtime_dir;
 
-/// Embedded query files from `runtime/queries/`.
-static QUERIES_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../runtime/queries");
+/// Embedded query files from `runtime/language/queries/`.
+static QUERIES_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../runtime/language/queries");
 
 /// Ensures the runtime directory exists and is populated with query files.
 ///
