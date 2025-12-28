@@ -1,6 +1,6 @@
-// Language support configuration.
-// See the languages documentation: https://docs.helix-editor.com/master/languages.html
-// LSP server definitions are in lsp.kdl.
+// Language configuration.
+// LSP definitions are in lsp.kdl.
+// Formatter definitions are in formatters.kdl.
 use-grammars {
 	except wren gemini
 }
@@ -87,7 +87,7 @@ language name=protobuf scope=source.proto injection-regex=proto comment-token="/
 language name=textproto comment-token="#" scope=source.textproto auto-format=#true {
 	file-types txtpb textpb textproto
 	indent tab-width=2 unit="  "
-	formatter command=txtpbfmt
+	formatter txtpbfmt
 }
 language name=eiffel scope=source.eiffel comment-token=-- {
 	file-types e
@@ -108,9 +108,7 @@ language name=fennel scope=source.fennel comment-token=";" {
 	file-types fnl fnlm
 	shebangs fennel
 	language-servers fennel-ls
-	formatter command=fnlfmt {
-		args -
-	}
+	formatter fnlfmt
 	indent tab-width=2 unit="  "
 }
 language name=fish scope=source.fish injection-regex=fish comment-token="#" auto-format=#true {
@@ -118,7 +116,7 @@ language name=fish scope=source.fish injection-regex=fish comment-token="#" auto
 	shebangs fish
 	language-servers fish-lsp
 	indent tab-width=4 unit="    "
-	formatter command=fish_indent
+	formatter fish_indent
 }
 language name=flatbuffers scope=source.flatbuffers injection-regex="(flatbuffers?|fbs)" comment-token="//" {
 	file-types fbs
@@ -136,16 +134,14 @@ language name=mojo scope=source.mojo injection-regex=mojo comment-token="#" auto
 	file-types mojo 🔥
 	language-servers mojo-lsp-server
 	indent tab-width=4 unit="    "
-	formatter command=pixi {
-		args run mojo format -q -
-	}
+	formatter pixi
 }
 language name=janet scope=source.janet injection-regex=janet comment-token="#" grammar=janet-simple {
 	file-types cgen janet jdn
 	shebangs janet
 	roots project.janet
 	indent tab-width=2 unit="  "
-	formatter command=janet-format
+	formatter janet-format
 	auto-pairs "\""="\"" "("=")" "["="]" "{"="}" `=`
 }
 language name=json scope=source.json injection-regex=json auto-format=#true {
@@ -306,9 +302,7 @@ language name=crystal scope=source.cr comment-token="#" {
 	roots shard.yml shard.lock
 	indent tab-width=2 unit="  "
 	language-servers crystalline ameba-ls
-	formatter command=crystal {
-		args tool format -
-	}
+	formatter crystal
 }
 language name=c-sharp scope=source.csharp injection-regex=c-?sharp {
 	file-types cs csx cake
@@ -524,7 +518,7 @@ language name=nix scope=source.nix injection-regex=nix comment-token="#" {
 	shebangs
 	language-servers nil nixd
 	indent tab-width=2 unit="  "
-	formatter command=nixfmt
+	formatter nixfmt
 }
 language name=ruby scope=source.ruby injection-regex=ruby comment-token="#" {
 	file-types {
@@ -676,9 +670,7 @@ language name=bibtex scope=source.bib injection-regex=bib comment-token=% auto-f
 	file-types bib
 	language-servers texlab
 	indent tab-width=4 unit="\t"
-	formatter command=bibtex-tidy {
-		args - --curly --drop-all-caps --remove-empty-fields --sort-fields "--sort=year,author,id" --strip-enclosing-braces --trailing-commas
-	}
+	formatter bibtex-tidy
 }
 language name=lean scope=source.lean injection-regex=lean comment-token=-- text-width=100 {
 	file-types lean
@@ -745,9 +737,7 @@ language name=dune scope=source.dune comment-token=";" grammar=scheme auto-forma
 		- glob=dune
 	}
 	indent tab-width=1 unit=" "
-	formatter command=dune {
-		args format-dune-file
-	}
+	formatter dune
 	auto-pairs "("=")" "{"="}" "["="]" "\""="\""
 }
 language name=lua injection-regex=lua scope=source.lua comment-token=-- {
@@ -796,9 +786,7 @@ language name=yaml scope=source.yaml comment-token="#" injection-regex=yml|yaml 
 	}
 	indent tab-width=2 unit="  "
 	language-servers yaml-language-server ansible-language-server
-	formatter command=yamlfmt {
-		args -
-	}
+	formatter yamlfmt
 }
 language name=nestedtext scope=text.nested injection-regex=nestedtext comment-token="#" grammar=yaml {
 	file-types nt
@@ -830,9 +818,7 @@ language name=purescript scope=source.purescript injection-regex=purescript comm
 	block-comment-tokens start="{-" end="-}"
 	language-servers purescript-language-server
 	indent tab-width=2 unit="  "
-	formatter command=purs-tidy {
-		args format
-	}
+	formatter purs-tidy
 }
 language name=zig scope=source.zig injection-regex=zig auto-format=#true {
 	file-types zig zon
@@ -840,9 +826,7 @@ language name=zig scope=source.zig injection-regex=zig auto-format=#true {
 	comment-tokens "//" "///" "//!"
 	language-servers zls
 	indent tab-width=4 unit="    "
-	formatter command=zig {
-		args fmt --stdin
-	}
+	formatter zig
 	debugger name=lldb-dap transport=stdio command=lldb-dap {
 		templates {
 			- name=binary request=launch {
@@ -1253,7 +1237,7 @@ language name=swift scope=source.swift injection-regex=swift comment-token="//" 
 	file-types swift swiftinterface
 	roots Package.swift
 	block-comment-tokens start="/*" end="*/"
-	formatter command=swift-format
+	formatter swift-format
 	language-servers sourcekit-lsp
 }
 language name=erb scope=text.html.erb injection-regex=erb grammar=embedded-template {
@@ -1288,9 +1272,7 @@ language name=gdscript scope=source.gdscript injection-regex=gdscript auto-forma
 	file-types gd
 	shebangs
 	roots project.godot
-	formatter command=gdformat {
-		args -
-	}
+	formatter gdformat
 	comment-tokens "#" "##"
 	indent tab-width=4 unit="\t"
 }
@@ -1342,9 +1324,7 @@ language name=odin auto-format=#true scope=source.odin comment-token="//" {
 	language-servers ols
 	block-comment-tokens start="/*" end="*/"
 	indent tab-width=4 unit="\t"
-	formatter command=odinfmt {
-		args -stdin
-	}
+	formatter odinfmt
 	debugger name=lldb-dap transport=stdio command=lldb-dap {
 		templates {
 			- name=binary request=launch {
@@ -1489,9 +1469,7 @@ language name=cue scope=source.cue injection-regex=cue auto-format=#true comment
 	roots cue.mod
 	language-servers cuelsp
 	indent tab-width=4 unit="\t"
-	formatter command=cue {
-		args fmt -
-	}
+	formatter cue
 }
 language name=slang scope=source.lang injection-regex=slang comment-token="//" {
 	file-types slang
@@ -1567,7 +1545,7 @@ language name=d scope=source.d comment-token="//" injection-regex=d {
 	block-comment-tokens start="/*" end="*/"
 	indent tab-width=4 unit="    "
 	language-servers serve-d
-	formatter command=dfmt
+	formatter dfmt
 }
 language name=vhs scope=source.vhs comment-token="#" grammar=vhs {
 	file-types tape
@@ -1576,9 +1554,7 @@ language name=vhs scope=source.vhs comment-token="#" grammar=vhs {
 language name=kdl scope=source.kdl comment-token="//" injection-regex=kdl {
 	file-types kdl
 	block-comment-tokens start="/*" end="*/"
-	formatter command=kdlfmt {
-		args format -
-	}
+	formatter kdlfmt
 }
 language name=xml scope=source.xml injection-regex=xml {
 	file-types {
@@ -1734,9 +1710,7 @@ language name=inko auto-format=#true scope=source.inko injection-regex=inko comm
 	file-types inko
 	roots inko.pkg
 	indent tab-width=2 unit="  "
-	formatter command=inko {
-		args fmt -
-	}
+	formatter inko
 }
 language name=bicep scope=source.bicep auto-format=#true comment-token="//" {
 	file-types bicep bicepparam
@@ -1770,9 +1744,7 @@ language name=dhall scope=source.dhall injection-regex=dhall comment-token=-- {
 	block-comment-tokens start="{-" end="-}"
 	indent tab-width=2 unit="  "
 	language-servers dhall-lsp-server
-	formatter command=dhall {
-		args format
-	}
+	formatter dhall
 }
 language name=sage scope=source.sage injection-regex=sage comment-token="#" grammar=python {
 	file-types sage
@@ -1865,7 +1837,7 @@ language name=cabal scope=source.cabal comment-token=-- {
 }
 language name=hurl scope=source.hurl injection-regex=hurl comment-token="#" {
 	file-types hurl
-	formatter command=hurlfmt
+	formatter hurlfmt
 	indent tab-width=2 unit="  "
 }
 language name=markdoc scope=text.markdoc {
@@ -1892,9 +1864,7 @@ language name=gn scope=source.gn injection-regex=gn comment-token="#" {
 	file-types gn gni
 	roots
 	indent tab-width=2 unit="  "
-	formatter command=gn {
-		args format --stdin
-	}
+	formatter gn
 }
 language name=blueprint scope=source.blueprint injection-regex=blueprint comment-token="//" {
 	file-types blp
@@ -1996,7 +1966,7 @@ language name=todotxt scope=text.todotxt auto-format=#true {
 		- glob=*.todo.txt
 		- todotxt
 	}
-	formatter command=sort
+	formatter sort
 }
 language name=strace scope=source.strace {
 	file-types strace
@@ -2141,9 +2111,7 @@ language name=glimmer scope=source.glimmer injection-regex=hbs grammar=glimmer {
 	block-comment-tokens start="{{!" end="}}"
 	roots package.json ember-cli-build.js
 	language-servers ember-language-server
-	formatter command=prettier {
-		args --parser glimmer
-	}
+	formatter prettier
 	auto-pairs "\""="\"" "{"="}" "("=")" <=> '='
 }
 language name=ohm scope=source.ohm injection-regex=ohm comment-token="//" {
@@ -2246,9 +2214,7 @@ language name=snakemake scope=source.snakemake {
 	comment-tokens "#" "##"
 	indent tab-width=2 unit="  "
 	language-servers pylsp
-	formatter command=snakefmt {
-		args -
-	}
+	formatter snakefmt
 }
 language name=cylc scope=source.cylc injection-regex=cylc comment-tokens="#" {
 	file-types {
@@ -2286,9 +2252,7 @@ language name=koto scope=source.koto injection-regex=koto comment-token="#" {
 	block-comment-tokens "#-" "-#"
 	indent tab-width=2 unit="  "
 	language-servers koto-ls
-	formatter command=koto {
-		args --format
-	}
+	formatter koto
 }
 language name=gpr scope=source.gpr injection-regex=gpr comment-token=-- {
 	file-types gpr
@@ -2377,9 +2341,7 @@ language name=tlaplus scope=scope.tlaplus injection-regex=tla comment-tokens="\\
 	file-types tla
 	block-comment-tokens start="(*" end="*)"
 	indent tab-width=4 unit=" "
-	formatter command=tlafmt {
-		args --stdin
-	}
+	formatter tlafmt
 }
 language name=werk scope=source.werk comment-token="#" {
 	file-types {
@@ -2442,9 +2404,7 @@ language name=caddyfile scope=source.caddyfile injection-regex=caddyfile auto-fo
 	}
 	comment-tokens "#"
 	indent tab-width=4 unit="    "
-	formatter command=caddy {
-		args fmt -
-	}
+	formatter caddy
 }
 language name=properties scope=source.properties injection-regex=properties {
 	file-types properties prefs
@@ -2535,9 +2495,7 @@ language name=nearley scope=source.nearley comment-token="#" {
 language name=kcl scope=source.kcl injection-regex=kcl comment-tokens="//" {
 	file-types kcl
 	indent tab-width=2 unit="  "
-	formatter command=zoo {
-		args kcl fmt -
-	}
+	formatter zoo
 	language-servers kcl-lsp
 	block-comment-tokens start="/*" end="*/"
 }
@@ -2593,9 +2551,7 @@ language name=woodpecker-ci scope=source.woodpecker-ci injection-regex=^woodpeck
 	}
 	indent tab-width=2 unit="  "
 	language-servers yaml-language-server
-	formatter command=yamlfmt {
-		args -
-	}
+	formatter yamlfmt
 }
 language name=chuck scope=source.ck comment-tokens="//" injection-regex=^chuck$|^ck$ {
 	block-comment-tokens start="/*" end="*/"
