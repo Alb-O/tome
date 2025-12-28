@@ -16,24 +16,6 @@ action!(
 );
 
 action!(
-	duplicate_selections_down,
-	{ description: "Duplicate selections on next lines" },
-	result: ActionResult::DuplicateSelectionsDown
-);
-
-action!(
-	duplicate_selections_up,
-	{ description: "Duplicate selections on previous lines" },
-	result: ActionResult::DuplicateSelectionsUp
-);
-
-action!(
-	merge_selections,
-	{ description: "Merge overlapping selections" },
-	result: ActionResult::MergeSelections
-);
-
-action!(
 	align,
 	{ description: "Align cursors" },
 	result: ActionResult::Align

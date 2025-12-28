@@ -59,9 +59,6 @@ result_slices!(
 	RESULT_USE_SELECTION_SEARCH_HANDLERS,
 	RESULT_SPLIT_LINES_HANDLERS,
 	RESULT_FORCE_REDRAW_HANDLERS,
-	RESULT_DUPLICATE_SELECTIONS_DOWN_HANDLERS,
-	RESULT_DUPLICATE_SELECTIONS_UP_HANDLERS,
-	RESULT_MERGE_SELECTIONS_HANDLERS,
 	// Unimplemented stubs (have action! but no real handler yet)
 	RESULT_ALIGN_HANDLERS,
 	RESULT_COPY_INDENT_HANDLERS,
@@ -139,21 +136,6 @@ pub fn dispatch_result(result: &ActionResult, ctx: &mut EditorContext, extend: b
 		ActionResult::SplitLines => run_handlers(&RESULT_SPLIT_LINES_HANDLERS, result, ctx, extend),
 		ActionResult::ForceRedraw => {
 			run_handlers(&RESULT_FORCE_REDRAW_HANDLERS, result, ctx, extend)
-		}
-		ActionResult::DuplicateSelectionsDown => run_handlers(
-			&RESULT_DUPLICATE_SELECTIONS_DOWN_HANDLERS,
-			result,
-			ctx,
-			extend,
-		),
-		ActionResult::DuplicateSelectionsUp => run_handlers(
-			&RESULT_DUPLICATE_SELECTIONS_UP_HANDLERS,
-			result,
-			ctx,
-			extend,
-		),
-		ActionResult::MergeSelections => {
-			run_handlers(&RESULT_MERGE_SELECTIONS_HANDLERS, result, ctx, extend)
 		}
 		ActionResult::Align => run_handlers(&RESULT_ALIGN_HANDLERS, result, ctx, extend),
 		ActionResult::CopyIndent => run_handlers(&RESULT_COPY_INDENT_HANDLERS, result, ctx, extend),

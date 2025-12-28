@@ -105,12 +105,6 @@ pub enum ActionResult {
 	UseSelectionAsSearch,
 	/// Split selection into lines.
 	SplitLines,
-	/// Duplicate selections downward.
-	DuplicateSelectionsDown,
-	/// Duplicate selections upward.
-	DuplicateSelectionsUp,
-	/// Merge overlapping selections.
-	MergeSelections,
 	/// Align selections.
 	Align,
 	/// Copy indentation.

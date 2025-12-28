@@ -131,6 +131,109 @@ action!(
 	result: ActionResult::SplitLines
 );
 
+action!(
+	duplicate_selections_down,
+	{ description: "Duplicate selections on next lines" },
+	handler: duplicate_selections_down
+);
+
+fn duplicate_selections_down(ctx: &ActionContext) -> ActionResult {
+	let text = &ctx.text;
+	let mut new_ranges = ctx.selection.ranges().to_vec();
+	let mut primary_index = ctx.selection.primary_index();
+
+	for (idx, range) in ctx.selection.ranges().iter().enumerate() {
+		let anchor_line = text.char_to_line(range.anchor);
+		let head_line = text.char_to_line(range.head);
+		let target_anchor_line = anchor_line + 1;
+		let target_head_line = head_line + 1;
+
+		if target_anchor_line >= text.len_lines() || target_head_line >= text.len_lines() {
+			continue;
+		}
+
+		let anchor_col = range.anchor - text.line_to_char(anchor_line);
+		let head_col = range.head - text.line_to_char(head_line);
+
+		let new_anchor = line_col_to_char(text, target_anchor_line, anchor_col);
+		let new_head = line_col_to_char(text, target_head_line, head_col);
+		let new_range = tome_base::range::Range::new(new_anchor, new_head);
+
+		if !new_ranges.contains(&new_range) {
+			new_ranges.push(new_range);
+			if idx == primary_index {
+				primary_index = new_ranges.len() - 1;
+			}
+		}
+	}
+
+	ActionResult::Motion(Selection::from_vec(new_ranges, primary_index))
+}
+
+action!(
+	duplicate_selections_up,
+	{ description: "Duplicate selections on previous lines" },
+	handler: duplicate_selections_up
+);
+
+fn duplicate_selections_up(ctx: &ActionContext) -> ActionResult {
+	let text = &ctx.text;
+	let mut new_ranges = ctx.selection.ranges().to_vec();
+	let mut primary_index = ctx.selection.primary_index();
+
+	for (idx, range) in ctx.selection.ranges().iter().enumerate() {
+		let anchor_line = text.char_to_line(range.anchor);
+		let head_line = text.char_to_line(range.head);
+
+		if anchor_line == 0 || head_line == 0 {
+			continue;
+		}
+
+		let target_anchor_line = anchor_line - 1;
+		let target_head_line = head_line - 1;
+
+		let anchor_col = range.anchor - text.line_to_char(anchor_line);
+		let head_col = range.head - text.line_to_char(head_line);
+
+		let new_anchor = line_col_to_char(text, target_anchor_line, anchor_col);
+		let new_head = line_col_to_char(text, target_head_line, head_col);
+		let new_range = tome_base::range::Range::new(new_anchor, new_head);
+
+		if !new_ranges.contains(&new_range) {
+			new_ranges.push(new_range);
+			if idx == primary_index {
+				primary_index = new_ranges.len() - 1;
+			}
+		}
+	}
+
+	ActionResult::Motion(Selection::from_vec(new_ranges, primary_index))
+}
+
+/// Convert line and column to char index, clamping column to line length.
+fn line_col_to_char(text: &ropey::RopeSlice, line: usize, col: usize) -> usize {
+	let line_start = text.line_to_char(line);
+	let line_end = if line + 1 < text.len_lines() {
+		text.line_to_char(line + 1)
+	} else {
+		text.len_chars()
+	};
+	let line_len = line_end.saturating_sub(line_start);
+	line_start + col.min(line_len)
+}
+
+action!(
+	merge_selections,
+	{ description: "Merge overlapping selections" },
+	handler: merge_selections
+);
+
+fn merge_selections(ctx: &ActionContext) -> ActionResult {
+	let mut new_sel = ctx.selection.clone();
+	new_sel.merge_overlaps_and_adjacent();
+	ActionResult::Motion(new_sel)
+}
+
 #[cfg(test)]
 mod tests {
 	use tome_manifest::actions::ActionArgs;
