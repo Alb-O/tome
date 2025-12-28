@@ -170,6 +170,7 @@ pub mod notifications;
 pub mod options;
 pub mod split_buffer;
 pub mod statusline;
+pub mod theme;
 
 #[distributed_slice]
 pub static ACTIONS: [actions::ActionDef];
@@ -344,4 +345,9 @@ pub use split_buffer::{
 pub use statusline::{
 	RenderedSegment, STATUSLINE_SEGMENTS, SegmentPosition, SegmentStyle, StatuslineContext,
 	StatuslineSegmentDef, all_segments, find_segment, render_position, segments_for_position,
+};
+pub use theme::{
+	DEFAULT_THEME, DEFAULT_THEME_ID, NotificationColors, PopupColors, SemanticColorPair,
+	StatusColors, THEMES, Theme, ThemeColors, ThemeSource, ThemeVariant, UiColors, blend_colors,
+	get_theme, suggest_theme,
 };

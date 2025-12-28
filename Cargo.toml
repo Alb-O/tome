@@ -17,6 +17,7 @@ futures = "0.3"
 globset = "0.4"
 home = "0.5"
 insta = "1.45"
+kdl = "6.5"
 kitty-test-harness = "0.1"
 libc = "0.2"
 libloading = "0.8"
@@ -46,6 +47,7 @@ tokio-util = { version = "0.7", features = ["compat"] }
 evildoer-acp = { path = "crates/acp" }
 evildoer-api = { path = "crates/api" }
 evildoer-base = { path = "crates/base" }
+evildoer-config = { path = "crates/config" }
 evildoer-extensions = { path = "crates/extensions" }
 evildoer-input = { path = "crates/input" }
 evildoer-language = { path = "crates/language" }
@@ -53,7 +55,6 @@ evildoer-lsp = { path = "crates/lsp" }
 evildoer-macro = { path = "crates/macro" }
 evildoer-manifest = { path = "crates/manifest" }
 evildoer-stdlib = { path = "crates/stdlib" }
-evildoer-theme = { path = "crates/theme" }
 evildoer-tui = { path = "crates/tui" }
 toml = "0.9"
 tree-house = "0.3"

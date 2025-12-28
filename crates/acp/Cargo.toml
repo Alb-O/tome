@@ -19,7 +19,6 @@ evildoer-api.workspace = true
 evildoer-base.workspace = true
 evildoer-manifest.workspace = true
 evildoer-stdlib.workspace = true
-evildoer-theme.workspace = true
 evildoer-tui.workspace = true
 
 [dev-dependencies]

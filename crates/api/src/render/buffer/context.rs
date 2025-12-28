@@ -8,7 +8,7 @@ use evildoer_language::LanguageLoader;
 use evildoer_language::highlight::{HighlightSpan, HighlightStyles};
 use evildoer_manifest::Mode;
 use evildoer_manifest::syntax::SyntaxStyles;
-use evildoer_theme::{Theme, ThemeVariant};
+use evildoer_manifest::{Theme, ThemeVariant};
 use evildoer_tui::layout::Rect;
 use evildoer_tui::style::{Modifier, Style};
 use evildoer_tui::text::{Line, Span};

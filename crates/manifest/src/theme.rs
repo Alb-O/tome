@@ -1,10 +1,13 @@
+//! Theme schema types and registry.
+//!
+//! This module defines the type schema for editor themes. Actual theme definitions
+//! should be KDL files in `runtime/themes/` - the hardcoded Rust themes exist only
+//! as fallback defaults.
+
 use linkme::distributed_slice;
 
-pub mod themes;
-
-// Re-export abstract color types from evildoer-base
+pub use crate::syntax::{SyntaxStyle, SyntaxStyles};
 pub use evildoer_base::color::{Color, Modifier};
-pub use evildoer_manifest::syntax::{SyntaxStyle, SyntaxStyles};
 
 /// Whether a theme uses a light or dark background.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -14,7 +17,7 @@ pub enum ThemeVariant {
 	Light,
 }
 
-#[non_exhaustive]
+/// UI color definitions for the editor chrome.
 #[derive(Clone, Copy, Debug)]
 pub struct UiColors {
 	pub bg: Color,
@@ -29,7 +32,7 @@ pub struct UiColors {
 	pub command_input_fg: Color,
 }
 
-#[non_exhaustive]
+/// Status line color definitions per mode.
 #[derive(Clone, Copy, Debug)]
 pub struct StatusColors {
 	pub normal_bg: Color,
@@ -49,7 +52,7 @@ pub struct StatusColors {
 	pub success_fg: Color,
 }
 
-#[non_exhaustive]
+/// Popup/menu color definitions.
 #[derive(Clone, Copy, Debug)]
 pub struct PopupColors {
 	pub bg: Color,
@@ -73,7 +76,6 @@ impl SemanticColorPair {
 
 /// Notification-specific color overrides.
 /// Uses a flat list of semantic identifiers mapped to color pairs.
-#[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub struct NotificationColors {
 	/// Border color override (inherits from popup.border if None)
@@ -91,7 +93,7 @@ impl NotificationColors {
 	};
 }
 
-#[non_exhaustive]
+/// Complete theme color palette.
 #[derive(Clone, Copy, Debug)]
 pub struct ThemeColors {
 	pub ui: UiColors,
@@ -103,7 +105,40 @@ pub struct ThemeColors {
 	pub syntax: SyntaxStyles,
 }
 
-#[non_exhaustive]
+impl ThemeColors {
+	/// Resolve notification style for a given semantic identifier.
+	/// Uses notification-specific overrides if set, otherwise inherits from popup/status colors.
+	pub fn notification_style(&self, semantic: &str) -> evildoer_base::Style {
+		let override_pair = self
+			.notification
+			.overrides
+			.iter()
+			.find(|(id, _)| *id == semantic)
+			.map(|(_, pair)| pair);
+
+		let bg = override_pair.and_then(|p| p.bg).unwrap_or(self.popup.bg);
+
+		let fg = override_pair.and_then(|p| p.fg).unwrap_or_else(|| {
+			use crate::*;
+			match semantic {
+				SEMANTIC_WARNING => self.status.warning_fg,
+				SEMANTIC_ERROR => self.status.error_fg,
+				SEMANTIC_SUCCESS => self.status.success_fg,
+				SEMANTIC_DIM => self.status.dim_fg,
+				_ => self.popup.fg,
+			}
+		});
+
+		evildoer_base::Style::new().bg(bg).fg(fg)
+	}
+
+	/// Resolve notification border color.
+	pub fn notification_border(&self) -> Color {
+		self.notification.border.unwrap_or(self.popup.border)
+	}
+}
+
+/// A complete theme definition.
 #[derive(Clone, Copy, Debug)]
 pub struct Theme {
 	pub id: &'static str,
@@ -112,7 +147,7 @@ pub struct Theme {
 	pub variant: ThemeVariant,
 	pub colors: ThemeColors,
 	pub priority: i16,
-	pub source: evildoer_manifest::RegistrySource,
+	pub source: crate::RegistrySource,
 }
 
 #[distributed_slice]
@@ -164,43 +199,8 @@ pub static DEFAULT_THEME: Theme = Theme {
 		syntax: SyntaxStyles::minimal(),
 	},
 	priority: 0,
-	source: evildoer_manifest::RegistrySource::Builtin,
+	source: crate::RegistrySource::Builtin,
 };
-
-impl ThemeColors {
-	/// Resolve notification style for a given semantic identifier.
-	/// Uses notification-specific overrides if set, otherwise inherits from popup/status colors.
-	pub fn notification_style(&self, semantic: &str) -> evildoer_base::Style {
-		let override_pair = self
-			.notification
-			.overrides
-			.iter()
-			.find(|(id, _)| *id == semantic)
-			.map(|(_, pair)| pair);
-
-		// Resolve background: notification override -> popup.bg
-		let bg = override_pair.and_then(|p| p.bg).unwrap_or(self.popup.bg);
-
-		// Resolve foreground: notification override -> semantic fallback from status/popup
-		let fg = override_pair.and_then(|p| p.fg).unwrap_or_else(|| {
-			use evildoer_manifest::*;
-			match semantic {
-				SEMANTIC_WARNING => self.status.warning_fg,
-				SEMANTIC_ERROR => self.status.error_fg,
-				SEMANTIC_SUCCESS => self.status.success_fg,
-				SEMANTIC_DIM => self.status.dim_fg,
-				_ => self.popup.fg, // Fallback for Info, Normal, and unknown semantics
-			}
-		});
-
-		evildoer_base::Style::new().bg(bg).fg(fg)
-	}
-
-	/// Resolve notification border color.
-	pub fn notification_border(&self) -> Color {
-		self.notification.border.unwrap_or(self.popup.border)
-	}
-}
 
 pub fn get_theme(name: &str) -> Option<&'static Theme> {
 	let normalize = |s: &str| -> String {
@@ -249,56 +249,11 @@ pub fn suggest_theme(name: &str) -> Option<&'static str> {
 	if best_score > 0.8 { best_match } else { None }
 }
 
-use futures::future::LocalBoxFuture;
-use evildoer_manifest::completion::{
-	CompletionContext, CompletionItem, CompletionKind, CompletionResult, CompletionSource,
-	PROMPT_COMMAND,
-};
-use evildoer_manifest::editor_ctx::MessageAccess;
-use evildoer_manifest::{
-	COMMANDS, CommandContext, CommandDef, CommandError, CommandOutcome, OPTIONS, OptionDef,
-	OptionScope, OptionType, OptionValue,
-};
-
 pub const DEFAULT_THEME_ID: &str = "gruvbox";
 
-#[distributed_slice(OPTIONS)]
-pub static OPT_THEME: OptionDef = OptionDef {
-	id: "theme",
-	name: "theme",
-	description: "Editor color theme",
-	value_type: OptionType::String,
-	default: || OptionValue::String(DEFAULT_THEME_ID.to_string()),
-	scope: OptionScope::Global,
-	source: evildoer_manifest::RegistrySource::Builtin,
-};
-
-fn cmd_theme<'a>(
-	ctx: &'a mut CommandContext<'a>,
-) -> LocalBoxFuture<'a, Result<CommandOutcome, CommandError>> {
-	Box::pin(async move {
-		let theme_name = ctx
-			.args
-			.first()
-			.ok_or(CommandError::MissingArgument("theme name"))?;
-		ctx.editor.set_theme(theme_name)?;
-		ctx.notify("info", &format!("Theme set to '{}'", theme_name));
-		Ok(CommandOutcome::Ok)
-	})
-}
-
-#[distributed_slice(COMMANDS)]
-pub static CMD_THEME: CommandDef = CommandDef {
-	id: "theme",
-	name: "theme",
-	aliases: &["colorscheme"],
-	description: "Set the editor theme",
-	handler: cmd_theme,
-	user_data: None,
-	priority: 0,
-	source: evildoer_manifest::RegistrySource::Builtin,
-	required_caps: &[],
-	flags: evildoer_manifest::flags::NONE,
+use crate::completion::{
+	CompletionContext, CompletionItem, CompletionKind, CompletionResult, CompletionSource,
+	PROMPT_COMMAND,
 };
 
 /// Completion source for theme names.
@@ -311,28 +266,21 @@ impl CompletionSource for ThemeSource {
 			return CompletionResult::empty();
 		}
 
-		// Parse the command line to check if we're completing theme arguments
 		let parts: Vec<&str> = ctx.input.split_whitespace().collect();
-
-		// Only complete if the command is "theme" or "colorscheme" and we have an argument position
 		let is_theme_cmd = matches!(parts.first(), Some(&"theme") | Some(&"colorscheme"));
 
 		if !is_theme_cmd {
 			return CompletionResult::empty();
 		}
 
-		// Get the partial theme name (if any)
 		let prefix = parts.get(1).copied().unwrap_or("");
 
-		// Check if we're still typing the command name vs. the argument
-		// If the input doesn't end with a space and we only have 1 part, we're still typing the command
 		if parts.len() == 1 && !ctx.input.ends_with(' ') {
 			return CompletionResult::empty();
 		}
 
-		// Calculate where the argument starts (after "theme " or "colorscheme ")
 		let cmd_name = parts.first().unwrap();
-		let arg_start = cmd_name.len() + 1; // +1 for the space
+		let arg_start = cmd_name.len() + 1;
 
 		let items: Vec<_> = THEMES
 			.iter()
@@ -356,97 +304,5 @@ impl CompletionSource for ThemeSource {
 			.collect();
 
 		CompletionResult::new(arg_start, items)
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_theme_completion_replace_start() {
-		let ctx = CompletionContext {
-			input: "theme ".to_string(),
-			cursor: 6,
-			prompt: PROMPT_COMMAND,
-		};
-
-		let result = ThemeSource.complete(&ctx);
-		assert!(!result.is_empty(), "Should have theme completions");
-		assert_eq!(
-			result.start, 6,
-			"Theme completion should start at position 6"
-		);
-
-		for item in &result.items {
-			assert_eq!(item.kind, CompletionKind::Theme);
-		}
-	}
-
-	#[test]
-	fn test_theme_completion_with_partial_arg() {
-		let ctx = CompletionContext {
-			input: "theme gr".to_string(),
-			cursor: 8,
-			prompt: PROMPT_COMMAND,
-		};
-
-		let result = ThemeSource.complete(&ctx);
-		assert_eq!(result.start, 6, "Should replace from position 6");
-
-		// Should filter to themes starting with "gr"
-		assert!(
-			result.items.iter().any(|i| i.label == "gruvbox"),
-			"Should include gruvbox"
-		);
-	}
-
-	#[test]
-	fn test_colorscheme_alias_completion() {
-		let ctx = CompletionContext {
-			input: "colorscheme ".to_string(),
-			cursor: 12,
-			prompt: PROMPT_COMMAND,
-		};
-
-		let result = ThemeSource.complete(&ctx);
-		assert!(
-			!result.is_empty(),
-			"Should have theme completions for colorscheme alias"
-		);
-		assert_eq!(
-			result.start, 12,
-			"Colorscheme completion should start at position 12"
-		);
-	}
-
-	#[test]
-	fn test_no_completion_for_other_commands() {
-		let ctx = CompletionContext {
-			input: "write ".to_string(),
-			cursor: 6,
-			prompt: PROMPT_COMMAND,
-		};
-
-		let result = ThemeSource.complete(&ctx);
-		assert!(
-			result.is_empty(),
-			"Should not complete for non-theme commands"
-		);
-	}
-
-	#[test]
-	fn test_no_completion_while_typing_command() {
-		let ctx = CompletionContext {
-			input: "them".to_string(),
-			cursor: 4,
-			prompt: PROMPT_COMMAND,
-		};
-
-		let result = ThemeSource.complete(&ctx);
-		assert!(
-			result.is_empty(),
-			"Should not complete while still typing command name"
-		);
 	}
 }

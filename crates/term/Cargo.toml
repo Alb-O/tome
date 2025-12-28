@@ -27,7 +27,6 @@ evildoer-extensions.workspace = true
 evildoer-language.workspace = true
 evildoer-manifest.workspace = true
 evildoer-stdlib.workspace = true
-evildoer-theme.workspace = true
 evildoer-tui.workspace = true
 toml.workspace = true
 

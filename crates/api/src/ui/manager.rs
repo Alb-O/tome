@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use termina::event::{KeyEvent, MouseEvent};
-use evildoer_theme::Theme;
+use evildoer_manifest::Theme;
 use evildoer_tui::layout::Rect;
 
 use super::dock::{DockLayout, DockManager};

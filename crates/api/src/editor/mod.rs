@@ -24,8 +24,7 @@ pub use layout_manager::LayoutManager;
 use evildoer_base::Transaction;
 use evildoer_language::LanguageLoader;
 use evildoer_manifest::syntax::SyntaxStyles;
-use evildoer_manifest::{HookContext, HookEventData, Mode, emit_hook, emit_hook_sync_with};
-use evildoer_theme::Theme;
+use evildoer_manifest::{HookContext, HookEventData, Mode, Theme, emit_hook, emit_hook_sync_with};
 pub use types::{HistoryEntry, Registers};
 
 pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
@@ -294,8 +293,8 @@ impl Editor {
 			buffers: buffer_manager,
 			layout: LayoutManager::new(buffer_id),
 			registers: Registers::default(),
-			theme: evildoer_theme::get_theme(evildoer_theme::DEFAULT_THEME_ID)
-				.unwrap_or(&evildoer_theme::DEFAULT_THEME),
+			theme: evildoer_manifest::get_theme(evildoer_manifest::DEFAULT_THEME_ID)
+				.unwrap_or(&evildoer_manifest::DEFAULT_THEME),
 			window_width: None,
 			window_height: None,
 			ui: UiManager::new(),
@@ -919,12 +918,12 @@ impl Editor {
 	}
 
 	pub fn set_theme(&mut self, theme_name: &str) -> Result<(), evildoer_manifest::CommandError> {
-		if let Some(theme) = evildoer_theme::get_theme(theme_name) {
+		if let Some(theme) = evildoer_manifest::get_theme(theme_name) {
 			self.theme = theme;
 			Ok(())
 		} else {
 			let mut err = format!("Theme not found: {}", theme_name);
-			if let Some(suggestion) = evildoer_theme::suggest_theme(theme_name) {
+			if let Some(suggestion) = evildoer_manifest::suggest_theme(theme_name) {
 				err.push_str(&format!(". Did you mean '{}'?", suggestion));
 			}
 			Err(evildoer_manifest::CommandError::Failed(err))

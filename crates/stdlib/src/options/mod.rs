@@ -9,6 +9,7 @@ mod file;
 mod indent;
 mod scroll;
 mod search;
+mod theme;
 
 // Re-export types from evildoer-manifest for use in option definitions
 pub use evildoer_manifest::options::{
