@@ -42,6 +42,8 @@ pub struct CursorStyles {
 	pub base: Style,
 	/// Selection highlight style.
 	pub selection: Style,
+	/// Style for cursors in unfocused buffers (dimmed like secondary cursors).
+	pub unfocused: Style,
 }
 
 impl<'a> BufferRenderContext<'a> {
@@ -82,6 +84,7 @@ impl<'a> BufferRenderContext<'a> {
 			secondary: secondary_cursor_style,
 			base: base_style,
 			selection: selection_style,
+			unfocused: secondary_cursor_style,
 		}
 	}
 
@@ -232,7 +235,7 @@ impl<'a> BufferRenderContext<'a> {
 		let viewport_height = area.height as usize;
 
 		while output_lines.len() < viewport_height && current_line_idx < total_lines {
-			let is_cursor_line = is_focused && current_line_idx == cursor_line;
+			let is_cursor_line = current_line_idx == cursor_line;
 			let line_start: CharIdx = buffer.doc().content.line_to_char(current_line_idx);
 			let line_end: CharIdx = if current_line_idx + 1 < total_lines {
 				buffer.doc().content.line_to_char(current_line_idx + 1)
@@ -303,11 +306,14 @@ impl<'a> BufferRenderContext<'a> {
 						.iter()
 						.any(|r: &tome_base::range::Range| doc_pos >= r.min() && doc_pos < r.max());
 
-					let cursor_style = if is_primary_cursor {
+					let cursor_style = if !is_focused {
+						styles.unfocused
+					} else if is_primary_cursor {
 						styles.primary
 					} else {
 						styles.secondary
 					};
+
 					// Convert char position to byte position for highlight lookup
 					let byte_pos = buffer.doc().content.char_to_byte(doc_pos);
 					let syntax_style = self.style_for_byte_pos(byte_pos, &highlight_spans);
@@ -335,8 +341,12 @@ impl<'a> BufferRenderContext<'a> {
 							base
 						}
 					};
-					let style = if is_cursor && use_block_cursor {
-						if blink_on { cursor_style } else { styles.base }
+					let style = if is_cursor && (use_block_cursor || !is_focused) {
+						if blink_on || !is_focused {
+							cursor_style
+						} else {
+							styles.base
+						}
 					} else {
 						non_cursor_style
 					};
@@ -396,22 +406,21 @@ impl<'a> BufferRenderContext<'a> {
 						}
 					});
 
-					if cursor_at_eol {
+					if cursor_at_eol && ((use_block_cursor && blink_on) || !is_focused) {
 						let primary_here = if is_last_doc_line {
 							primary_cursor >= line_content_end && primary_cursor <= line_end
 						} else {
 							primary_cursor >= line_content_end && primary_cursor < line_end
 						};
-
-						if use_block_cursor && blink_on {
-							let cursor_style = if primary_here {
-								styles.primary
-							} else {
-								styles.secondary
-							};
-							spans.push(Span::styled(" ", cursor_style));
-							seg_col += 1;
-						}
+						let cursor_style = if !is_focused {
+							styles.unfocused
+						} else if primary_here {
+							styles.primary
+						} else {
+							styles.secondary
+						};
+						spans.push(Span::styled(" ", cursor_style));
+						seg_col += 1;
 					}
 
 					if is_cursor_line && seg_col < text_width {
@@ -449,13 +458,15 @@ impl<'a> BufferRenderContext<'a> {
 					}
 				});
 				let mut cols_used = 0;
-				if cursor_at_eol && use_block_cursor && blink_on {
+				if cursor_at_eol && ((use_block_cursor && blink_on) || !is_focused) {
 					let primary_here = if is_last_doc_line {
 						primary_cursor >= line_start && primary_cursor <= line_end
 					} else {
 						primary_cursor >= line_start && primary_cursor < line_end
 					};
-					let cursor_style = if primary_here {
+					let cursor_style = if !is_focused {
+						styles.unfocused
+					} else if primary_here {
 						styles.primary
 					} else {
 						styles.secondary
