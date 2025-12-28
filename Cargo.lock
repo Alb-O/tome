@@ -2409,6 +2409,7 @@ dependencies = [
  "linkme",
  "log",
  "paste",
+ "ropey",
  "tome-api",
  "tome-language",
  "tome-lsp",

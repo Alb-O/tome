@@ -671,7 +671,13 @@ impl Editor {
 			let scratch_path = PathBuf::from("[scratch]");
 			let path = buffer.path.as_ref().unwrap_or(&scratch_path);
 			emit_hook_sync_with(
-				&HookContext::new(HookEventData::BufferClose { path }, Some(&self.extensions)),
+				&HookContext::new(
+					HookEventData::BufferClose {
+						path,
+						file_type: buffer.file_type.as_deref(),
+					},
+					Some(&self.extensions),
+				),
 				&mut self.hook_runtime,
 			);
 		}
@@ -826,6 +832,7 @@ impl Editor {
 						HookEventData::BufferChange {
 							path,
 							text: buffer.doc.slice(..),
+							file_type: buffer.file_type.as_deref(),
 							version: buffer.version,
 						},
 						Some(&self.extensions),

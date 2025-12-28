@@ -5,15 +5,15 @@ LSP and other async extensions, while preserving Tome's orthogonal registry mode
 
 ## Implementation Status
 
-| Phase | Status | Notes |
-|-------|--------|-------|
-| Phase 1: Hook runtime | ✅ Complete | `HookScheduler`, `emit_sync_with`, `HookRuntime` |
-| Phase 2: Hook emissions | ✅ Complete | All lifecycle hooks except CursorMove/SelectionChange |
-| Phase 3: BufferChange | ✅ Complete | Version tracking, dirty buffer queue |
-| Phase 4: HookContext services | ✅ Complete | Type-erased `extensions` field via `dyn Any` |
-| Phase 5: LSP hooks | ✅ Complete | `LspManager` + hooks for open/change/close/quit |
-| Phase 6: Async trait refactor | ⏸ Deferred | Not needed for v1 |
-| Phase 7: Testing | ⏸ Partial | Unit tests exist, integration tests pending |
+| Phase                         | Status      | Notes                                                       |
+| ----------------------------- | ----------- | ----------------------------------------------------------- |
+| Phase 1: Hook runtime         | ✅ Complete | `HookScheduler`, `emit_sync_with`, `HookRuntime`            |
+| Phase 2: Hook emissions       | ✅ Complete | All lifecycle hooks except CursorMove/SelectionChange       |
+| Phase 3: BufferChange         | ✅ Complete | Version tracking, dirty buffer queue, file_type field       |
+| Phase 4: HookContext services | ✅ Complete | Type-erased `extensions` field via `dyn Any`                |
+| Phase 5: LSP hooks            | ✅ Complete | `LspManager` + hooks for open/change/close/quit             |
+| Phase 6: Async trait refactor | ⏸ Deferred  | Not needed for v1                                           |
+| Phase 7: Testing              | ✅ Complete | Unit tests for hooks, language inference, context ownership |
 
 ## Decisions (v1)
 
@@ -38,10 +38,12 @@ LSP and other async extensions, while preserving Tome's orthogonal registry mode
 ### HookContext Structure
 
 `HookContext` is a struct with two fields:
+
 - `data: HookEventData<'a>` - The event-specific payload (enum)
 - `extensions: Option<&'a dyn Any>` - Type-erased access to `ExtensionMap`
 
 This design:
+
 - Avoids duplicating `extensions` in every enum variant
 - Allows `tome-manifest` to remain decoupled from `tome-api` (uses `dyn Any`)
 - Hooks downcast via `ctx.extensions::<ExtensionMap>()`
@@ -116,18 +118,18 @@ The `lsp` extension (`crates/extensions/extensions/lsp/`) provides:
 
 ## Files Modified
 
-| File | Changes |
-|------|---------|
-| `crates/manifest/src/hooks.rs` | `HookContext` struct with `data`+`extensions`, `HookEventData` enum, `HookScheduler` trait, `emit_sync_with` |
-| `crates/manifest/src/lib.rs` | Re-export `HookEventData` |
-| `crates/api/src/editor/mod.rs` | `HookRuntime` field, dirty buffer queue, hook emissions with extensions |
-| `crates/api/src/editor/hook_runtime.rs` | `HookRuntime` implementation |
-| `crates/api/src/editor/input_handling.rs` | Mode change hook emission |
-| `crates/api/src/buffer/editing.rs` | Buffer version increment |
-| `crates/term/src/app.rs` | `EditorStart`/`EditorQuit` hooks |
-| `crates/extensions/extensions/lsp/mod.rs` | `LspManager`, extension init |
-| `crates/extensions/extensions/lsp/hooks.rs` | LSP hooks |
-| `crates/stdlib/src/hooks/*.rs` | Updated to use `ctx.data` pattern |
+| File                                        | Changes                                                                                                      |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `crates/manifest/src/hooks.rs`              | `HookContext` struct with `data`+`extensions`, `HookEventData` enum, `HookScheduler` trait, `emit_sync_with` |
+| `crates/manifest/src/lib.rs`                | Re-export `HookEventData`                                                                                    |
+| `crates/api/src/editor/mod.rs`              | `HookRuntime` field, dirty buffer queue, hook emissions with extensions                                      |
+| `crates/api/src/editor/hook_runtime.rs`     | `HookRuntime` implementation                                                                                 |
+| `crates/api/src/editor/input_handling.rs`   | Mode change hook emission                                                                                    |
+| `crates/api/src/buffer/editing.rs`          | Buffer version increment                                                                                     |
+| `crates/term/src/app.rs`                    | `EditorStart`/`EditorQuit` hooks                                                                             |
+| `crates/extensions/extensions/lsp/mod.rs`   | `LspManager`, extension init                                                                                 |
+| `crates/extensions/extensions/lsp/hooks.rs` | LSP hooks                                                                                                    |
+| `crates/stdlib/src/hooks/*.rs`              | Updated to use `ctx.data` pattern                                                                            |
 
 ## Deferred / v2
 
@@ -136,6 +138,7 @@ The `lsp` extension (`crates/extensions/extensions/lsp/`) provides:
 - Hook cancellation/timeouts.
 - Concurrent async hook execution while preserving priority semantics.
 - Async trait refactor if sync APIs become a bottleneck.
+- GUI integration tests using kitty-test-harness (for end-to-end LSP validation).
 
 ## Alternatives (Not Chosen)
 

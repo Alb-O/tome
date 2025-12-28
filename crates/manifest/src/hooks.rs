@@ -110,11 +110,16 @@ pub enum HookEventData<'a> {
 	/// Buffer was written.
 	BufferWrite { path: &'a Path },
 	/// Buffer was closed.
-	BufferClose { path: &'a Path },
+	BufferClose {
+		path: &'a Path,
+		file_type: Option<&'a str>,
+	},
 	/// Buffer content changed.
 	BufferChange {
 		path: &'a Path,
 		text: RopeSlice<'a>,
+		/// Detected file type (e.g., "rust", "python").
+		file_type: Option<&'a str>,
 		/// Document version number (incremented on each transaction).
 		version: u64,
 	},
@@ -188,16 +193,19 @@ impl<'a> HookEventData<'a> {
 			HookEventData::BufferWrite { path } => OwnedHookContext::BufferWrite {
 				path: path.to_path_buf(),
 			},
-			HookEventData::BufferClose { path } => OwnedHookContext::BufferClose {
+			HookEventData::BufferClose { path, file_type } => OwnedHookContext::BufferClose {
 				path: path.to_path_buf(),
+				file_type: file_type.map(String::from),
 			},
 			HookEventData::BufferChange {
 				path,
 				text,
+				file_type,
 				version,
 			} => OwnedHookContext::BufferChange {
 				path: path.to_path_buf(),
 				text: text.to_string(),
+				file_type: file_type.map(String::from),
 				version: *version,
 			},
 			HookEventData::ModeChange { old_mode, new_mode } => OwnedHookContext::ModeChange {
@@ -288,11 +296,15 @@ pub enum OwnedHookContext {
 	/// Buffer was written.
 	BufferWrite { path: std::path::PathBuf },
 	/// Buffer was closed.
-	BufferClose { path: std::path::PathBuf },
+	BufferClose {
+		path: std::path::PathBuf,
+		file_type: Option<String>,
+	},
 	/// Buffer content changed.
 	BufferChange {
 		path: std::path::PathBuf,
 		text: String,
+		file_type: Option<String>,
 		version: u64,
 	},
 	/// Mode changed.

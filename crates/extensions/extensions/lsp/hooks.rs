@@ -6,10 +6,10 @@ use std::sync::Arc;
 
 use linkme::distributed_slice;
 use tome_api::editor::extensions::ExtensionMap;
+use tome_manifest::RegistrySource;
 use tome_manifest::hooks::{
 	HOOKS, HookAction, HookContext, HookDef, HookEvent, HookResult, OwnedHookContext,
 };
-use tome_manifest::RegistrySource;
 
 use super::LspManager;
 
@@ -72,10 +72,11 @@ fn lsp_buffer_change_handler(ctx: &HookContext) -> HookAction {
 		if let OwnedHookContext::BufferChange {
 			path,
 			text,
+			file_type,
 			version,
 		} = owned
 		{
-			let language = infer_language_from_path(&path);
+			let language = file_type.or_else(|| infer_language_from_path(&path));
 			lsp.did_change(&path, &text, language.as_deref(), version)
 				.await;
 		}
@@ -105,8 +106,8 @@ fn lsp_buffer_close_handler(ctx: &HookContext) -> HookAction {
 	let owned = ctx.to_owned();
 
 	HookAction::Async(Box::pin(async move {
-		if let OwnedHookContext::BufferClose { path } = owned {
-			let language = infer_language_from_path(&path);
+		if let OwnedHookContext::BufferClose { path, file_type } = owned {
+			let language = file_type.or_else(|| infer_language_from_path(&path));
 			lsp.did_close(&path, language.as_deref()).await;
 		}
 		HookResult::Continue
@@ -180,4 +181,113 @@ fn infer_language_from_path(path: &std::path::Path) -> Option<String> {
 		_ => return None,
 	};
 	Some(language.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+	use std::path::Path;
+
+	use tome_api::editor::extensions::ExtensionMap;
+	use tome_manifest::hooks::{
+		HookAction, HookContext, HookEvent, HookEventData, OwnedHookContext,
+	};
+
+	use super::*;
+
+	#[test]
+	fn infer_language_from_path_common_extensions() {
+		let cases = [
+			("main.rs", Some("rust")),
+			("app.ts", Some("typescript")),
+			("component.tsx", Some("typescript")),
+			("script.js", Some("javascript")),
+			("module.mjs", Some("javascript")),
+			("script.py", Some("python")),
+			("main.go", Some("go")),
+			("main.c", Some("c")),
+			("main.cpp", Some("cpp")),
+			("Cargo.toml", Some("toml")),
+			("config.yaml", Some("yaml")),
+			("package.json", Some("json")),
+			("file.xyz", None),
+			("Makefile", None),
+			("/home/user/src/main.rs", Some("rust")),
+		];
+		for (path, expected) in cases {
+			assert_eq!(
+				infer_language_from_path(Path::new(path)),
+				expected.map(String::from),
+				"path: {path}"
+			);
+		}
+	}
+
+	#[test]
+	fn hook_definitions_have_correct_events() {
+		assert_eq!(LSP_BUFFER_OPEN.event, HookEvent::BufferOpen);
+		assert_eq!(LSP_BUFFER_CHANGE.event, HookEvent::BufferChange);
+		assert_eq!(LSP_BUFFER_CLOSE.event, HookEvent::BufferClose);
+		assert_eq!(LSP_EDITOR_QUIT.event, HookEvent::EditorQuit);
+		assert!(LSP_EDITOR_QUIT.priority < LSP_BUFFER_OPEN.priority);
+	}
+
+	#[test]
+	fn handler_returns_done_without_extensions() {
+		let rope = ropey::Rope::from_str("fn main() {}");
+		let ctx = HookContext::new(
+			HookEventData::BufferOpen {
+				path: Path::new("test.rs"),
+				text: rope.slice(..),
+				file_type: Some("rust"),
+			},
+			None,
+		);
+		assert!(matches!(lsp_buffer_open_handler(&ctx), HookAction::Done(_)));
+	}
+
+	#[test]
+	fn handler_returns_done_without_lsp_manager() {
+		let ext_map = ExtensionMap::new();
+		let rope = ropey::Rope::from_str("fn main() {}");
+		let ctx = HookContext::new(
+			HookEventData::BufferOpen {
+				path: Path::new("test.rs"),
+				text: rope.slice(..),
+				file_type: Some("rust"),
+			},
+			Some(&ext_map),
+		);
+		assert!(matches!(lsp_buffer_open_handler(&ctx), HookAction::Done(_)));
+	}
+
+	#[test]
+	fn owned_context_preserves_file_type() {
+		let rope = ropey::Rope::from_str("fn main() {}");
+		let ctx = HookContext::new(
+			HookEventData::BufferChange {
+				path: Path::new("test.rs"),
+				text: rope.slice(..),
+				file_type: Some("rust"),
+				version: 1,
+			},
+			None,
+		);
+		let OwnedHookContext::BufferChange { file_type, .. } = ctx.to_owned() else {
+			panic!("expected BufferChange");
+		};
+		assert_eq!(file_type, Some("rust".to_string()));
+	}
+
+	#[test]
+	fn file_type_takes_precedence_over_path_inference() {
+		let path = Path::new("main.rs");
+		assert_eq!(
+			None::<String>.or_else(|| infer_language_from_path(path)),
+			Some("rust".to_string())
+		);
+		assert_eq!(
+			Some("custom".to_string()).or_else(|| infer_language_from_path(path)),
+			Some("custom".to_string())
+		);
+	}
 }
