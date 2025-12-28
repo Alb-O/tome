@@ -2,8 +2,8 @@
 
 use tome_tui::layout::Rect;
 
-use super::types::{BufferView, SplitDirection, SplitPath};
 use super::Layout;
+use super::types::{BufferView, SplitDirection, SplitPath};
 use crate::buffer::BufferId;
 
 impl Layout {
@@ -115,17 +115,17 @@ impl Layout {
 
 	/// Resizes the split at the given path based on mouse position.
 	/// Child splits have their ratios adjusted to keep separators at same absolute positions.
-	pub fn resize_at_path(&mut self, area: Rect, path: &SplitPath, mouse_x: u16, mouse_y: u16) -> bool {
-		self.do_resize_at_path(area, &path.0, mouse_x, mouse_y)
-	}
-
-	fn do_resize_at_path(
+	pub fn resize_at_path(
 		&mut self,
 		area: Rect,
-		path: &[bool],
+		path: &SplitPath,
 		mouse_x: u16,
 		mouse_y: u16,
 	) -> bool {
+		self.do_resize_at_path(area, &path.0, mouse_x, mouse_y)
+	}
+
+	fn do_resize_at_path(&mut self, area: Rect, path: &[bool], mouse_x: u16, mouse_y: u16) -> bool {
 		let Layout::Split {
 			direction,
 			ratio,
@@ -262,11 +262,19 @@ impl Layout {
 	}
 
 	/// Gets the separator rect for a split at the given path.
-	pub fn separator_rect_at_path(&self, area: Rect, path: &SplitPath) -> Option<(SplitDirection, Rect)> {
+	pub fn separator_rect_at_path(
+		&self,
+		area: Rect,
+		path: &SplitPath,
+	) -> Option<(SplitDirection, Rect)> {
 		self.do_get_separator_at_path(area, &path.0)
 	}
 
-	fn do_get_separator_at_path(&self, area: Rect, path: &[bool]) -> Option<(SplitDirection, Rect)> {
+	fn do_get_separator_at_path(
+		&self,
+		area: Rect,
+		path: &[bool],
+	) -> Option<(SplitDirection, Rect)> {
 		let Layout::Split {
 			direction,
 			ratio,

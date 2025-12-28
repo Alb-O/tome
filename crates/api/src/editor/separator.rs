@@ -100,8 +100,8 @@ impl SeparatorHoverAnimation {
 
 	/// Creates a new hover animation for the given separator.
 	pub fn new(rect: Rect, hovering: bool) -> Self {
-		let mut tween = ToggleTween::new(0.0f32, 1.0f32, Self::FADE_DURATION)
-			.with_easing(Easing::EaseOut);
+		let mut tween =
+			ToggleTween::new(0.0f32, 1.0f32, Self::FADE_DURATION).with_easing(Easing::EaseOut);
 		tween.set_active(hovering);
 		Self { rect, tween }
 	}

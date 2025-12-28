@@ -23,10 +23,9 @@ use tome_tui::widgets::terminal::vt100;
 use self::color::map_vt_color;
 use self::key::key_to_bytes;
 use self::selection::TerminalSelection;
+pub use self::state::TerminalError as Error;
 use self::state::{TerminalError, TerminalState};
 use crate::terminal_ipc::TerminalIpcEnv;
-
-pub use self::state::TerminalError as Error;
 
 /// A terminal emulator that implements [`SplitBuffer`].
 ///

@@ -5,10 +5,9 @@
 
 use tome_manifest::SplitBuffer;
 
+use super::Editor;
 use crate::buffer::{Buffer, BufferId, BufferView, TerminalId};
 use crate::terminal::TerminalBuffer;
-
-use super::Editor;
 
 impl Editor {
 	/// Returns a reference to the currently focused text buffer.

@@ -3,10 +3,10 @@
 use std::sync::mpsc;
 use std::thread;
 
+use super::Result;
 use super::compile::{BuildStatus, build_grammar};
 use super::config::GrammarConfig;
 use super::fetch::{FetchStatus, fetch_grammar};
-use super::Result;
 
 /// Callback type for progress reporting.
 pub type ProgressCallback = Box<dyn Fn(&str, &str) + Send + Sync>;

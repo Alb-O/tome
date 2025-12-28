@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use tome_base::range::CharIdx;
 use tome_language::LanguageLoader;
 use tome_language::highlight::{HighlightSpan, HighlightStyles};
 use tome_manifest::Mode;
@@ -16,8 +17,6 @@ use tome_tui::widgets::Paragraph;
 use crate::buffer::Buffer;
 use crate::editor::extensions::StyleOverlays;
 use crate::render::types::{RenderResult, wrap_line};
-
-use tome_base::range::CharIdx;
 
 /// Context for rendering a buffer.
 ///

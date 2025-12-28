@@ -22,14 +22,13 @@ use tome_manifest::{HookContext, Mode, emit_hook};
 use tome_theme::Theme;
 pub use types::{HistoryEntry, Registers};
 
+pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
 use crate::buffer::{Buffer, BufferId, BufferView, Layout, SplitDirection, TerminalId};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
 use crate::terminal::TerminalBuffer;
 use crate::terminal_ipc::TerminalIpc;
 use crate::ui::UiManager;
-
-pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
 
 /// The main editor/workspace structure.
 ///

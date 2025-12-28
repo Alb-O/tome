@@ -1,7 +1,7 @@
 //! Layout navigation methods for traversing views and buffers.
 
-use super::types::BufferView;
 use super::Layout;
+use super::types::BufferView;
 use crate::buffer::BufferId;
 
 impl Layout {

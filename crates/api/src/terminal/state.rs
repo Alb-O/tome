@@ -48,7 +48,11 @@ const FISH_INIT_CHECK_INTERVAL: Duration = Duration::from_millis(50);
 const FISH_INIT_MAX_ATTEMPTS: u32 = 100;
 
 impl TerminalState {
-	pub fn new(cols: u16, rows: u16, env_vars: Vec<(String, String)>) -> Result<Self, TerminalError> {
+	pub fn new(
+		cols: u16,
+		rows: u16,
+		env_vars: Vec<(String, String)>,
+	) -> Result<Self, TerminalError> {
 		let pty_system = NativePtySystem::default();
 		let pair = pty_system
 			.openpty(PtySize {
