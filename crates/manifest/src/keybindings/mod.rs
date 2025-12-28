@@ -2,10 +2,22 @@
 //!
 //! Keybindings map keys to actions in different modes. This replaces
 //! the hardcoded keymap arrays with an extensible registry.
-
-mod goto;
-mod insert;
-mod view;
+//!
+//! All keybindings are now colocated with their action definitions using
+//! the `bound_action!` macro with `bindings:` syntax. For example:
+//!
+//! ```ignore
+//! bound_action!(
+//!     document_start,
+//!     description: "Move to document start",
+//!     bindings: [
+//!         Normal => [Key::special(SpecialKey::Home).with_ctrl()],
+//!         Goto => [Key::char('g'), Key::char('k')],
+//!         Insert => [Key::special(SpecialKey::Home).with_ctrl()],
+//!     ],
+//!     |_ctx| { ... }
+//! );
+//! ```
 
 use linkme::distributed_slice;
 use tome_base::key::Key;
@@ -160,43 +172,4 @@ mod tests {
 		assert_eq!(BindingMode::from(Mode::Goto), BindingMode::Goto);
 	}
 
-	#[test]
-	fn test_goto_mode_bindings_registered() {
-		let g = find_binding(BindingMode::Goto, Key::char('g'));
-		assert!(g.is_some());
-		assert_eq!(g.unwrap().action, "document_start");
-
-		let e = find_binding(BindingMode::Goto, Key::char('e'));
-		assert!(e.is_some());
-		assert_eq!(e.unwrap().action, "document_end");
-
-		let h = find_binding(BindingMode::Goto, Key::char('h'));
-		assert!(h.is_some());
-		assert_eq!(h.unwrap().action, "move_line_start");
-	}
-
-	#[test]
-	fn test_view_mode_bindings_registered() {
-		let j = find_binding(BindingMode::View, Key::char('j'));
-		assert!(j.is_some());
-		assert_eq!(j.unwrap().action, "scroll_down");
-
-		let k = find_binding(BindingMode::View, Key::char('k'));
-		assert!(k.is_some());
-		assert_eq!(k.unwrap().action, "scroll_up");
-	}
-
-	#[test]
-	fn test_bindings_for_mode() {
-		let goto_bindings: Vec<_> = bindings_for_mode(BindingMode::Goto).collect();
-		assert!(goto_bindings.len() >= 5);
-
-		let view_bindings: Vec<_> = bindings_for_mode(BindingMode::View).collect();
-		assert!(view_bindings.len() >= 2);
-
-		let insert_bindings: Vec<_> = bindings_for_mode(BindingMode::Insert).collect();
-		assert!(insert_bindings.len() >= 6);
-	}
-
-	// test_find_binding_resolved moved to tests/registry.rs (requires tome-stdlib)
 }

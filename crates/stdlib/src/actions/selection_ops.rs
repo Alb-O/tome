@@ -9,10 +9,8 @@ use crate::action;
 
 bound_action!(
 	collapse_selection,
-	mode: Normal,
-	key: Key::char(';'),
-	alt_keys: [Key::special(SpecialKey::Escape)],
 	description: "Collapse selection to cursor",
+	bindings: [Normal => [Key::char(';'), Key::special(SpecialKey::Escape)]],
 	|ctx| {
 		let mut new_sel = ctx.selection.clone();
 		new_sel.transform_mut(|r| r.anchor = r.head);
@@ -22,9 +20,8 @@ bound_action!(
 
 bound_action!(
 	flip_selection,
-	mode: Normal,
-	key: Key::alt(';'),
 	description: "Flip selection direction",
+	bindings: [Normal => [Key::alt(';')]],
 	|ctx| {
 		let mut new_sel = ctx.selection.clone();
 		new_sel.transform_mut(|r| std::mem::swap(&mut r.anchor, &mut r.head));
@@ -34,9 +31,8 @@ bound_action!(
 
 bound_action!(
 	ensure_forward,
-	mode: Normal,
-	key: Key::alt(':'),
 	description: "Ensure selection is forward",
+	bindings: [Normal => [Key::alt(':')]],
 	|ctx| {
 		let mut new_sel = ctx.selection.clone();
 		new_sel.transform_mut(|r| {
@@ -50,9 +46,8 @@ bound_action!(
 
 bound_action!(
 	select_line,
-	mode: Normal,
-	key: Key::char('x'),
 	description: "Select current line",
+	bindings: [Normal => [Key::char('x')]],
 	handler: select_line_impl
 );
 
@@ -80,9 +75,8 @@ fn select_line_impl(ctx: &ActionContext) -> ActionResult {
 
 bound_action!(
 	select_all,
-	mode: Normal,
-	key: Key::char('%'),
 	description: "Select all text",
+	bindings: [Normal => [Key::char('%')]],
 	|ctx| {
 		let end = ctx.text.len_chars();
 		ActionResult::Motion(Selection::single(0, end))
@@ -91,9 +85,8 @@ bound_action!(
 
 bound_action!(
 	expand_to_line,
-	mode: Normal,
-	key: Key::alt('x'),
 	description: "Expand selection to cover full lines",
+	bindings: [Normal => [Key::alt('x')]],
 	handler: expand_to_line_impl
 );
 
@@ -114,9 +107,8 @@ fn expand_to_line_impl(ctx: &ActionContext) -> ActionResult {
 
 bound_action!(
 	remove_primary_selection,
-	mode: Normal,
-	key: Key::alt(','),
 	description: "Remove the primary selection",
+	bindings: [Normal => [Key::alt(',')]],
 	|ctx| {
 		if ctx.selection.len() <= 1 {
 			return ActionResult::Ok;
@@ -129,9 +121,8 @@ bound_action!(
 
 bound_action!(
 	remove_selections_except_primary,
-	mode: Normal,
-	key: Key::char(','),
 	description: "Remove all selections except the primary one",
+	bindings: [Normal => [Key::char(',')]],
 	|ctx| {
 		ActionResult::Motion(Selection::single(
 			ctx.selection.primary().anchor,
@@ -142,9 +133,8 @@ bound_action!(
 
 bound_action!(
 	rotate_selections_forward,
-	mode: Normal,
-	key: Key::char(')'),
 	description: "Rotate selections forward",
+	bindings: [Normal => [Key::char(')')]],
 	|ctx| {
 		let mut new_sel = ctx.selection.clone();
 		new_sel.rotate_forward();
@@ -154,9 +144,8 @@ bound_action!(
 
 bound_action!(
 	rotate_selections_backward,
-	mode: Normal,
-	key: Key::char('('),
 	description: "Rotate selections backward",
+	bindings: [Normal => [Key::char('(')]],
 	|ctx| {
 		let mut new_sel = ctx.selection.clone();
 		new_sel.rotate_backward();
@@ -210,10 +199,8 @@ fn split_lines_impl(ctx: &ActionContext) -> ActionResult {
 
 bound_action!(
 	duplicate_selections_down,
-	mode: Normal,
-	key: Key::char('C'),
-	alt_keys: [Key::char('+')],
 	description: "Duplicate selections on next lines",
+	bindings: [Normal => [Key::char('C'), Key::char('+')]],
 	handler: duplicate_selections_down_impl
 );
 
@@ -252,9 +239,8 @@ fn duplicate_selections_down_impl(ctx: &ActionContext) -> ActionResult {
 
 bound_action!(
 	duplicate_selections_up,
-	mode: Normal,
-	key: Key::alt('C'),
 	description: "Duplicate selections on previous lines",
+	bindings: [Normal => [Key::alt('C')]],
 	handler: duplicate_selections_up_impl
 );
 
@@ -306,9 +292,8 @@ fn line_col_to_char(text: &ropey::RopeSlice, line: usize, col: usize) -> usize {
 
 bound_action!(
 	merge_selections,
-	mode: Normal,
-	key: Key::alt('+'),
 	description: "Merge overlapping selections",
+	bindings: [Normal => [Key::alt('+')]],
 	|ctx| {
 		let mut new_sel = ctx.selection.clone();
 		new_sel.merge_overlaps_and_adjacent();

@@ -2,7 +2,7 @@
 
 use tome_base::key::{Key, SpecialKey};
 use tome_manifest::actions::{ActionResult, EditAction, ScrollAmount, ScrollDir, VisualDirection};
-use tome_manifest::bound_action;
+use tome_manifest::{bind, bound_action};
 
 use crate::action;
 
@@ -22,11 +22,13 @@ action!(scroll_down, { description: "Scroll view down" }, |ctx| {
 	})
 });
 
+bind!(scroll_up, View => [Key::char('k')]);
+bind!(scroll_down, View => [Key::char('j')]);
+
 bound_action!(
 	scroll_half_page_up,
-	mode: Normal,
-	key: Key::ctrl('u'),
 	description: "Scroll half page up",
+	bindings: [Normal => [Key::ctrl('u')]],
 	|ctx| {
 		ActionResult::Edit(EditAction::Scroll {
 			direction: ScrollDir::Up,
@@ -38,9 +40,8 @@ bound_action!(
 
 bound_action!(
 	scroll_half_page_down,
-	mode: Normal,
-	key: Key::ctrl('d'),
 	description: "Scroll half page down",
+	bindings: [Normal => [Key::ctrl('d')]],
 	|ctx| {
 		ActionResult::Edit(EditAction::Scroll {
 			direction: ScrollDir::Down,
@@ -52,10 +53,11 @@ bound_action!(
 
 bound_action!(
 	scroll_page_up,
-	mode: Normal,
-	key: Key::special(SpecialKey::PageUp),
-	alt_keys: [Key::ctrl('b')],
 	description: "Scroll page up",
+	bindings: [
+		Normal => [Key::special(SpecialKey::PageUp), Key::ctrl('b')],
+		Insert => [Key::special(SpecialKey::PageUp)],
+	],
 	|ctx| {
 		ActionResult::Edit(EditAction::Scroll {
 			direction: ScrollDir::Up,
@@ -67,10 +69,11 @@ bound_action!(
 
 bound_action!(
 	scroll_page_down,
-	mode: Normal,
-	key: Key::special(SpecialKey::PageDown),
-	alt_keys: [Key::ctrl('f')],
 	description: "Scroll page down",
+	bindings: [
+		Normal => [Key::special(SpecialKey::PageDown), Key::ctrl('f')],
+		Insert => [Key::special(SpecialKey::PageDown)],
+	],
 	|ctx| {
 		ActionResult::Edit(EditAction::Scroll {
 			direction: ScrollDir::Down,
@@ -82,10 +85,11 @@ bound_action!(
 
 bound_action!(
 	move_up_visual,
-	mode: Normal,
-	key: Key::char('k'),
-	alt_keys: [Key::special(SpecialKey::Up)],
 	description: "Move up (visual lines)",
+	bindings: [
+		Normal => [Key::char('k'), Key::special(SpecialKey::Up)],
+		Insert => [Key::special(SpecialKey::Up)],
+	],
 	|ctx| {
 		ActionResult::Edit(EditAction::MoveVisual {
 			direction: VisualDirection::Up,
@@ -97,10 +101,11 @@ bound_action!(
 
 bound_action!(
 	move_down_visual,
-	mode: Normal,
-	key: Key::char('j'),
-	alt_keys: [Key::special(SpecialKey::Down)],
 	description: "Move down (visual lines)",
+	bindings: [
+		Normal => [Key::char('j'), Key::special(SpecialKey::Down)],
+		Insert => [Key::special(SpecialKey::Down)],
+	],
 	|ctx| {
 		ActionResult::Edit(EditAction::MoveVisual {
 			direction: VisualDirection::Down,

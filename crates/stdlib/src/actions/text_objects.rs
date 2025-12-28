@@ -59,34 +59,28 @@ fn select_to_boundary(
 
 bound_action!(
 	select_object_inner,
-	mode: Normal,
-	key: Key::alt('i'),
 	description: "Select inner text object",
+	bindings: [Normal => [Key::alt('i')]],
 	|ctx| select_object_with_trigger(ctx, ObjectSelectionKind::Inner)
 );
 
 bound_action!(
 	select_object_around,
-	mode: Normal,
-	key: Key::alt('a'),
 	description: "Select around text object",
+	bindings: [Normal => [Key::alt('a')]],
 	|ctx| select_object_with_trigger(ctx, ObjectSelectionKind::Around)
 );
 
 bound_action!(
 	select_object_to_start,
-	mode: Normal,
-	key: Key::char('['),
-	alt_keys: [Key::char('{')],
 	description: "Select to object start",
+	bindings: [Normal => [Key::char('['), Key::char('{')]],
 	|ctx| select_object_with_trigger(ctx, ObjectSelectionKind::ToStart)
 );
 
 bound_action!(
 	select_object_to_end,
-	mode: Normal,
-	key: Key::char(']'),
-	alt_keys: [Key::char('}')],
 	description: "Select to object end",
+	bindings: [Normal => [Key::char(']'), Key::char('}')]],
 	|ctx| select_object_with_trigger(ctx, ObjectSelectionKind::ToEnd)
 );

@@ -7,17 +7,15 @@ use tome_manifest::find_motion;
 
 bound_action!(
 	insert_before,
-	mode: Normal,
-	key: Key::char('i'),
 	description: "Insert before cursor",
+	bindings: [Normal => [Key::char('i')]],
 	|_ctx| ActionResult::ModeChange(ActionMode::Insert)
 );
 
 bound_action!(
 	insert_after,
-	mode: Normal,
-	key: Key::char('a'),
 	description: "Insert after cursor",
+	bindings: [Normal => [Key::char('a')]],
 	handler: insert_after_impl
 );
 
@@ -37,9 +35,8 @@ fn insert_after_impl(ctx: &ActionContext) -> ActionResult {
 
 bound_action!(
 	insert_line_start,
-	mode: Normal,
-	key: Key::char('I'),
 	description: "Insert at line start (first non-blank)",
+	bindings: [Normal => [Key::char('I')]],
 	handler: insert_line_start_impl
 );
 
@@ -59,9 +56,8 @@ fn insert_line_start_impl(ctx: &ActionContext) -> ActionResult {
 
 bound_action!(
 	insert_line_end,
-	mode: Normal,
-	key: Key::char('A'),
 	description: "Insert at line end",
+	bindings: [Normal => [Key::char('A')]],
 	handler: insert_line_end_impl
 );
 

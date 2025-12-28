@@ -10,9 +10,8 @@ macro_rules! bound_edit_action {
 	($name:ident, key: $key:expr, description: $desc:expr, edit: $edit:expr) => {
 		bound_action!(
 			$name,
-			mode: Normal,
-			key: $key,
 			description: $desc,
+			bindings: [Normal => [$key]],
 			|_ctx| ActionResult::Edit($edit)
 		);
 	};
@@ -58,9 +57,8 @@ static ACTION_DELETE_BACK: ActionDef = ActionDef {
 
 bound_action!(
 	replace_char,
-	mode: Normal,
-	key: Key::char('r'),
 	description: "Replace selection with character",
+	bindings: [Normal => [Key::char('r')]],
 	|ctx| match ctx.args.char {
 		Some(ch) => ActionResult::Edit(EditAction::ReplaceWithChar { ch }),
 		None => ActionResult::Pending(PendingAction {

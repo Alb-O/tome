@@ -30,7 +30,12 @@ action!(
 
 /// Registers an unimplemented action with keybinding and stub handler.
 macro_rules! stub_action {
-	($name:ident, key: $key:expr, description: $desc:expr, result: $result:ident, slice: $slice:ident) => {
+	($name:ident,
+		description: $desc:expr,
+		bindings: [Normal => [$key:expr]],
+		result: $result:ident,
+		slice: $slice:ident
+	) => {
 		paste::paste! {
 			fn [<handler_ $name>](_ctx: &tome_manifest::actions::ActionContext) -> ActionResult {
 				ActionResult::$result
@@ -71,40 +76,40 @@ macro_rules! stub_action {
 
 stub_action!(
 	align,
-	key: Key::char('&'),
 	description: "Align cursors",
+	bindings: [Normal => [Key::char('&')]],
 	result: Align,
 	slice: RESULT_ALIGN_HANDLERS
 );
 
 stub_action!(
 	copy_indent,
-	key: Key::alt('&'),
 	description: "Copy indent from previous line",
+	bindings: [Normal => [Key::alt('&')]],
 	result: CopyIndent,
 	slice: RESULT_COPY_INDENT_HANDLERS
 );
 
 stub_action!(
 	tabs_to_spaces,
-	key: Key::char('@'),
 	description: "Convert tabs to spaces",
+	bindings: [Normal => [Key::char('@')]],
 	result: TabsToSpaces,
 	slice: RESULT_TABS_TO_SPACES_HANDLERS
 );
 
 stub_action!(
 	spaces_to_tabs,
-	key: Key::alt('@'),
 	description: "Convert spaces to tabs",
+	bindings: [Normal => [Key::alt('@')]],
 	result: SpacesToTabs,
 	slice: RESULT_SPACES_TO_TABS_HANDLERS
 );
 
 stub_action!(
 	trim_selections,
-	key: Key::char('_'),
 	description: "Trim whitespace from selections",
+	bindings: [Normal => [Key::char('_')]],
 	result: TrimSelections,
 	slice: RESULT_TRIM_SELECTIONS_HANDLERS
 );

@@ -5,7 +5,7 @@ use tome_base::key::{Key, SpecialKey};
 use tome_base::range::Range;
 use tome_base::selection::Selection;
 use tome_manifest::actions::{ActionContext, ActionDef, ActionResult};
-use tome_manifest::keybindings::{BindingMode, KEYBINDINGS_NORMAL, KeyBindingDef};
+use tome_manifest::keybindings::{BindingMode, KeyBindingDef};
 use tome_manifest::{ACTIONS, find_motion};
 
 /// Cursor movement - moves cursor (and all cursors) without creating new selections unless extending.
@@ -74,6 +74,7 @@ fn selection_motion_action(ctx: &ActionContext, motion_name: &str) -> ActionResu
 	}
 }
 
+/// Cursor action without keybindings (used when bindings come from elsewhere).
 macro_rules! cursor_action {
 	($name:ident, $motion:expr, $desc:expr) => {
 		paste::paste! {
@@ -97,8 +98,13 @@ macro_rules! cursor_action {
 	};
 }
 
+/// Cursor action with colocated multi-mode keybindings.
 macro_rules! bound_cursor_action {
-	($name:ident, motion: $motion:expr, key: $key:expr, description: $desc:expr) => {
+	($name:ident,
+		motion: $motion:expr,
+		description: $desc:expr,
+		bindings: [$($mode:ident => [$($key:expr),+ $(,)?]),+ $(,)?] $(,)?
+	) => {
 		paste::paste! {
 			fn [<handler_ $name>](ctx: &ActionContext) -> ActionResult {
 				cursor_move_action(ctx, $motion)
@@ -117,46 +123,46 @@ macro_rules! bound_cursor_action {
 				flags: tome_manifest::flags::NONE,
 			};
 
-			#[distributed_slice(KEYBINDINGS_NORMAL)]
-			static [<KB_ $name:upper>]: KeyBindingDef = KeyBindingDef {
-				mode: BindingMode::Normal,
-				key: $key,
-				action: stringify!($name),
-				priority: 100,
-			};
+			$(bound_cursor_action!(@mode_keys $name, $mode, [] $($key),+);)+
 		}
 	};
 
-	// With one alt key
-	($name:ident, motion: $motion:expr, key: $key:expr, alt_keys: [$alt1:expr], description: $desc:expr) => {
-		bound_cursor_action!($name, motion: $motion, key: $key, description: $desc);
+	(@mode_keys $name:ident, $mode:ident, [$($done:tt)*] $key:expr $(, $rest:expr)+) => {
 		paste::paste! {
-			#[distributed_slice(KEYBINDINGS_NORMAL)]
-			static [<KB_ $name:upper _ALT1>]: KeyBindingDef = KeyBindingDef {
-				mode: BindingMode::Normal,
-				key: $alt1,
-				action: stringify!($name),
-				priority: 100,
-			};
+			#[allow(non_upper_case_globals)]
+			#[distributed_slice(tome_manifest::keybindings::[<KEYBINDINGS_ $mode:upper>])]
+			static [<KB_ $name:upper _ $mode:upper _ $($done)*>]: KeyBindingDef =
+				KeyBindingDef {
+					mode: BindingMode::$mode,
+					key: $key,
+					action: stringify!($name),
+					priority: 100,
+				};
 		}
+		bound_cursor_action!(@mode_keys $name, $mode, [$($done)* _] $($rest),+);
 	};
-
-	($name:ident, motion: $motion:expr, key: $key:expr, alt_keys: [$alt1:expr, $alt2:expr], description: $desc:expr) => {
-		bound_cursor_action!($name, motion: $motion, key: $key, alt_keys: [$alt1], description: $desc);
+	(@mode_keys $name:ident, $mode:ident, [$($done:tt)*] $key:expr) => {
 		paste::paste! {
-			#[distributed_slice(KEYBINDINGS_NORMAL)]
-			static [<KB_ $name:upper _ALT2>]: KeyBindingDef = KeyBindingDef {
-				mode: BindingMode::Normal,
-				key: $alt2,
-				action: stringify!($name),
-				priority: 100,
-			};
+			#[allow(non_upper_case_globals)]
+			#[distributed_slice(tome_manifest::keybindings::[<KEYBINDINGS_ $mode:upper>])]
+			static [<KB_ $name:upper _ $mode:upper _ $($done)*>]: KeyBindingDef =
+				KeyBindingDef {
+					mode: BindingMode::$mode,
+					key: $key,
+					action: stringify!($name),
+					priority: 100,
+				};
 		}
 	};
 }
 
+/// Selection-creating action with colocated multi-mode keybindings.
 macro_rules! bound_selection_action {
-	($name:ident, motion: $motion:expr, key: $key:expr, description: $desc:expr) => {
+	($name:ident,
+		motion: $motion:expr,
+		description: $desc:expr,
+		bindings: [$($mode:ident => [$($key:expr),+ $(,)?]),+ $(,)?] $(,)?
+	) => {
 		paste::paste! {
 			fn [<handler_ $name>](ctx: &ActionContext) -> ActionResult {
 				selection_motion_action(ctx, $motion)
@@ -175,26 +181,35 @@ macro_rules! bound_selection_action {
 				flags: tome_manifest::flags::NONE,
 			};
 
-			#[distributed_slice(KEYBINDINGS_NORMAL)]
-			static [<KB_ $name:upper>]: KeyBindingDef = KeyBindingDef {
-				mode: BindingMode::Normal,
-				key: $key,
-				action: stringify!($name),
-				priority: 100,
-			};
+			$(bound_selection_action!(@mode_keys $name, $mode, [] $($key),+);)+
 		}
 	};
 
-	($name:ident, motion: $motion:expr, key: $key:expr, alt_keys: [$alt1:expr], description: $desc:expr) => {
-		bound_selection_action!($name, motion: $motion, key: $key, description: $desc);
+	(@mode_keys $name:ident, $mode:ident, [$($done:tt)*] $key:expr $(, $rest:expr)+) => {
 		paste::paste! {
-			#[distributed_slice(KEYBINDINGS_NORMAL)]
-			static [<KB_ $name:upper _ALT1>]: KeyBindingDef = KeyBindingDef {
-				mode: BindingMode::Normal,
-				key: $alt1,
-				action: stringify!($name),
-				priority: 100,
-			};
+			#[allow(non_upper_case_globals)]
+			#[distributed_slice(tome_manifest::keybindings::[<KEYBINDINGS_ $mode:upper>])]
+			static [<KB_ $name:upper _ $mode:upper _ $($done)*>]: KeyBindingDef =
+				KeyBindingDef {
+					mode: BindingMode::$mode,
+					key: $key,
+					action: stringify!($name),
+					priority: 100,
+				};
+		}
+		bound_selection_action!(@mode_keys $name, $mode, [$($done)* _] $($rest),+);
+	};
+	(@mode_keys $name:ident, $mode:ident, [$($done:tt)*] $key:expr) => {
+		paste::paste! {
+			#[allow(non_upper_case_globals)]
+			#[distributed_slice(tome_manifest::keybindings::[<KEYBINDINGS_ $mode:upper>])]
+			static [<KB_ $name:upper _ $mode:upper _ $($done)*>]: KeyBindingDef =
+				KeyBindingDef {
+					mode: BindingMode::$mode,
+					key: $key,
+					action: stringify!($name),
+					priority: 100,
+				};
 		}
 	};
 }
@@ -202,17 +217,21 @@ macro_rules! bound_selection_action {
 bound_cursor_action!(
 	move_left,
 	motion: "move_left",
-	key: Key::char('h'),
-	alt_keys: [Key::special(SpecialKey::Left)],
-	description: "Move left"
+	description: "Move left",
+	bindings: [
+		Normal => [Key::char('h'), Key::special(SpecialKey::Left)],
+		Insert => [Key::special(SpecialKey::Left)],
+	],
 );
 
 bound_cursor_action!(
 	move_right,
 	motion: "move_right",
-	key: Key::char('l'),
-	alt_keys: [Key::special(SpecialKey::Right)],
-	description: "Move right"
+	description: "Move right",
+	bindings: [
+		Normal => [Key::char('l'), Key::special(SpecialKey::Right)],
+		Insert => [Key::special(SpecialKey::Right)],
+	],
 );
 
 cursor_action!(move_up, "move_up", "Move up");
@@ -221,89 +240,109 @@ cursor_action!(move_down, "move_down", "Move down");
 bound_cursor_action!(
 	move_line_start,
 	motion: "line_start",
-	key: Key::char('0'),
-	alt_keys: [Key::special(SpecialKey::Home), Key::alt('h')],
-	description: "Move to line start"
+	description: "Move to line start",
+	bindings: [
+		Normal => [Key::char('0'), Key::special(SpecialKey::Home), Key::alt('h')],
+		Goto => [Key::char('h')],
+		Insert => [Key::special(SpecialKey::Home)],
+	],
 );
 
 bound_cursor_action!(
 	move_line_end,
 	motion: "line_end",
-	key: Key::char('$'),
-	alt_keys: [Key::special(SpecialKey::End), Key::alt('l')],
-	description: "Move to line end"
+	description: "Move to line end",
+	bindings: [
+		Normal => [Key::char('$'), Key::special(SpecialKey::End), Key::alt('l')],
+		Goto => [Key::char('l')],
+		Insert => [Key::special(SpecialKey::End)],
+	],
 );
 
 bound_cursor_action!(
 	move_first_nonblank,
 	motion: "first_nonwhitespace",
-	key: Key::char('^'),
-	description: "Move to first non-blank"
+	description: "Move to first non-blank",
+	bindings: [
+		Normal => [Key::char('^')],
+		Goto => [Key::char('i')],
+	],
 );
 
 bound_cursor_action!(
 	document_start,
 	motion: "document_start",
-	key: Key::special(SpecialKey::Home).with_ctrl(),
-	description: "Move to document start"
+	description: "Move to document start",
+	bindings: [
+		Normal => [Key::special(SpecialKey::Home).with_ctrl()],
+		Goto => [Key::char('g'), Key::char('k')],
+		Insert => [Key::special(SpecialKey::Home).with_ctrl()],
+	],
 );
 
 bound_cursor_action!(
 	document_end,
 	motion: "document_end",
-	key: Key::char('G'),
-	alt_keys: [Key::special(SpecialKey::End).with_ctrl()],
-	description: "Move to document end"
+	description: "Move to document end",
+	bindings: [
+		Normal => [Key::char('G'), Key::special(SpecialKey::End).with_ctrl()],
+		Goto => [Key::char('j'), Key::char('e')],
+		Insert => [Key::special(SpecialKey::End).with_ctrl()],
+	],
 );
 
 // Selection-creating motions - create selections
 bound_selection_action!(
 	next_word_start,
 	motion: "next_word_start",
-	key: Key::char('w'),
-	description: "Move to next word start"
+	description: "Move to next word start",
+	bindings: [
+		Normal => [Key::char('w')],
+		Insert => [Key::special(SpecialKey::Right).with_ctrl()],
+	],
 );
 
 bound_selection_action!(
 	next_word_end,
 	motion: "next_word_end",
-	key: Key::char('e'),
-	description: "Move to next word end"
+	description: "Move to next word end",
+	bindings: [Normal => [Key::char('e')]],
 );
 
 bound_selection_action!(
 	prev_word_start,
 	motion: "prev_word_start",
-	key: Key::char('b'),
-	description: "Move to previous word start"
+	description: "Move to previous word start",
+	bindings: [
+		Normal => [Key::char('b')],
+		Insert => [Key::special(SpecialKey::Left).with_ctrl()],
+	],
 );
 
 bound_selection_action!(
 	prev_word_end,
 	motion: "prev_word_end",
-	key: Key::alt('e'),
-	description: "Move to previous word end"
+	description: "Move to previous word end",
+	bindings: [Normal => [Key::alt('e')]],
 );
 
 bound_selection_action!(
 	next_long_word_start,
 	motion: "next_long_word_start",
-	key: Key::char('W'),
-	alt_keys: [Key::alt('w')],
-	description: "Move to next WORD start"
+	description: "Move to next WORD start",
+	bindings: [Normal => [Key::char('W'), Key::alt('w')]],
 );
 
 bound_selection_action!(
 	next_long_word_end,
 	motion: "next_long_word_end",
-	key: Key::char('E'),
-	description: "Move to next WORD end"
+	description: "Move to next WORD end",
+	bindings: [Normal => [Key::char('E')]],
 );
 
 bound_selection_action!(
 	prev_long_word_start,
 	motion: "prev_long_word_start",
-	key: Key::char('B'),
-	alt_keys: [Key::alt('b')],
-	description: "Move to previous WORD start"
+	description: "Move to previous WORD start",
+	bindings: [Normal => [Key::char('B'), Key::alt('b')]],
 );

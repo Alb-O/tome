@@ -8,9 +8,8 @@ use crate::movement;
 
 bound_action!(
 	find_char,
-	mode: Normal,
-	key: Key::char('f'),
 	description: "Select to next occurrence of character (inclusive)",
+	bindings: [Normal => [Key::char('f')]],
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();
@@ -28,9 +27,8 @@ bound_action!(
 
 bound_action!(
 	find_char_to,
-	mode: Normal,
-	key: Key::char('t'),
 	description: "Select to next occurrence of character (exclusive)",
+	bindings: [Normal => [Key::char('t')]],
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();
@@ -48,9 +46,8 @@ bound_action!(
 
 bound_action!(
 	find_char_reverse,
-	mode: Normal,
-	key: Key::alt('f'),
 	description: "Select to previous occurrence of character (inclusive)",
+	bindings: [Normal => [Key::alt('f')]],
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();
@@ -68,9 +65,8 @@ bound_action!(
 
 bound_action!(
 	find_char_to_reverse,
-	mode: Normal,
-	key: Key::alt('t'),
 	description: "Select to previous occurrence of character (exclusive)",
+	bindings: [Normal => [Key::alt('t')]],
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();

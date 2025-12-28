@@ -178,52 +178,56 @@ macro_rules! action {
 	(@opt , $default:expr) => { $default };
 }
 
-/// Define an action with a colocated keybinding.
+/// Define an action with colocated keybindings across multiple modes.
 ///
 /// This macro combines action registration with keybinding registration in one place,
 /// improving code locality and reducing the mental overhead of finding where an action
-/// is bound. Use this for actions that have a primary keybinding.
+/// is bound.
+///
+/// # Syntax
+///
+/// ```ignore
+/// bound_action!(
+///     action_name,
+///     description: "What this action does",
+///     bindings: [
+///         Normal => [Key::char('x'), Key::special(SpecialKey::Delete)],
+///         Insert => [Key::special(SpecialKey::Delete)],
+///         Goto => [Key::char('x')],
+///     ],
+///     |ctx| { /* handler body */ }
+/// );
+/// ```
 ///
 /// # Examples
 ///
 /// ```ignore
-/// // Pure action returning Motion(Selection)
+/// // Action bound in multiple modes with different keys
 /// bound_action!(
-///     collapse_selection,
-///     mode: Normal,
-///     key: Key::char(';'),
-///     description: "Collapse selection to cursor",
-///     |ctx| {
-///         let mut sel = ctx.selection.clone();
-///         sel.transform_mut(|r| r.anchor = r.head);
-///         ActionResult::Motion(sel)
-///     }
+///     document_start,
+///     description: "Move to document start",
+///     bindings: [
+///         Normal => [Key::special(SpecialKey::Home).with_ctrl()],
+///         Goto => [Key::char('g'), Key::char('k')],
+///         Insert => [Key::special(SpecialKey::Home).with_ctrl()],
+///     ],
+///     |_ctx| ActionResult::Motion(...)
 /// );
 ///
 /// // Action with named handler function
 /// bound_action!(
 ///     split_lines,
-///     mode: Normal,
-///     key: Key::char('S'),
 ///     description: "Split selection into lines",
+///     bindings: [Normal => [Key::char('S')]],
 ///     handler: split_lines_impl
 /// );
-///
-/// fn split_lines_impl(ctx: &ActionContext) -> ActionResult {
-///     // ...
-/// }
 /// ```
-///
-/// For actions bound to multiple keys, use `action!` + `bind!` separately,
-/// or use `bound_action!` for the primary key and `bind!` for alternates.
 #[macro_export]
 macro_rules! bound_action {
 	// Inline closure variant
 	($name:ident,
-		mode: $mode:ident,
-		key: $key:expr,
-		$(alt_keys: [$($alt_key:expr),* $(,)?],)?
-		description: $desc:expr
+		description: $desc:expr,
+		bindings: [$($mode:ident => [$($key:expr),+ $(,)?]),+ $(,)?]
 		$(, priority: $priority:expr)?
 		$(, caps: $caps:expr)?
 		$(, flags: $flags:expr)?
@@ -237,10 +241,8 @@ macro_rules! bound_action {
 			}
 
 			$crate::bound_action!($name,
-				mode: $mode,
-				key: $key,
-				$(alt_keys: [$($alt_key),*],)?
-				description: $desc
+				description: $desc,
+				bindings: [$($mode => [$($key),+]),+]
 				$(, priority: $priority)?
 				$(, caps: $caps)?
 				$(, flags: $flags)?,
@@ -251,10 +253,8 @@ macro_rules! bound_action {
 
 	// Named handler variant
 	($name:ident,
-		mode: $mode:ident,
-		key: $key:expr,
-		$(alt_keys: [$($alt_key:expr),* $(,)?],)?
-		description: $desc:expr
+		description: $desc:expr,
+		bindings: [$($mode:ident => [$($key:expr),+ $(,)?]),+ $(,)?]
 		$(, priority: $priority:expr)?
 		$(, caps: $caps:expr)?
 		$(, flags: $flags:expr)?
@@ -277,28 +277,15 @@ macro_rules! bound_action {
 				flags: $crate::bound_action!(@opt $({$flags})?, $crate::flags::NONE),
 			};
 
-			// Register the primary keybinding
-			#[allow(non_upper_case_globals)]
-			#[linkme::distributed_slice($crate::keybindings::[<KEYBINDINGS_ $mode:upper>])]
-			static [<KB_ $name:upper>]: $crate::keybindings::KeyBindingDef =
-				$crate::keybindings::KeyBindingDef {
-					mode: $crate::keybindings::BindingMode::$mode,
-					key: $key,
-					action: stringify!($name),
-					priority: 100,
-				};
-
-			// Register alternate keybindings
-			$($crate::bound_action!(@alt_keys $name, $mode, 0usize, $($alt_key),*);)?
+			$($crate::bound_action!(@mode_keys $name, $mode, [] $($key),+);)+
 		}
 	};
 
-	// Helper for alternate keys - recursively generates bindings with unique names
-	(@alt_keys $name:ident, $mode:ident, $idx:expr, $key:expr $(, $rest:expr)*) => {
+	(@mode_keys $name:ident, $mode:ident, [$($done:tt)*] $key:expr $(, $rest:expr)+) => {
 		paste::paste! {
 			#[allow(non_upper_case_globals)]
 			#[linkme::distributed_slice($crate::keybindings::[<KEYBINDINGS_ $mode:upper>])]
-			static [<KB_ $name:upper _ALT_ $idx>]: $crate::keybindings::KeyBindingDef =
+			static [<KB_ $name:upper _ $mode:upper _ $($done)*>]: $crate::keybindings::KeyBindingDef =
 				$crate::keybindings::KeyBindingDef {
 					mode: $crate::keybindings::BindingMode::$mode,
 					key: $key,
@@ -306,12 +293,73 @@ macro_rules! bound_action {
 					priority: 100,
 				};
 		}
-		$crate::bound_action!(@alt_keys $name, $mode, $idx + 1usize $(, $rest)*);
+		$crate::bound_action!(@mode_keys $name, $mode, [$($done)* _] $($rest),+);
 	};
-	(@alt_keys $name:ident, $mode:ident, $idx:expr) => {};
+	(@mode_keys $name:ident, $mode:ident, [$($done:tt)*] $key:expr) => {
+		paste::paste! {
+			#[allow(non_upper_case_globals)]
+			#[linkme::distributed_slice($crate::keybindings::[<KEYBINDINGS_ $mode:upper>])]
+			static [<KB_ $name:upper _ $mode:upper _ $($done)*>]: $crate::keybindings::KeyBindingDef =
+				$crate::keybindings::KeyBindingDef {
+					mode: $crate::keybindings::BindingMode::$mode,
+					key: $key,
+					action: stringify!($name),
+					priority: 100,
+				};
+		}
+	};
 
 	(@opt {$val:expr}, $default:expr) => { $val };
 	(@opt , $default:expr) => { $default };
+}
+
+/// Register additional keybindings for an existing action.
+///
+/// Use this when you need to add bindings to an action defined elsewhere,
+/// or for secondary bindings that don't belong with the action definition.
+///
+/// # Examples
+///
+/// ```ignore
+/// // Add a binding in a different mode
+/// bind!(scroll_down, View => [Key::char('j')]);
+///
+/// // Add multiple bindings
+/// bind!(move_left, Insert => [Key::special(SpecialKey::Left)]);
+/// ```
+#[macro_export]
+macro_rules! bind {
+	($action:ident, $($mode:ident => [$($key:expr),+ $(,)?]),+ $(,)?) => {
+		$($crate::bind!(@mode_keys $action, $mode, [] $($key),+);)+
+	};
+
+	(@mode_keys $action:ident, $mode:ident, [$($done:tt)*] $key:expr $(, $rest:expr)+) => {
+		paste::paste! {
+			#[allow(non_upper_case_globals)]
+			#[linkme::distributed_slice($crate::keybindings::[<KEYBINDINGS_ $mode:upper>])]
+			static [<KB_ $action:upper _ $mode:upper _EXTRA_ $($done)*>]: $crate::keybindings::KeyBindingDef =
+				$crate::keybindings::KeyBindingDef {
+					mode: $crate::keybindings::BindingMode::$mode,
+					key: $key,
+					action: stringify!($action),
+					priority: 100,
+				};
+		}
+		$crate::bind!(@mode_keys $action, $mode, [$($done)* _] $($rest),+);
+	};
+	(@mode_keys $action:ident, $mode:ident, [$($done:tt)*] $key:expr) => {
+		paste::paste! {
+			#[allow(non_upper_case_globals)]
+			#[linkme::distributed_slice($crate::keybindings::[<KEYBINDINGS_ $mode:upper>])]
+			static [<KB_ $action:upper _ $mode:upper _EXTRA_ $($done)*>]: $crate::keybindings::KeyBindingDef =
+				$crate::keybindings::KeyBindingDef {
+					mode: $crate::keybindings::BindingMode::$mode,
+					key: $key,
+					action: stringify!($action),
+					priority: 100,
+				};
+		}
+	};
 }
 
 /// Define a hook and register it in the HOOKS slice.
@@ -459,4 +507,4 @@ macro_rules! motion {
 	(@opt , $default:expr) => { $default };
 }
 
-pub use crate::{action, bound_action, command, hook, language, motion, option, text_object};
+pub use crate::{action, bind, bound_action, command, hook, language, motion, option, text_object};
