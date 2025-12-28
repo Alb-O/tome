@@ -339,7 +339,7 @@ mod tests {
 			args: ActionArgs::default(),
 		};
 
-		let result = select_line(&ctx);
+		let result = select_line_impl(&ctx);
 		if let ActionResult::Motion(new_sel) = result {
 			let primary = new_sel.primary();
 			// If it extends, anchor should stay at 1, head should be start of next line (7)
@@ -369,7 +369,7 @@ mod tests {
 			args: ActionArgs::default(),
 		};
 
-		let result = select_line(&ctx);
+		let result = select_line_impl(&ctx);
 		if let ActionResult::Motion(new_sel) = result {
 			let primary = new_sel.primary();
 			// Should replace with line 2
@@ -399,7 +399,7 @@ mod tests {
 			args: ActionArgs::default(),
 		};
 
-		let result = select_line(&ctx);
+		let result = select_line_impl(&ctx);
 		if let ActionResult::Motion(new_sel) = result {
 			let primary = new_sel.primary();
 			assert_eq!(primary.anchor, 0);

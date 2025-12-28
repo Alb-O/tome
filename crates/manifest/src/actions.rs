@@ -1,90 +1,80 @@
 use ropey::RopeSlice;
 use tome_base::Selection;
 use tome_base::range::CharIdx;
+use tome_macro::DispatchResult;
 
 use crate::{Capability, RegistrySource};
 
 /// Result of executing an action.
 ///
 /// Actions return this enum to indicate what the editor should do next.
-/// Variants are split into two categories based on whether they can be
-/// applied when a terminal view is focused.
+/// Variants marked `#[terminal_safe]` can be applied when a terminal view
+/// is focused (workspace-level operations). Other variants require text
+/// buffer context.
 ///
-/// # Terminal-Safe Results
+/// The `#[derive(DispatchResult)]` macro generates:
+/// - Handler slices (`RESULT_*_HANDLERS`) for each variant
+/// - [`dispatch_result`] function for routing results to handlers
+/// - [`is_terminal_safe`] method from `#[terminal_safe]` attributes
 ///
-/// These operate at the workspace level and don't require text buffer context:
-/// - [`Ok`], [`Quit`], [`ForceQuit`], [`Error`], [`ForceRedraw`]
-/// - Split/buffer management: [`SplitHorizontal`], [`BufferNext`], [`CloseBuffer`], etc.
-/// - Focus navigation: [`FocusLeft`], [`FocusRight`], [`FocusUp`], [`FocusDown`]
-///
-/// # Text Buffer Results
-///
-/// These require cursor, selection, or document access:
-/// - Mode/cursor: [`ModeChange`], [`CursorMove`], [`Motion`]
-/// - Editing: [`Edit`], [`SearchNext`], [`SplitLines`]
-///
-/// Use [`is_terminal_safe`] to check at runtime.
-///
-/// [`Ok`]: Self::Ok
-/// [`Quit`]: Self::Quit
-/// [`ForceQuit`]: Self::ForceQuit
-/// [`Error`]: Self::Error
-/// [`ForceRedraw`]: Self::ForceRedraw
-/// [`SplitHorizontal`]: Self::SplitHorizontal
-/// [`BufferNext`]: Self::BufferNext
-/// [`CloseBuffer`]: Self::CloseBuffer
-/// [`FocusLeft`]: Self::FocusLeft
-/// [`FocusRight`]: Self::FocusRight
-/// [`FocusUp`]: Self::FocusUp
-/// [`FocusDown`]: Self::FocusDown
-/// [`ModeChange`]: Self::ModeChange
-/// [`CursorMove`]: Self::CursorMove
-/// [`Motion`]: Self::Motion
-/// [`Edit`]: Self::Edit
-/// [`SearchNext`]: Self::SearchNext
-/// [`SplitLines`]: Self::SplitLines
+/// [`dispatch_result`]: crate::dispatch_result
 /// [`is_terminal_safe`]: Self::is_terminal_safe
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DispatchResult)]
 pub enum ActionResult {
-	// Terminal-safe: workspace-level operations
-	//
 	/// No-op success.
+	#[terminal_safe]
 	Ok,
 	/// Quit the editor.
+	#[terminal_safe]
+	#[handler(Quit)]
 	Quit,
 	/// Force quit without save prompts.
+	#[terminal_safe]
+	#[handler(Quit)]
 	ForceQuit,
 	/// Error message to display.
+	#[terminal_safe]
 	Error(String),
 	/// Force a redraw.
+	#[terminal_safe]
 	ForceRedraw,
 	/// Split horizontally with current buffer.
+	#[terminal_safe]
 	SplitHorizontal,
 	/// Split vertically with current buffer.
+	#[terminal_safe]
 	SplitVertical,
 	/// Open terminal in horizontal split.
+	#[terminal_safe]
 	SplitTerminalHorizontal,
 	/// Open terminal in vertical split.
+	#[terminal_safe]
 	SplitTerminalVertical,
 	/// Switch to next buffer.
+	#[terminal_safe]
 	BufferNext,
 	/// Switch to previous buffer.
+	#[terminal_safe]
 	BufferPrev,
 	/// Close current buffer/view.
+	#[terminal_safe]
 	CloseBuffer,
 	/// Close all other buffers.
+	#[terminal_safe]
 	CloseOtherBuffers,
 	/// Focus split to the left.
+	#[terminal_safe]
 	FocusLeft,
 	/// Focus split to the right.
+	#[terminal_safe]
 	FocusRight,
 	/// Focus split above.
+	#[terminal_safe]
 	FocusUp,
 	/// Focus split below.
+	#[terminal_safe]
 	FocusDown,
 
-	// Text buffer required: cursor/selection/edit operations
-	//
 	/// Change editor mode.
 	ModeChange(ActionMode),
 	/// Move cursor to position.
@@ -102,6 +92,7 @@ pub enum ActionResult {
 	/// Search backward.
 	SearchPrev { add_selection: bool },
 	/// Use current selection as search pattern.
+	#[handler(UseSelectionSearch)]
 	UseSelectionAsSearch,
 	/// Align selections.
 	Align,
@@ -113,34 +104,6 @@ pub enum ActionResult {
 	SpacesToTabs,
 	/// Trim whitespace from selections.
 	TrimSelections,
-}
-
-impl ActionResult {
-	/// Returns true if this result can be applied when a terminal is focused.
-	///
-	/// Terminal-safe results are workspace-level operations that don't require
-	/// text buffer context (cursor, selection, document content).
-	pub fn is_terminal_safe(&self) -> bool {
-		matches!(
-			self,
-			Self::Ok
-				| Self::Quit | Self::ForceQuit
-				| Self::Error(_)
-				| Self::ForceRedraw
-				| Self::SplitHorizontal
-				| Self::SplitVertical
-				| Self::SplitTerminalHorizontal
-				| Self::SplitTerminalVertical
-				| Self::BufferNext
-				| Self::BufferPrev
-				| Self::CloseBuffer
-				| Self::CloseOtherBuffers
-				| Self::FocusLeft
-				| Self::FocusRight
-				| Self::FocusUp
-				| Self::FocusDown
-		)
-	}
 }
 
 #[derive(Debug, Clone)]

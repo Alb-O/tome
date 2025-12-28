@@ -237,6 +237,69 @@ bind!(KB_MY_ACTION, Key::char('x'), "my_action");
 
 Or use the colocated macro if applicable.
 
+## Handler Infrastructure
+
+### `#[derive(DispatchResult)]`
+
+The `ActionResult` enum uses `#[derive(DispatchResult)]` (from `tome-macro`) to auto-generate dispatch infrastructure:
+
+```rust
+#[derive(Debug, Clone, DispatchResult)]
+pub enum ActionResult {
+    #[terminal_safe]
+    Ok,
+    #[terminal_safe]
+    #[handler(Quit)]  // Share handler with ForceQuit
+    Quit,
+    #[terminal_safe]
+    #[handler(Quit)]
+    ForceQuit,
+    Motion(Selection),
+    // ...
+}
+```
+
+This generates:
+- **Handler slices**: `RESULT_OK_HANDLERS`, `RESULT_QUIT_HANDLERS`, `RESULT_MOTION_HANDLERS`, etc.
+- **`dispatch_result` function**: Routes results to their handler slices
+- **`is_terminal_safe` method**: Returns `true` for variants marked `#[terminal_safe]`
+
+#### Attributes
+
+| Attribute | Purpose |
+|-----------|---------|
+| `#[terminal_safe]` | Marks variant as safe when terminal is focused (workspace-level ops) |
+| `#[handler(Name)]` | Override handler slice name (e.g., `Quit` and `ForceQuit` share `RESULT_QUIT_HANDLERS`) |
+
+#### Adding New Variants
+
+1. Add the variant to `ActionResult`
+2. If terminal-safe, add `#[terminal_safe]`
+3. If sharing a handler, add `#[handler(ExistingVariant)]`
+4. Register a handler with `result_handler!` macro
+
+The handler slice is auto-generated; no manual `distributed_slice` declaration needed.
+
+### Handler Registration
+
+Handlers are registered to the generated slices:
+
+```rust
+result_handler!(RESULT_OK_HANDLERS, HANDLE_OK, "ok", |_, _, _| {
+    HandleOutcome::Handled
+});
+
+result_handler!(RESULT_MOTION_HANDLERS, HANDLE_MOTION, "motion", |result, ctx, extend| {
+    if let ActionResult::Motion(sel) = result {
+        ctx.set_selection(sel.clone());
+        ctx.set_cursor(sel.primary().head);
+    }
+    HandleOutcome::Handled
+});
+```
+
+Handler slices are in `tome_manifest::actions::*`, not `tome_manifest::editor_ctx::*`.
+
 ## Historical Decisions
 
 ### Removing Orphan Variants
@@ -265,6 +328,15 @@ To:
 - Pure action function returning `Motion(Selection)`
 
 This reduced code, improved testability, and eliminated three ActionResult variants.
+
+### Auto-Generated Dispatch
+
+Previously, `dispatch_result` and handler slices were manually maintained in `handlers.rs` (~100 lines of boilerplate). Each new `ActionResult` variant required:
+1. Adding a `result_slices!` entry
+2. Adding a match arm in `dispatch_result`
+3. Updating `is_terminal_safe` if applicable
+
+Now, `#[derive(DispatchResult)]` generates all of this. Adding a new variant only requires adding the variant itself (with optional attributes).
 
 ## Metrics
 

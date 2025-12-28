@@ -311,9 +311,8 @@ pub use actions::{
 };
 pub use commands::{CommandContext, CommandDef, flags};
 pub use completion::{CompletionContext, CompletionItem, CompletionKind, CompletionSource};
-pub use editor_ctx::{
-	EditorCapabilities, EditorContext, EditorOps, HandleOutcome, dispatch_result,
-};
+pub use actions::dispatch_result;
+pub use editor_ctx::{EditorCapabilities, EditorContext, EditorOps, HandleOutcome};
 pub use hooks::{
 	BoxFuture as HookBoxFuture, HOOKS, HookAction, HookContext, HookDef, HookEvent, HookEventData,
 	HookResult, HookScheduler, MUTABLE_HOOKS, MutableHookContext, MutableHookDef, OwnedHookContext,

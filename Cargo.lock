@@ -2495,6 +2495,7 @@ dependencies = [
  "strsim",
  "thiserror 2.0.17",
  "tome-base",
+ "tome-macro",
  "tome-stdlib",
 ]
 

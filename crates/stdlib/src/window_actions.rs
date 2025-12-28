@@ -33,7 +33,7 @@ macro_rules! window_action {
 				priority: DEFAULT_PRIORITY,
 			};
 
-			#[linkme::distributed_slice(tome_manifest::editor_ctx::$slice)]
+			#[linkme::distributed_slice(tome_manifest::actions::$slice)]
 			static [<HANDLE_ $name:upper>]: tome_manifest::editor_ctx::ResultHandler =
 				tome_manifest::editor_ctx::ResultHandler {
 					name: stringify!($name),
