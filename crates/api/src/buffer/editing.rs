@@ -96,12 +96,11 @@ impl Buffer {
 		}
 	}
 
-	/// Applies a transaction to the document with incremental syntax tree update.
-	///
-	/// This is the central method for all document modifications.
+	/// Applies a transaction to the document. Increments the version counter.
 	pub fn apply_transaction(&mut self, tx: &Transaction) {
 		tx.apply(&mut self.doc);
 		self.modified = true;
+		self.version = self.version.wrapping_add(1);
 	}
 
 	/// Applies a transaction and updates syntax tree incrementally.
@@ -123,5 +122,6 @@ impl Buffer {
 		}
 
 		self.modified = true;
+		self.version = self.version.wrapping_add(1);
 	}
 }

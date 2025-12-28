@@ -318,8 +318,9 @@ pub use editor_ctx::{
 };
 pub use hooks::{
 	BoxFuture as HookBoxFuture, HOOKS, HookAction, HookContext, HookDef, HookEvent, HookResult,
-	MUTABLE_HOOKS, MutableHookContext, MutableHookDef, all_hooks, emit as emit_hook,
-	emit_mutable as emit_mutable_hook, emit_sync as emit_hook_sync, find_hooks,
+	HookScheduler, MUTABLE_HOOKS, MutableHookContext, MutableHookDef, OwnedHookContext, all_hooks,
+	emit as emit_hook, emit_mutable as emit_mutable_hook, emit_sync as emit_hook_sync,
+	emit_sync_with as emit_hook_sync_with, find_hooks,
 };
 pub use index::{
 	all_actions, all_commands, all_motions, all_text_objects, find_action, find_action_by_id,

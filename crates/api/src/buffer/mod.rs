@@ -106,6 +106,9 @@ pub struct Buffer {
 
 	/// Flag for grouping insert-mode edits into a single undo.
 	pub(crate) insert_undo_active: bool,
+
+	/// Document version, incremented on every transaction.
+	pub version: u64,
 }
 
 impl Buffer {
@@ -131,6 +134,7 @@ impl Buffer {
 			file_type: None,
 			syntax: None,
 			insert_undo_active: false,
+			version: 0,
 		}
 	}
 

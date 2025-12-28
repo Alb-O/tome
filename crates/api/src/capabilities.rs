@@ -143,7 +143,7 @@ impl BufferOpsAccess for Editor {
 		let current = self.buffer();
 		let content: String = current.doc.slice(..).into();
 		let path = current.path.clone();
-		let new_id = self.open_buffer(content, path);
+		let new_id = self.open_buffer_sync(content, path);
 		Editor::split_horizontal(self, new_id);
 	}
 
@@ -158,7 +158,7 @@ impl BufferOpsAccess for Editor {
 		let current = self.buffer();
 		let content: String = current.doc.slice(..).into();
 		let path = current.path.clone();
-		let new_id = self.open_buffer(content, path);
+		let new_id = self.open_buffer_sync(content, path);
 		Editor::split_vertical(self, new_id);
 	}
 

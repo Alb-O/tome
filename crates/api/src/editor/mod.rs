@@ -2,6 +2,7 @@ mod actions;
 mod actions_exec;
 pub mod extensions;
 mod history;
+mod hook_runtime;
 mod input_handling;
 mod messaging;
 mod navigation;
@@ -10,15 +11,16 @@ mod separator;
 pub mod types;
 mod views;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use agentfs_sdk::{FileSystem, HostFS};
+pub use hook_runtime::HookRuntime;
 use tome_base::Transaction;
 use tome_language::LanguageLoader;
 use tome_manifest::syntax::SyntaxStyles;
-use tome_manifest::{HookContext, Mode, emit_hook, emit_hook_sync};
+use tome_manifest::{HookContext, Mode, emit_hook, emit_hook_sync_with};
 use tome_theme::Theme;
 pub use types::{HistoryEntry, Registers};
 
@@ -159,6 +161,12 @@ pub struct Editor {
 	///
 	/// Lazily initialized when the first terminal is opened.
 	terminal_ipc: Option<TerminalIpc>,
+
+	/// Runtime for scheduling async hooks during sync emission.
+	pub hook_runtime: HookRuntime,
+
+	/// Buffers with pending content changes for [`HookEvent::BufferChange`].
+	dirty_buffers: HashSet<BufferId>,
 }
 
 impl tome_manifest::editor_ctx::FileOpsAccess for Editor {
@@ -292,14 +300,19 @@ impl Editor {
 		let mut buffer = Buffer::new(buffer_id, content.clone(), path.clone());
 		buffer.init_syntax(&language_loader);
 
+		let mut hook_runtime = HookRuntime::new();
+
 		let scratch_path = PathBuf::from("[scratch]");
 		let hook_path = path.as_ref().unwrap_or(&scratch_path);
 
-		emit_hook_sync(&HookContext::BufferOpen {
-			path: hook_path,
-			text: buffer.doc.slice(..),
-			file_type: buffer.file_type.as_deref(),
-		});
+		emit_hook_sync_with(
+			&HookContext::BufferOpen {
+				path: hook_path,
+				text: buffer.doc.slice(..),
+				file_type: buffer.file_type.as_deref(),
+			},
+			&mut hook_runtime,
+		);
 
 		let mut buffers = HashMap::new();
 		buffers.insert(buffer_id, buffer);
@@ -342,32 +355,66 @@ impl Editor {
 			mouse_velocity: MouseVelocityTracker::default(),
 			dragging_separator: None,
 			terminal_ipc: None,
+			hook_runtime,
+			dirty_buffers: HashSet::new(),
 		}
 	}
 
 	/// Opens a new buffer from content, optionally with a path.
 	///
-	/// Returns the new buffer's ID.
-	pub fn open_buffer(&mut self, content: String, path: Option<PathBuf>) -> BufferId {
-		let buffer_id = BufferId(self.next_buffer_id);
-		self.next_buffer_id += 1;
-
-		let mut buffer = Buffer::new(buffer_id, content.clone(), path.clone());
-		buffer.init_syntax(&self.language_loader);
-
-		// Update text width to match current window
-		if let Some(width) = self.window_width {
-			buffer.text_width = width.saturating_sub(buffer.gutter_width()) as usize;
-		}
+	/// This async version awaits all hooks including async ones (e.g., LSP).
+	/// For sync contexts like split operations, use [`open_buffer_sync`](Self::open_buffer_sync).
+	pub async fn open_buffer(&mut self, content: String, path: Option<PathBuf>) -> BufferId {
+		let buffer_id = self.create_buffer_internal(content, path.clone());
 
 		let scratch_path = PathBuf::from("[scratch]");
 		let hook_path = path.as_ref().unwrap_or(&scratch_path);
+		let buffer = self.buffers.get(&buffer_id).unwrap();
 
-		emit_hook_sync(&HookContext::BufferOpen {
+		emit_hook(&HookContext::BufferOpen {
 			path: hook_path,
 			text: buffer.doc.slice(..),
 			file_type: buffer.file_type.as_deref(),
-		});
+		})
+		.await;
+
+		buffer_id
+	}
+
+	/// Opens a new buffer synchronously, scheduling async hooks for later.
+	///
+	/// Use this in sync contexts like split operations. Async hooks are queued
+	/// in the hook runtime and will execute when the main loop drains them.
+	pub fn open_buffer_sync(&mut self, content: String, path: Option<PathBuf>) -> BufferId {
+		let buffer_id = self.create_buffer_internal(content, path.clone());
+
+		let scratch_path = PathBuf::from("[scratch]");
+		let hook_path = path.as_ref().unwrap_or(&scratch_path);
+		let buffer = self.buffers.get(&buffer_id).unwrap();
+
+		emit_hook_sync_with(
+			&HookContext::BufferOpen {
+				path: hook_path,
+				text: buffer.doc.slice(..),
+				file_type: buffer.file_type.as_deref(),
+			},
+			&mut self.hook_runtime,
+		);
+
+		buffer_id
+	}
+
+	/// Internal helper to create a buffer without emitting hooks.
+	fn create_buffer_internal(&mut self, content: String, path: Option<PathBuf>) -> BufferId {
+		let buffer_id = BufferId(self.next_buffer_id);
+		self.next_buffer_id += 1;
+
+		let mut buffer = Buffer::new(buffer_id, content, path);
+		buffer.init_syntax(&self.language_loader);
+
+		if let Some(width) = self.window_width {
+			buffer.text_width = width.saturating_sub(buffer.gutter_width()) as usize;
+		}
 
 		self.buffers.insert(buffer_id, buffer);
 		buffer_id
@@ -388,7 +435,7 @@ impl Editor {
 			String::new()
 		};
 
-		Ok(self.open_buffer(content, Some(path)))
+		Ok(self.open_buffer(content, Some(path)).await)
 	}
 
 	/// Focuses a specific view.
@@ -602,6 +649,14 @@ impl Editor {
 			return false;
 		}
 
+		if let BufferView::Text(id) = view
+			&& let Some(buffer) = self.buffers.get(&id)
+		{
+			let scratch_path = PathBuf::from("[scratch]");
+			let path = buffer.path.as_ref().unwrap_or(&scratch_path);
+			emit_hook_sync_with(&HookContext::BufferClose { path }, &mut self.hook_runtime);
+		}
+
 		// Remove from layout
 		if let Some(new_layout) = self.layout.remove_view(view) {
 			self.layout = new_layout;
@@ -741,6 +796,23 @@ impl Editor {
 		{
 			self.needs_redraw = true;
 		}
+
+		let dirty_ids: Vec<_> = self.dirty_buffers.drain().collect();
+		for buffer_id in dirty_ids {
+			if let Some(buffer) = self.buffers.get(&buffer_id) {
+				let scratch_path = PathBuf::from("[scratch]");
+				let path = buffer.path.as_ref().unwrap_or(&scratch_path);
+				emit_hook_sync_with(
+					&HookContext::BufferChange {
+						path,
+						text: buffer.doc.slice(..),
+						version: buffer.version,
+					},
+					&mut self.hook_runtime,
+				);
+			}
+		}
+		emit_hook_sync_with(&HookContext::EditorTick, &mut self.hook_runtime);
 	}
 
 	pub fn update_style_overlays(&mut self) {
@@ -765,6 +837,9 @@ impl Editor {
 
 	pub fn insert_text(&mut self, text: &str) {
 		self.buffer_mut().insert_text(text);
+		if let BufferView::Text(id) = self.focused_view {
+			self.dirty_buffers.insert(id);
+		}
 	}
 
 	pub fn yank_selection(&mut self) {
@@ -780,6 +855,9 @@ impl Editor {
 		}
 		let yank = self.registers.yank.clone();
 		self.buffer_mut().paste_after(&yank);
+		if let BufferView::Text(id) = self.focused_view {
+			self.dirty_buffers.insert(id);
+		}
 	}
 
 	pub fn paste_before(&mut self) {
@@ -788,6 +866,9 @@ impl Editor {
 		}
 		let yank = self.registers.yank.clone();
 		self.buffer_mut().paste_before(&yank);
+		if let BufferView::Text(id) = self.focused_view {
+			self.dirty_buffers.insert(id);
+		}
 	}
 
 	pub fn handle_window_resize(&mut self, width: u16, height: u16) {
@@ -806,14 +887,20 @@ impl Editor {
 		}
 		self.ui = ui;
 		self.needs_redraw = true;
+		emit_hook_sync_with(
+			&HookContext::WindowResize { width, height },
+			&mut self.hook_runtime,
+		);
 	}
 
 	pub fn handle_focus_in(&mut self) {
 		self.needs_redraw = true;
+		emit_hook_sync_with(&HookContext::FocusGained, &mut self.hook_runtime);
 	}
 
 	pub fn handle_focus_out(&mut self) {
 		self.needs_redraw = true;
+		emit_hook_sync_with(&HookContext::FocusLost, &mut self.hook_runtime);
 	}
 
 	pub fn handle_paste(&mut self, content: String) {
@@ -833,7 +920,11 @@ impl Editor {
 	}
 
 	pub fn delete_selection(&mut self) {
-		self.buffer_mut().delete_selection();
+		if self.buffer_mut().delete_selection()
+			&& let BufferView::Text(id) = self.focused_view
+		{
+			self.dirty_buffers.insert(id);
+		}
 	}
 
 	pub fn set_theme(&mut self, theme_name: &str) -> Result<(), tome_manifest::CommandError> {
@@ -956,6 +1047,7 @@ impl Editor {
 			.get_mut(&buffer_id)
 			.expect("focused buffer must exist");
 		buffer.apply_transaction_with_syntax(tx, &self.language_loader);
+		self.dirty_buffers.insert(buffer_id);
 	}
 
 	pub fn reparse_syntax(&mut self) {

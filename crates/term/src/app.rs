@@ -5,6 +5,7 @@ use termina::escape::csi::{Csi, Cursor};
 use termina::event::{Event, KeyEventKind};
 use termina::{PlatformTerminal, Terminal as _};
 use tome_api::Editor;
+use tome_manifest::{HookContext, emit_hook_sync_with};
 use tome_tui::Terminal;
 
 use crate::backend::TerminaBackend;
@@ -24,11 +25,14 @@ pub async fn run_editor(mut editor: Editor) -> io::Result<()> {
 
 	// Start UI panels (includes terminal prewarm).
 	editor.ui_startup();
+	emit_hook_sync_with(&HookContext::EditorStart, &mut editor.hook_runtime);
 
 	let result: io::Result<()> = async {
 		loop {
 			editor.ui_tick();
 			editor.tick();
+			editor.hook_runtime.drain().await;
+
 			if editor.take_quit_request() {
 				break;
 			}
@@ -110,6 +114,8 @@ pub async fn run_editor(mut editor: Editor) -> io::Result<()> {
 		Ok(())
 	}
 	.await;
+
+	tome_manifest::emit_hook(&HookContext::EditorQuit).await;
 
 	let terminal_inner = terminal.backend_mut().terminal_mut();
 	let cleanup_result = disable_terminal_features(terminal_inner);

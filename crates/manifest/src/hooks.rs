@@ -112,7 +112,12 @@ pub enum HookContext<'a> {
 	/// Buffer was closed.
 	BufferClose { path: &'a Path },
 	/// Buffer content changed.
-	BufferChange { path: &'a Path, text: RopeSlice<'a> },
+	BufferChange {
+		path: &'a Path,
+		text: RopeSlice<'a>,
+		/// Document version number (incremented on each transaction).
+		version: u64,
+	},
 	/// Mode changed.
 	ModeChange { old_mode: Mode, new_mode: Mode },
 	/// Cursor moved.
@@ -144,6 +149,146 @@ impl<'a> HookContext<'a> {
 			HookContext::WindowResize { .. } => HookEvent::WindowResize,
 			HookContext::FocusGained => HookEvent::FocusGained,
 			HookContext::FocusLost => HookEvent::FocusLost,
+		}
+	}
+
+	/// Creates an owned version of this context for use in async hooks.
+	///
+	/// Copies all data from the borrowed context so it can be moved into a future.
+	pub fn to_owned(&self) -> OwnedHookContext {
+		match self {
+			HookContext::EditorStart => OwnedHookContext::EditorStart,
+			HookContext::EditorQuit => OwnedHookContext::EditorQuit,
+			HookContext::EditorTick => OwnedHookContext::EditorTick,
+			HookContext::BufferOpen {
+				path,
+				text,
+				file_type,
+			} => OwnedHookContext::BufferOpen {
+				path: path.to_path_buf(),
+				text: text.to_string(),
+				file_type: file_type.map(String::from),
+			},
+			HookContext::BufferWritePre { path, text } => OwnedHookContext::BufferWritePre {
+				path: path.to_path_buf(),
+				text: text.to_string(),
+			},
+			HookContext::BufferWrite { path } => OwnedHookContext::BufferWrite {
+				path: path.to_path_buf(),
+			},
+			HookContext::BufferClose { path } => OwnedHookContext::BufferClose {
+				path: path.to_path_buf(),
+			},
+			HookContext::BufferChange {
+				path,
+				text,
+				version,
+			} => OwnedHookContext::BufferChange {
+				path: path.to_path_buf(),
+				text: text.to_string(),
+				version: *version,
+			},
+			HookContext::ModeChange { old_mode, new_mode } => OwnedHookContext::ModeChange {
+				old_mode: old_mode.clone(),
+				new_mode: new_mode.clone(),
+			},
+			HookContext::CursorMove { line, col } => OwnedHookContext::CursorMove {
+				line: *line,
+				col: *col,
+			},
+			HookContext::SelectionChange { anchor, head } => OwnedHookContext::SelectionChange {
+				anchor: *anchor,
+				head: *head,
+			},
+			HookContext::WindowResize { width, height } => OwnedHookContext::WindowResize {
+				width: *width,
+				height: *height,
+			},
+			HookContext::FocusGained => OwnedHookContext::FocusGained,
+			HookContext::FocusLost => OwnedHookContext::FocusLost,
+		}
+	}
+}
+
+/// Owned version of [`HookContext`] for async hook handlers.
+///
+/// Unlike `HookContext` which borrows data, this owns all its data and can be
+/// moved into async futures. Use [`HookContext::to_owned()`] to create one.
+///
+/// # Example
+///
+/// ```ignore
+/// hook!(lsp_open, BufferOpen, 100, "Notify LSP", |ctx| {
+///     let owned = ctx.to_owned();
+///     HookAction::Async(Box::pin(async move {
+///         if let OwnedHookContext::BufferOpen { path, text, file_type } = owned {
+///             lsp.did_open(&path, &text, file_type.as_deref()).await;
+///         }
+///         HookResult::Continue
+///     }))
+/// });
+/// ```
+#[derive(Debug, Clone)]
+pub enum OwnedHookContext {
+	/// Editor startup context.
+	EditorStart,
+	/// Editor quit context.
+	EditorQuit,
+	/// Editor tick context.
+	EditorTick,
+	/// Buffer was opened.
+	BufferOpen {
+		path: std::path::PathBuf,
+		text: String,
+		file_type: Option<String>,
+	},
+	/// Buffer is about to be written.
+	BufferWritePre {
+		path: std::path::PathBuf,
+		text: String,
+	},
+	/// Buffer was written.
+	BufferWrite { path: std::path::PathBuf },
+	/// Buffer was closed.
+	BufferClose { path: std::path::PathBuf },
+	/// Buffer content changed.
+	BufferChange {
+		path: std::path::PathBuf,
+		text: String,
+		version: u64,
+	},
+	/// Mode changed.
+	ModeChange { old_mode: Mode, new_mode: Mode },
+	/// Cursor moved.
+	CursorMove { line: usize, col: usize },
+	/// Selection changed.
+	SelectionChange { anchor: usize, head: usize },
+	/// Window resized.
+	WindowResize { width: u16, height: u16 },
+	/// Window focus gained.
+	FocusGained,
+	/// Window focus lost.
+	FocusLost,
+}
+
+impl OwnedHookContext {
+	/// Returns the event type for this context.
+	pub fn event(&self) -> HookEvent {
+		match self {
+			OwnedHookContext::EditorStart => HookEvent::EditorStart,
+			OwnedHookContext::EditorQuit => HookEvent::EditorQuit,
+			OwnedHookContext::EditorTick => HookEvent::EditorTick,
+			OwnedHookContext::BufferOpen { .. } => HookEvent::BufferOpen,
+			OwnedHookContext::BufferWritePre { .. } => HookEvent::BufferWritePre,
+			OwnedHookContext::BufferWrite { .. } => HookEvent::BufferWrite,
+			OwnedHookContext::BufferClose { .. } => HookEvent::BufferClose,
+			OwnedHookContext::BufferChange { .. } => HookEvent::BufferChange,
+			OwnedHookContext::ModeChange { .. } => HookEvent::ModeChange,
+			OwnedHookContext::CursorMove { .. } => HookEvent::CursorMove,
+			OwnedHookContext::SelectionChange { .. } => HookEvent::SelectionChange,
+			OwnedHookContext::WindowResize { .. } => HookEvent::WindowResize,
+			OwnedHookContext::FocusGained => HookEvent::FocusGained,
+			OwnedHookContext::FocusLost => HookEvent::FocusLost,
 		}
 	}
 }
@@ -353,4 +498,41 @@ pub fn find_hooks(event: HookEvent) -> impl Iterator<Item = &'static HookDef> {
 /// List all registered hooks.
 pub fn all_hooks() -> &'static [HookDef] {
 	&HOOKS
+}
+
+/// Trait for scheduling async hook futures.
+///
+/// This allows sync emission to queue async hooks without coupling `tome-manifest`
+/// to any specific runtime. The caller provides an implementor that stores futures
+/// for later execution.
+pub trait HookScheduler {
+	/// Queue an async hook future for later execution.
+	fn schedule(&mut self, fut: BoxFuture);
+}
+
+/// Emit an event synchronously, scheduling async hooks for later execution.
+///
+/// Sync hooks run immediately and can cancel the operation. Async hooks are
+/// queued via the provided scheduler and will run later (they cannot cancel
+/// since the operation has already proceeded).
+///
+/// Returns [`HookResult::Cancel`] if any sync hook cancels, otherwise [`HookResult::Continue`].
+pub fn emit_sync_with<S: HookScheduler>(ctx: &HookContext<'_>, scheduler: &mut S) -> HookResult {
+	let event = ctx.event();
+	let mut matching: Vec<_> = HOOKS.iter().filter(|h| h.event == event).collect();
+	matching.sort_by_key(|h| h.priority);
+
+	for hook in matching {
+		match (hook.handler)(ctx) {
+			HookAction::Done(result) => {
+				if result == HookResult::Cancel {
+					return HookResult::Cancel;
+				}
+			}
+			HookAction::Async(fut) => {
+				scheduler.schedule(fut);
+			}
+		}
+	}
+	HookResult::Continue
 }
