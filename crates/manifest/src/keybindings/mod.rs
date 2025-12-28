@@ -5,7 +5,6 @@
 
 mod goto;
 mod insert;
-mod normal;
 mod view;
 
 use linkme::distributed_slice;
@@ -162,21 +161,6 @@ mod tests {
 	}
 
 	#[test]
-	fn test_normal_mode_bindings_registered() {
-		let d = find_binding(BindingMode::Normal, Key::char('d'));
-		assert!(d.is_some());
-		assert_eq!(d.unwrap().action, "delete");
-
-		let y = find_binding(BindingMode::Normal, Key::char('y'));
-		assert!(y.is_some());
-		assert_eq!(y.unwrap().action, "yank");
-
-		let i = find_binding(BindingMode::Normal, Key::char('i'));
-		assert!(i.is_some());
-		assert_eq!(i.unwrap().action, "insert_before");
-	}
-
-	#[test]
 	fn test_goto_mode_bindings_registered() {
 		let g = find_binding(BindingMode::Goto, Key::char('g'));
 		assert!(g.is_some());
@@ -204,9 +188,6 @@ mod tests {
 
 	#[test]
 	fn test_bindings_for_mode() {
-		let normal_bindings: Vec<_> = bindings_for_mode(BindingMode::Normal).collect();
-		assert!(normal_bindings.len() >= 10);
-
 		let goto_bindings: Vec<_> = bindings_for_mode(BindingMode::Goto).collect();
 		assert!(goto_bindings.len() >= 5);
 
@@ -214,10 +195,7 @@ mod tests {
 		assert!(view_bindings.len() >= 2);
 
 		let insert_bindings: Vec<_> = bindings_for_mode(BindingMode::Insert).collect();
-		assert!(
-			insert_bindings.len() >= 6,
-			"should have insert mode bindings"
-		);
+		assert!(insert_bindings.len() >= 6);
 	}
 
 	// test_find_binding_resolved moved to tests/registry.rs (requires tome-stdlib)

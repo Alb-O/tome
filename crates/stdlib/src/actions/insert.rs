@@ -1,19 +1,27 @@
 //! Insert mode entry actions.
 
+use tome_base::key::Key;
 use tome_manifest::actions::{ActionContext, ActionMode, ActionResult};
+use tome_manifest::bound_action;
 use tome_manifest::find_motion;
 
-use crate::action;
-
-action!(
+bound_action!(
 	insert_before,
-	{ description: "Insert before cursor" },
-	result: ActionResult::ModeChange(ActionMode::Insert)
+	mode: Normal,
+	key: Key::char('i'),
+	description: "Insert before cursor",
+	|_ctx| ActionResult::ModeChange(ActionMode::Insert)
 );
 
-action!(insert_after, { description: "Insert after cursor" }, handler: insert_after);
+bound_action!(
+	insert_after,
+	mode: Normal,
+	key: Key::char('a'),
+	description: "Insert after cursor",
+	handler: insert_after_impl
+);
 
-fn insert_after(ctx: &ActionContext) -> ActionResult {
+fn insert_after_impl(ctx: &ActionContext) -> ActionResult {
 	let motion = match find_motion("move_right") {
 		Some(m) => m,
 		None => return ActionResult::ModeChange(ActionMode::Insert),
@@ -27,10 +35,16 @@ fn insert_after(ctx: &ActionContext) -> ActionResult {
 	ActionResult::InsertWithMotion(new_selection)
 }
 
-action!(insert_line_start, { description: "Insert at line start (first non-blank)" }, handler: insert_line_start);
+bound_action!(
+	insert_line_start,
+	mode: Normal,
+	key: Key::char('I'),
+	description: "Insert at line start (first non-blank)",
+	handler: insert_line_start_impl
+);
 
-fn insert_line_start(ctx: &ActionContext) -> ActionResult {
-	let motion = match find_motion("move_first_nonblank") {
+fn insert_line_start_impl(ctx: &ActionContext) -> ActionResult {
+	let motion = match find_motion("first_nonwhitespace") {
 		Some(m) => m,
 		None => return ActionResult::ModeChange(ActionMode::Insert),
 	};
@@ -43,10 +57,16 @@ fn insert_line_start(ctx: &ActionContext) -> ActionResult {
 	ActionResult::InsertWithMotion(new_selection)
 }
 
-action!(insert_line_end, { description: "Insert at line end" }, handler: insert_line_end);
+bound_action!(
+	insert_line_end,
+	mode: Normal,
+	key: Key::char('A'),
+	description: "Insert at line end",
+	handler: insert_line_end_impl
+);
 
-fn insert_line_end(ctx: &ActionContext) -> ActionResult {
-	let motion = match find_motion("move_line_end") {
+fn insert_line_end_impl(ctx: &ActionContext) -> ActionResult {
+	let motion = match find_motion("line_end") {
 		Some(m) => m,
 		None => return ActionResult::ModeChange(ActionMode::Insert),
 	};

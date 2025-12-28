@@ -1,12 +1,16 @@
 //! Find character actions (f/t/F/T commands).
 
+use tome_base::key::Key;
 use tome_manifest::actions::{ActionResult, PendingAction, PendingKind};
+use tome_manifest::bound_action;
 
-use crate::{action, movement};
+use crate::movement;
 
-action!(
+bound_action!(
 	find_char,
-	{ description: "Select to next occurrence of character (inclusive)" },
+	mode: Normal,
+	key: Key::char('f'),
+	description: "Select to next occurrence of character (inclusive)",
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();
@@ -17,14 +21,16 @@ action!(
 		}
 		None => ActionResult::Pending(PendingAction {
 			kind: PendingKind::FindChar { inclusive: true },
-			prompt: "find→".into(),
+			prompt: "find->".into(),
 		}),
 	}
 );
 
-action!(
+bound_action!(
 	find_char_to,
-	{ description: "Select to next occurrence of character (exclusive)" },
+	mode: Normal,
+	key: Key::char('t'),
+	description: "Select to next occurrence of character (exclusive)",
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();
@@ -35,14 +41,16 @@ action!(
 		}
 		None => ActionResult::Pending(PendingAction {
 			kind: PendingKind::FindChar { inclusive: false },
-			prompt: "to→".into(),
+			prompt: "to->".into(),
 		}),
 	}
 );
 
-action!(
+bound_action!(
 	find_char_reverse,
-	{ description: "Select to previous occurrence of character (inclusive)" },
+	mode: Normal,
+	key: Key::alt('f'),
+	description: "Select to previous occurrence of character (inclusive)",
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();
@@ -53,14 +61,16 @@ action!(
 		}
 		None => ActionResult::Pending(PendingAction {
 			kind: PendingKind::FindCharReverse { inclusive: true },
-			prompt: "find←".into(),
+			prompt: "find<-".into(),
 		}),
 	}
 );
 
-action!(
+bound_action!(
 	find_char_to_reverse,
-	{ description: "Select to previous occurrence of character (exclusive)" },
+	mode: Normal,
+	key: Key::alt('t'),
+	description: "Select to previous occurrence of character (exclusive)",
 	|ctx| match ctx.args.char {
 		Some(ch) => {
 			let mut new_sel = ctx.selection.clone();
@@ -71,7 +81,7 @@ action!(
 		}
 		None => ActionResult::Pending(PendingAction {
 			kind: PendingKind::FindCharReverse { inclusive: false },
-			prompt: "to←".into(),
+			prompt: "to<-".into(),
 		}),
 	}
 );

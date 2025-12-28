@@ -1,7 +1,9 @@
 //! Text object selection actions.
 
+use tome_base::key::Key;
 use tome_base::range::Range;
 use tome_manifest::actions::{ActionResult, ObjectSelectionKind, PendingAction, PendingKind};
+use tome_manifest::bound_action;
 use tome_manifest::{TextObjectDef, find_text_object_by_trigger};
 
 fn select_object_with_trigger(
@@ -55,17 +57,36 @@ fn select_to_boundary(
 	}
 }
 
-use crate::action;
+bound_action!(
+	select_object_inner,
+	mode: Normal,
+	key: Key::alt('i'),
+	description: "Select inner text object",
+	|ctx| select_object_with_trigger(ctx, ObjectSelectionKind::Inner)
+);
 
-action!(select_object_inner, { description: "Select inner text object" }, |ctx| {
-	select_object_with_trigger(ctx, ObjectSelectionKind::Inner)
-});
-action!(select_object_around, { description: "Select around text object" }, |ctx| {
-	select_object_with_trigger(ctx, ObjectSelectionKind::Around)
-});
-action!(select_object_to_start, { description: "Select to object start" }, |ctx| {
-	select_object_with_trigger(ctx, ObjectSelectionKind::ToStart)
-});
-action!(select_object_to_end, { description: "Select to object end" }, |ctx| {
-	select_object_with_trigger(ctx, ObjectSelectionKind::ToEnd)
-});
+bound_action!(
+	select_object_around,
+	mode: Normal,
+	key: Key::alt('a'),
+	description: "Select around text object",
+	|ctx| select_object_with_trigger(ctx, ObjectSelectionKind::Around)
+);
+
+bound_action!(
+	select_object_to_start,
+	mode: Normal,
+	key: Key::char('['),
+	alt_keys: [Key::char('{')],
+	description: "Select to object start",
+	|ctx| select_object_with_trigger(ctx, ObjectSelectionKind::ToStart)
+);
+
+bound_action!(
+	select_object_to_end,
+	mode: Normal,
+	key: Key::char(']'),
+	alt_keys: [Key::char('}')],
+	description: "Select to object end",
+	|ctx| select_object_with_trigger(ctx, ObjectSelectionKind::ToEnd)
+);
