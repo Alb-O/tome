@@ -156,39 +156,35 @@ impl Editor {
 
 		// Check if mouse has slowed down over a separator that was previously suppressed
 		// This handles the case where mouse was moving fast, then stopped over a separator
-		if self.hovered_separator.is_none()
-			&& self.separator_under_mouse.is_some()
-			&& !self.mouse_velocity.is_fast()
+		if self.layout.hovered_separator.is_none()
+			&& self.layout.separator_under_mouse.is_some()
+			&& !self.layout.is_mouse_fast()
 		{
-			let old_hover = self.hovered_separator.take();
-			self.hovered_separator = self.separator_under_mouse;
-			if old_hover != self.hovered_separator {
-				self.update_separator_hover_animation(old_hover, self.hovered_separator);
+			let old_hover = self.layout.hovered_separator.take();
+			self.layout.hovered_separator = self.layout.separator_under_mouse;
+			if old_hover != self.layout.hovered_separator {
+				self.layout
+					.update_hover_animation(old_hover, self.layout.hovered_separator);
 				self.needs_redraw = true;
 			}
 		}
 
 		// Check for hovered separator
-		let hovered_rect = self.hovered_separator.map(|(_, rect)| rect);
+		let hovered_rect = self.layout.hovered_separator.map(|(_, rect)| rect);
 
 		// Get the current rect of the separator being dragged (if any)
-		let dragging_rect = self.dragging_separator.as_ref().and_then(|drag_state| {
+		let dragging_rect = self.layout.drag_state().and_then(|drag_state| {
 			self.layout
 				.separator_rect_at_path(doc_area, &drag_state.path)
 				.map(|(_, rect)| rect)
 		});
 
 		// Get animation state for fading
-		let (anim_rect, anim_intensity) = self
-			.separator_hover_animation
-			.as_ref()
-			.map(|anim| (Some(anim.rect), anim.intensity()))
-			.unwrap_or((None, 0.0));
+		let anim_rect = self.layout.animation_rect();
+		let anim_intensity = self.layout.animation_intensity();
 
 		// Request redraw if animation is in progress (including debounce period)
-		if let Some(anim) = &self.separator_hover_animation
-			&& anim.needs_redraw()
-		{
+		if self.layout.animation_needs_redraw() {
 			self.needs_redraw = true;
 		}
 

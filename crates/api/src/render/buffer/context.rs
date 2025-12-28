@@ -109,18 +109,19 @@ impl<'a> BufferRenderContext<'a> {
 		buffer: &Buffer,
 		area: Rect,
 	) -> Vec<(HighlightSpan, Style)> {
-		let Some(ref syntax) = buffer.syntax else {
+		let doc = buffer.doc();
+		let Some(ref syntax) = doc.syntax else {
 			return Vec::new();
 		};
 
 		let start_line = buffer.scroll_line;
-		let end_line = (start_line + area.height as usize).min(buffer.doc.len_lines());
+		let end_line = (start_line + area.height as usize).min(doc.content.len_lines());
 
-		let start_byte = buffer.doc.line_to_byte(start_line) as u32;
-		let end_byte = if end_line < buffer.doc.len_lines() {
-			buffer.doc.line_to_byte(end_line) as u32
+		let start_byte = doc.content.line_to_byte(start_line) as u32;
+		let end_byte = if end_line < doc.content.len_lines() {
+			doc.content.line_to_byte(end_line) as u32
 		} else {
-			buffer.doc.len_bytes() as u32
+			doc.content.len_bytes() as u32
 		};
 
 		let highlight_styles = HighlightStyles::new(SyntaxStyles::scope_names(), |scope| {
@@ -128,7 +129,7 @@ impl<'a> BufferRenderContext<'a> {
 		});
 
 		let highlighter = syntax.highlighter(
-			buffer.doc.slice(..),
+			doc.content.slice(..),
 			self.language_loader,
 			start_byte..end_byte,
 		);
@@ -208,7 +209,7 @@ impl<'a> BufferRenderContext<'a> {
 		use_block_cursor: bool,
 		is_focused: bool,
 	) -> RenderResult {
-		let total_lines = buffer.doc.len_lines();
+		let total_lines = buffer.doc().content.len_lines();
 		let gutter_width = buffer.gutter_width();
 		let text_width = area.width.saturating_sub(gutter_width) as usize;
 		let tab_width = 4usize;
@@ -232,14 +233,14 @@ impl<'a> BufferRenderContext<'a> {
 
 		while output_lines.len() < viewport_height && current_line_idx < total_lines {
 			let is_cursor_line = is_focused && current_line_idx == cursor_line;
-			let line_start: CharIdx = buffer.doc.line_to_char(current_line_idx);
+			let line_start: CharIdx = buffer.doc().content.line_to_char(current_line_idx);
 			let line_end: CharIdx = if current_line_idx + 1 < total_lines {
-				buffer.doc.line_to_char(current_line_idx + 1)
+				buffer.doc().content.line_to_char(current_line_idx + 1)
 			} else {
-				buffer.doc.len_chars()
+				buffer.doc().content.len_chars()
 			};
 
-			let line_text: String = buffer.doc.slice(line_start..line_end).into();
+			let line_text: String = buffer.doc().content.slice(line_start..line_end).into();
 			let line_text = line_text.trim_end_matches('\n');
 			let line_content_end: CharIdx = line_start + line_text.chars().count();
 
@@ -308,7 +309,7 @@ impl<'a> BufferRenderContext<'a> {
 						styles.secondary
 					};
 					// Convert char position to byte position for highlight lookup
-					let byte_pos = buffer.doc.char_to_byte(doc_pos);
+					let byte_pos = buffer.doc().content.char_to_byte(doc_pos);
 					let syntax_style = self.style_for_byte_pos(byte_pos, &highlight_spans);
 
 					// Apply style overlays (e.g., zen mode dimming)

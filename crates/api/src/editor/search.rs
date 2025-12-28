@@ -5,12 +5,19 @@ use super::Editor;
 
 impl Editor {
 	pub(crate) fn do_search_next(&mut self, add_selection: bool, extend: bool) -> bool {
-		if let Some((pattern, _reverse)) = self.buffer().input.last_search() {
-			match movement::find_next(
-				self.buffer().doc.slice(..),
-				pattern,
-				self.buffer().cursor + 1,
-			) {
+		let search_info = self
+			.buffer()
+			.input
+			.last_search()
+			.map(|(p, r)| (p.to_string(), r));
+		if let Some((pattern, _reverse)) = search_info {
+			let cursor_pos = self.buffer().cursor;
+			let search_result = {
+				let buffer = self.buffer();
+				let doc = buffer.doc();
+				movement::find_next(doc.content.slice(..), &pattern, cursor_pos + 1)
+			};
+			match search_result {
 				Ok(Some(range)) => {
 					self.buffer_mut().cursor = range.head;
 					if add_selection {
@@ -36,8 +43,19 @@ impl Editor {
 	}
 
 	pub(crate) fn do_search_prev(&mut self, add_selection: bool, extend: bool) -> bool {
-		if let Some((pattern, _reverse)) = self.buffer().input.last_search() {
-			match movement::find_prev(self.buffer().doc.slice(..), pattern, self.buffer().cursor) {
+		let search_info = self
+			.buffer()
+			.input
+			.last_search()
+			.map(|(p, r)| (p.to_string(), r));
+		if let Some((pattern, _reverse)) = search_info {
+			let cursor_pos = self.buffer().cursor;
+			let search_result = {
+				let buffer = self.buffer();
+				let doc = buffer.doc();
+				movement::find_prev(doc.content.slice(..), &pattern, cursor_pos)
+			};
+			match search_result {
 				Ok(Some(range)) => {
 					self.buffer_mut().cursor = range.head;
 					if add_selection {
@@ -67,13 +85,23 @@ impl Editor {
 		let from = primary.min();
 		let to = primary.max();
 		if from < to {
-			let text: String = self.buffer().doc.slice(from..to).chars().collect();
-			let pattern = movement::escape_pattern(&text);
+			let (text, pattern) = {
+				let buffer = self.buffer();
+				let doc = buffer.doc();
+				let text: String = doc.content.slice(from..to).chars().collect();
+				let pattern = movement::escape_pattern(&text);
+				(text, pattern)
+			};
 			self.buffer_mut()
 				.input
 				.set_last_search(pattern.clone(), false);
 			self.notify("info", format!("Search: {}", text));
-			match movement::find_next(self.buffer().doc.slice(..), &pattern, to) {
+			let search_result = {
+				let buffer = self.buffer();
+				let doc = buffer.doc();
+				movement::find_next(doc.content.slice(..), &pattern, to)
+			};
+			match search_result {
 				Ok(Some(range)) => {
 					self.buffer_mut().selection = Selection::single(range.min(), range.max());
 				}
@@ -100,14 +128,20 @@ impl Editor {
 			return false;
 		}
 
-		match movement::find_all_matches(self.buffer().doc.slice(from..to), pattern) {
+		let search_result = {
+			let buffer = self.buffer();
+			let doc = buffer.doc();
+			movement::find_all_matches(doc.content.slice(from..to), pattern)
+		};
+		match search_result {
 			Ok(matches) if !matches.is_empty() => {
 				let new_ranges: Vec<tome_base::range::Range> = matches
 					.into_iter()
 					.map(|r| tome_base::range::Range::new(from + r.min(), from + r.max()))
 					.collect();
+				let count = new_ranges.len();
 				self.buffer_mut().selection = Selection::from_vec(new_ranges, 0);
-				self.notify("info", format!("{} matches", self.buffer().selection.len()));
+				self.notify("info", format!("{} matches", count));
 			}
 			Ok(_) => {
 				self.notify("warn", "No matches found");
@@ -129,7 +163,12 @@ impl Editor {
 			return false;
 		}
 
-		match movement::find_all_matches(self.buffer().doc.slice(from..to), pattern) {
+		let search_result = {
+			let buffer = self.buffer();
+			let doc = buffer.doc();
+			movement::find_all_matches(doc.content.slice(from..to), pattern)
+		};
+		match search_result {
 			Ok(matches) if !matches.is_empty() => {
 				let mut new_ranges: Vec<tome_base::range::Range> = Vec::new();
 				let mut last_end = from;
@@ -144,8 +183,9 @@ impl Editor {
 					new_ranges.push(tome_base::range::Range::new(last_end, to));
 				}
 				if !new_ranges.is_empty() {
+					let count = new_ranges.len();
 					self.buffer_mut().selection = Selection::from_vec(new_ranges, 0);
-					self.notify("info", format!("{} splits", self.buffer().selection.len()));
+					self.notify("info", format!("{} splits", count));
 				} else {
 					self.notify("warn", "Split produced no ranges");
 				}
@@ -169,25 +209,31 @@ impl Editor {
 			return false;
 		}
 
-		let start_line = self.buffer().doc.char_to_line(from);
-		let end_line = self.buffer().doc.char_to_line(to.saturating_sub(1));
+		let new_ranges: Vec<tome_base::range::Range> = {
+			let buffer = self.buffer();
+			let doc = buffer.doc();
+			let start_line = doc.content.char_to_line(from);
+			let end_line = doc.content.char_to_line(to.saturating_sub(1));
 
-		let mut new_ranges: Vec<tome_base::range::Range> = Vec::new();
-		for line in start_line..=end_line {
-			let line_start = self.buffer().doc.line_to_char(line).max(from);
-			let line_end = if line + 1 < self.buffer().doc.len_lines() {
-				self.buffer().doc.line_to_char(line + 1).min(to)
-			} else {
-				self.buffer().doc.len_chars().min(to)
-			};
-			if line_start < line_end {
-				new_ranges.push(tome_base::range::Range::new(line_start, line_end));
+			let mut ranges = Vec::new();
+			for line in start_line..=end_line {
+				let line_start = doc.content.line_to_char(line).max(from);
+				let line_end = if line + 1 < doc.content.len_lines() {
+					doc.content.line_to_char(line + 1).min(to)
+				} else {
+					doc.content.len_chars().min(to)
+				};
+				if line_start < line_end {
+					ranges.push(tome_base::range::Range::new(line_start, line_end));
+				}
 			}
-		}
+			ranges
+		};
 
 		if !new_ranges.is_empty() {
+			let count = new_ranges.len();
 			self.buffer_mut().selection = Selection::from_vec(new_ranges, 0);
-			self.notify("info", format!("{} lines", self.buffer().selection.len()));
+			self.notify("info", format!("{} lines", count));
 		}
 		false
 	}
@@ -197,16 +243,30 @@ impl Editor {
 		reason = "keep-matching filter will be re-enabled via picker UI"
 	)]
 	pub(crate) fn keep_matching(&mut self, pattern: &str, invert: bool) -> bool {
+		// Collect ranges and text to process
+		let ranges_with_text: Vec<(tome_base::range::Range, String)> = {
+			let buffer = self.buffer();
+			let doc = buffer.doc();
+			buffer
+				.selection
+				.ranges()
+				.iter()
+				.map(|range| {
+					let from = range.min();
+					let to = range.max();
+					let text: String = doc.content.slice(from..to).chars().collect();
+					(*range, text)
+				})
+				.collect()
+		};
+
 		let mut kept_ranges: Vec<tome_base::range::Range> = Vec::new();
 		let mut had_error = false;
-		for range in self.buffer().selection.ranges() {
-			let from = range.min();
-			let to = range.max();
-			let text: String = self.buffer().doc.slice(from..to).chars().collect();
+		for (range, text) in ranges_with_text {
 			match movement::matches_pattern(&text, pattern) {
 				Ok(matches) => {
 					if matches != invert {
-						kept_ranges.push(*range);
+						kept_ranges.push(range);
 					}
 				}
 				Err(e) => {

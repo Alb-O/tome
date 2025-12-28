@@ -24,7 +24,7 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
+use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 
 static IPC_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -146,11 +146,8 @@ impl TerminalIpc {
 	///
 	/// Returns `Some(request)` if available. Call regularly from the event loop.
 	pub fn poll(&mut self) -> Option<IpcRequest> {
-		loop {
-			match self.receiver.try_recv() {
-				Ok(req) => self.pending.push_back(req),
-				Err(TryRecvError::Empty | TryRecvError::Disconnected) => break,
-			}
+		while let Ok(req) = self.receiver.try_recv() {
+			self.pending.push_back(req);
 		}
 		self.pending.pop_front()
 	}

@@ -26,7 +26,10 @@ impl Buffer {
 			r.head = pos;
 		});
 
-		let tx = Transaction::insert(self.doc.slice(..), &insertion_points, text.to_string());
+		let tx = {
+			let doc = self.doc();
+			Transaction::insert(doc.content.slice(..), &insertion_points, text.to_string())
+		};
 		let mut new_selection = tx.map_selection(&insertion_points);
 		new_selection.transform_mut(|r| {
 			let pos = r.max();
@@ -47,7 +50,8 @@ impl Buffer {
 		let from = primary.min();
 		let to = primary.max();
 		if from < to {
-			let text = self.doc.slice(from..to).to_string();
+			let doc = self.doc();
+			let text = doc.content.slice(from..to).to_string();
 			let count = to - from;
 			Some((text, count))
 		} else {
@@ -60,16 +64,24 @@ impl Buffer {
 		if text.is_empty() {
 			return;
 		}
-		let slice = self.doc.slice(..);
-		self.selection.transform_mut(|r| {
-			*r = movement::move_horizontally(
-				slice,
-				*r,
-				tome_base::range::Direction::Forward,
-				1,
-				false,
-			);
-		});
+		// Compute new ranges by moving each cursor forward by 1
+		let new_ranges: Vec<_> = {
+			let doc = self.doc();
+			self.selection
+				.ranges()
+				.iter()
+				.map(|r| {
+					movement::move_horizontally(
+						doc.content.slice(..),
+						*r,
+						tome_base::range::Direction::Forward,
+						1,
+						false,
+					)
+				})
+				.collect()
+		};
+		self.selection = tome_base::Selection::from_vec(new_ranges, self.selection.primary_index());
 		self.insert_text(text);
 	}
 
@@ -87,7 +99,10 @@ impl Buffer {
 	pub fn delete_selection(&mut self) -> bool {
 		if !self.selection.primary().is_empty() {
 			self.save_undo_state();
-			let tx = Transaction::delete(self.doc.slice(..), &self.selection);
+			let tx = {
+				let doc = self.doc();
+				Transaction::delete(doc.content.slice(..), &self.selection)
+			};
 			self.selection = tx.map_selection(&self.selection);
 			self.apply_transaction(&tx);
 			true
@@ -97,31 +112,37 @@ impl Buffer {
 	}
 
 	/// Applies a transaction to the document. Increments the version counter.
-	pub fn apply_transaction(&mut self, tx: &Transaction) {
-		tx.apply(&mut self.doc);
-		self.modified = true;
-		self.version = self.version.wrapping_add(1);
+	pub fn apply_transaction(&self, tx: &Transaction) {
+		let mut doc = self.doc_mut();
+		tx.apply(&mut doc.content);
+		doc.modified = true;
+		doc.version = doc.version.wrapping_add(1);
 	}
 
 	/// Applies a transaction and updates syntax tree incrementally.
 	pub fn apply_transaction_with_syntax(
-		&mut self,
+		&self,
 		tx: &Transaction,
 		language_loader: &LanguageLoader,
 	) {
-		let old_doc = self.doc.clone();
-		tx.apply(&mut self.doc);
+		let mut doc = self.doc_mut();
+		let old_doc = doc.content.clone();
+		tx.apply(&mut doc.content);
 
-		if let Some(ref mut syntax) = self.syntax {
-			let _ = syntax.update_from_changeset(
-				old_doc.slice(..),
-				self.doc.slice(..),
-				tx.changes(),
-				language_loader,
-			);
+		if doc.syntax.is_some() {
+			// Clone the new content to avoid borrow conflict with syntax
+			let new_doc = doc.content.clone();
+			if let Some(ref mut syntax) = doc.syntax {
+				let _ = syntax.update_from_changeset(
+					old_doc.slice(..),
+					new_doc.slice(..),
+					tx.changes(),
+					language_loader,
+				);
+			}
 		}
 
-		self.modified = true;
-		self.version = self.version.wrapping_add(1);
+		doc.modified = true;
+		doc.version = doc.version.wrapping_add(1);
 	}
 }

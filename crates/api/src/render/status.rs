@@ -17,37 +17,55 @@ impl Editor {
 			+ 1;
 		let buffer_count = buffer_ids.len();
 
-		// When a terminal is focused, show terminal-specific status
-		let ctx = if self.is_terminal_focused() {
-			StatuslineContext {
-				mode_name: "TERMINAL",
-				path: None,
-				modified: false,
-				line: 0,
-				col: 0,
-				count: 0,
-				total_lines: 0,
-				file_type: Some("terminal"),
-				buffer_index,
-				buffer_count,
-			}
-		} else {
-			let buffer = self.buffer();
-			StatuslineContext {
-				mode_name: self.mode_name(),
-				path: buffer
-					.path
+		// Extract data before creating the context to avoid lifetime issues
+		let (path_str, file_type_str, modified, mode_name, line, col, count, total_lines) =
+			if self.is_terminal_focused() {
+				(
+					None,
+					Some("terminal".to_string()),
+					false,
+					"TERMINAL",
+					0,
+					0,
+					0,
+					0,
+				)
+			} else {
+				let buffer = self.buffer();
+				let path_str = buffer
+					.path()
 					.as_ref()
-					.map(|p: &std::path::PathBuf| p.to_str().unwrap_or("[invalid path]")),
-				modified: buffer.modified,
-				line: self.cursor_line() + 1,
-				col: self.cursor_col() + 1,
-				count: buffer.input.count(),
-				total_lines: buffer.doc.len_lines(),
-				file_type: buffer.file_type.as_deref(),
-				buffer_index,
-				buffer_count,
-			}
+					.and_then(|p| p.to_str().map(|s| s.to_string()));
+				let file_type_str = buffer.file_type();
+				let modified = buffer.modified();
+				let count = buffer.input.count();
+				let total_lines = buffer.doc().content.len_lines();
+				let mode_name = self.mode_name();
+				let line = self.cursor_line() + 1;
+				let col = self.cursor_col() + 1;
+				(
+					path_str,
+					file_type_str,
+					modified,
+					mode_name,
+					line,
+					col,
+					count,
+					total_lines,
+				)
+			};
+
+		let ctx = StatuslineContext {
+			mode_name,
+			path: path_str.as_deref(),
+			modified,
+			line,
+			col,
+			count,
+			total_lines,
+			file_type: file_type_str.as_deref(),
+			buffer_index,
+			buffer_count,
 		};
 
 		let mut spans = Vec::new();

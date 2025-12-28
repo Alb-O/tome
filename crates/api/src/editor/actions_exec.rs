@@ -53,10 +53,16 @@ impl Editor {
 			}
 			result
 		} else {
+			// Extract data from buffer before creating context
+			let (content, cursor, selection) = {
+				let buffer = self.buffer();
+				let doc = buffer.doc();
+				(doc.content.clone(), buffer.cursor, buffer.selection.clone())
+			};
 			let ctx = ActionContext {
-				text: self.buffer().doc.slice(..),
-				cursor: self.buffer().cursor,
-				selection: &self.buffer().selection,
+				text: content.slice(..),
+				cursor,
+				selection: &selection,
 				count,
 				extend,
 				register,
@@ -119,10 +125,16 @@ impl Editor {
 			}
 			result
 		} else {
+			// Extract data from buffer before creating context
+			let (content, cursor, selection) = {
+				let buffer = self.buffer();
+				let doc = buffer.doc();
+				(doc.content.clone(), buffer.cursor, buffer.selection.clone())
+			};
 			let ctx = ActionContext {
-				text: self.buffer().doc.slice(..),
-				cursor: self.buffer().cursor,
-				selection: &self.buffer().selection,
+				text: content.slice(..),
+				cursor,
+				selection: &selection,
 				count,
 				extend,
 				register,

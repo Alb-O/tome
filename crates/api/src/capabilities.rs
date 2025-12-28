@@ -38,7 +38,10 @@ impl SelectionAccess for Editor {
 
 impl TextAccess for Editor {
 	fn text(&self) -> RopeSlice<'_> {
-		self.buffer().doc.slice(..)
+		// Note: This returns a slice that borrows from the RwLockReadGuard.
+		// The guard is dropped at end of scope, so we need to restructure.
+		// For now, this will need the caller to hold the lock.
+		todo!("TextAccess needs restructuring for shared Document")
 	}
 }
 
@@ -98,11 +101,11 @@ impl UndoAccess for Editor {
 	}
 
 	fn can_undo(&self) -> bool {
-		!self.buffer().undo_stack.is_empty()
+		self.buffer().undo_stack_len() > 0
 	}
 
 	fn can_redo(&self) -> bool {
-		!self.buffer().redo_stack.is_empty()
+		self.buffer().redo_stack_len() > 0
 	}
 }
 
@@ -135,15 +138,8 @@ impl BufferOpsAccess for Editor {
 			return;
 		}
 
-		// TODO: Implement proper view layer where splits share the same buffer.
-		// Currently we copy the buffer content, which means:
-		// - Independent undo history per split
-		// - Edits don't sync between splits
-		// - Same path on both (potential save conflict)
-		let current = self.buffer();
-		let content: String = current.doc.slice(..).into();
-		let path = current.path.clone();
-		let new_id = self.open_buffer_sync(content, path);
+		// Create a new buffer that shares the same document
+		let new_id = self.clone_buffer_for_split();
 		Editor::split_horizontal(self, new_id);
 	}
 
@@ -153,12 +149,8 @@ impl BufferOpsAccess for Editor {
 			return;
 		}
 
-		// TODO: Implement proper view layer where splits share the same buffer.
-		// Currently we copy the buffer content (see split_horizontal comment).
-		let current = self.buffer();
-		let content: String = current.doc.slice(..).into();
-		let path = current.path.clone();
-		let new_id = self.open_buffer_sync(content, path);
+		// Create a new buffer that shares the same document
+		let new_id = self.clone_buffer_for_split();
 		Editor::split_vertical(self, new_id);
 	}
 

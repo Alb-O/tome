@@ -28,7 +28,7 @@ impl BufferManager {
 	/// Creates a manager with an initial buffer (ID 1) as the focused view.
 	pub fn new(content: String, path: Option<PathBuf>, language_loader: &LanguageLoader) -> Self {
 		let buffer_id = BufferId(1);
-		let mut buffer = Buffer::new(buffer_id, content, path);
+		let buffer = Buffer::new(buffer_id, content, path);
 		buffer.init_syntax(language_loader);
 
 		let mut buffers = HashMap::new();
@@ -89,6 +89,23 @@ impl BufferManager {
 		terminal.on_open();
 		self.terminals.insert(terminal_id, terminal);
 		terminal_id
+	}
+
+	/// Creates a new buffer that shares the same document as the focused buffer.
+	///
+	/// The new buffer has independent cursor/selection/scroll state but
+	/// edits in either buffer affect both (they share the same Document).
+	///
+	/// # Panics
+	///
+	/// Panics if the focused view is a terminal (not a text buffer).
+	pub fn clone_focused_buffer_for_split(&mut self) -> BufferId {
+		let new_id = BufferId(self.next_buffer_id);
+		self.next_buffer_id += 1;
+
+		let new_buffer = self.focused_buffer().clone_for_split(new_id);
+		self.buffers.insert(new_id, new_buffer);
+		new_id
 	}
 
 	/// Removes a buffer. Does not update focus.

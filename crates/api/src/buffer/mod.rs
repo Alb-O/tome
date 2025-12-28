@@ -1,31 +1,28 @@
 //! Buffer - the core text editing unit.
 //!
-//! A `Buffer` represents a single text document with its associated state:
-//! - Text content (Rope)
-//! - Cursor and selection (multi-cursor support)
-//! - Input handling (modal state)
-//! - File association and modification tracking
-//! - Undo/redo history
-//! - Scroll state
-//! - Syntax highlighting
+//! The buffer system separates document content from view state:
+//! - [`Document`] holds shared content (text, undo history, syntax)
+//! - [`Buffer`] holds per-view state (cursor, selection, scroll position)
+//!
+//! Multiple buffers can share the same document, enabling proper split behavior.
 
+mod document;
 mod editing;
 mod history;
 mod layout;
 mod navigation;
 
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 
+pub use document::{Document, DocumentId};
 pub use history::HistoryResult;
 pub use layout::{BufferView, Layout, SplitDirection, SplitPath, TerminalId};
+use tome_base::Selection;
 use tome_base::range::CharIdx;
-use tome_base::{Rope, Selection};
 use tome_input::InputHandler;
 use tome_language::LanguageLoader;
-use tome_language::syntax::Syntax;
 use tome_manifest::Mode;
-
-use crate::editor::types::HistoryEntry;
 
 /// Unique identifier for a buffer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -35,23 +32,20 @@ impl BufferId {
 	pub const SCRATCH: BufferId = BufferId(0);
 }
 
-/// A text buffer - the core editing unit.
+/// A text buffer - combines a view with its document.
 ///
-/// Each buffer represents one file or scratch document. It contains all
-/// state needed for editing: text content, cursor/selection, input mode,
-/// undo history, and syntax highlighting.
+/// Buffer is now a wrapper that provides convenient access to both view state
+/// (cursor, selection, scroll) and document state (content, undo history, syntax).
 ///
-/// Buffers are managed by a `Workspace` which provides shared resources
-/// like themes, registers, and filesystem access.
+/// For split views, multiple Buffers can share the same underlying Document.
 pub struct Buffer {
-	/// Unique identifier for this buffer.
+	/// Unique identifier for this buffer/view.
 	pub id: BufferId,
 
-	/// The document content.
-	pub doc: Rope,
+	/// The underlying document (shared across split views).
+	document: Arc<RwLock<Document>>,
 
 	/// Primary cursor position (char index).
-	/// This is the head of the primary range in the selection.
 	pub cursor: CharIdx,
 
 	/// Multi-cursor selection state.
@@ -59,18 +53,6 @@ pub struct Buffer {
 
 	/// Modal input handler (tracks mode, pending keys, count).
 	pub input: InputHandler,
-
-	/// Associated file path (None for scratch buffers).
-	pub path: Option<PathBuf>,
-
-	/// Whether the buffer has unsaved changes.
-	pub modified: bool,
-
-	/// Undo history stack.
-	pub undo_stack: Vec<HistoryEntry>,
-
-	/// Redo history stack.
-	pub redo_stack: Vec<HistoryEntry>,
 
 	/// Scroll position: first visible line.
 	pub scroll_line: usize,
@@ -82,59 +64,31 @@ pub struct Buffer {
 	pub text_width: usize,
 
 	/// Last rendered viewport height (in rows).
-	///
-	/// Used to detect viewport shrinking during split resize. When the viewport
-	/// shrinks and the cursor would go off-screen below, we avoid auto-scrolling
-	/// to preserve the visual position of the viewport's top edge.
 	pub last_viewport_height: usize,
 
 	/// Cursor position observed during the last render.
-	///
-	/// Used to distinguish user-driven cursor moves from resize-only changes.
 	pub last_rendered_cursor: CharIdx,
 
 	/// Whether to suppress auto-scroll down to keep the cursor visible.
-	///
-	/// Set when the viewport shrinks and the cursor would go off-screen below.
 	pub suppress_scroll_down: bool,
-
-	/// Detected file type (e.g., "rust", "python").
-	pub file_type: Option<String>,
-
-	/// Syntax highlighting state.
-	pub syntax: Option<Syntax>,
-
-	/// Flag for grouping insert-mode edits into a single undo.
-	pub(crate) insert_undo_active: bool,
-
-	/// Document version, incremented on every transaction.
-	pub version: u64,
 }
 
 impl Buffer {
 	/// Creates a new buffer with the given ID and content.
 	pub fn new(id: BufferId, content: String, path: Option<PathBuf>) -> Self {
-		let doc = Rope::from(content.as_str());
+		let document = Arc::new(RwLock::new(Document::new(content, path)));
 		Self {
 			id,
-			doc,
+			document,
 			cursor: 0,
 			selection: Selection::point(0),
 			input: InputHandler::new(),
-			path,
-			modified: false,
-			undo_stack: Vec::new(),
-			redo_stack: Vec::new(),
 			scroll_line: 0,
 			scroll_segment: 0,
 			text_width: 80,
 			last_viewport_height: 0,
 			last_rendered_cursor: 0,
 			suppress_scroll_down: false,
-			file_type: None,
-			syntax: None,
-			insert_undo_active: false,
-			version: 0,
 		}
 	}
 
@@ -143,15 +97,93 @@ impl Buffer {
 		Self::new(id, String::new(), None)
 	}
 
-	/// Initializes syntax highlighting for this buffer.
-	pub fn init_syntax(&mut self, language_loader: &LanguageLoader) {
-		if let Some(ref p) = self.path
-			&& let Some(lang_id) = language_loader.language_for_path(p)
-		{
-			let lang_data = language_loader.get(lang_id);
-			self.file_type = lang_data.map(|l| l.name.clone());
-			self.syntax = Syntax::new(self.doc.slice(..), lang_id, language_loader).ok();
+	/// Creates a new buffer that shares the same document (for split views).
+	///
+	/// The new buffer has independent cursor/selection/scroll state but
+	/// edits in either buffer affect both.
+	pub fn clone_for_split(&self, new_id: BufferId) -> Self {
+		Self {
+			id: new_id,
+			document: Arc::clone(&self.document),
+			cursor: self.cursor,
+			selection: self.selection.clone(),
+			input: InputHandler::new(),
+			scroll_line: self.scroll_line,
+			scroll_segment: self.scroll_segment,
+			text_width: self.text_width,
+			last_viewport_height: 0,
+			last_rendered_cursor: self.cursor,
+			suppress_scroll_down: false,
 		}
+	}
+
+	/// Returns the document ID.
+	pub fn document_id(&self) -> DocumentId {
+		self.document.read().unwrap().id
+	}
+
+	/// Returns a clone of the document Arc (for creating split views).
+	pub fn document_arc(&self) -> Arc<RwLock<Document>> {
+		Arc::clone(&self.document)
+	}
+
+	/// Checks if this buffer shares a document with another buffer.
+	pub fn shares_document_with(&self, other: &Buffer) -> bool {
+		Arc::ptr_eq(&self.document, &other.document)
+	}
+
+	/// Returns the document content (read-only borrow of the Rope).
+	///
+	/// For mutation, use the editing methods which handle locking properly.
+	#[inline]
+	pub fn doc(&self) -> std::sync::RwLockReadGuard<'_, Document> {
+		self.document.read().unwrap()
+	}
+
+	/// Returns mutable access to the document.
+	#[inline]
+	pub fn doc_mut(&self) -> std::sync::RwLockWriteGuard<'_, Document> {
+		self.document.write().unwrap()
+	}
+
+	/// Returns the associated file path.
+	pub fn path(&self) -> Option<PathBuf> {
+		self.document.read().unwrap().path.clone()
+	}
+
+	/// Sets the file path.
+	pub fn set_path(&self, path: Option<PathBuf>) {
+		self.document.write().unwrap().path = path;
+	}
+
+	/// Returns whether the buffer has unsaved changes.
+	pub fn modified(&self) -> bool {
+		self.document.read().unwrap().modified
+	}
+
+	/// Sets the modified flag.
+	pub fn set_modified(&self, modified: bool) {
+		self.document.write().unwrap().modified = modified;
+	}
+
+	/// Returns the document version.
+	pub fn version(&self) -> u64 {
+		self.document.read().unwrap().version
+	}
+
+	/// Returns the file type.
+	pub fn file_type(&self) -> Option<String> {
+		self.document.read().unwrap().file_type.clone()
+	}
+
+	/// Returns whether syntax highlighting is available.
+	pub fn has_syntax(&self) -> bool {
+		self.document.read().unwrap().syntax.is_some()
+	}
+
+	/// Initializes syntax highlighting for this buffer.
+	pub fn init_syntax(&self, language_loader: &LanguageLoader) {
+		self.document.write().unwrap().init_syntax(language_loader);
 	}
 
 	/// Returns the current editing mode.
@@ -166,14 +198,18 @@ impl Buffer {
 
 	/// Returns the line number containing the cursor.
 	pub fn cursor_line(&self) -> usize {
-		let max_pos = self.doc.len_chars();
-		self.doc.char_to_line(self.cursor.min(max_pos))
+		let doc = self.document.read().unwrap();
+		let max_pos = doc.content.len_chars();
+		doc.content.char_to_line(self.cursor.min(max_pos))
 	}
 
 	/// Returns the column of the cursor within its line.
 	pub fn cursor_col(&self) -> usize {
-		let line = self.cursor_line();
-		let line_start = self.doc.line_to_char(line);
+		let doc = self.document.read().unwrap();
+		let line = doc
+			.content
+			.char_to_line(self.cursor.min(doc.content.len_chars()));
+		let line_start = doc.content.line_to_char(line);
 		self.cursor.saturating_sub(line_start)
 	}
 
@@ -182,17 +218,31 @@ impl Buffer {
 
 	/// Computes the gutter width based on total line count.
 	pub fn gutter_width(&self) -> u16 {
-		let total_lines = self.doc.len_lines();
+		let doc = self.document.read().unwrap();
+		let total_lines = doc.content.len_lines();
 		(total_lines.max(1).ilog10() as u16 + 2).max(Self::GUTTER_MIN_WIDTH)
 	}
 
 	/// Reparses the entire syntax tree from scratch.
-	///
-	/// Used after operations that replace the entire document (undo/redo).
-	pub fn reparse_syntax(&mut self, language_loader: &LanguageLoader) {
-		if self.syntax.is_some() {
-			let lang_id = self.syntax.as_ref().unwrap().root_language();
-			self.syntax = Syntax::new(self.doc.slice(..), lang_id, language_loader).ok();
-		}
+	pub fn reparse_syntax(&self, language_loader: &LanguageLoader) {
+		self.document
+			.write()
+			.unwrap()
+			.reparse_syntax(language_loader);
+	}
+
+	/// Returns the undo stack length.
+	pub fn undo_stack_len(&self) -> usize {
+		self.document.read().unwrap().undo_stack.len()
+	}
+
+	/// Returns the redo stack length.
+	pub fn redo_stack_len(&self) -> usize {
+		self.document.read().unwrap().redo_stack.len()
+	}
+
+	/// Clears the insert undo grouping flag.
+	pub fn clear_insert_undo_active(&self) {
+		self.doc_mut().insert_undo_active = false;
 	}
 }

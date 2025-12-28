@@ -5,6 +5,7 @@ pub mod extensions;
 mod history;
 mod hook_runtime;
 mod input_handling;
+mod layout_manager;
 mod messaging;
 mod navigation;
 mod search;
@@ -19,6 +20,7 @@ use std::sync::Arc;
 use agentfs_sdk::{FileSystem, HostFS};
 pub use buffer_manager::BufferManager;
 pub use hook_runtime::HookRuntime;
+pub use layout_manager::LayoutManager;
 use tome_base::Transaction;
 use tome_language::LanguageLoader;
 use tome_manifest::syntax::SyntaxStyles;
@@ -27,7 +29,7 @@ use tome_theme::Theme;
 pub use types::{HistoryEntry, Registers};
 
 pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
-use crate::buffer::{BufferId, BufferView, Layout, SplitDirection, TerminalId};
+use crate::buffer::{BufferId, BufferView, TerminalId};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
 use crate::terminal_ipc::TerminalIpc;
@@ -77,8 +79,9 @@ pub struct Editor {
 	/// Buffer and terminal management.
 	pub buffers: BufferManager,
 
-	/// Layout of buffer views (for splits).
-	pub layout: Layout,
+	/// Layout and split management.
+	pub layout: LayoutManager,
+
 	/// Workspace-level registers (yank buffer, etc.).
 	pub registers: Registers,
 
@@ -119,33 +122,6 @@ pub struct Editor {
 	/// Style overlays for rendering modifications.
 	pub style_overlays: StyleOverlays,
 
-	/// Currently hovered separator (for visual feedback during resize).
-	///
-	/// Contains the separator's direction and screen rectangle when the mouse
-	/// is hovering over a split boundary. Only set when velocity is low enough.
-	pub hovered_separator: Option<(SplitDirection, tome_tui::layout::Rect)>,
-
-	/// Separator the mouse is currently over (regardless of velocity).
-	///
-	/// This tracks the physical position even when hover is suppressed due to
-	/// fast mouse movement, allowing us to activate hover when mouse slows down.
-	pub separator_under_mouse: Option<(SplitDirection, tome_tui::layout::Rect)>,
-
-	/// Animation state for separator hover fade effects.
-	///
-	/// Tracks ongoing hover animations for smooth visual transitions.
-	pub separator_hover_animation: Option<SeparatorHoverAnimation>,
-
-	/// Tracks mouse velocity to suppress hover effects during fast movement.
-	pub mouse_velocity: MouseVelocityTracker,
-
-	/// Active separator drag state for resizing splits.
-	///
-	/// When dragging a separator, this contains the separator's direction,
-	/// its current rectangle, and the parent split's area (needed to calculate
-	/// the new ratio based on mouse position).
-	pub dragging_separator: Option<DragState>,
-
 	/// IPC infrastructure for terminal command integration.
 	///
 	/// Lazily initialized when the first terminal is opened.
@@ -164,7 +140,7 @@ impl tome_manifest::editor_ctx::FileOpsAccess for Editor {
 		if self.is_terminal_focused() {
 			return false;
 		}
-		self.buffer().modified
+		self.buffer().modified()
 	}
 
 	fn save(
@@ -180,7 +156,7 @@ impl tome_manifest::editor_ctx::FileOpsAccess for Editor {
 				));
 			}
 
-			let path_owned = match &self.buffer().path {
+			let path_owned = match &self.buffer().path() {
 				Some(p) => p.clone(),
 				None => {
 					return Err(tome_manifest::CommandError::InvalidArgument(
@@ -189,17 +165,18 @@ impl tome_manifest::editor_ctx::FileOpsAccess for Editor {
 				}
 			};
 
+			let text_slice = self.buffer().doc().content.clone();
 			emit_hook(&HookContext::new(
 				HookEventData::BufferWritePre {
 					path: &path_owned,
-					text: self.buffer().doc.slice(..),
+					text: text_slice.slice(..),
 				},
 				Some(&self.extensions),
 			))
 			.await;
 
 			let mut content = Vec::new();
-			for chunk in self.buffer().doc.chunks() {
+			for chunk in self.buffer().doc().content.chunks() {
 				content.extend_from_slice(chunk.as_bytes());
 			}
 
@@ -214,7 +191,7 @@ impl tome_manifest::editor_ctx::FileOpsAccess for Editor {
 				.await
 				.map_err(|e| tome_manifest::CommandError::Io(e.to_string()))?;
 
-			self.buffer_mut().modified = false;
+			self.buffer_mut().set_modified(false);
 			self.notify("info", format!("Saved {}", path_owned.display()));
 
 			emit_hook(&HookContext::new(
@@ -242,7 +219,7 @@ impl tome_manifest::editor_ctx::FileOpsAccess for Editor {
 			});
 		}
 
-		self.buffer_mut().path = Some(path);
+		self.buffer_mut().set_path(Some(path));
 		self.save()
 	}
 }
@@ -305,8 +282,8 @@ impl Editor {
 			&HookContext::new(
 				HookEventData::BufferOpen {
 					path: hook_path,
-					text: buffer.doc.slice(..),
-					file_type: buffer.file_type.as_deref(),
+					text: buffer.doc().content.slice(..),
+					file_type: buffer.file_type().as_deref(),
 				},
 				None,
 			),
@@ -315,7 +292,7 @@ impl Editor {
 
 		Self {
 			buffers: buffer_manager,
-			layout: Layout::text(buffer_id),
+			layout: LayoutManager::new(buffer_id),
 			registers: Registers::default(),
 			theme: tome_theme::get_theme(tome_theme::DEFAULT_THEME_ID)
 				.unwrap_or(&tome_theme::DEFAULT_THEME),
@@ -341,11 +318,6 @@ impl Editor {
 			fs,
 			language_loader,
 			style_overlays: StyleOverlays::new(),
-			hovered_separator: None,
-			separator_under_mouse: None,
-			separator_hover_animation: None,
-			mouse_velocity: MouseVelocityTracker::default(),
-			dragging_separator: None,
 			terminal_ipc: None,
 			hook_runtime,
 			dirty_buffers: HashSet::new(),
@@ -368,11 +340,13 @@ impl Editor {
 		let hook_path = path.as_ref().unwrap_or(&scratch_path);
 		let buffer = self.buffers.get_buffer(buffer_id).unwrap();
 
+		let text_slice = buffer.doc().content.clone();
+		let file_type = buffer.file_type();
 		emit_hook(&HookContext::new(
 			HookEventData::BufferOpen {
 				path: hook_path,
-				text: buffer.doc.slice(..),
-				file_type: buffer.file_type.as_deref(),
+				text: text_slice.slice(..),
+				file_type: file_type.as_deref(),
 			},
 			Some(&self.extensions),
 		))
@@ -401,8 +375,8 @@ impl Editor {
 			&HookContext::new(
 				HookEventData::BufferOpen {
 					path: hook_path,
-					text: buffer.doc.slice(..),
-					file_type: buffer.file_type.as_deref(),
+					text: buffer.doc().content.slice(..),
+					file_type: buffer.file_type().as_deref(),
 				},
 				Some(&self.extensions),
 			),
@@ -487,26 +461,31 @@ impl Editor {
 	/// Creates a horizontal split with the current view and a new buffer.
 	pub fn split_horizontal(&mut self, new_buffer_id: BufferId) {
 		let current_view = self.buffers.focused_view();
-		let new_layout = Layout::hsplit(Layout::single(current_view), Layout::text(new_buffer_id));
-		self.layout.replace_view(current_view, new_layout);
+		self.layout.split_horizontal(current_view, new_buffer_id);
 		self.focus_buffer(new_buffer_id);
 	}
 
 	/// Creates a vertical split with the current view and a new buffer.
 	pub fn split_vertical(&mut self, new_buffer_id: BufferId) {
 		let current_view = self.buffers.focused_view();
-		let new_layout = Layout::vsplit(Layout::single(current_view), Layout::text(new_buffer_id));
-		self.layout.replace_view(current_view, new_layout);
+		self.layout.split_vertical(current_view, new_buffer_id);
 		self.focus_buffer(new_buffer_id);
+	}
+
+	/// Creates a new buffer that shares the same document as the current buffer.
+	///
+	/// This is used for split operations - both buffers see the same content
+	/// but have independent cursor/selection/scroll state.
+	pub fn clone_buffer_for_split(&mut self) -> BufferId {
+		self.buffers.clone_focused_buffer_for_split()
 	}
 
 	/// Opens a new terminal in a horizontal split.
 	pub fn split_horizontal_terminal(&mut self) -> TerminalId {
 		let terminal_id = self.create_terminal();
 		let current_view = self.buffers.focused_view();
-		let new_layout =
-			Layout::hsplit(Layout::single(current_view), Layout::terminal(terminal_id));
-		self.layout.replace_view(current_view, new_layout);
+		self.layout
+			.split_horizontal_terminal(current_view, terminal_id);
 		self.focus_terminal(terminal_id);
 		terminal_id
 	}
@@ -515,9 +494,8 @@ impl Editor {
 	pub fn split_vertical_terminal(&mut self) -> TerminalId {
 		let terminal_id = self.create_terminal();
 		let current_view = self.buffers.focused_view();
-		let new_layout =
-			Layout::vsplit(Layout::single(current_view), Layout::terminal(terminal_id));
-		self.layout.replace_view(current_view, new_layout);
+		self.layout
+			.split_vertical_terminal(current_view, terminal_id);
 		self.focus_terminal(terminal_id);
 		terminal_id
 	}
@@ -632,12 +610,13 @@ impl Editor {
 			&& let Some(buffer) = self.buffers.get_buffer(id)
 		{
 			let scratch_path = PathBuf::from("[scratch]");
-			let path = buffer.path.as_ref().unwrap_or(&scratch_path);
+			let path = buffer.path().unwrap_or_else(|| scratch_path.clone());
+			let file_type = buffer.file_type();
 			emit_hook_sync_with(
 				&HookContext::new(
 					HookEventData::BufferClose {
-						path,
-						file_type: buffer.file_type.as_deref(),
+						path: &path,
+						file_type: file_type.as_deref(),
 					},
 					Some(&self.extensions),
 				),
@@ -645,9 +624,10 @@ impl Editor {
 			);
 		}
 
-		// Remove from layout
-		if let Some(new_layout) = self.layout.remove_view(view) {
-			self.layout = new_layout;
+		// Remove from layout - returns the new focus target if successful
+		let new_focus = self.layout.remove_view(view);
+		if new_focus.is_none() {
+			return false;
 		}
 
 		// Remove the actual buffer/terminal
@@ -661,8 +641,10 @@ impl Editor {
 		}
 
 		// If we closed the focused view, focus another one
-		if self.buffers.focused_view() == view {
-			self.buffers.set_focused_view(self.layout.first_view());
+		if self.buffers.focused_view() == view
+			&& let Some(focus) = new_focus
+		{
+			self.buffers.set_focused_view(focus);
 		}
 
 		self.needs_redraw = true;
@@ -779,9 +761,7 @@ impl Editor {
 		}
 
 		// Check if separator animation needs continuous redraws
-		if let Some(anim) = &self.separator_hover_animation
-			&& anim.needs_redraw()
-		{
+		if self.layout.animation_needs_redraw() {
 			self.needs_redraw = true;
 		}
 
@@ -789,14 +769,17 @@ impl Editor {
 		for buffer_id in dirty_ids {
 			if let Some(buffer) = self.buffers.get_buffer(buffer_id) {
 				let scratch_path = PathBuf::from("[scratch]");
-				let path = buffer.path.as_ref().unwrap_or(&scratch_path);
+				let path = buffer.path().unwrap_or_else(|| scratch_path.clone());
+				let file_type = buffer.file_type();
+				let version = buffer.version();
+				let content = buffer.doc().content.clone();
 				emit_hook_sync_with(
 					&HookContext::new(
 						HookEventData::BufferChange {
-							path,
-							text: buffer.doc.slice(..),
-							file_type: buffer.file_type.as_deref(),
-							version: buffer.version,
+							path: &path,
+							text: content.slice(..),
+							file_type: file_type.as_deref(),
+							version,
 						},
 						Some(&self.extensions),
 					),
@@ -956,18 +939,20 @@ impl Editor {
 		tome_tui::style::Style,
 	)> {
 		let buffer = self.buffer();
-		let Some(ref syntax) = buffer.syntax else {
+		let doc = buffer.doc();
+
+		let Some(ref syntax) = doc.syntax else {
 			return Vec::new();
 		};
 
 		let start_line = buffer.scroll_line;
-		let end_line = (start_line + area.height as usize).min(buffer.doc.len_lines());
+		let end_line = (start_line + area.height as usize).min(doc.content.len_lines());
 
-		let start_byte = buffer.doc.line_to_byte(start_line) as u32;
-		let end_byte = if end_line < buffer.doc.len_lines() {
-			buffer.doc.line_to_byte(end_line) as u32
+		let start_byte = doc.content.line_to_byte(start_line) as u32;
+		let end_byte = if end_line < doc.content.len_lines() {
+			doc.content.line_to_byte(end_line) as u32
 		} else {
-			buffer.doc.len_bytes() as u32
+			doc.content.len_bytes() as u32
 		};
 
 		let highlight_styles =
@@ -976,7 +961,7 @@ impl Editor {
 			});
 
 		let highlighter = syntax.highlighter(
-			buffer.doc.slice(..),
+			doc.content.slice(..),
 			&self.language_loader,
 			start_byte..end_byte,
 		);

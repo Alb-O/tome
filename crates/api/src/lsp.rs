@@ -104,11 +104,11 @@ impl LspManager {
 	///
 	/// Starts the appropriate language server and opens the document.
 	pub async fn on_buffer_open(&self, buffer: &Buffer) -> Result<Option<ClientHandle>> {
-		let Some(path) = &buffer.path else {
+		let Some(path) = &buffer.path() else {
 			return Ok(None);
 		};
 
-		let Some(language) = &buffer.file_type else {
+		let Some(language) = &buffer.file_type() else {
 			return Ok(None);
 		};
 
@@ -117,7 +117,8 @@ impl LspManager {
 			return Ok(None);
 		}
 
-		let client = self.sync.open_document(path, language, &buffer.doc).await?;
+		let content = buffer.doc().content.clone();
+		let client = self.sync.open_document(path, language, &content).await?;
 		Ok(Some(client))
 	}
 
@@ -125,17 +126,16 @@ impl LspManager {
 	///
 	/// Sends a full document sync to the language server.
 	pub async fn on_buffer_change(&self, buffer: &Buffer) -> Result<()> {
-		let Some(path) = &buffer.path else {
+		let Some(path) = &buffer.path() else {
 			return Ok(());
 		};
 
-		let Some(language) = &buffer.file_type else {
+		let Some(language) = &buffer.file_type() else {
 			return Ok(());
 		};
 
-		self.sync
-			.notify_change_full(path, language, &buffer.doc)
-			.await
+		let content = buffer.doc().content.clone();
+		self.sync.notify_change_full(path, language, &content).await
 	}
 
 	/// Called when a buffer's content changes with specific range info.
@@ -148,37 +148,32 @@ impl LspManager {
 		end_char: usize,
 		new_text: &str,
 	) -> Result<()> {
-		let Some(path) = &buffer.path else {
+		let Some(path) = &buffer.path() else {
 			return Ok(());
 		};
 
-		let Some(language) = &buffer.file_type else {
+		let Some(language) = &buffer.file_type() else {
 			return Ok(());
 		};
 
 		// Get encoding from the client, default to UTF-16
 		let encoding = self.get_encoding_for_path(path, language);
 
+		let content = buffer.doc().content.clone();
 		self.sync
 			.notify_change_incremental(
-				path,
-				language,
-				&buffer.doc,
-				start_char,
-				end_char,
-				new_text,
-				encoding,
+				path, language, &content, start_char, end_char, new_text, encoding,
 			)
 			.await
 	}
 
 	/// Called before a buffer is saved.
 	pub fn on_buffer_will_save(&self, buffer: &Buffer) -> Result<()> {
-		let Some(path) = &buffer.path else {
+		let Some(path) = &buffer.path() else {
 			return Ok(());
 		};
 
-		let Some(language) = &buffer.file_type else {
+		let Some(language) = &buffer.file_type() else {
 			return Ok(());
 		};
 
@@ -187,16 +182,17 @@ impl LspManager {
 
 	/// Called after a buffer is saved.
 	pub fn on_buffer_did_save(&self, buffer: &Buffer, include_text: bool) -> Result<()> {
-		let Some(path) = &buffer.path else {
+		let Some(path) = &buffer.path() else {
 			return Ok(());
 		};
 
-		let Some(language) = &buffer.file_type else {
+		let Some(language) = &buffer.file_type() else {
 			return Ok(());
 		};
 
+		let doc = buffer.doc();
 		let text = if include_text {
-			Some(&buffer.doc)
+			Some(&doc.content)
 		} else {
 			None
 		};
@@ -206,11 +202,11 @@ impl LspManager {
 
 	/// Called when a buffer is closed.
 	pub fn on_buffer_close(&self, buffer: &Buffer) -> Result<()> {
-		let Some(path) = &buffer.path else {
+		let Some(path) = &buffer.path() else {
 			return Ok(());
 		};
 
-		let Some(language) = &buffer.file_type else {
+		let Some(language) = &buffer.file_type() else {
 			return Ok(());
 		};
 
@@ -220,7 +216,7 @@ impl LspManager {
 	/// Get diagnostics for a buffer.
 	pub fn get_diagnostics(&self, buffer: &Buffer) -> Vec<tome_lsp::lsp_types::Diagnostic> {
 		buffer
-			.path
+			.path()
 			.as_ref()
 			.map(|p| self.sync.get_diagnostics(p))
 			.unwrap_or_default()
@@ -229,7 +225,7 @@ impl LspManager {
 	/// Get error count for a buffer.
 	pub fn error_count(&self, buffer: &Buffer) -> usize {
 		buffer
-			.path
+			.path()
 			.as_ref()
 			.map(|p| self.sync.error_count(p))
 			.unwrap_or(0)
@@ -238,7 +234,7 @@ impl LspManager {
 	/// Get warning count for a buffer.
 	pub fn warning_count(&self, buffer: &Buffer) -> usize {
 		buffer
-			.path
+			.path()
 			.as_ref()
 			.map(|p| self.sync.warning_count(p))
 			.unwrap_or(0)
@@ -256,9 +252,9 @@ impl LspManager {
 
 	/// Get a language server client for a buffer.
 	pub fn get_client(&self, buffer: &Buffer) -> Option<ClientHandle> {
-		let path = buffer.path.as_ref()?;
-		let language = buffer.file_type.as_ref()?;
-		self.sync.registry().get(language, path)
+		let path = buffer.path()?;
+		let language = buffer.file_type()?;
+		self.sync.registry().get(&language, &path)
 	}
 
 	/// Request hover information at the cursor position.
@@ -268,14 +264,15 @@ impl LspManager {
 			None => return Ok(None),
 		};
 
-		let path = buffer.path.as_ref().unwrap();
-		let language = buffer.file_type.as_ref().unwrap();
-		let uri = tome_lsp::lsp_types::Url::from_file_path(path)
+		let path = buffer.path().unwrap();
+		let language = buffer.file_type().unwrap();
+		let uri = tome_lsp::lsp_types::Url::from_file_path(&path)
 			.map_err(|_| tome_lsp::Error::Protocol("Invalid path".into()))?;
 
-		let encoding = self.get_encoding_for_path(path, language);
-		let position = tome_lsp::char_to_lsp_position(&buffer.doc, buffer.cursor, encoding)
-			.ok_or_else(|| tome_lsp::Error::Protocol("Invalid position".into()))?;
+		let encoding = self.get_encoding_for_path(&path, &language);
+		let position =
+			tome_lsp::char_to_lsp_position(&buffer.doc().content, buffer.cursor, encoding)
+				.ok_or_else(|| tome_lsp::Error::Protocol("Invalid position".into()))?;
 
 		client.hover(uri, position).await
 	}
@@ -290,14 +287,15 @@ impl LspManager {
 			None => return Ok(None),
 		};
 
-		let path = buffer.path.as_ref().unwrap();
-		let language = buffer.file_type.as_ref().unwrap();
-		let uri = tome_lsp::lsp_types::Url::from_file_path(path)
+		let path = buffer.path().unwrap();
+		let language = buffer.file_type().unwrap();
+		let uri = tome_lsp::lsp_types::Url::from_file_path(&path)
 			.map_err(|_| tome_lsp::Error::Protocol("Invalid path".into()))?;
 
-		let encoding = self.get_encoding_for_path(path, language);
-		let position = tome_lsp::char_to_lsp_position(&buffer.doc, buffer.cursor, encoding)
-			.ok_or_else(|| tome_lsp::Error::Protocol("Invalid position".into()))?;
+		let encoding = self.get_encoding_for_path(&path, &language);
+		let position =
+			tome_lsp::char_to_lsp_position(&buffer.doc().content, buffer.cursor, encoding)
+				.ok_or_else(|| tome_lsp::Error::Protocol("Invalid position".into()))?;
 
 		client.completion(uri, position, None).await
 	}
@@ -312,14 +310,15 @@ impl LspManager {
 			None => return Ok(None),
 		};
 
-		let path = buffer.path.as_ref().unwrap();
-		let language = buffer.file_type.as_ref().unwrap();
-		let uri = tome_lsp::lsp_types::Url::from_file_path(path)
+		let path = buffer.path().unwrap();
+		let language = buffer.file_type().unwrap();
+		let uri = tome_lsp::lsp_types::Url::from_file_path(&path)
 			.map_err(|_| tome_lsp::Error::Protocol("Invalid path".into()))?;
 
-		let encoding = self.get_encoding_for_path(path, language);
-		let position = tome_lsp::char_to_lsp_position(&buffer.doc, buffer.cursor, encoding)
-			.ok_or_else(|| tome_lsp::Error::Protocol("Invalid position".into()))?;
+		let encoding = self.get_encoding_for_path(&path, &language);
+		let position =
+			tome_lsp::char_to_lsp_position(&buffer.doc().content, buffer.cursor, encoding)
+				.ok_or_else(|| tome_lsp::Error::Protocol("Invalid position".into()))?;
 
 		client.goto_definition(uri, position).await
 	}
@@ -335,14 +334,15 @@ impl LspManager {
 			None => return Ok(None),
 		};
 
-		let path = buffer.path.as_ref().unwrap();
-		let language = buffer.file_type.as_ref().unwrap();
-		let uri = tome_lsp::lsp_types::Url::from_file_path(path)
+		let path = buffer.path().unwrap();
+		let language = buffer.file_type().unwrap();
+		let uri = tome_lsp::lsp_types::Url::from_file_path(&path)
 			.map_err(|_| tome_lsp::Error::Protocol("Invalid path".into()))?;
 
-		let encoding = self.get_encoding_for_path(path, language);
-		let position = tome_lsp::char_to_lsp_position(&buffer.doc, buffer.cursor, encoding)
-			.ok_or_else(|| tome_lsp::Error::Protocol("Invalid position".into()))?;
+		let encoding = self.get_encoding_for_path(&path, &language);
+		let position =
+			tome_lsp::char_to_lsp_position(&buffer.doc().content, buffer.cursor, encoding)
+				.ok_or_else(|| tome_lsp::Error::Protocol("Invalid position".into()))?;
 
 		client.references(uri, position, include_declaration).await
 	}
@@ -357,8 +357,8 @@ impl LspManager {
 			None => return Ok(None),
 		};
 
-		let path = buffer.path.as_ref().unwrap();
-		let uri = tome_lsp::lsp_types::Url::from_file_path(path)
+		let path = buffer.path().unwrap();
+		let uri = tome_lsp::lsp_types::Url::from_file_path(&path)
 			.map_err(|_| tome_lsp::Error::Protocol("Invalid path".into()))?;
 
 		// Default formatting options

@@ -369,37 +369,43 @@ fn update_zenmode(editor: &mut Editor) {
 		return;
 	}
 
-	let syntax = match &editor.buffer().syntax {
-		Some(s) => s,
-		None => {
-			// Clear focus range when no syntax tree
-			if let Some(state) = editor.extensions.get_mut::<ZenmodeState>() {
-				state.request_focus_range(None);
-				state.commit_pending();
+	// Get cursor position and compute focus range while holding doc lock
+	let new_focus_range = {
+		let buffer = editor.buffer();
+		let doc = buffer.doc();
+		let syntax = match &doc.syntax {
+			Some(s) => s,
+			None => {
+				drop(doc);
+				// Clear focus range when no syntax tree
+				if let Some(state) = editor.extensions.get_mut::<ZenmodeState>() {
+					state.request_focus_range(None);
+					state.commit_pending();
+				}
+				return;
 			}
-			return;
-		}
-	};
+		};
 
-	// Convert cursor position to byte position
-	let cursor_byte = editor.buffer().doc.char_to_byte(editor.buffer().cursor) as u32;
-	let cursor_byte_usize = cursor_byte as usize;
+		// Convert cursor position to byte position
+		let cursor_byte = doc.content.char_to_byte(buffer.cursor) as u32;
+		let cursor_byte_usize = cursor_byte as usize;
 
-	// Stability check: if cursor is still within the current focus range,
-	// don't look for a new node - just keep the current one.
-	// This prevents flickering when tree-sitter returns slightly different
-	// nodes on different frames.
-	let new_focus_range = if let Some(ref range) = current_range {
-		if cursor_byte_usize >= range.start && cursor_byte_usize < range.end {
-			// Cursor still in current range - keep it
-			Some(range.clone())
+		// Stability check: if cursor is still within the current focus range,
+		// don't look for a new node - just keep the current one.
+		// This prevents flickering when tree-sitter returns slightly different
+		// nodes on different frames.
+		if let Some(ref range) = current_range {
+			if cursor_byte_usize >= range.start && cursor_byte_usize < range.end {
+				// Cursor still in current range - keep it
+				Some(range.clone())
+			} else {
+				// Cursor left the range - find a new one
+				find_focus_range(syntax, cursor_byte)
+			}
 		} else {
-			// Cursor left the range - find a new one
+			// No current range - find one
 			find_focus_range(syntax, cursor_byte)
 		}
-	} else {
-		// No current range - find one
-		find_focus_range(syntax, cursor_byte)
 	};
 
 	// Request the focus range change (debounced)
@@ -423,7 +429,7 @@ fn update_zenmode(editor: &mut Editor) {
 		}
 	};
 
-	let doc_len = editor.buffer().doc.len_bytes();
+	let doc_len = editor.buffer().doc().content.len_bytes();
 
 	if animate && is_animating {
 		// Use different easing for undim-all (slower, more gradual)

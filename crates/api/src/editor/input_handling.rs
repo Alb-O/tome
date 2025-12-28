@@ -6,8 +6,8 @@ use tome_manifest::{
 	SplitMouseButton,
 };
 
-use crate::buffer::{BufferView, SplitDirection};
-use crate::editor::{DragState, Editor, SeparatorHoverAnimation};
+use crate::buffer::BufferView;
+use crate::editor::Editor;
 
 impl Editor {
 	pub async fn handle_key(&mut self, key: termina::event::KeyEvent) -> bool {
@@ -144,7 +144,7 @@ impl Editor {
 					.await;
 				}
 				if leaving_insert {
-					self.buffer_mut().insert_undo_active = false;
+					self.buffer_mut().clear_insert_undo_active();
 				}
 				false
 			}
@@ -305,20 +305,18 @@ impl Editor {
 		let mouse_y = mouse.row;
 
 		// Handle active drag operation
-		if let Some(ref drag_state) = self.dragging_separator {
+		if let Some(drag_state) = self.layout.drag_state().cloned() {
 			match mouse.kind {
 				MouseEventKind::Drag(_) => {
 					// Continue resizing - use path to identify the split
-					let path = drag_state.path.clone();
 					self.layout
-						.resize_at_path(doc_area, &path, mouse_x, mouse_y);
+						.resize_at_path(doc_area, &drag_state.path, mouse_x, mouse_y);
 					self.needs_redraw = true;
 					return false;
 				}
 				MouseEventKind::Up(_) => {
 					// End drag operation
-					self.dragging_separator = None;
-					self.hovered_separator = None;
+					self.layout.end_drag();
 					self.needs_redraw = true;
 					return false;
 				}
@@ -332,26 +330,26 @@ impl Editor {
 			.separator_with_path_at_position(doc_area, mouse_x, mouse_y);
 
 		// Update mouse velocity tracker
-		self.mouse_velocity.update(mouse_x, mouse_y);
-		let is_fast_mouse = self.mouse_velocity.is_fast();
+		self.layout.update_mouse_velocity(mouse_x, mouse_y);
+		let is_fast_mouse = self.layout.is_mouse_fast();
 
 		// Always track which separator the mouse is physically over
 		let current_separator = separator_info
 			.as_ref()
 			.map(|(direction, sep_rect, _)| (*direction, *sep_rect));
-		self.separator_under_mouse = current_separator;
+		self.layout.separator_under_mouse = current_separator;
 
 		// Update hover/drag state based on mouse event type
 		match mouse.kind {
 			MouseEventKind::Moved => {
-				let old_hover = self.hovered_separator;
+				let old_hover = self.layout.hovered_separator;
 
 				// Determine new hover state:
 				// - If already hovering a separator and mouse is still over it, keep it
 				//   (regardless of velocity - once active, stay active while over it)
 				// - If not hovering, only start hover if velocity is slow
 				// - If mouse left the separator, clear hover
-				self.hovered_separator = match (old_hover, current_separator) {
+				self.layout.hovered_separator = match (old_hover, current_separator) {
 					// Already hovering same separator - keep it active
 					(Some(old), Some(new)) if old == new => Some(old),
 					// Mouse moved to different separator - only activate if slow
@@ -367,48 +365,44 @@ impl Editor {
 				};
 
 				// Trigger animation if hover state changed
-				if old_hover != self.hovered_separator {
-					self.update_separator_hover_animation(old_hover, self.hovered_separator);
+				if old_hover != self.layout.hovered_separator {
+					self.layout
+						.update_hover_animation(old_hover, self.layout.hovered_separator);
 					self.needs_redraw = true;
 				}
 
 				// Mouse move over separator doesn't need further processing
-				if self.hovered_separator.is_some() {
+				if self.layout.hovered_separator.is_some() {
 					return false;
 				}
 			}
 			MouseEventKind::Down(_) => {
 				// Start drag if clicking on a separator
 				if let Some((direction, separator_rect, path)) = separator_info {
-					self.dragging_separator = Some(DragState { direction, path });
-					let old_hover = self.hovered_separator.take();
-					self.hovered_separator = Some((direction, separator_rect));
-					if old_hover != self.hovered_separator {
-						self.update_separator_hover_animation(old_hover, self.hovered_separator);
-					}
+					self.layout.start_drag(direction, path, separator_rect);
 					self.needs_redraw = true;
 					return false;
 				}
 				// Clear hover when clicking elsewhere
-				if self.hovered_separator.is_some() {
-					let old_hover = self.hovered_separator.take();
-					self.update_separator_hover_animation(old_hover, None);
+				if self.layout.hovered_separator.is_some() {
+					let old_hover = self.layout.hovered_separator.take();
+					self.layout.update_hover_animation(old_hover, None);
 					self.needs_redraw = true;
 				}
 			}
 			MouseEventKind::Drag(_) => {
 				// Clear hover when dragging (not on separator)
-				if self.hovered_separator.is_some() {
-					let old_hover = self.hovered_separator.take();
-					self.update_separator_hover_animation(old_hover, None);
+				if self.layout.hovered_separator.is_some() {
+					let old_hover = self.layout.hovered_separator.take();
+					self.layout.update_hover_animation(old_hover, None);
 					self.needs_redraw = true;
 				}
 			}
 			_ => {
 				// For other events (scroll, release), clear hover if not on separator
-				if separator_info.is_none() && self.hovered_separator.is_some() {
-					let old_hover = self.hovered_separator.take();
-					self.update_separator_hover_animation(old_hover, None);
+				if separator_info.is_none() && self.layout.hovered_separator.is_some() {
+					let old_hover = self.layout.hovered_separator.take();
+					self.layout.update_hover_animation(old_hover, None);
 					self.needs_redraw = true;
 				}
 			}
@@ -524,55 +518,6 @@ impl Editor {
 
 		// Fallback to entire doc area if view not found
 		doc_area
-	}
-
-	/// Updates the separator hover animation when hover state changes.
-	pub fn update_separator_hover_animation(
-		&mut self,
-		old: Option<(SplitDirection, tome_tui::layout::Rect)>,
-		new: Option<(SplitDirection, tome_tui::layout::Rect)>,
-	) {
-		use crate::test_events::{AnimationDirection, SeparatorAnimationEvent};
-
-		match (old, new) {
-			(None, Some((_, rect))) => {
-				// Started hovering - animate in
-				SeparatorAnimationEvent::start(AnimationDirection::FadeIn);
-				self.separator_hover_animation = Some(SeparatorHoverAnimation::new(rect, true));
-			}
-			(Some((_, old_rect)), None) => {
-				// Stopped hovering - animate out from current position
-				// If we have an existing animation for this rect, toggle it off
-				// Otherwise create a new one starting from fully hovered
-				let can_toggle = self
-					.separator_hover_animation
-					.as_ref()
-					.map(|a| a.rect == old_rect)
-					.unwrap_or(false);
-				if can_toggle {
-					// Same separator - just toggle the existing animation
-					SeparatorAnimationEvent::start(AnimationDirection::FadeOut);
-					self.separator_hover_animation
-						.as_mut()
-						.unwrap()
-						.set_hovering(false);
-					return;
-				}
-				// Different separator or no existing animation - create new one at full intensity
-				SeparatorAnimationEvent::start(AnimationDirection::FadeOut);
-				self.separator_hover_animation = Some(SeparatorHoverAnimation::new_at_intensity(
-					old_rect, 1.0, false,
-				));
-			}
-			(Some((_, old_rect)), Some((_, new_rect))) if old_rect != new_rect => {
-				// Moved to a different separator - start fresh animation
-				SeparatorAnimationEvent::start(AnimationDirection::FadeIn);
-				self.separator_hover_animation = Some(SeparatorHoverAnimation::new(new_rect, true));
-			}
-			_ => {
-				// Same separator or both None - no change needed
-			}
-		}
 	}
 }
 

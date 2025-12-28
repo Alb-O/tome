@@ -209,7 +209,8 @@ impl Registry {
 	/// Shutdown a specific server.
 	pub async fn shutdown(&self, language: &str, root_path: &Path) -> Result<()> {
 		let key = (language.to_string(), root_path.to_path_buf());
-		if let Some(instance) = self.servers.write().remove(&key) {
+		let instance = self.servers.write().remove(&key);
+		if let Some(instance) = instance {
 			instance.handle.shutdown_and_exit().await?;
 		}
 		Ok(())
