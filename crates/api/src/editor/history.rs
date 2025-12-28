@@ -26,7 +26,7 @@ impl Editor {
 
 	/// Undoes the last change and notifies the user.
 	pub fn undo(&mut self) {
-		let BufferView::Text(buffer_id) = self.focused_view else {
+		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
 			self.notify("warn", "Cannot undo in terminal");
 			return;
 		};
@@ -34,7 +34,7 @@ impl Editor {
 		// Access buffer directly to avoid borrow conflict with language_loader.
 		let buffer = self
 			.buffers
-			.get_mut(&buffer_id)
+			.get_buffer_mut(buffer_id)
 			.expect("focused buffer must exist");
 		let result = buffer.undo(&self.language_loader);
 		match result {
@@ -46,7 +46,7 @@ impl Editor {
 
 	/// Redoes the last undone change and notifies the user.
 	pub fn redo(&mut self) {
-		let BufferView::Text(buffer_id) = self.focused_view else {
+		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
 			self.notify("warn", "Cannot redo in terminal");
 			return;
 		};
@@ -54,7 +54,7 @@ impl Editor {
 		// Access buffer directly to avoid borrow conflict with language_loader.
 		let buffer = self
 			.buffers
-			.get_mut(&buffer_id)
+			.get_buffer_mut(buffer_id)
 			.expect("focused buffer must exist");
 		let result = buffer.redo(&self.language_loader);
 		match result {

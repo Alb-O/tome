@@ -1,5 +1,6 @@
 mod actions;
 mod actions_exec;
+mod buffer_manager;
 pub mod extensions;
 mod history;
 mod hook_runtime;
@@ -11,11 +12,12 @@ mod separator;
 pub mod types;
 mod views;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use agentfs_sdk::{FileSystem, HostFS};
+pub use buffer_manager::BufferManager;
 pub use hook_runtime::HookRuntime;
 use tome_base::Transaction;
 use tome_language::LanguageLoader;
@@ -25,10 +27,9 @@ use tome_theme::Theme;
 pub use types::{HistoryEntry, Registers};
 
 pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
-use crate::buffer::{Buffer, BufferId, BufferView, Layout, SplitDirection, TerminalId};
+use crate::buffer::{BufferId, BufferView, Layout, SplitDirection, TerminalId};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
-use crate::terminal::TerminalBuffer;
 use crate::terminal_ipc::TerminalIpc;
 use crate::ui::UiManager;
 
@@ -73,20 +74,8 @@ use crate::ui::UiManager;
 /// [`focus_next_view`]: Self::focus_next_view
 /// [`focus_prev_view`]: Self::focus_prev_view
 pub struct Editor {
-	/// All open text buffers, keyed by BufferId.
-	buffers: HashMap<BufferId, Buffer>,
-
-	/// All open terminal buffers, keyed by TerminalId.
-	terminals: HashMap<TerminalId, TerminalBuffer>,
-
-	/// Counter for generating unique buffer IDs.
-	next_buffer_id: u64,
-
-	/// Counter for generating unique terminal IDs.
-	next_terminal_id: u64,
-
-	/// The currently focused view (text buffer or terminal).
-	focused_view: BufferView,
+	/// Buffer and terminal management.
+	pub buffers: BufferManager,
 
 	/// Layout of buffer views (for splits).
 	pub layout: Layout,
@@ -302,15 +291,15 @@ impl Editor {
 			language_loader.register(lang.into());
 		}
 
-		// Create initial buffer with ID 1
-		let buffer_id = BufferId(1);
-		let mut buffer = Buffer::new(buffer_id, content.clone(), path.clone());
-		buffer.init_syntax(&language_loader);
+		// Create buffer manager with initial buffer
+		let buffer_manager = BufferManager::new(content, path.clone(), &language_loader);
+		let buffer_id = buffer_manager.focused_buffer_id().unwrap();
 
 		let mut hook_runtime = HookRuntime::new();
 
 		let scratch_path = PathBuf::from("[scratch]");
 		let hook_path = path.as_ref().unwrap_or(&scratch_path);
+		let buffer = buffer_manager.focused_buffer();
 
 		emit_hook_sync_with(
 			&HookContext::new(
@@ -324,15 +313,8 @@ impl Editor {
 			&mut hook_runtime,
 		);
 
-		let mut buffers = HashMap::new();
-		buffers.insert(buffer_id, buffer);
-
 		Self {
-			buffers,
-			terminals: HashMap::new(),
-			next_buffer_id: 2, // Next ID will be 2
-			next_terminal_id: 1,
-			focused_view: BufferView::Text(buffer_id),
+			buffers: buffer_manager,
 			layout: Layout::text(buffer_id),
 			registers: Registers::default(),
 			theme: tome_theme::get_theme(tome_theme::DEFAULT_THEME_ID)
@@ -375,11 +357,16 @@ impl Editor {
 	/// This async version awaits all hooks including async ones (e.g., LSP).
 	/// For sync contexts like split operations, use [`open_buffer_sync`](Self::open_buffer_sync).
 	pub async fn open_buffer(&mut self, content: String, path: Option<PathBuf>) -> BufferId {
-		let buffer_id = self.create_buffer_internal(content, path.clone());
+		let buffer_id = self.buffers.create_buffer(
+			content,
+			path.clone(),
+			&self.language_loader,
+			self.window_width,
+		);
 
 		let scratch_path = PathBuf::from("[scratch]");
 		let hook_path = path.as_ref().unwrap_or(&scratch_path);
-		let buffer = self.buffers.get(&buffer_id).unwrap();
+		let buffer = self.buffers.get_buffer(buffer_id).unwrap();
 
 		emit_hook(&HookContext::new(
 			HookEventData::BufferOpen {
@@ -399,11 +386,16 @@ impl Editor {
 	/// Use this in sync contexts like split operations. Async hooks are queued
 	/// in the hook runtime and will execute when the main loop drains them.
 	pub fn open_buffer_sync(&mut self, content: String, path: Option<PathBuf>) -> BufferId {
-		let buffer_id = self.create_buffer_internal(content, path.clone());
+		let buffer_id = self.buffers.create_buffer(
+			content,
+			path.clone(),
+			&self.language_loader,
+			self.window_width,
+		);
 
 		let scratch_path = PathBuf::from("[scratch]");
 		let hook_path = path.as_ref().unwrap_or(&scratch_path);
-		let buffer = self.buffers.get(&buffer_id).unwrap();
+		let buffer = self.buffers.get_buffer(buffer_id).unwrap();
 
 		emit_hook_sync_with(
 			&HookContext::new(
@@ -417,22 +409,6 @@ impl Editor {
 			&mut self.hook_runtime,
 		);
 
-		buffer_id
-	}
-
-	/// Internal helper to create a buffer without emitting hooks.
-	fn create_buffer_internal(&mut self, content: String, path: Option<PathBuf>) -> BufferId {
-		let buffer_id = BufferId(self.next_buffer_id);
-		self.next_buffer_id += 1;
-
-		let mut buffer = Buffer::new(buffer_id, content, path);
-		buffer.init_syntax(&self.language_loader);
-
-		if let Some(width) = self.window_width {
-			buffer.text_width = width.saturating_sub(buffer.gutter_width()) as usize;
-		}
-
-		self.buffers.insert(buffer_id, buffer);
 		buffer_id
 	}
 
@@ -458,12 +434,7 @@ impl Editor {
 	///
 	/// Returns true if the view exists and was focused.
 	pub fn focus_view(&mut self, view: BufferView) -> bool {
-		let exists = match view {
-			BufferView::Text(id) => self.buffers.contains_key(&id),
-			BufferView::Terminal(id) => self.terminals.contains_key(&id),
-		};
-		if exists {
-			self.focused_view = view;
+		if self.buffers.set_focused_view(view) {
 			self.needs_redraw = true;
 			true
 		} else {
@@ -487,19 +458,19 @@ impl Editor {
 
 	/// Focuses the next view in the layout (buffer or terminal).
 	pub fn focus_next_view(&mut self) {
-		let next = self.layout.next_view(self.focused_view);
+		let next = self.layout.next_view(self.buffers.focused_view());
 		self.focus_view(next);
 	}
 
 	/// Focuses the previous view in the layout.
 	pub fn focus_prev_view(&mut self) {
-		let prev = self.layout.prev_view(self.focused_view);
+		let prev = self.layout.prev_view(self.buffers.focused_view());
 		self.focus_view(prev);
 	}
 
 	/// Focuses the next text buffer in the layout.
 	pub fn focus_next_buffer(&mut self) {
-		if let Some(current_id) = self.focused_view.as_text() {
+		if let Some(current_id) = self.buffers.focused_view().as_text() {
 			let next_id = self.layout.next_buffer(current_id);
 			self.focus_buffer(next_id);
 		}
@@ -507,7 +478,7 @@ impl Editor {
 
 	/// Focuses the previous text buffer in the layout.
 	pub fn focus_prev_buffer(&mut self) {
-		if let Some(current_id) = self.focused_view.as_text() {
+		if let Some(current_id) = self.buffers.focused_view().as_text() {
 			let prev_id = self.layout.prev_buffer(current_id);
 			self.focus_buffer(prev_id);
 		}
@@ -515,7 +486,7 @@ impl Editor {
 
 	/// Creates a horizontal split with the current view and a new buffer.
 	pub fn split_horizontal(&mut self, new_buffer_id: BufferId) {
-		let current_view = self.focused_view;
+		let current_view = self.buffers.focused_view();
 		let new_layout = Layout::hsplit(Layout::single(current_view), Layout::text(new_buffer_id));
 		self.layout.replace_view(current_view, new_layout);
 		self.focus_buffer(new_buffer_id);
@@ -523,7 +494,7 @@ impl Editor {
 
 	/// Creates a vertical split with the current view and a new buffer.
 	pub fn split_vertical(&mut self, new_buffer_id: BufferId) {
-		let current_view = self.focused_view;
+		let current_view = self.buffers.focused_view();
 		let new_layout = Layout::vsplit(Layout::single(current_view), Layout::text(new_buffer_id));
 		self.layout.replace_view(current_view, new_layout);
 		self.focus_buffer(new_buffer_id);
@@ -532,7 +503,7 @@ impl Editor {
 	/// Opens a new terminal in a horizontal split.
 	pub fn split_horizontal_terminal(&mut self) -> TerminalId {
 		let terminal_id = self.create_terminal();
-		let current_view = self.focused_view;
+		let current_view = self.buffers.focused_view();
 		let new_layout =
 			Layout::hsplit(Layout::single(current_view), Layout::terminal(terminal_id));
 		self.layout.replace_view(current_view, new_layout);
@@ -543,7 +514,7 @@ impl Editor {
 	/// Opens a new terminal in a vertical split.
 	pub fn split_vertical_terminal(&mut self) -> TerminalId {
 		let terminal_id = self.create_terminal();
-		let current_view = self.focused_view;
+		let current_view = self.buffers.focused_view();
 		let new_layout =
 			Layout::vsplit(Layout::single(current_view), Layout::terminal(terminal_id));
 		self.layout.replace_view(current_view, new_layout);
@@ -553,11 +524,6 @@ impl Editor {
 
 	/// Creates a new terminal with IPC integration.
 	fn create_terminal(&mut self) -> TerminalId {
-		use tome_manifest::SplitBuffer;
-
-		let terminal_id = TerminalId(self.next_terminal_id);
-		self.next_terminal_id += 1;
-
 		let ipc_env = self
 			.terminal_ipc
 			.get_or_insert_with(|| {
@@ -576,10 +542,7 @@ impl Editor {
 			ipc_env.bin_dir()
 		);
 
-		let mut terminal = TerminalBuffer::with_ipc(ipc_env);
-		terminal.on_open();
-		self.terminals.insert(terminal_id, terminal);
-		terminal_id
+		self.buffers.create_terminal(ipc_env)
 	}
 
 	/// Polls for and dispatches IPC requests from embedded terminals.
@@ -596,8 +559,8 @@ impl Editor {
 			if self.is_terminal_focused()
 				&& let Some(buffer_id) = self.layout.first_buffer()
 			{
-				restore_view = Some(self.focused_view);
-				self.focused_view = BufferView::Text(buffer_id);
+				restore_view = Some(self.buffers.focused_view());
+				self.buffers.set_focused_view(BufferView::Text(buffer_id));
 			}
 
 			let outcome = if let Some(cmd) = tome_manifest::find_command(&req.command) {
@@ -627,7 +590,7 @@ impl Editor {
 			};
 
 			if let Some(view) = restore_view {
-				self.focused_view = view;
+				self.buffers.set_focused_view(view);
 			}
 
 			self.handle_command_outcome(outcome);
@@ -666,7 +629,7 @@ impl Editor {
 		}
 
 		if let BufferView::Text(id) = view
-			&& let Some(buffer) = self.buffers.get(&id)
+			&& let Some(buffer) = self.buffers.get_buffer(id)
 		{
 			let scratch_path = PathBuf::from("[scratch]");
 			let path = buffer.path.as_ref().unwrap_or(&scratch_path);
@@ -690,16 +653,16 @@ impl Editor {
 		// Remove the actual buffer/terminal
 		match view {
 			BufferView::Text(id) => {
-				self.buffers.remove(&id);
+				self.buffers.remove_buffer(id);
 			}
 			BufferView::Terminal(id) => {
-				self.terminals.remove(&id);
+				self.buffers.remove_terminal(id);
 			}
 		}
 
 		// If we closed the focused view, focus another one
-		if self.focused_view == view {
-			self.focused_view = self.layout.first_view();
+		if self.buffers.focused_view() == view {
+			self.buffers.set_focused_view(self.layout.first_view());
 		}
 
 		self.needs_redraw = true;
@@ -724,14 +687,14 @@ impl Editor {
 	///
 	/// Returns true if the view was closed.
 	pub fn close_current_view(&mut self) -> bool {
-		self.close_view(self.focused_view)
+		self.close_view(self.buffers.focused_view())
 	}
 
 	/// Closes the current buffer if a text buffer is focused.
 	///
 	/// Returns true if the buffer was closed.
 	pub fn close_current_buffer(&mut self) -> bool {
-		match self.focused_view {
+		match self.buffers.focused_view() {
 			BufferView::Text(id) => self.close_buffer(id),
 			BufferView::Terminal(_) => false,
 		}
@@ -741,7 +704,7 @@ impl Editor {
 		if self.is_terminal_focused() {
 			// Check if we're in window mode (using first buffer's input handler)
 			if let Some(first_buffer_id) = self.layout.first_buffer()
-				&& let Some(buffer) = self.buffers.get(&first_buffer_id)
+				&& let Some(buffer) = self.buffers.get_buffer(first_buffer_id)
 			{
 				let mode = buffer.input.mode();
 				if matches!(mode, Mode::Window) {
@@ -758,7 +721,7 @@ impl Editor {
 		if self.is_terminal_focused() {
 			// Check if we're in window mode (using first buffer's input handler)
 			if let Some(first_buffer_id) = self.layout.first_buffer()
-				&& let Some(buffer) = self.buffers.get(&first_buffer_id)
+				&& let Some(buffer) = self.buffers.get_buffer(first_buffer_id)
 				&& matches!(buffer.input.mode(), Mode::Window)
 			{
 				return buffer.input.mode_name();
@@ -795,9 +758,9 @@ impl Editor {
 		self.poll_terminal_ipc();
 
 		// Tick all terminals
-		let terminal_ids: Vec<_> = self.terminals.keys().copied().collect();
+		let terminal_ids: Vec<_> = self.buffers.terminal_ids().collect();
 		for id in terminal_ids {
-			if let Some(terminal) = self.terminals.get_mut(&id) {
+			if let Some(terminal) = self.buffers.get_terminal_mut(id) {
 				let result = terminal.tick(Duration::from_millis(16));
 				if result.needs_redraw {
 					self.needs_redraw = true;
@@ -824,7 +787,7 @@ impl Editor {
 
 		let dirty_ids: Vec<_> = self.dirty_buffers.drain().collect();
 		for buffer_id in dirty_ids {
-			if let Some(buffer) = self.buffers.get(&buffer_id) {
+			if let Some(buffer) = self.buffers.get_buffer(buffer_id) {
 				let scratch_path = PathBuf::from("[scratch]");
 				let path = buffer.path.as_ref().unwrap_or(&scratch_path);
 				emit_hook_sync_with(
@@ -869,7 +832,7 @@ impl Editor {
 
 	pub fn insert_text(&mut self, text: &str) {
 		self.buffer_mut().insert_text(text);
-		if let BufferView::Text(id) = self.focused_view {
+		if let BufferView::Text(id) = self.buffers.focused_view() {
 			self.dirty_buffers.insert(id);
 		}
 	}
@@ -887,7 +850,7 @@ impl Editor {
 		}
 		let yank = self.registers.yank.clone();
 		self.buffer_mut().paste_after(&yank);
-		if let BufferView::Text(id) = self.focused_view {
+		if let BufferView::Text(id) = self.buffers.focused_view() {
 			self.dirty_buffers.insert(id);
 		}
 	}
@@ -898,7 +861,7 @@ impl Editor {
 		}
 		let yank = self.registers.yank.clone();
 		self.buffer_mut().paste_before(&yank);
-		if let BufferView::Text(id) = self.focused_view {
+		if let BufferView::Text(id) = self.buffers.focused_view() {
 			self.dirty_buffers.insert(id);
 		}
 	}
@@ -908,7 +871,7 @@ impl Editor {
 		self.window_height = Some(height);
 
 		// Update text width for all buffers
-		for buffer in self.buffers.values_mut() {
+		for buffer in self.buffers.buffers_mut() {
 			buffer.text_width = width.saturating_sub(buffer.gutter_width()) as usize;
 		}
 
@@ -962,7 +925,7 @@ impl Editor {
 
 	pub fn delete_selection(&mut self) {
 		if self.buffer_mut().delete_selection()
-			&& let BufferView::Text(id) = self.focused_view
+			&& let BufferView::Text(id) = self.buffers.focused_view()
 		{
 			self.dirty_buffers.insert(id);
 		}
@@ -1078,28 +1041,28 @@ impl Editor {
 	}
 
 	pub fn apply_transaction(&mut self, tx: &Transaction) {
-		let BufferView::Text(buffer_id) = self.focused_view else {
+		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
 			return;
 		};
 
 		// Access buffer directly to avoid borrow conflict with language_loader.
 		let buffer = self
 			.buffers
-			.get_mut(&buffer_id)
+			.get_buffer_mut(buffer_id)
 			.expect("focused buffer must exist");
 		buffer.apply_transaction_with_syntax(tx, &self.language_loader);
 		self.dirty_buffers.insert(buffer_id);
 	}
 
 	pub fn reparse_syntax(&mut self) {
-		let BufferView::Text(buffer_id) = self.focused_view else {
+		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
 			return;
 		};
 
 		// Access buffer directly to avoid borrow conflict with language_loader.
 		let buffer = self
 			.buffers
-			.get_mut(&buffer_id)
+			.get_buffer_mut(buffer_id)
 			.expect("focused buffer must exist");
 		buffer.reparse_syntax(&self.language_loader);
 	}

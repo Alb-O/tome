@@ -1,7 +1,7 @@
 //! Buffer and terminal view access.
 //!
 //! Provides convenient methods for accessing the focused view and navigating
-//! between buffers and terminals.
+//! between buffers and terminals. These delegate to [`BufferManager`].
 
 use tome_manifest::SplitBuffer;
 
@@ -15,10 +15,7 @@ impl Editor {
 	/// Panics if the focused view is a terminal.
 	#[inline]
 	pub fn buffer(&self) -> &Buffer {
-		match self.focused_view {
-			BufferView::Text(id) => self.buffers.get(&id).expect("focused buffer must exist"),
-			BufferView::Terminal(_) => panic!("focused view is a terminal, not a text buffer"),
-		}
+		self.buffers.focused_buffer()
 	}
 
 	/// Returns a mutable reference to the currently focused text buffer.
@@ -26,78 +23,72 @@ impl Editor {
 	/// Panics if the focused view is a terminal.
 	#[inline]
 	pub fn buffer_mut(&mut self) -> &mut Buffer {
-		match self.focused_view {
-			BufferView::Text(id) => self
-				.buffers
-				.get_mut(&id)
-				.expect("focused buffer must exist"),
-			BufferView::Terminal(_) => panic!("focused view is a terminal, not a text buffer"),
-		}
+		self.buffers.focused_buffer_mut()
 	}
 
 	/// Returns the currently focused view.
 	pub fn focused_view(&self) -> BufferView {
-		self.focused_view
+		self.buffers.focused_view()
 	}
 
 	/// Returns true if the focused view is a text buffer.
 	pub fn is_text_focused(&self) -> bool {
-		self.focused_view.is_text()
+		self.buffers.is_text_focused()
 	}
 
 	/// Returns true if the focused view is a terminal.
 	pub fn is_terminal_focused(&self) -> bool {
-		self.focused_view.is_terminal()
+		self.buffers.is_terminal_focused()
 	}
 
 	/// Returns the ID of the focused text buffer, if one is focused.
 	pub fn focused_buffer_id(&self) -> Option<BufferId> {
-		self.focused_view.as_text()
+		self.buffers.focused_buffer_id()
 	}
 
 	/// Returns the ID of the focused terminal, if one is focused.
 	pub fn focused_terminal_id(&self) -> Option<TerminalId> {
-		self.focused_view.as_terminal()
+		self.buffers.focused_terminal_id()
 	}
 
 	/// Returns all text buffer IDs.
 	pub fn buffer_ids(&self) -> Vec<BufferId> {
-		self.buffers.keys().copied().collect()
+		self.buffers.buffer_ids().collect()
 	}
 
 	/// Returns all terminal IDs.
 	pub fn terminal_ids(&self) -> Vec<TerminalId> {
-		self.terminals.keys().copied().collect()
+		self.buffers.terminal_ids().collect()
 	}
 
 	/// Returns a reference to a specific buffer by ID.
 	pub fn get_buffer(&self, id: BufferId) -> Option<&Buffer> {
-		self.buffers.get(&id)
+		self.buffers.get_buffer(id)
 	}
 
 	/// Returns a mutable reference to a specific buffer by ID.
 	pub fn get_buffer_mut(&mut self, id: BufferId) -> Option<&mut Buffer> {
-		self.buffers.get_mut(&id)
+		self.buffers.get_buffer_mut(id)
 	}
 
 	/// Returns a reference to a specific terminal by ID.
 	pub fn get_terminal(&self, id: TerminalId) -> Option<&TerminalBuffer> {
-		self.terminals.get(&id)
+		self.buffers.get_terminal(id)
 	}
 
 	/// Returns a mutable reference to a specific terminal by ID.
 	pub fn get_terminal_mut(&mut self, id: TerminalId) -> Option<&mut TerminalBuffer> {
-		self.terminals.get_mut(&id)
+		self.buffers.get_terminal_mut(id)
 	}
 
 	/// Returns the number of open text buffers.
 	pub fn buffer_count(&self) -> usize {
-		self.buffers.len()
+		self.buffers.buffer_count()
 	}
 
 	/// Returns the number of open terminals.
 	pub fn terminal_count(&self) -> usize {
-		self.terminals.len()
+		self.buffers.terminal_count()
 	}
 
 	/// Returns the cursor style for the focused terminal, if any.

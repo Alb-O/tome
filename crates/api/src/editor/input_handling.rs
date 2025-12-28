@@ -35,7 +35,7 @@ impl Editor {
 			// Ctrl+w enters window mode - use first buffer's input handler
 			if key.code == KeyCode::Char('w') && key.modifiers.contains(Modifiers::CONTROL) {
 				if let Some(first_buffer_id) = self.layout.first_buffer()
-					&& let Some(buffer) = self.buffers.get_mut(&first_buffer_id)
+					&& let Some(buffer) = self.buffers.get_buffer_mut(first_buffer_id)
 				{
 					buffer.input.set_mode(Mode::Window);
 					self.needs_redraw = true;
@@ -56,7 +56,7 @@ impl Editor {
 			if let Some(first_buffer_id) = self.layout.first_buffer() {
 				let in_window_mode = self
 					.buffers
-					.get(&first_buffer_id)
+					.get_buffer(first_buffer_id)
 					.is_some_and(|b| matches!(b.input.mode(), Mode::Window));
 
 				if in_window_mode {
@@ -67,7 +67,7 @@ impl Editor {
 
 			// Route all other keys to the terminal
 			if let Some(split_key) = convert_termina_key(&key)
-				&& let Some(terminal) = self.terminals.get_mut(&terminal_id)
+				&& let Some(terminal) = self.buffers.get_terminal_mut(terminal_id)
 			{
 				let result = terminal.handle_key(split_key);
 				if result.needs_redraw {
@@ -192,7 +192,7 @@ impl Editor {
 
 		// Get the result from the buffer's input handler
 		let result = {
-			let Some(buffer) = self.buffers.get_mut(&buffer_id) else {
+			let Some(buffer) = self.buffers.get_buffer_mut(buffer_id) else {
 				return false;
 			};
 			buffer.input.handle_key(key)
