@@ -41,16 +41,11 @@
           pkgs.openssl
           pkgs.ast-grep
           pkgs.yq-go
-          pkgs.sccache
           pkgs.mold
           pkgs.clang
           lint-summary
           self'.formatter
         ];
-
-        env = {
-          RUSTC_WRAPPER = "sccache";
-        };
 
         shellHook = ''
           if [ -t 0 ]; then
@@ -62,11 +57,9 @@
             echo "Rust dev shell"
             echo "  Rust: $(rustc --version)"
             echo "  Cargo: $(cargo --version)"
-            echo "  sccache: $(sccache --version)"
             echo ""
             echo "Available commands:"
             echo "  lint          - Run consolidated lint summary"
-            echo "  sccache -s    - Show cache statistics"
           fi
         '';
       };
