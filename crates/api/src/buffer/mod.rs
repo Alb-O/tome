@@ -20,7 +20,7 @@ use evildoer_base::Selection;
 use evildoer_base::range::CharIdx;
 use evildoer_input::InputHandler;
 use evildoer_language::LanguageLoader;
-use evildoer_manifest::Mode;
+use evildoer_manifest::{Dockable, Mode, SplitDockPreference};
 pub use history::HistoryResult;
 pub use layout::{BufferView, Layout, SplitDirection, SplitPath, TerminalId};
 
@@ -244,5 +244,15 @@ impl Buffer {
 	/// Clears the insert undo grouping flag.
 	pub fn clear_insert_undo_active(&self) {
 		self.doc_mut().insert_undo_active = false;
+	}
+}
+
+impl Dockable for Buffer {
+	fn dock_id(&self) -> &'static str {
+		"buffer"
+	}
+
+	fn dock_preference(&self) -> SplitDockPreference {
+		SplitDockPreference::Right
 	}
 }

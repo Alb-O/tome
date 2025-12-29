@@ -143,6 +143,10 @@ impl BufferOpsAccess for Editor {
 		Editor::split_vertical_terminal(self);
 	}
 
+	fn toggle_terminal(&mut self) {
+		Editor::toggle_terminal(self);
+	}
+
 	fn buffer_next(&mut self) {
 		self.focus_next_buffer();
 	}

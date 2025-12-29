@@ -279,7 +279,7 @@ pub use options::{
 	OPTIONS, OptionDef, OptionScope, OptionType, OptionValue, all_options, find_option,
 };
 pub use split_buffer::{
-	SplitAttrs, SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle,
+	Dockable, SplitAttrs, SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle,
 	SplitDockPreference, SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse,
 	SplitMouseAction, SplitMouseButton, SplitSize,
 };

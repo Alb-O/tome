@@ -50,6 +50,9 @@ pub enum ActionResult {
 	/// Open terminal in vertical split.
 	#[terminal_safe]
 	SplitTerminalVertical,
+	/// Toggle terminal split.
+	#[terminal_safe]
+	ToggleTerminal,
 	/// Switch to next buffer.
 	#[terminal_safe]
 	BufferNext,

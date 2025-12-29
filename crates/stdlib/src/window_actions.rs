@@ -41,6 +41,14 @@ action!(split_terminal_vertical, {
 	handler_slice: RESULT_SPLIT_TERMINAL_VERTICAL_HANDLERS,
 }, |ops| ops.split_terminal_vertical());
 
+action!(toggle_terminal, {
+	description: "Toggle terminal split",
+	key: Key::char(':'),
+	mode: Normal,
+	result: ToggleTerminal,
+	handler_slice: RESULT_TOGGLE_TERMINAL_HANDLERS,
+}, |ops| ops.toggle_terminal());
+
 action!(focus_left, {
 	description: "Focus split to the left",
 	key: Key::char('h'),

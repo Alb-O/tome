@@ -126,6 +126,12 @@ pub struct Editor {
 
 	/// Buffers with pending content changes for [`HookEvent::BufferChange`].
 	dirty_buffers: HashSet<BufferId>,
+
+	/// The docked terminal (opened via `:` key, only one allowed).
+	docked_terminal: Option<TerminalId>,
+
+	/// Views with sticky focus (resist mouse hover focus changes).
+	sticky_views: HashSet<BufferView>,
 }
 
 impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
@@ -311,6 +317,8 @@ impl Editor {
 			style_overlays: StyleOverlays::new(),
 			hook_runtime,
 			dirty_buffers: HashSet::new(),
+			docked_terminal: None,
+			sticky_views: HashSet::new(),
 		}
 	}
 
@@ -394,16 +402,43 @@ impl Editor {
 		Ok(self.open_buffer(content, Some(path)).await)
 	}
 
-	/// Focuses a specific view.
+	/// Focuses a specific view explicitly (user action like click or keybinding).
 	///
 	/// Returns true if the view exists and was focused.
+	/// Explicit focus can override sticky focus and will close dockables.
 	pub fn focus_view(&mut self, view: BufferView) -> bool {
-		if self.buffers.set_focused_view(view) {
-			self.needs_redraw = true;
-			true
-		} else {
-			false
+		self.focus_view_inner(view, true)
+	}
+
+	/// Focuses a specific view implicitly (mouse hover).
+	///
+	/// Returns true if the view exists and was focused.
+	/// Respects sticky focus - won't steal focus from sticky views.
+	pub fn focus_view_implicit(&mut self, view: BufferView) -> bool {
+		let current = self.buffers.focused_view();
+		if current == view || self.sticky_views.contains(&current) {
+			return false;
 		}
+		self.focus_view_inner(view, false)
+	}
+
+	fn focus_view_inner(&mut self, view: BufferView, explicit: bool) -> bool {
+		let old_view = self.buffers.focused_view();
+		if !self.buffers.set_focused_view(view) {
+			return false;
+		}
+		self.needs_redraw = true;
+
+		if explicit
+			&& let Some(docked_id) = self.docked_terminal
+			&& old_view == BufferView::Terminal(docked_id)
+			&& view != old_view
+		{
+			self.sticky_views.remove(&old_view);
+			self.close_terminal(docked_id);
+		}
+
+		true
 	}
 
 	/// Focuses a specific buffer by ID.
@@ -497,6 +532,27 @@ impl Editor {
 	/// Creates a new terminal.
 	fn create_terminal(&mut self) -> TerminalId {
 		self.buffers.create_terminal()
+	}
+
+	/// Toggles the docked terminal.
+	///
+	/// If visible, closes it. Otherwise opens it at the bottom with sticky focus.
+	pub fn toggle_terminal(&mut self) {
+		if let Some(id) = self.docked_terminal
+			&& self.layout.contains_view(BufferView::Terminal(id))
+		{
+			self.sticky_views.remove(&BufferView::Terminal(id));
+			self.close_terminal(id);
+			return;
+		}
+
+		let terminal_id = self.create_terminal();
+		self.docked_terminal = Some(terminal_id);
+		self.sticky_views.insert(BufferView::Terminal(terminal_id));
+		let current_view = self.buffers.focused_view();
+		self.layout
+			.split_horizontal_terminal(current_view, terminal_id);
+		self.focus_terminal(terminal_id);
 	}
 
 	pub fn request_quit(&mut self) {

@@ -463,12 +463,17 @@ impl Editor {
 			return false;
 		};
 
-		// Focus the target view if different from current
 		if target_view != self.focused_view() {
-			self.focus_view(target_view);
+			let focus_changed = match mouse.kind {
+				MouseEventKind::Down(_) => self.focus_view(target_view),
+				_ => self.focus_view_implicit(target_view),
+			};
+			if !focus_changed && target_view != self.focused_view() {
+				return false;
+			}
 		}
 
-		if let BufferView::Terminal(terminal_id) = target_view {
+		if let BufferView::Terminal(terminal_id) = self.focused_view() {
 			let local_x = mouse_x.saturating_sub(view_area.x);
 			let local_y = mouse_y.saturating_sub(view_area.y);
 
