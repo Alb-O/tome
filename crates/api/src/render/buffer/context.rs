@@ -409,9 +409,11 @@ impl<'a> BufferRenderContext<'a> {
 									non_cursor_style,
 								));
 							}
+						} else if in_selection {
+							spans.push(Span::styled(" ".repeat(tab_cells), style));
 						} else if in_leading_indent && let Some(guide_style) = indent_guide_style {
 							// Render tab with chevron indicator at start, spaces for rest
-							let guide_style_with_bg = if is_cursor_line && !in_selection {
+							let guide_style_with_bg = if is_cursor_line {
 								guide_style.bg(cursorline_bg)
 							} else {
 								guide_style
@@ -431,9 +433,10 @@ impl<'a> BufferRenderContext<'a> {
 					} else if ch == ' '
 						&& in_leading_indent
 						&& let Some(guide_style) = indent_guide_style
+						&& !in_selection
+						&& !(is_cursor && use_block_cursor && blink_on)
 					{
-						// Render space with dot indicator for leading indentation
-						let guide_style_with_bg = if is_cursor_line && !in_selection {
+						let guide_style_with_bg = if is_cursor_line {
 							guide_style.bg(cursorline_bg)
 						} else {
 							guide_style
