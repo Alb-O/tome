@@ -25,7 +25,7 @@ use evildoer_language::LanguageLoader;
 use evildoer_manifest::syntax::SyntaxStyles;
 use evildoer_manifest::{HookContext, HookEventData, Mode, Theme, emit_hook, emit_hook_sync_with};
 pub use hook_runtime::HookRuntime;
-pub use layout_manager::{LayoutManager, SeparatorHit};
+pub use layout_manager::{LayoutManager, SeparatorHit, SeparatorId};
 pub use types::{HistoryEntry, Registers};
 
 pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};

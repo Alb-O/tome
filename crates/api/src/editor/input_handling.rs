@@ -304,25 +304,14 @@ impl Editor {
 	) -> bool {
 		use termina::event::MouseEventKind;
 
-		use crate::buffer::SplitDirection;
-		use crate::editor::separator::DragState;
-		use crate::editor::SeparatorHit;
-
 		let mouse_x = mouse.column;
 		let mouse_y = mouse.row;
 
 		if let Some(drag_state) = self.layout.drag_state().cloned() {
 			match mouse.kind {
 				MouseEventKind::Drag(_) => {
-					match drag_state {
-						DragState::Split { path, layer, .. } => {
-							self.layout
-								.resize_at_path(doc_area, &path, layer, mouse_x, mouse_y);
-						}
-						DragState::LayerBoundary => {
-							self.layout.resize_dock_boundary(doc_area, mouse_y);
-						}
-					}
+					self.layout
+						.resize_separator(doc_area, &drag_state.id, mouse_x, mouse_y);
 					self.needs_redraw = true;
 					return false;
 				}
@@ -386,10 +375,9 @@ impl Editor {
 		self.layout.update_mouse_velocity(mouse_x, mouse_y);
 		let is_fast_mouse = self.layout.is_mouse_fast();
 
-		let current_separator = separator_hit.as_ref().map(|hit| match hit {
-			SeparatorHit::Split { direction, rect, .. } => (*direction, *rect),
-			SeparatorHit::LayerBoundary { rect } => (SplitDirection::Vertical, *rect),
-		});
+		let current_separator = separator_hit
+			.as_ref()
+			.map(|hit| (hit.direction, hit.rect));
 		self.layout.separator_under_mouse = current_separator;
 
 		match mouse.kind {
@@ -418,24 +406,10 @@ impl Editor {
 				}
 			}
 			MouseEventKind::Down(_) => {
-				match &separator_hit {
-					Some(SeparatorHit::Split {
-						direction,
-						rect,
-						path,
-						layer,
-					}) => {
-						self.layout
-							.start_split_drag(*direction, path.clone(), *rect, *layer);
-						self.needs_redraw = true;
-						return false;
-					}
-					Some(SeparatorHit::LayerBoundary { rect }) => {
-						self.layout.start_layer_boundary_drag(*rect);
-						self.needs_redraw = true;
-						return false;
-					}
-					None => {}
+				if let Some(hit) = &separator_hit {
+					self.layout.start_drag(hit);
+					self.needs_redraw = true;
+					return false;
 				}
 				if self.layout.hovered_separator.is_some() {
 					let old_hover = self.layout.hovered_separator.take();

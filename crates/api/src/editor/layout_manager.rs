@@ -35,18 +35,24 @@ use crate::buffer::{BufferId, BufferView, Layout, SplitDirection, SplitPath, Ter
 /// Layer index for layout operations.
 pub type LayerIndex = usize;
 
-/// Information about a separator found at a screen position.
-#[derive(Debug, Clone)]
-pub enum SeparatorHit {
+/// Identifies which separator is being interacted with.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SeparatorId {
 	/// A separator within a layer's split tree.
 	Split {
-		direction: SplitDirection,
-		rect: Rect,
 		path: SplitPath,
 		layer: LayerIndex,
 	},
 	/// The boundary between layer 0 and layer 1 (dock boundary).
-	LayerBoundary { rect: Rect },
+	LayerBoundary,
+}
+
+/// Information about a separator found at a screen position.
+#[derive(Debug, Clone)]
+pub struct SeparatorHit {
+	pub id: SeparatorId,
+	pub direction: SplitDirection,
+	pub rect: Rect,
 }
 
 /// Manages stacked layout layers and separator interactions.
@@ -57,9 +63,8 @@ pub struct LayoutManager {
 	/// Layout layers, index 0 is base (bottom), higher indices overlay on top.
 	layers: Vec<Option<Layout>>,
 
-	/// Dock layer height as a ratio of total height (0.0 to 1.0).
-	/// Only used when layer 1 is visible.
-	dock_height_ratio: f32,
+	/// Dock layer height in terminal rows. Persists across window resizes.
+	dock_height: u16,
 
 	/// Currently hovered separator (for visual feedback during resize).
 	pub hovered_separator: Option<(SplitDirection, Rect)>,
@@ -81,20 +86,17 @@ pub struct LayoutManager {
 }
 
 impl LayoutManager {
-	/// Default dock height as a ratio of total height.
-	const DEFAULT_DOCK_HEIGHT_RATIO: f32 = 0.33;
+	/// Default dock height in rows.
+	const DEFAULT_DOCK_HEIGHT: u16 = 12;
 
-	/// Minimum dock height ratio to prevent dock from disappearing.
-	const MIN_DOCK_HEIGHT_RATIO: f32 = 0.1;
-
-	/// Maximum dock height ratio to prevent dock from taking over.
-	const MAX_DOCK_HEIGHT_RATIO: f32 = 0.8;
+	/// Minimum dock height in rows.
+	const MIN_DOCK_HEIGHT: u16 = 3;
 
 	/// Creates a new layout manager with a single text buffer on the base layer.
 	pub fn new(buffer_id: BufferId) -> Self {
 		Self {
 			layers: vec![Some(Layout::text(buffer_id))],
-			dock_height_ratio: Self::DEFAULT_DOCK_HEIGHT_RATIO,
+			dock_height: Self::DEFAULT_DOCK_HEIGHT,
 			hovered_separator: None,
 			separator_under_mouse: None,
 			separator_hover_animation: None,
@@ -354,11 +356,11 @@ impl LayoutManager {
 	/// Computes the area for a specific layer given the full doc area.
 	///
 	/// Layer 0 gets the full area (or shrunk if dock layer is visible).
-	/// Layer 1 (dock) gets the bottom portion based on `dock_height_ratio`.
+	/// Layer 1 (dock) gets the bottom portion based on `dock_height`.
 	pub fn layer_area(&self, layer: LayerIndex, doc_area: Rect) -> Rect {
 		if layer == 0 {
 			if self.layer(1).is_some() {
-				let dock_height = (doc_area.height as f32 * self.dock_height_ratio) as u16;
+				let dock_height = self.effective_dock_height(doc_area.height);
 				Rect {
 					x: doc_area.x,
 					y: doc_area.y,
@@ -369,7 +371,7 @@ impl LayoutManager {
 				doc_area
 			}
 		} else if layer == 1 {
-			let dock_height = (doc_area.height as f32 * self.dock_height_ratio) as u16;
+			let dock_height = self.effective_dock_height(doc_area.height);
 			Rect {
 				x: doc_area.x,
 				y: doc_area.bottom().saturating_sub(dock_height),
@@ -379,6 +381,12 @@ impl LayoutManager {
 		} else {
 			doc_area
 		}
+	}
+
+	/// Returns the effective dock height, clamped to available space.
+	fn effective_dock_height(&self, total_height: u16) -> u16 {
+		let max_dock = total_height.saturating_sub(Self::MIN_DOCK_HEIGHT);
+		self.dock_height.clamp(Self::MIN_DOCK_HEIGHT, max_dock)
 	}
 
 	/// Returns the separator rect between layer 0 and layer 1 (the dock boundary).
@@ -399,12 +407,10 @@ impl LayoutManager {
 
 	/// Resizes the dock layer by moving the boundary to the given y position.
 	pub fn resize_dock_boundary(&mut self, doc_area: Rect, mouse_y: u16) {
-		let total_height = doc_area.height as f32;
 		let new_dock_top = mouse_y.saturating_sub(doc_area.y);
-		let new_dock_height = doc_area.height.saturating_sub(new_dock_top);
-		let new_ratio = new_dock_height as f32 / total_height;
-		self.dock_height_ratio =
-			new_ratio.clamp(Self::MIN_DOCK_HEIGHT_RATIO, Self::MAX_DOCK_HEIGHT_RATIO);
+		let new_height = doc_area.height.saturating_sub(new_dock_top);
+		let max_dock = doc_area.height.saturating_sub(Self::MIN_DOCK_HEIGHT);
+		self.dock_height = new_height.clamp(Self::MIN_DOCK_HEIGHT, max_dock);
 	}
 
 	/// Finds the view at the given screen coordinates (searches top-down).
@@ -458,25 +464,26 @@ impl LayoutManager {
 	///
 	/// Checks layer boundary first, then searches split separators top-down.
 	pub fn separator_hit_at_position(&self, area: Rect, x: u16, y: u16) -> Option<SeparatorHit> {
-		// Check layer boundary separator first (between layer 0 and layer 1)
-		if let Some(boundary_rect) = self.layer_boundary_separator(area) {
-			if y == boundary_rect.y && x >= boundary_rect.x && x < boundary_rect.right() {
-				return Some(SeparatorHit::LayerBoundary { rect: boundary_rect });
+		if let Some(rect) = self.layer_boundary_separator(area) {
+			if y == rect.y && x >= rect.x && x < rect.right() {
+				return Some(SeparatorHit {
+					id: SeparatorId::LayerBoundary,
+					direction: SplitDirection::Vertical,
+					rect,
+				});
 			}
 		}
 
-		// Then check split separators in each layer (top-down)
 		for i in (0..self.layers.len()).rev() {
 			if let Some(layout) = &self.layers[i] {
 				let layer_area = self.layer_area(i, area);
 				if let Some((direction, rect, path)) =
 					layout.separator_with_path_at_position(layer_area, x, y)
 				{
-					return Some(SeparatorHit::Split {
+					return Some(SeparatorHit {
+						id: SeparatorId::Split { path, layer: i },
 						direction,
 						rect,
-						path,
-						layer: i,
 					});
 				}
 			}
@@ -484,29 +491,37 @@ impl LayoutManager {
 		None
 	}
 
-	/// Gets the separator rect for a split at the given path in a specific layer.
-	pub fn separator_rect_at_path(
-		&self,
-		area: Rect,
-		path: &SplitPath,
-		layer: LayerIndex,
-	) -> Option<(SplitDirection, Rect)> {
-		let layer_area = self.layer_area(layer, area);
-		self.layer(layer)?.separator_rect_at_path(layer_area, path)
+	/// Gets the separator rect for the given separator ID.
+	pub fn separator_rect(&self, area: Rect, id: &SeparatorId) -> Option<Rect> {
+		match id {
+			SeparatorId::Split { path, layer } => {
+				let layer_area = self.layer_area(*layer, area);
+				self.layer(*layer)?
+					.separator_rect_at_path(layer_area, path)
+					.map(|(_, rect)| rect)
+			}
+			SeparatorId::LayerBoundary => self.layer_boundary_separator(area),
+		}
 	}
 
-	/// Resizes the split at the given path in a specific layer based on mouse position.
-	pub fn resize_at_path(
+	/// Resizes the separator identified by the given ID based on mouse position.
+	pub fn resize_separator(
 		&mut self,
 		area: Rect,
-		path: &SplitPath,
-		layer: LayerIndex,
+		id: &SeparatorId,
 		mouse_x: u16,
 		mouse_y: u16,
 	) {
-		let layer_area = self.layer_area(layer, area);
-		if let Some(layout) = self.layer_mut(layer) {
-			layout.resize_at_path(layer_area, path, mouse_x, mouse_y);
+		match id {
+			SeparatorId::Split { path, layer } => {
+				let layer_area = self.layer_area(*layer, area);
+				if let Some(layout) = self.layer_mut(*layer) {
+					layout.resize_at_path(layer_area, path, mouse_x, mouse_y);
+				}
+			}
+			SeparatorId::LayerBoundary => {
+				self.resize_dock_boundary(area, mouse_y);
+			}
 		}
 	}
 
@@ -520,31 +535,11 @@ impl LayoutManager {
 		self.mouse_velocity.is_fast()
 	}
 
-	/// Starts a split separator drag operation.
-	pub fn start_split_drag(
-		&mut self,
-		direction: SplitDirection,
-		path: SplitPath,
-		separator_rect: Rect,
-		layer: LayerIndex,
-	) {
-		self.dragging_separator = Some(DragState::Split {
-			direction,
-			path,
-			layer,
-		});
+	/// Starts a separator drag operation.
+	pub fn start_drag(&mut self, hit: &SeparatorHit) {
+		self.dragging_separator = Some(DragState { id: hit.id.clone() });
 		let old_hover = self.hovered_separator.take();
-		self.hovered_separator = Some((direction, separator_rect));
-		if old_hover != self.hovered_separator {
-			self.update_hover_animation(old_hover, self.hovered_separator);
-		}
-	}
-
-	/// Starts a layer boundary drag operation (dock resize).
-	pub fn start_layer_boundary_drag(&mut self, separator_rect: Rect) {
-		self.dragging_separator = Some(DragState::LayerBoundary);
-		let old_hover = self.hovered_separator.take();
-		self.hovered_separator = Some((SplitDirection::Vertical, separator_rect));
+		self.hovered_separator = Some((hit.direction, hit.rect));
 		if old_hover != self.hovered_separator {
 			self.update_hover_animation(old_hover, self.hovered_separator);
 		}
@@ -632,5 +627,150 @@ impl LayoutManager {
 	/// Returns the rect being animated, if any.
 	pub fn animation_rect(&self) -> Option<Rect> {
 		self.separator_hover_animation.as_ref().map(|a| a.rect)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::buffer::TerminalId;
+
+	fn make_doc_area() -> Rect {
+		Rect {
+			x: 0,
+			y: 0,
+			width: 80,
+			height: 24,
+		}
+	}
+
+	#[test]
+	fn layer_area_base_only() {
+		let mgr = LayoutManager::new(BufferId(0));
+		let doc = make_doc_area();
+
+		let layer0 = mgr.layer_area(0, doc);
+		assert_eq!(layer0, doc, "base layer gets full area when no dock");
+	}
+
+	#[test]
+	fn layer_area_with_dock() {
+		let mut mgr = LayoutManager::new(BufferId(0));
+		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		let doc = make_doc_area();
+
+		let layer0 = mgr.layer_area(0, doc);
+		let layer1 = mgr.layer_area(1, doc);
+
+		assert!(layer0.height < doc.height, "base layer shrinks when dock visible");
+		assert!(layer1.height > 0, "dock layer has height");
+		assert_eq!(
+			layer0.height + layer1.height,
+			doc.height,
+			"layers fill doc area"
+		);
+		assert_eq!(layer1.y, layer0.bottom(), "dock starts at base layer bottom");
+	}
+
+	#[test]
+	fn layer_boundary_separator() {
+		let mut mgr = LayoutManager::new(BufferId(0));
+		let doc = make_doc_area();
+
+		assert!(
+			mgr.layer_boundary_separator(doc).is_none(),
+			"no boundary without dock"
+		);
+
+		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		let boundary = mgr.layer_boundary_separator(doc).unwrap();
+
+		assert_eq!(boundary.x, doc.x);
+		assert_eq!(boundary.width, doc.width);
+		assert_eq!(boundary.height, 1);
+		assert_eq!(boundary.y, mgr.layer_area(0, doc).bottom());
+	}
+
+	#[test]
+	fn separator_hit_layer_boundary() {
+		let mut mgr = LayoutManager::new(BufferId(0));
+		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		let doc = make_doc_area();
+
+		let boundary = mgr.layer_boundary_separator(doc).unwrap();
+		let hit = mgr.separator_hit_at_position(doc, boundary.x + 5, boundary.y);
+
+		assert!(hit.is_some());
+		let hit = hit.unwrap();
+		assert!(matches!(hit.id, SeparatorId::LayerBoundary));
+		assert_eq!(hit.rect, boundary);
+	}
+
+	#[test]
+	fn resize_dock_boundary() {
+		let mut mgr = LayoutManager::new(BufferId(0));
+		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		let doc = make_doc_area();
+
+		let initial_height = mgr.layer_area(1, doc).height;
+
+		// Drag boundary up (increases dock height)
+		mgr.resize_dock_boundary(doc, doc.y + 8);
+		let new_height = mgr.layer_area(1, doc).height;
+		assert!(new_height > initial_height, "dragging up increases dock height");
+
+		// Drag boundary down (decreases dock height)
+		mgr.resize_dock_boundary(doc, doc.y + 20);
+		let newer_height = mgr.layer_area(1, doc).height;
+		assert!(newer_height < new_height, "dragging down decreases dock height");
+	}
+
+	#[test]
+	fn view_at_position_searches_top_down() {
+		let mut mgr = LayoutManager::new(BufferId(0));
+		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		let doc = make_doc_area();
+
+		let layer1_area = mgr.layer_area(1, doc);
+		let mid_x = layer1_area.x + layer1_area.width / 2;
+		let mid_y = layer1_area.y + layer1_area.height / 2;
+
+		let hit = mgr.view_at_position(doc, mid_x, mid_y);
+		assert!(hit.is_some());
+		let (view, _) = hit.unwrap();
+		assert!(
+			matches!(view, BufferView::Terminal(_)),
+			"clicking in dock area returns terminal"
+		);
+
+		let layer0_area = mgr.layer_area(0, doc);
+		let hit = mgr.view_at_position(doc, layer0_area.x + 5, layer0_area.y + 5);
+		assert!(hit.is_some());
+		let (view, _) = hit.unwrap();
+		assert!(
+			matches!(view, BufferView::Text(_)),
+			"clicking in base area returns buffer"
+		);
+	}
+
+	#[test]
+	fn dock_height_clamps() {
+		let mut mgr = LayoutManager::new(BufferId(0));
+		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		let doc = make_doc_area();
+
+		// Try to make dock too small
+		mgr.resize_dock_boundary(doc, doc.bottom() - 1);
+		let height = mgr.layer_area(1, doc).height;
+		assert!(
+			height >= LayoutManager::MIN_DOCK_HEIGHT,
+			"dock height respects minimum"
+		);
+
+		// Try to make dock too large
+		mgr.resize_dock_boundary(doc, doc.y + 1);
+		let height = mgr.layer_area(1, doc).height;
+		let max = doc.height - LayoutManager::MIN_DOCK_HEIGHT;
+		assert!(height <= max, "dock height respects maximum");
 	}
 }

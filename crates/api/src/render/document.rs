@@ -3,6 +3,7 @@ mod wrapping;
 use std::time::{Duration, SystemTime};
 
 use evildoer_manifest::{SplitAttrs, SplitBuffer, SplitColor};
+use evildoer_tui::animation::Animatable;
 use evildoer_tui::layout::{Constraint, Direction, Layout, Rect};
 use evildoer_tui::style::{Color, Modifier, Style};
 use evildoer_tui::text::{Line, Span};
@@ -11,11 +12,67 @@ use evildoer_tui::widgets::{Block, Clear, Paragraph};
 use super::buffer::{BufferRenderContext, ensure_buffer_cursor_visible};
 use crate::Editor;
 use crate::buffer::{BufferView, SplitDirection};
+use crate::test_events::SeparatorAnimationEvent;
 
 fn color_to_rgb(color: Color) -> Option<(u8, u8, u8)> {
 	match color {
 		Color::Rgb(r, g, b) => Some((r, g, b)),
 		_ => None,
+	}
+}
+
+/// Precomputed separator colors and state for efficient style lookups.
+struct SeparatorStyle {
+	hovered_rect: Option<Rect>,
+	dragging_rect: Option<Rect>,
+	anim_rect: Option<Rect>,
+	anim_intensity: f32,
+	normal_fg: Color,
+	normal_bg: Color,
+	hover_fg: Color,
+	hover_bg: Color,
+	drag_fg: Color,
+	drag_bg: Color,
+}
+
+impl SeparatorStyle {
+	fn new(editor: &Editor, doc_area: Rect) -> Self {
+		Self {
+			hovered_rect: editor.layout.hovered_separator.map(|(_, rect)| rect),
+			dragging_rect: editor
+				.layout
+				.drag_state()
+				.and_then(|ds| editor.layout.separator_rect(doc_area, &ds.id)),
+			anim_rect: editor.layout.animation_rect(),
+			anim_intensity: editor.layout.animation_intensity(),
+			normal_fg: editor.theme.colors.ui.gutter_fg.into(),
+			normal_bg: editor.theme.colors.ui.bg.into(),
+			hover_fg: editor.theme.colors.ui.cursor_fg.into(),
+			hover_bg: editor.theme.colors.ui.selection_bg.into(),
+			drag_fg: editor.theme.colors.ui.bg.into(),
+			drag_bg: editor.theme.colors.ui.fg.into(),
+		}
+	}
+
+	fn for_rect(&self, rect: Rect) -> Style {
+		let is_dragging = self.dragging_rect == Some(rect);
+		let is_animating = self.anim_rect == Some(rect);
+		let is_hovered = self.hovered_rect == Some(rect);
+
+		if is_dragging {
+			Style::default().fg(self.drag_fg).bg(self.drag_bg)
+		} else if is_animating {
+			let fg = self.normal_fg.lerp(&self.hover_fg, self.anim_intensity);
+			let bg = self.normal_bg.lerp(&self.hover_bg, self.anim_intensity);
+			if let (Some(fg_rgb), Some(bg_rgb)) = (color_to_rgb(fg), color_to_rgb(bg)) {
+				SeparatorAnimationEvent::frame(self.anim_intensity, fg_rgb, bg_rgb);
+			}
+			Style::default().fg(fg).bg(bg)
+		} else if is_hovered {
+			Style::default().fg(self.hover_fg).bg(self.hover_bg)
+		} else {
+			Style::default().fg(self.normal_fg)
+		}
 	}
 }
 
@@ -152,49 +209,8 @@ impl Editor {
 			self.needs_redraw = true;
 		}
 
-		use crate::editor::DragState;
-		use crate::test_events::SeparatorAnimationEvent;
-		use evildoer_tui::animation::Animatable;
-
-		let hovered_rect = self.layout.hovered_separator.map(|(_, rect)| rect);
-		let dragging_rect = self.layout.drag_state().and_then(|drag_state| match drag_state {
-			DragState::Split { path, layer, .. } => self
-				.layout
-				.separator_rect_at_path(doc_area, path, *layer)
-				.map(|(_, rect)| rect),
-			DragState::LayerBoundary => self.layout.layer_boundary_separator(doc_area),
-		});
-		let anim_rect = self.layout.animation_rect();
-		let anim_intensity = self.layout.animation_intensity();
 		let layer_boundary = self.layout.layer_boundary_separator(doc_area);
-
-		let normal_fg: Color = self.theme.colors.ui.gutter_fg.into();
-		let hover_fg: Color = self.theme.colors.ui.cursor_fg.into();
-		let hover_bg: Color = self.theme.colors.ui.selection_bg.into();
-		let normal_bg: Color = self.theme.colors.ui.bg.into();
-		let drag_fg: Color = self.theme.colors.ui.bg.into();
-		let drag_bg: Color = self.theme.colors.ui.fg.into();
-
-		let separator_style = |rect: Rect| -> Style {
-			let is_hovered = hovered_rect == Some(rect);
-			let is_dragging = dragging_rect == Some(rect);
-			let is_animating = anim_rect == Some(rect);
-
-			if is_dragging {
-				Style::default().fg(drag_fg).bg(drag_bg)
-			} else if is_animating {
-				let fg = normal_fg.lerp(&hover_fg, anim_intensity);
-				let bg = normal_bg.lerp(&hover_bg, anim_intensity);
-				if let (Some(fg_rgb), Some(bg_rgb)) = (color_to_rgb(fg), color_to_rgb(bg)) {
-					SeparatorAnimationEvent::frame(anim_intensity, fg_rgb, bg_rgb);
-				}
-				Style::default().fg(fg).bg(bg)
-			} else if is_hovered {
-				Style::default().fg(hover_fg).bg(hover_bg)
-			} else {
-				Style::default().fg(normal_fg)
-			}
-		};
+		let sep_style = SeparatorStyle::new(self, doc_area);
 
 		let ctx = BufferRenderContext {
 			theme: self.theme,
@@ -223,14 +239,14 @@ impl Editor {
 			}
 
 			for (direction, _pos, sep_rect) in separators {
-				let sep_style = separator_style(*sep_rect);
+				let style = sep_style.for_rect(*sep_rect);
 				let lines: Vec<Line> = match direction {
 					SplitDirection::Horizontal => (0..sep_rect.height)
-						.map(|_| Line::from(Span::styled("\u{2502}", sep_style)))
+						.map(|_| Line::from(Span::styled("\u{2502}", style)))
 						.collect(),
 					SplitDirection::Vertical => vec![Line::from(Span::styled(
 						"\u{2500}".repeat(sep_rect.width as usize),
-						sep_style,
+						style,
 					))],
 				};
 				frame.render_widget(Paragraph::new(lines), *sep_rect);
@@ -238,10 +254,10 @@ impl Editor {
 		}
 
 		if let Some(boundary_rect) = layer_boundary {
-			let sep_style = separator_style(boundary_rect);
+			let style = sep_style.for_rect(boundary_rect);
 			let line = Line::from(Span::styled(
 				"\u{2500}".repeat(boundary_rect.width as usize),
-				sep_style,
+				style,
 			));
 			frame.render_widget(Paragraph::new(vec![line]), boundary_rect);
 		}
