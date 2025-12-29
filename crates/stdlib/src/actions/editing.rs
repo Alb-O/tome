@@ -1,8 +1,7 @@
 //! Editing actions (delete, yank, paste, undo, redo, etc.).
 
-use evildoer_manifest::action;
 use evildoer_manifest::actions::{ActionDef, ActionResult, EditAction, PendingAction, PendingKind};
-use evildoer_manifest::ACTIONS;
+use evildoer_manifest::{ACTIONS, action};
 use linkme::distributed_slice;
 
 action!(delete, { description: "Delete selection", bindings: r#"normal "d""# },

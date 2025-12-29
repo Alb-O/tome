@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use super::collision::Collision;
-use crate::{ActionDef, ActionId, CommandDef, LanguageDef, MotionDef, TextObjectDef};
+use crate::{ActionDef, ActionId, CommandDef, MotionDef, TextObjectDef};
 
 /// Generic registry index with collision tracking.
 pub struct RegistryIndex<T: 'static> {
@@ -50,5 +50,4 @@ pub struct ExtensionRegistry {
 	pub actions: ActionRegistryIndex,
 	pub motions: RegistryIndex<MotionDef>,
 	pub text_objects: RegistryIndex<TextObjectDef>,
-	pub languages: RegistryIndex<LanguageDef>,
 }

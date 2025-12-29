@@ -1,35 +1,82 @@
 //! Language loader and registry.
 //!
-//! The `LanguageLoader` is the central registry for all language configurations.
-//! It implements `tree_house::LanguageLoader` for injection handling.
+//! The [`LanguageLoader`] is the central registry for all language configurations.
+//! It implements [`tree_house::LanguageLoader`] for injection handling.
 
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
 
-// Re-export tree_house::Language for convenience.
 pub use tree_house::Language as LanguageId;
 use tree_house::{InjectionLanguageMarker, Language, LanguageConfig as TreeHouseConfig};
 
+use crate::config::load_language_configs;
 use crate::language::LanguageData;
 
-/// The main language loader that implements tree-house's LanguageLoader trait.
+/// Simple glob pattern matching for file detection.
 ///
-/// This is the central registry for all language configurations. It handles:
-/// - Language registration with file type associations
-/// - Lazy loading of grammars and queries
-/// - Lookup by filename, extension, shebang, or name
+/// Supports `*` (any chars except `/`), `**` (any chars), `?` (single char).
+fn glob_matches(pattern: &str, path: &str, filename: Option<&str>) -> bool {
+	if !pattern.contains('/') {
+		return filename.is_some_and(|f| glob_match_simple(pattern, f));
+	}
+	glob_match_simple(pattern, path)
+}
+
+fn glob_match_simple(pattern: &str, text: &str) -> bool {
+	let mut p = pattern.chars().peekable();
+	let mut t = text.chars().peekable();
+
+	while let Some(pc) = p.next() {
+		match pc {
+			'*' => {
+				if p.peek() == Some(&'*') {
+					p.next();
+					let remaining: String = p.collect();
+					if remaining.is_empty() {
+						return true;
+					}
+					let rest: String = t.collect();
+					return (0..=rest.len()).any(|i| glob_match_simple(&remaining, &rest[i..]));
+				}
+
+				let remaining: String = p.collect();
+				if remaining.is_empty() {
+					return !t.any(|c| c == '/');
+				}
+
+				let rest: String = t.collect();
+				for (i, c) in rest.char_indices() {
+					if c == '/' {
+						break;
+					}
+					if glob_match_simple(&remaining, &rest[i..]) {
+						return true;
+					}
+				}
+				return glob_match_simple(&remaining, "");
+			}
+			'?' if t.next().is_none() => return false,
+			'?' => {}
+			c if t.next() != Some(c) => return false,
+			_ => {}
+		}
+	}
+
+	t.next().is_none()
+}
+
+/// Central registry for all language configurations.
+///
+/// Handles language registration with file type associations, lazy loading of
+/// grammars and queries, and lookup by filename, extension, shebang, or name.
 #[derive(Debug, Default)]
 pub struct LanguageLoader {
-	/// All registered languages.
 	languages: Vec<LanguageData>,
-	/// Lookup by extension.
 	by_extension: HashMap<String, usize>,
-	/// Lookup by filename.
 	by_filename: HashMap<String, usize>,
-	/// Lookup by shebang.
+	globs: Vec<(String, usize)>,
 	by_shebang: HashMap<String, usize>,
-	/// Lookup by name.
 	by_name: HashMap<String, usize>,
 }
 
@@ -39,6 +86,20 @@ impl LanguageLoader {
 		Self::default()
 	}
 
+	/// Creates a loader populated from the embedded `languages.kdl`.
+	pub fn from_embedded() -> Self {
+		let mut loader = Self::new();
+		match load_language_configs() {
+			Ok(langs) => {
+				for lang in langs {
+					loader.register(lang);
+				}
+			}
+			Err(e) => log::error!("Failed to load language configs: {}", e),
+		}
+		loader
+	}
+
 	/// Registers a language and returns its ID.
 	pub fn register(&mut self, data: LanguageData) -> Language {
 		let idx = self.languages.len();
@@ -46,18 +107,18 @@ impl LanguageLoader {
 		for ext in &data.extensions {
 			self.by_extension.insert(ext.clone(), idx);
 		}
-
 		for fname in &data.filenames {
 			self.by_filename.insert(fname.clone(), idx);
 		}
-
+		for glob in &data.globs {
+			self.globs.push((glob.clone(), idx));
+		}
 		for shebang in &data.shebangs {
 			self.by_shebang.insert(shebang.clone(), idx);
 		}
-
 		self.by_name.insert(data.name.clone(), idx);
-
 		self.languages.push(data);
+
 		Language::new(idx as u32)
 	}
 
@@ -73,18 +134,30 @@ impl LanguageLoader {
 
 	/// Finds a language by file path.
 	pub fn language_for_path(&self, path: &Path) -> Option<Language> {
-		// Check exact filename first
-		if let Some(name) = path.file_name().and_then(|n| n.to_str())
+		let filename = path.file_name().and_then(|n| n.to_str());
+
+		if let Some(name) = filename
 			&& let Some(&idx) = self.by_filename.get(name)
 		{
 			return Some(Language::new(idx as u32));
 		}
 
-		// Check extension
-		path.extension()
+		if let Some(&idx) = path
+			.extension()
 			.and_then(|ext| ext.to_str())
 			.and_then(|ext| self.by_extension.get(ext))
-			.map(|&idx| Language::new(idx as u32))
+		{
+			return Some(Language::new(idx as u32));
+		}
+
+		let path_str = path.to_string_lossy();
+		for (pattern, idx) in &self.globs {
+			if glob_matches(pattern, &path_str, filename) {
+				return Some(Language::new(*idx as u32));
+			}
+		}
+
+		None
 	}
 
 	/// Finds a language by shebang line.
@@ -96,7 +169,6 @@ impl LanguageLoader {
 		let line = first_line.trim_start_matches("#!");
 		let parts: Vec<&str> = line.split_whitespace().collect();
 
-		// Handle /usr/bin/env python style
 		let interpreter = if parts.first() == Some(&"/usr/bin/env") || parts.first() == Some(&"env")
 		{
 			parts.get(1).copied()
@@ -105,7 +177,6 @@ impl LanguageLoader {
 		};
 
 		interpreter.and_then(|interp| {
-			// Strip version numbers (python3 -> python)
 			let base = interp.trim_end_matches(|c: char| c.is_ascii_digit());
 			self.by_shebang
 				.get(base)
@@ -113,16 +184,13 @@ impl LanguageLoader {
 		})
 	}
 
-	/// Finds a language by injection regex match.
 	fn language_for_injection_match(&self, text: &str) -> Option<Language> {
-		for (idx, lang) in self.languages.iter().enumerate() {
-			if let Some(ref regex) = lang.injection_regex
-				&& regex.is_match(text)
-			{
-				return Some(Language::new(idx as u32));
-			}
-		}
-		None
+		self.languages.iter().enumerate().find_map(|(idx, lang)| {
+			lang.injection_regex
+				.as_ref()
+				.filter(|r| r.is_match(text))
+				.map(|_| Language::new(idx as u32))
+		})
 	}
 
 	/// Returns all registered languages.
@@ -149,16 +217,13 @@ impl tree_house::LanguageLoader for LanguageLoader {
 		match marker {
 			InjectionLanguageMarker::Name(name) => self.language_for_name(name),
 			InjectionLanguageMarker::Match(text) => {
-				let cow: Cow<str> = text.into();
-				self.language_for_injection_match(&cow)
+				self.language_for_injection_match(&Cow::<str>::from(text))
 			}
 			InjectionLanguageMarker::Filename(text) => {
-				let path: Cow<str> = text.into();
-				self.language_for_path(Path::new(path.as_ref()))
+				self.language_for_path(Path::new(Cow::<str>::from(text).as_ref()))
 			}
 			InjectionLanguageMarker::Shebang(text) => {
-				let line: Cow<str> = text.into();
-				self.language_for_shebang(&line)
+				self.language_for_shebang(&Cow::<str>::from(text))
 			}
 		}
 	}
@@ -173,13 +238,13 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn test_loader_registration() {
+	fn loader_registration() {
 		let mut loader = LanguageLoader::new();
-
 		let data = LanguageData::new(
 			"rust".to_string(),
 			None,
 			vec!["rs".to_string()],
+			vec![],
 			vec![],
 			vec![],
 			vec!["//".to_string()],
@@ -189,22 +254,18 @@ mod tests {
 
 		let lang = loader.register(data);
 		assert_eq!(lang.idx(), 0);
-
-		let found = loader.language_for_path(Path::new("test.rs"));
-		assert_eq!(found, Some(lang));
-
-		let found = loader.language_for_name("rust");
-		assert_eq!(found, Some(lang));
+		assert_eq!(loader.language_for_path(Path::new("test.rs")), Some(lang));
+		assert_eq!(loader.language_for_name("rust"), Some(lang));
 	}
 
 	#[test]
-	fn test_shebang_detection() {
+	fn shebang_detection() {
 		let mut loader = LanguageLoader::new();
-
 		let data = LanguageData::new(
 			"python".to_string(),
 			None,
 			vec!["py".to_string()],
+			vec![],
 			vec![],
 			vec!["python".to_string()],
 			vec!["#".to_string()],

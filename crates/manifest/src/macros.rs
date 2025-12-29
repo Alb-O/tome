@@ -14,84 +14,42 @@
 //!
 //! # Secondary Macros
 //!
-//! - [`language!`] - Language definitions for syntax highlighting
 //! - [`option!`] - Configuration options
 //! - [`text_object!`] - Text object selection (`iw`, `a"`, etc.)
 //! - [`statusline_segment!`] - Statusline segment definitions
+//!
+//! Note: Language definitions are loaded at runtime from `languages.kdl`.
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __opt {
-	({$val:expr}, $default:expr) => { $val };
-	(, $default:expr) => { $default };
+	({$val:expr}, $default:expr) => {
+		$val
+	};
+	(, $default:expr) => {
+		$default
+	};
 }
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __opt_slice {
-	({$val:expr}) => { $val };
-	() => { &[] };
+	({$val:expr}) => {
+		$val
+	};
+	() => {
+		&[]
+	};
 }
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __opt_static {
-	({$val:expr}) => { Some($val) };
-	() => { None };
-}
-
-/// Registers a language definition in the [`LANGUAGES`](crate::LANGUAGES) slice.
-///
-/// # Example
-///
-/// ```ignore
-/// language!(rust, {
-///     grammar: "rust",
-///     extensions: &["rs"],
-///     comment_tokens: &["//"],
-///     block_comment: ("/*", "*/"),
-///     description: "Rust source file",
-/// });
-/// ```
-#[macro_export]
-macro_rules! language {
-	($name:ident, {
-		$(grammar: $grammar:expr,)?
-		$(scope: $scope:expr,)?
-		$(extensions: $ext:expr,)?
-		$(filenames: $fnames:expr,)?
-		$(globs: $globs:expr,)?
-		$(shebangs: $shebangs:expr,)?
-		$(first_line_patterns: $patterns:expr,)?
-		$(injection_regex: $injection:expr,)?
-		$(comment_tokens: $comments:expr,)?
-		$(block_comment: $block:expr,)?
-		description: $desc:expr
-		$(, priority: $priority:expr)?
-		$(, source: $source:expr)?
-		$(,)?
-	}) => {
-		paste::paste! {
-			#[allow(non_upper_case_globals)]
-			#[linkme::distributed_slice($crate::LANGUAGES)]
-			static [<LANG_ $name>]: $crate::LanguageDef = $crate::LanguageDef {
-				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
-				name: stringify!($name),
-				grammar: $crate::__opt_static!($({$grammar})?),
-				scope: $crate::__opt_static!($({$scope})?),
-				extensions: $crate::__opt_slice!($({$ext})?),
-				filenames: $crate::__opt_slice!($({$fnames})?),
-				globs: $crate::__opt_slice!($({$globs})?),
-				shebangs: $crate::__opt_slice!($({$shebangs})?),
-				first_line_patterns: $crate::__opt_slice!($({$patterns})?),
-				injection_regex: $crate::__opt_static!($({$injection})?),
-				comment_tokens: $crate::__opt_slice!($({$comments})?),
-				block_comment: $crate::__opt_static!($({$block})?),
-				description: $desc,
-				priority: $crate::__opt!($({$priority})?, 0),
-				source: $crate::__opt!($({$source})?, $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME"))),
-			};
-		}
+	({$val:expr}) => {
+		Some($val)
+	};
+	() => {
+		None
 	};
 }
 
@@ -455,14 +413,15 @@ macro_rules! statusline_segment {
 macro_rules! result_handler {
 	($slice:ident, $static_name:ident, $name:literal, $body:expr) => {
 		#[::linkme::distributed_slice($crate::actions::$slice)]
-		static $static_name: $crate::editor_ctx::ResultHandler = $crate::editor_ctx::ResultHandler {
-			name: $name,
-			handle: $body,
-		};
+		static $static_name: $crate::editor_ctx::ResultHandler =
+			$crate::editor_ctx::ResultHandler {
+				name: $name,
+				handle: $body,
+			};
 	};
 }
 
 pub use crate::{
-	__opt, __opt_slice, __opt_static, action, bind, command, hook, language, motion, option,
-	result_handler, statusline_segment, text_object,
+	__opt, __opt_slice, __opt_static, action, bind, command, hook, motion, option, result_handler,
+	statusline_segment, text_object,
 };

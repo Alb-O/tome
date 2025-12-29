@@ -14,8 +14,7 @@ use evildoer_manifest::actions::{
 	RESULT_OK_HANDLERS, RESULT_QUIT_HANDLERS,
 };
 use evildoer_manifest::{
-	BindingMode, LANGUAGES, find_action, find_action_by_id, find_binding_resolved,
-	resolve_action_id,
+	BindingMode, find_action, find_action_by_id, find_binding_resolved, resolve_action_id,
 };
 
 #[test]
@@ -80,20 +79,4 @@ fn test_find_binding_resolved() {
 	let action = find_action_by_id(resolved.action_id);
 	assert!(action.is_some());
 	assert_eq!(action.unwrap().name, "move_left");
-}
-
-#[test]
-fn test_languages_registered() {
-	// With evildoer_stdlib linked, we should have languages registered
-	assert!(
-		!LANGUAGES.is_empty(),
-		"LANGUAGES should contain entries from evildoer-stdlib"
-	);
-
-	// Check for common languages
-	let has_rust = LANGUAGES.iter().any(|l| l.name == "rust");
-	assert!(has_rust, "should have rust language registered");
-
-	let has_python = LANGUAGES.iter().any(|l| l.name == "python");
-	assert!(has_python, "should have python language registered");
 }

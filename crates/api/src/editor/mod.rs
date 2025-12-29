@@ -262,11 +262,8 @@ impl Editor {
 	}
 
 	pub fn from_content(fs: Arc<dyn FileSystem>, content: String, path: Option<PathBuf>) -> Self {
-		// Initialize language loader
-		let mut language_loader = LanguageLoader::new();
-		for lang in evildoer_manifest::LANGUAGES.iter() {
-			language_loader.register(lang.into());
-		}
+		// Initialize language loader from embedded languages.kdl
+		let language_loader = LanguageLoader::from_embedded();
 
 		// Create buffer manager with initial buffer
 		let buffer_manager = BufferManager::new(content, path.clone(), &language_loader);

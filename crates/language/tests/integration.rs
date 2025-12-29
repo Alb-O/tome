@@ -13,21 +13,19 @@ use evildoer_language::syntax::Syntax;
 use evildoer_language::{LanguageData, LanguageLoader};
 use ropey::Rope;
 
-/// Creates a simple test language loader with Rust registered.
 fn create_test_loader() -> LanguageLoader {
 	let mut loader = LanguageLoader::new();
-
 	let rust = LanguageData::new(
 		"rust".to_string(),
-		None, // grammar_name defaults to language name
+		None,
 		vec!["rs".to_string()],
+		vec![],
 		vec![],
 		vec![],
 		vec!["//".to_string()],
 		Some(("/*".to_string(), "*/".to_string())),
 		Some("rust"),
 	);
-
 	loader.register(rust);
 	loader
 }
@@ -181,11 +179,11 @@ fn test_full_highlighting_pipeline() {
 
 	let mut loader = LanguageLoader::new();
 
-	// Register Rust with proper extensions
 	let rust = LanguageData::new(
 		"rust".to_string(),
 		None,
 		vec!["rs".to_string()],
+		vec![],
 		vec![],
 		vec![],
 		vec!["//".to_string()],
@@ -284,6 +282,7 @@ fn test_incremental_syntax_update() {
 		vec!["rs".to_string()],
 		vec![],
 		vec![],
+		vec![],
 		vec!["//".to_string()],
 		Some(("/*".to_string(), "*/".to_string())),
 		Some("rust"),
@@ -365,6 +364,7 @@ fn test_highlight_span_positions_doc_comment() {
 		"rust".to_string(),
 		None,
 		vec!["rs".to_string()],
+		vec![],
 		vec![],
 		vec![],
 		vec!["//".to_string()],

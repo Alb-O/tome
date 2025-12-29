@@ -1,12 +1,14 @@
 //! Standard library of built-in implementations for evildoer.
 //!
 //! This crate contains the concrete implementations of actions, commands, motions,
-//! text objects, filetypes, hooks, options, and statusline segments.
+//! text objects, hooks, options, and statusline segments.
+//!
+//! Note: Language/filetype definitions are loaded at runtime from `languages.kdl`
+//! via the `evildoer-language` crate.
 
 pub mod actions;
 pub mod commands;
 pub mod editor_ctx;
-pub mod filetypes;
 pub mod hooks;
 pub mod motions;
 #[cfg(feature = "host")]
@@ -27,13 +29,12 @@ pub use evildoer_manifest::{
 	BindingMode, COMMANDS, Capability, CommandContext, CommandDef, CommandError, CommandOutcome,
 	CommandResult, CompletionContext, CompletionItem, CompletionKind, CompletionSource, EditAction,
 	EditorCapabilities, EditorContext, EditorOps, HOOKS, HandleOutcome, HookContext, HookDef,
-	HookEvent, HookResult, KeyBindingDef, LANGUAGES, LanguageDef, MOTIONS, MUTABLE_HOOKS,
-	MotionDef, MutableHookContext, MutableHookDef, OPTIONS, ObjectSelectionKind, OptionDef,
-	OptionScope, OptionType, OptionValue, PendingAction, PendingKind, RegistryMetadata,
-	RegistrySource, RenderedSegment, ResolvedBinding, STATUSLINE_SEGMENTS, ScrollAmount, ScrollDir,
-	SegmentPosition, SegmentStyle, StatuslineContext, StatuslineSegmentDef, TEXT_OBJECTS,
-	TextObjectDef, VisualDirection, action, command, dispatch_result, hook, language, motion,
-	option, result_handler, statusline_segment, text_object,
+	HookEvent, HookResult, KeyBindingDef, MOTIONS, MUTABLE_HOOKS, MotionDef, MutableHookContext,
+	MutableHookDef, OPTIONS, ObjectSelectionKind, OptionDef, OptionScope, OptionType, OptionValue,
+	PendingAction, PendingKind, RegistryMetadata, RegistrySource, RenderedSegment, ResolvedBinding,
+	STATUSLINE_SEGMENTS, ScrollAmount, ScrollDir, SegmentPosition, SegmentStyle, StatuslineContext,
+	StatuslineSegmentDef, TEXT_OBJECTS, TextObjectDef, VisualDirection, action, command,
+	dispatch_result, hook, motion, option, result_handler, statusline_segment, text_object,
 };
 #[cfg(feature = "host")]
 pub use movement::WordType;

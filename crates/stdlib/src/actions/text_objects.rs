@@ -1,9 +1,8 @@
 //! Text object selection actions.
 
 use evildoer_base::range::Range;
-use evildoer_manifest::action;
 use evildoer_manifest::actions::{ActionResult, ObjectSelectionKind, PendingAction, PendingKind};
-use evildoer_manifest::{TextObjectDef, find_text_object_by_trigger};
+use evildoer_manifest::{TextObjectDef, action, find_text_object_by_trigger};
 
 fn select_object_with_trigger(
 	ctx: &evildoer_manifest::actions::ActionContext,

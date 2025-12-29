@@ -10,16 +10,18 @@
 //! - [`loader`]: Language registry implementing `tree_house::LanguageLoader`
 //! - [`query`]: Query types for indentation, text objects, tags
 //! - [`highlight`]: Syntax highlighting via tree-sitter queries
+//! - [`config`]: Language configuration parsing from KDL
 //!
 //! # Integration with Evildoer
 //!
-//! Languages are registered via the `LANGUAGES` distributed slice in evildoer-manifest.
+//! Languages are loaded from `languages.kdl` at runtime via [`config::load_language_configs`].
 //! Each language definition includes:
 //! - Grammar name (for loading the .so file)
-//! - File type associations
+//! - File type associations (extensions, filenames, globs)
 //! - Query files (highlights, indents, textobjects, injections, locals)
 
 pub mod build;
+pub mod config;
 pub mod grammar;
 pub mod highlight;
 pub mod language;
@@ -28,6 +30,7 @@ pub mod query;
 pub mod runtime;
 pub mod syntax;
 
+pub use config::{LanguageConfigError, load_language_configs};
 pub use grammar::{
 	GrammarError, GrammarSource, cache_dir, grammar_search_paths, load_grammar,
 	load_grammar_or_build, query_search_paths, runtime_dir,

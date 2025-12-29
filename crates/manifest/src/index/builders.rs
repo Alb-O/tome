@@ -6,8 +6,8 @@ use super::collision::{Collision, CollisionKind};
 use super::diagnostics::diagnostics_internal;
 use super::types::{ActionRegistryIndex, ExtensionRegistry, RegistryIndex};
 use crate::{
-	ACTIONS, ActionDef, ActionId, COMMANDS, CommandDef, LANGUAGES, LanguageDef, MOTIONS, MotionDef,
-	RegistryMetadata, TEXT_OBJECTS, TextObjectDef,
+	ACTIONS, ActionDef, ActionId, COMMANDS, CommandDef, MOTIONS, MotionDef, RegistryMetadata,
+	TEXT_OBJECTS, TextObjectDef,
 };
 
 /// Builds the complete extension registry from distributed slices.
@@ -19,14 +19,12 @@ pub(super) fn build_registry() -> ExtensionRegistry {
 	let actions = build_action_index();
 	let motions = build_motion_index();
 	let text_objects = build_text_object_index();
-	let languages = build_language_index();
 
 	let registry = ExtensionRegistry {
 		commands,
 		actions,
 		motions,
 		text_objects,
-		languages,
 	};
 
 	validate_registry(&registry);
@@ -155,46 +153,6 @@ fn build_text_object_index() -> RegistryIndex<TextObjectDef> {
 			} else {
 				index.by_trigger.insert(*trigger, obj);
 			}
-		}
-	}
-
-	index
-}
-
-fn build_language_index() -> RegistryIndex<LanguageDef> {
-	let mut index = RegistryIndex::new();
-	let mut sorted: Vec<_> = LANGUAGES.iter().collect();
-	sorted.sort_by(|a, b| b.priority.cmp(&a.priority).then(a.id.cmp(b.id)));
-
-	for lang in sorted {
-		if let Some(&existing) = index.by_id.get(lang.id) {
-			index.collisions.push(Collision {
-				kind: CollisionKind::Id,
-				key: lang.id.to_string(),
-				winner: existing,
-				shadowed: lang,
-			});
-		} else {
-			index.by_id.insert(lang.id, lang);
-		}
-
-		if let Some(&existing) = index.by_name.get(lang.name) {
-			index.collisions.push(Collision {
-				kind: CollisionKind::Name,
-				key: lang.name.to_string(),
-				winner: existing,
-				shadowed: lang,
-			});
-		} else {
-			index.by_name.insert(lang.name, lang);
-		}
-
-		for ext in lang.extensions {
-			register_alias(&mut index, lang, ext);
-		}
-
-		for fname in lang.filenames {
-			register_alias(&mut index, lang, fname);
 		}
 	}
 

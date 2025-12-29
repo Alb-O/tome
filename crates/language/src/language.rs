@@ -3,7 +3,6 @@
 //! This module contains the core `LanguageData` type that holds metadata
 //! about a language, including file associations and lazily-loaded syntax config.
 
-use evildoer_manifest::LanguageDef;
 use once_cell::sync::OnceCell;
 use tree_house::LanguageConfig as TreeHouseConfig;
 
@@ -23,6 +22,8 @@ pub struct LanguageData {
 	pub extensions: Vec<String>,
 	/// Exact filenames to match.
 	pub filenames: Vec<String>,
+	/// Glob patterns for matching.
+	pub globs: Vec<String>,
 	/// Shebang interpreters.
 	pub shebangs: Vec<String>,
 	/// Comment token(s) for the language.
@@ -37,11 +38,13 @@ pub struct LanguageData {
 
 impl LanguageData {
 	/// Creates new language data.
+	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		name: String,
 		grammar_name: Option<String>,
 		extensions: Vec<String>,
 		filenames: Vec<String>,
+		globs: Vec<String>,
 		shebangs: Vec<String>,
 		comment_tokens: Vec<String>,
 		block_comment: Option<(String, String)>,
@@ -52,6 +55,7 @@ impl LanguageData {
 			name,
 			extensions,
 			filenames,
+			globs,
 			shebangs,
 			comment_tokens,
 			block_comment,
@@ -115,28 +119,6 @@ impl LanguageData {
 	}
 }
 
-impl From<&LanguageDef> for LanguageData {
-	fn from(def: &LanguageDef) -> Self {
-		Self::new(
-			def.name.to_string(),
-			def.grammar.map(|s: &str| s.to_string()),
-			def.extensions
-				.iter()
-				.map(|s: &&str| s.to_string())
-				.collect(),
-			def.filenames.iter().map(|s: &&str| s.to_string()).collect(),
-			def.shebangs.iter().map(|s: &&str| s.to_string()).collect(),
-			def.comment_tokens
-				.iter()
-				.map(|s: &&str| s.to_string())
-				.collect(),
-			def.block_comment
-				.map(|(s, e): (&str, &str)| (s.to_string(), e.to_string())),
-			def.injection_regex,
-		)
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -148,6 +130,7 @@ mod tests {
 			None,
 			vec!["rs".to_string()],
 			vec!["Cargo.toml".to_string()],
+			vec![],
 			vec![],
 			vec!["//".to_string()],
 			Some(("/*".to_string(), "*/".to_string())),
@@ -165,6 +148,7 @@ mod tests {
 			"typescript".to_string(),
 			Some("tsx".to_string()),
 			vec!["ts".to_string()],
+			vec![],
 			vec![],
 			vec![],
 			vec!["//".to_string()],

@@ -433,8 +433,7 @@ impl<'a> BufferRenderContext<'a> {
 					} else if ch == ' '
 						&& in_leading_indent
 						&& let Some(guide_style) = indent_guide_style
-						&& !in_selection
-						&& !(is_cursor && use_block_cursor && blink_on)
+						&& !in_selection && !(is_cursor && use_block_cursor && blink_on)
 					{
 						let guide_style_with_bg = if is_cursor_line {
 							guide_style.bg(cursorline_bg)

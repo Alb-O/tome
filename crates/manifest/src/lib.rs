@@ -26,7 +26,8 @@
 //! - [`COMMANDS`] - All registered commands
 //! - [`MOTIONS`] - All registered motions
 //! - [`TEXT_OBJECTS`] - All registered text objects
-//! - [`LANGUAGES`] - All registered languages (file types + syntax)
+//!
+//! Note: Languages are loaded at runtime from `languages.kdl` via `evildoer-language`.
 
 pub use evildoer_base::range::CharIdx;
 pub use evildoer_base::{Range, Selection};
@@ -216,54 +217,6 @@ pub struct TextObjectDef {
 #[distributed_slice]
 pub static TEXT_OBJECTS: [TextObjectDef];
 
-/// Language definition for file type detection and syntax highlighting.
-///
-/// Languages unify file type detection with tree-sitter syntax support.
-/// Each language can specify how files are detected (extensions, filenames,
-/// shebangs) and how they're parsed/highlighted (grammar, queries).
-pub struct LanguageDef {
-	/// Unique identifier (e.g., "evildoer-stdlib::rust").
-	pub id: &'static str,
-	/// Language name (e.g., "rust", "python"). Used for grammar lookup.
-	pub name: &'static str,
-	/// Tree-sitter grammar name if different from `name`.
-	pub grammar: Option<&'static str>,
-	/// Scope name for syntax highlighting (e.g., "source.rust").
-	pub scope: Option<&'static str>,
-	/// File extensions (e.g., &["rs", "rust"]).
-	pub extensions: &'static [&'static str],
-	/// Exact filenames (e.g., &["Makefile", "Dockerfile"]).
-	pub filenames: &'static [&'static str],
-	/// Glob patterns (e.g., &["*.config", "Cargo.*"]).
-	pub globs: &'static [&'static str],
-	/// Shebang interpreter names (e.g., &["python", "python3"]).
-	pub shebangs: &'static [&'static str],
-	/// First-line regex patterns for detection.
-	pub first_line_patterns: &'static [&'static str],
-	/// Regex for injection markers (e.g., markdown code blocks).
-	pub injection_regex: Option<&'static str>,
-	/// Line comment token(s) (e.g., &["//", "#"]).
-	pub comment_tokens: &'static [&'static str],
-	/// Block comment delimiters (start, end).
-	pub block_comment: Option<(&'static str, &'static str)>,
-	/// Description for UI display.
-	pub description: &'static str,
-	/// Priority for conflict resolution (higher wins).
-	pub priority: i16,
-	/// Where this language was defined.
-	pub source: RegistrySource,
-}
-
-impl LanguageDef {
-	/// Returns the grammar name to use for loading.
-	pub fn grammar_name(&self) -> &'static str {
-		self.grammar.unwrap_or(self.name)
-	}
-}
-
-#[distributed_slice]
-pub static LANGUAGES: [LanguageDef];
-
 impl RegistryMetadata for MotionDef {
 	fn id(&self) -> &'static str {
 		self.id
@@ -280,21 +233,6 @@ impl RegistryMetadata for MotionDef {
 }
 
 impl RegistryMetadata for TextObjectDef {
-	fn id(&self) -> &'static str {
-		self.id
-	}
-	fn name(&self) -> &'static str {
-		self.name
-	}
-	fn priority(&self) -> i16 {
-		self.priority
-	}
-	fn source(&self) -> RegistrySource {
-		self.source
-	}
-}
-
-impl RegistryMetadata for LanguageDef {
 	fn id(&self) -> &'static str {
 		self.id
 	}
