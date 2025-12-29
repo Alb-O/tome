@@ -972,6 +972,7 @@ version = "0.2.0"
 dependencies = [
  "evildoer-keymap-derive",
  "evildoer-keymap-parser",
+ "kdl",
  "serde",
  "termina",
  "toml",

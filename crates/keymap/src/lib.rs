@@ -16,5 +16,7 @@ pub use matcher::Matcher;
 
 pub mod backend;
 pub mod config;
+#[cfg(feature = "kdl")]
+pub mod kdl;
 mod keymap;
 mod matcher;
