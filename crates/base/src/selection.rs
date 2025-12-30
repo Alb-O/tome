@@ -245,11 +245,7 @@ impl Selection {
 		}
 	}
 
-	/// Clamps all ranges to valid document bounds.
-	///
-	/// Ensures all anchor/head positions are within `[0, max_char]`.
-	/// This is essential when a selection may have become stale after
-	/// edits in a sibling view sharing the same document.
+	/// Clamps all ranges to `[0, max_char]`.
 	pub fn clamp(&mut self, max_char: CharIdx) {
 		for range in &mut self.ranges {
 			*range = range.clamp(max_char);

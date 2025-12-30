@@ -247,21 +247,13 @@ impl Buffer {
 	}
 
 	/// Clamps selection and cursor to valid document bounds.
-	///
-	/// Call this before any operation that accesses document content via the selection.
-	/// This is necessary when a sibling view may have edited the shared document,
-	/// making this buffer's selection indices stale.
 	pub fn ensure_valid_selection(&mut self) {
 		let max_char = self.doc().content.len_chars();
 		self.selection.clamp(max_char);
 		self.cursor = self.cursor.min(max_char);
 	}
 
-	/// Maps selection and cursor through a transaction.
-	///
-	/// Call this on sibling buffers after a transaction is applied to their
-	/// shared document. This adjusts selection positions to account for
-	/// insertions and deletions made by another view.
+	/// Maps selection and cursor through a [`Transaction`](evildoer_base::Transaction).
 	pub fn map_selection_through(&mut self, tx: &evildoer_base::Transaction) {
 		self.selection = tx.map_selection(&self.selection);
 		self.cursor = self.selection.primary().head;

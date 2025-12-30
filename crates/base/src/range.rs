@@ -128,11 +128,7 @@ impl Range {
 		}
 	}
 
-	/// Clamps the range to valid document bounds.
-	///
-	/// Ensures both anchor and head are within `[0, max_char)`.
-	/// Useful when a selection may have become stale after edits
-	/// in a sibling view sharing the same document.
+	/// Clamps anchor and head to `[0, max_char]`.
 	pub fn clamp(&self, max_char: CharIdx) -> Self {
 		Self {
 			anchor: self.anchor.min(max_char),

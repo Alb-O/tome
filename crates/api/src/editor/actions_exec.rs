@@ -53,11 +53,7 @@ impl Editor {
 			}
 			result
 		} else {
-			// Ensure selection is valid before creating context
-			// (sibling views may have edited the shared document)
 			self.buffer_mut().ensure_valid_selection();
-
-			// Extract data from buffer before creating context
 			let (content, cursor, selection) = {
 				let buffer = self.buffer();
 				let doc = buffer.doc();
@@ -129,11 +125,7 @@ impl Editor {
 			}
 			result
 		} else {
-			// Ensure selection is valid before creating context
-			// (sibling views may have edited the shared document)
 			self.buffer_mut().ensure_valid_selection();
-
-			// Extract data from buffer before creating context
 			let (content, cursor, selection) = {
 				let buffer = self.buffer();
 				let doc = buffer.doc();

@@ -7,10 +7,7 @@ use evildoer_stdlib::movement;
 use super::Buffer;
 
 impl Buffer {
-	/// Inserts text at all cursor positions.
-	///
-	/// Returns the transaction that was applied, for sibling buffer synchronization.
-	/// Note: Undo state should be saved by the caller (Editor) before calling this.
+	/// Inserts text at all cursor positions, returning the applied [`Transaction`].
 	pub fn insert_text(&mut self, text: &str) -> Transaction {
 		self.ensure_valid_selection();
 
@@ -58,9 +55,7 @@ impl Buffer {
 		}
 	}
 
-	/// Pastes text after the cursor position.
-	///
-	/// Returns the transaction that was applied, for sibling buffer synchronization.
+	/// Pastes text after the cursor position, returning the applied [`Transaction`].
 	pub fn paste_after(&mut self, text: &str) -> Option<Transaction> {
 		if text.is_empty() {
 			return None;
@@ -89,9 +84,7 @@ impl Buffer {
 		Some(self.insert_text(text))
 	}
 
-	/// Pastes text before the cursor position.
-	///
-	/// Returns the transaction that was applied, for sibling buffer synchronization.
+	/// Pastes text before the cursor position, returning the applied [`Transaction`].
 	pub fn paste_before(&mut self, text: &str) -> Option<Transaction> {
 		if text.is_empty() {
 			return None;
@@ -100,10 +93,7 @@ impl Buffer {
 		Some(self.insert_text(text))
 	}
 
-	/// Deletes the current selection.
-	///
-	/// Returns the transaction if anything was deleted, for sibling buffer synchronization.
-	/// Note: Undo state should be saved by the caller (Editor) before calling this.
+	/// Deletes the current selection, returning the applied [`Transaction`] if non-empty.
 	pub fn delete_selection(&mut self) -> Option<Transaction> {
 		self.ensure_valid_selection();
 

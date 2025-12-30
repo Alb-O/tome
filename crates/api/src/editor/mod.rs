@@ -748,14 +748,11 @@ impl Editor {
 		self.ui.any_panel_open()
 	}
 
-	/// Synchronizes sibling buffer selections after a transaction.
-	///
-	/// Maps selections for all buffers sharing the same document as the focused buffer.
+	/// Maps sibling buffer selections through a transaction.
 	fn sync_sibling_selections(&mut self, tx: &Transaction) {
 		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
 			return;
 		};
-
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)
@@ -781,7 +778,6 @@ impl Editor {
 	}
 
 	pub fn insert_text(&mut self, text: &str) {
-		// Save undo state with insert grouping based on mode
 		if self.buffer().mode() == evildoer_manifest::Mode::Insert {
 			self.save_insert_undo_state();
 		} else {
@@ -887,10 +883,10 @@ impl Editor {
 	}
 
 	pub fn delete_selection(&mut self) {
-		// Only save undo if there's something to delete
-		if !self.buffer().selection.primary().is_empty() {
-			self.save_undo_state();
+		if self.buffer().selection.primary().is_empty() {
+			return;
 		}
+		self.save_undo_state();
 		if let Some(tx) = self.buffer_mut().delete_selection() {
 			self.sync_sibling_selections(&tx);
 			if let BufferView::Text(id) = self.buffers.focused_view() {
@@ -1010,16 +1006,11 @@ impl Editor {
 		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
 			return;
 		};
-
-		// Apply the transaction to the focused buffer
-		let buffer = self
-			.buffers
+		self.buffers
 			.get_buffer_mut(buffer_id)
-			.expect("focused buffer must exist");
-		buffer.apply_transaction_with_syntax(tx, &self.language_loader);
+			.expect("focused buffer must exist")
+			.apply_transaction_with_syntax(tx, &self.language_loader);
 		self.dirty_buffers.insert(buffer_id);
-
-		// Sync sibling buffer selections
 		self.sync_sibling_selections(tx);
 	}
 
