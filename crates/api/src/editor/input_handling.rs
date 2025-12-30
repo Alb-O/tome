@@ -92,11 +92,15 @@ impl Editor {
 			return false;
 		}
 
-		// If a terminal is focused, route input to it
-		// Exception: Ctrl+w enters window mode, Escape releases focus
-		if let BufferView::Terminal(terminal_id) = self.focused_view() {
-			// Ctrl+w enters window mode - use first buffer's input handler
-			if key.code == KeyCode::Char('w') && key.modifiers.contains(Modifiers::CONTROL) {
+		// If a panel is focused, route input to it
+		if let BufferView::Panel(panel_id) = self.focused_view() {
+			let is_terminal = self.is_terminal_focused();
+
+			// Ctrl+w enters window mode - use first buffer's input handler (terminal panels only)
+			if is_terminal
+				&& key.code == KeyCode::Char('w')
+				&& key.modifiers.contains(Modifiers::CONTROL)
+			{
 				if let Some(first_buffer_id) = self.layout.first_buffer()
 					&& let Some(buffer) = self.buffers.get_buffer_mut(first_buffer_id)
 				{
@@ -115,69 +119,22 @@ impl Editor {
 				return false;
 			}
 
-			// Check if we're in window mode (using first buffer's input handler)
-			if let Some(first_buffer_id) = self.layout.first_buffer() {
-				let in_window_mode = self
-					.buffers
-					.get_buffer(first_buffer_id)
-					.is_some_and(|b| matches!(b.input.mode(), Mode::Window));
+			// Check if we're in window mode (using first buffer's input handler, terminal panels only)
+			if is_terminal {
+				if let Some(first_buffer_id) = self.layout.first_buffer() {
+					let in_window_mode = self
+						.buffers
+						.get_buffer(first_buffer_id)
+						.is_some_and(|b| matches!(b.input.mode(), Mode::Window));
 
-				if in_window_mode {
-					// Process window mode key through first buffer's input handler
-					return self.handle_terminal_window_key(key, first_buffer_id).await;
-				}
-			}
-
-			// Route all other keys to the terminal
-			if let Some(split_key) = convert_termina_key(&key)
-				&& let Some(terminal) = self.buffers.get_terminal_mut(terminal_id)
-			{
-				let result = terminal.handle_key(split_key);
-				if result.needs_redraw {
-					self.needs_redraw = true;
-				}
-			}
-			return false;
-		}
-
-		// If a debug panel is focused, route input to it
-		if let BufferView::Debug(_) = self.focused_view() {
-			// Escape releases focus back to the first text buffer
-			if key.code == KeyCode::Escape {
-				if let Some(first_buffer) = self.layout.first_buffer() {
-					self.focus_buffer(first_buffer);
-				}
-				self.needs_redraw = true;
-				return false;
-			}
-
-			// Route all other keys to the debug panel
-			if let Some(split_key) = convert_termina_key(&key)
-				&& let Some(debug) = &mut self.debug_panel
-			{
-				let result = debug.handle_key(split_key);
-				if result.needs_redraw {
-					self.needs_redraw = true;
-				}
-				if result.release_focus {
-					if let Some(first_buffer) = self.layout.first_buffer() {
-						self.focus_buffer(first_buffer);
+					if in_window_mode {
+						// Process window mode key through first buffer's input handler
+						return self.handle_terminal_window_key(key, first_buffer_id).await;
 					}
 				}
 			}
-			return false;
-		}
 
-		// If a generic panel is focused, route input to it
-		if let BufferView::Panel(panel_id) = self.focused_view() {
-			if key.code == KeyCode::Escape {
-				if let Some(first_buffer) = self.layout.first_buffer() {
-					self.focus_buffer(first_buffer);
-				}
-				self.needs_redraw = true;
-				return false;
-			}
-
+			// Route all other keys to the panel
 			if let Some(split_key) = convert_termina_key(&key) {
 				let result = self.handle_panel_key(panel_id, split_key);
 				if result.needs_redraw {
@@ -477,36 +434,6 @@ impl Editor {
 			if !focus_changed && target_view != self.focused_view() {
 				return false;
 			}
-		}
-
-		if let BufferView::Terminal(terminal_id) = self.focused_view() {
-			let local_x = mouse_x.saturating_sub(view_area.x);
-			let local_y = mouse_y.saturating_sub(view_area.y);
-
-			if let Some(split_mouse) = convert_mouse_event(&mouse, local_x, local_y)
-				&& let Some(terminal) = self.get_terminal_mut(terminal_id)
-			{
-				let result = terminal.handle_mouse(split_mouse);
-				if result.needs_redraw {
-					self.needs_redraw = true;
-				}
-			}
-			return false;
-		}
-
-		if let BufferView::Debug(_) = self.focused_view() {
-			let local_x = mouse_x.saturating_sub(view_area.x);
-			let local_y = mouse_y.saturating_sub(view_area.y);
-
-			if let Some(split_mouse) = convert_mouse_event(&mouse, local_x, local_y)
-				&& let Some(debug) = &mut self.debug_panel
-			{
-				let result = debug.handle_mouse(split_mouse);
-				if result.needs_redraw {
-					self.needs_redraw = true;
-				}
-			}
-			return false;
 		}
 
 		if let BufferView::Panel(panel_id) = self.focused_view() {

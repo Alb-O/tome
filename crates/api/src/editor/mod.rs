@@ -26,8 +26,7 @@ pub use layout_manager::{LayoutManager, SeparatorHit, SeparatorId};
 pub use types::{HistoryEntry, Registers};
 
 pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
-use crate::buffer::{BufferId, BufferView, DebugPanelId, Layout, TerminalId};
-use crate::debug::DebugPanel;
+use crate::buffer::{BufferId, BufferView, Layout};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
 use crate::ui::UiManager;
@@ -122,23 +121,17 @@ pub struct Editor {
 	/// Buffers with pending content changes for [`HookEvent::BufferChange`].
 	dirty_buffers: HashSet<BufferId>,
 
-	/// The docked terminal (opened via `:` key, only one allowed).
-	docked_terminal: Option<TerminalId>,
-
 	/// Views with sticky focus (resist mouse hover focus changes).
 	sticky_views: HashSet<BufferView>,
 
-	pub debug_panel: Option<DebugPanel>,
-	debug_panel_id: Option<DebugPanelId>,
-
-	/// Generic panel registry for new panel types.
+	/// Panel registry for all panel types.
 	pub panels: crate::panels::PanelRegistry,
 }
 
 impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
 	fn is_modified(&self) -> bool {
-		// Terminals and debug panels are never considered "modified" for save purposes
-		if self.is_terminal_focused() || self.is_debug_focused() {
+		// Panels are never considered "modified" for save purposes
+		if self.is_panel_focused() {
 			return false;
 		}
 		self.buffer().modified()
@@ -150,15 +143,10 @@ impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
 		Box<dyn std::future::Future<Output = Result<(), evildoer_manifest::CommandError>> + '_>,
 	> {
 		Box::pin(async move {
-			// Cannot save a terminal or debug panel
-			if self.is_terminal_focused() {
+			// Cannot save a panel
+			if self.is_panel_focused() {
 				return Err(evildoer_manifest::CommandError::InvalidArgument(
-					"Cannot save a terminal".to_string(),
-				));
-			}
-			if self.is_debug_focused() {
-				return Err(evildoer_manifest::CommandError::InvalidArgument(
-					"Cannot save a debug panel".to_string(),
+					"Cannot save a panel".to_string(),
 				));
 			}
 
@@ -209,11 +197,11 @@ impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
 	) -> std::pin::Pin<
 		Box<dyn std::future::Future<Output = Result<(), evildoer_manifest::CommandError>> + '_>,
 	> {
-		// Cannot save a terminal
-		if self.is_terminal_focused() {
+		// Cannot save a panel
+		if self.is_panel_focused() {
 			return Box::pin(async {
 				Err(evildoer_manifest::CommandError::InvalidArgument(
-					"Cannot save a terminal".to_string(),
+					"Cannot save a panel".to_string(),
 				))
 			});
 		}
@@ -295,10 +283,7 @@ impl Editor {
 			style_overlays: StyleOverlays::new(),
 			hook_runtime,
 			dirty_buffers: HashSet::new(),
-			docked_terminal: None,
 			sticky_views: HashSet::new(),
-			debug_panel: None,
-			debug_panel_id: None,
 			panels: crate::panels::PanelRegistry::new(),
 		}
 	}
@@ -406,11 +391,11 @@ impl Editor {
 		self.needs_redraw = true;
 
 		if explicit
-			&& let Some(docked_id) = self.docked_terminal
-			&& old_view == BufferView::Terminal(docked_id)
 			&& view != old_view
+			&& old_view.is_panel()
+			&& self.sticky_views.remove(&old_view)
+			&& self.layout.layer_of_view(old_view) == Some(Self::DOCK_LAYER)
 		{
-			self.sticky_views.remove(&old_view);
 			self.layout.set_layer(Self::DOCK_LAYER, None);
 		}
 
@@ -424,11 +409,11 @@ impl Editor {
 		self.focus_view(BufferView::Text(id))
 	}
 
-	/// Focuses a specific terminal by ID.
+	/// Focuses a specific panel by ID.
 	///
-	/// Returns true if the terminal exists and was focused.
-	pub fn focus_terminal(&mut self, id: TerminalId) -> bool {
-		self.focus_view(BufferView::Terminal(id))
+	/// Returns true if the panel exists and was focused.
+	pub fn focus_panel(&mut self, id: evildoer_manifest::PanelId) -> bool {
+		self.focus_view(BufferView::Panel(id))
 	}
 
 	/// Focuses the next view in the layout (buffer or terminal).
@@ -489,100 +474,8 @@ impl Editor {
 		self.buffers.clone_focused_buffer_for_split()
 	}
 
-	/// Opens a new terminal in a horizontal split (terminal below).
-	pub fn split_horizontal_terminal(&mut self) -> TerminalId {
-		let terminal_id = self.create_terminal();
-		let current_view = self.buffers.focused_view();
-		let doc_area = self.doc_area();
-		self.layout
-			.split_horizontal_terminal(current_view, terminal_id, doc_area);
-		self.focus_terminal(terminal_id);
-		terminal_id
-	}
-
-	/// Opens a new terminal in a vertical split (terminal to the right).
-	pub fn split_vertical_terminal(&mut self) -> TerminalId {
-		let terminal_id = self.create_terminal();
-		let current_view = self.buffers.focused_view();
-		let doc_area = self.doc_area();
-		self.layout
-			.split_vertical_terminal(current_view, terminal_id, doc_area);
-		self.focus_terminal(terminal_id);
-		terminal_id
-	}
-
-	/// Creates a new terminal.
-	fn create_terminal(&mut self) -> TerminalId {
-		self.buffers.create_terminal()
-	}
-
-	/// Layer index for the docked terminal.
+	/// Layer index for the docked terminal panel.
 	const DOCK_LAYER: usize = 1;
-
-	/// Toggles the docked terminal.
-	///
-	/// If visible, hides it (preserving state). Otherwise shows it on layer 1.
-	pub fn toggle_terminal(&mut self) {
-		let terminal_view = self.docked_terminal.map(BufferView::Terminal);
-
-		if let Some(view) = terminal_view
-			&& self.layout.contains_view(view)
-		{
-			self.sticky_views.remove(&view);
-			self.layout.set_layer(Self::DOCK_LAYER, None);
-			let new_focus = self.layout.first_view();
-			self.buffers.set_focused_view(new_focus);
-			self.needs_redraw = true;
-			return;
-		}
-
-		let terminal_id = self.docked_terminal.unwrap_or_else(|| {
-			let id = self.create_terminal();
-			self.docked_terminal = Some(id);
-			id
-		});
-
-		let terminal_view = BufferView::Terminal(terminal_id);
-		self.sticky_views.insert(terminal_view);
-		self.layout
-			.set_layer(Self::DOCK_LAYER, Some(Layout::terminal(terminal_id)));
-		self.focus_terminal(terminal_id);
-	}
-
-	/// Layer index for the debug panel.
-	const DEBUG_LAYER: usize = 2;
-
-	/// Toggles the debug panel.
-	///
-	/// If visible, hides it (preserving state). Otherwise shows it on layer 2.
-	pub fn toggle_debug_panel(&mut self) {
-		let debug_view = self.debug_panel_id.map(BufferView::Debug);
-
-		if let Some(view) = debug_view
-			&& self.layout.contains_view(view)
-		{
-			self.sticky_views.remove(&view);
-			self.layout.set_layer(Self::DEBUG_LAYER, None);
-			let new_focus = self.layout.first_view();
-			self.buffers.set_focused_view(new_focus);
-			self.needs_redraw = true;
-			return;
-		}
-
-		let debug_id = self.debug_panel_id.unwrap_or_else(|| {
-			let id = DebugPanelId(DebugPanel::next_id());
-			self.debug_panel = Some(DebugPanel::new());
-			self.debug_panel_id = Some(id);
-			id
-		});
-
-		let debug_view = BufferView::Debug(debug_id);
-		self.sticky_views.insert(debug_view);
-		self.layout
-			.set_layer(Self::DEBUG_LAYER, Some(Layout::single(debug_view)));
-		self.buffers.set_focused_view(debug_view);
-		self.needs_redraw = true;
-	}
 
 	/// Toggles a panel by name.
 	///
@@ -638,7 +531,7 @@ impl Editor {
 		}
 	}
 
-	/// Closes a view (buffer or terminal).
+	/// Closes a view (buffer or panel).
 	///
 	/// Returns true if the view was closed.
 	pub fn close_view(&mut self, view: BufferView) -> bool {
@@ -675,12 +568,6 @@ impl Editor {
 			BufferView::Text(id) => {
 				self.buffers.remove_buffer(id);
 			}
-			BufferView::Terminal(id) => {
-				self.buffers.remove_terminal(id);
-			}
-			BufferView::Debug(_) => {
-				self.debug_panel = None;
-			}
 			BufferView::Panel(id) => {
 				self.panels.remove_any(id);
 			}
@@ -704,14 +591,14 @@ impl Editor {
 		self.close_view(BufferView::Text(id))
 	}
 
-	/// Closes a terminal.
+	/// Closes a panel.
 	///
-	/// Returns true if the terminal was closed.
-	pub fn close_terminal(&mut self, id: TerminalId) -> bool {
-		self.close_view(BufferView::Terminal(id))
+	/// Returns true if the panel was closed.
+	pub fn close_panel(&mut self, id: evildoer_manifest::PanelId) -> bool {
+		self.close_view(BufferView::Panel(id))
 	}
 
-	/// Closes the current view (buffer or terminal).
+	/// Closes the current view (buffer or panel).
 	///
 	/// Returns true if the view was closed.
 	pub fn close_current_view(&mut self) -> bool {
@@ -724,12 +611,12 @@ impl Editor {
 	pub fn close_current_buffer(&mut self) -> bool {
 		match self.buffers.focused_view() {
 			BufferView::Text(id) => self.close_buffer(id),
-			BufferView::Terminal(_) | BufferView::Debug(_) | BufferView::Panel(_) => false,
+			BufferView::Panel(_) => false,
 		}
 	}
 
 	pub fn mode(&self) -> Mode {
-		if self.is_terminal_focused() || self.is_debug_focused() {
+		if self.is_panel_focused() {
 			// Check if we're in window mode (using first buffer's input handler)
 			if let Some(first_buffer_id) = self.layout.first_buffer()
 				&& let Some(buffer) = self.buffers.get_buffer(first_buffer_id)
@@ -739,7 +626,7 @@ impl Editor {
 					return mode;
 				}
 			}
-			Mode::Normal // Non-text views show as Normal mode
+			Mode::Normal // Panels show as Normal mode
 		} else {
 			self.buffer().input.mode()
 		}
@@ -747,7 +634,6 @@ impl Editor {
 
 	pub fn mode_name(&self) -> &'static str {
 		if self.is_terminal_focused() {
-			// Check if we're in window mode (using first buffer's input handler)
 			if let Some(first_buffer_id) = self.layout.first_buffer()
 				&& let Some(buffer) = self.buffers.get_buffer(first_buffer_id)
 				&& matches!(buffer.input.mode(), Mode::Window)
@@ -757,6 +643,8 @@ impl Editor {
 			"TERMINAL"
 		} else if self.is_debug_focused() {
 			"DEBUG"
+		} else if self.is_panel_focused() {
+			"PANEL"
 		} else {
 			self.buffer().input.mode_name()
 		}
@@ -783,29 +671,31 @@ impl Editor {
 
 		use evildoer_manifest::SplitBuffer;
 
+		use crate::debug::DebugPanel;
 		use crate::editor::extensions::TICK_EXTENSIONS;
+		use crate::terminal::TerminalBuffer;
 
-		// Tick all terminals
-		let terminal_ids: Vec<_> = self.buffers.terminal_ids().collect();
-		for id in terminal_ids {
-			if let Some(terminal) = self.buffers.get_terminal_mut(id) {
+		// Tick all panels (terminals, debug panels, etc.)
+		let panel_ids: Vec<_> = self.panels.ids().collect();
+		let mut panels_to_close = Vec::new();
+		for id in panel_ids {
+			if let Some(terminal) = self.panels.get_mut::<TerminalBuffer>(id) {
 				let result = terminal.tick(Duration::from_millis(16));
 				if result.needs_redraw {
 					self.needs_redraw = true;
 				}
 				if result.wants_close {
-					// Terminal exited, close it
-					self.close_terminal(id);
+					panels_to_close.push(id);
+				}
+			} else if let Some(debug) = self.panels.get_mut::<DebugPanel>(id) {
+				let result = debug.tick(Duration::from_millis(16));
+				if result.needs_redraw {
+					self.needs_redraw = true;
 				}
 			}
 		}
-
-		// Tick the debug panel
-		if let Some(debug) = &mut self.debug_panel {
-			let result = debug.tick(Duration::from_millis(16));
-			if result.needs_redraw {
-				self.needs_redraw = true;
-			}
+		for id in panels_to_close {
+			self.close_panel(id);
 		}
 
 		let mut sorted_ticks: Vec<_> = TICK_EXTENSIONS.iter().collect();

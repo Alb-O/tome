@@ -30,7 +30,7 @@
 use evildoer_tui::layout::Rect;
 
 use super::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
-use crate::buffer::{BufferId, BufferView, Layout, SplitDirection, SplitPath, TerminalId};
+use crate::buffer::{BufferId, BufferView, Layout, SplitDirection, SplitPath};
 
 /// Layer index for layout operations.
 pub type LayerIndex = usize;
@@ -205,15 +205,6 @@ impl LayoutManager {
 			.collect()
 	}
 
-	/// Returns all terminal IDs across all layers.
-	pub fn terminal_ids(&self) -> Vec<TerminalId> {
-		self.layers
-			.iter()
-			.filter_map(|l| l.as_ref())
-			.flat_map(|l| l.terminal_ids())
-			.collect()
-	}
-
 	/// Checks if any layer contains a specific view.
 	pub fn contains_view(&self, view: BufferView) -> bool {
 		self.layers
@@ -296,50 +287,6 @@ impl LayoutManager {
 		let new_layout = Layout::side_by_side(
 			Layout::single(current_view),
 			Layout::text(new_buffer_id),
-			view_area,
-		);
-		if let Some(layer_idx) = self.layer_of_view(current_view)
-			&& let Some(layout) = self.layer_mut(layer_idx)
-		{
-			layout.replace_view(current_view, new_layout);
-		}
-	}
-
-	/// Creates a horizontal split with a new terminal below the current view.
-	pub fn split_horizontal_terminal(
-		&mut self,
-		current_view: BufferView,
-		terminal_id: TerminalId,
-		doc_area: Rect,
-	) {
-		let Some(view_area) = self.view_area(current_view, doc_area) else {
-			return;
-		};
-		let new_layout = Layout::stacked(
-			Layout::single(current_view),
-			Layout::terminal(terminal_id),
-			view_area,
-		);
-		if let Some(layer_idx) = self.layer_of_view(current_view)
-			&& let Some(layout) = self.layer_mut(layer_idx)
-		{
-			layout.replace_view(current_view, new_layout);
-		}
-	}
-
-	/// Creates a vertical split with a new terminal to the right of the current view.
-	pub fn split_vertical_terminal(
-		&mut self,
-		current_view: BufferView,
-		terminal_id: TerminalId,
-		doc_area: Rect,
-	) {
-		let Some(view_area) = self.view_area(current_view, doc_area) else {
-			return;
-		};
-		let new_layout = Layout::side_by_side(
-			Layout::single(current_view),
-			Layout::terminal(terminal_id),
 			view_area,
 		);
 		if let Some(layer_idx) = self.layer_of_view(current_view)
@@ -695,8 +642,9 @@ impl LayoutManager {
 
 #[cfg(test)]
 mod tests {
+	use evildoer_manifest::PanelId;
+
 	use super::*;
-	use crate::buffer::TerminalId;
 
 	fn make_doc_area() -> Rect {
 		Rect {
@@ -705,6 +653,10 @@ mod tests {
 			width: 80,
 			height: 24,
 		}
+	}
+
+	fn test_panel_id() -> PanelId {
+		PanelId::new(0, 0)
 	}
 
 	#[test]
@@ -719,7 +671,7 @@ mod tests {
 	#[test]
 	fn layer_area_with_dock() {
 		let mut mgr = LayoutManager::new(BufferId(0));
-		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		mgr.set_layer(1, Some(Layout::panel(test_panel_id())));
 		let doc = make_doc_area();
 
 		let layer0 = mgr.layer_area(0, doc);
@@ -752,7 +704,7 @@ mod tests {
 			"no boundary without dock"
 		);
 
-		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		mgr.set_layer(1, Some(Layout::panel(test_panel_id())));
 		let boundary = mgr.layer_boundary_separator(doc).unwrap();
 
 		assert_eq!(boundary.x, doc.x);
@@ -764,7 +716,7 @@ mod tests {
 	#[test]
 	fn separator_hit_layer_boundary() {
 		let mut mgr = LayoutManager::new(BufferId(0));
-		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		mgr.set_layer(1, Some(Layout::panel(test_panel_id())));
 		let doc = make_doc_area();
 
 		let boundary = mgr.layer_boundary_separator(doc).unwrap();
@@ -779,7 +731,7 @@ mod tests {
 	#[test]
 	fn resize_dock_boundary() {
 		let mut mgr = LayoutManager::new(BufferId(0));
-		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		mgr.set_layer(1, Some(Layout::panel(test_panel_id())));
 		let doc = make_doc_area();
 
 		let initial_height = mgr.layer_area(1, doc).height;
@@ -804,7 +756,7 @@ mod tests {
 	#[test]
 	fn view_at_position_searches_top_down() {
 		let mut mgr = LayoutManager::new(BufferId(0));
-		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		mgr.set_layer(1, Some(Layout::panel(test_panel_id())));
 		let doc = make_doc_area();
 
 		let layer1_area = mgr.layer_area(1, doc);
@@ -815,8 +767,8 @@ mod tests {
 		assert!(hit.is_some());
 		let (view, _) = hit.unwrap();
 		assert!(
-			matches!(view, BufferView::Terminal(_)),
-			"clicking in dock area returns terminal"
+			matches!(view, BufferView::Panel(_)),
+			"clicking in dock area returns panel"
 		);
 
 		let layer0_area = mgr.layer_area(0, doc);
@@ -832,7 +784,7 @@ mod tests {
 	#[test]
 	fn dock_height_clamps() {
 		let mut mgr = LayoutManager::new(BufferId(0));
-		mgr.set_layer(1, Some(Layout::terminal(TerminalId(0))));
+		mgr.set_layer(1, Some(Layout::panel(test_panel_id())));
 		let doc = make_doc_area();
 
 		// Try to make dock too small

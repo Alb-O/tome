@@ -1,18 +1,18 @@
-//! Buffer and terminal view access.
+//! Buffer and panel view access.
 //!
 //! Provides convenient methods for accessing the focused view and navigating
-//! between buffers and terminals. These delegate to [`BufferManager`].
+//! between buffers and panels. These delegate to [`BufferManager`] and [`PanelRegistry`].
 
-use evildoer_manifest::SplitBuffer;
+use evildoer_manifest::{PanelId, SplitBuffer};
 
 use super::Editor;
-use crate::buffer::{Buffer, BufferId, BufferView, TerminalId};
+use crate::buffer::{Buffer, BufferId, BufferView};
 use crate::terminal::TerminalBuffer;
 
 impl Editor {
 	/// Returns a reference to the currently focused text buffer.
 	///
-	/// Panics if the focused view is a terminal.
+	/// Panics if the focused view is not a text buffer.
 	#[inline]
 	pub fn buffer(&self) -> &Buffer {
 		self.buffers.focused_buffer()
@@ -20,7 +20,7 @@ impl Editor {
 
 	/// Returns a mutable reference to the currently focused text buffer.
 	///
-	/// Panics if the focused view is a terminal.
+	/// Panics if the focused view is not a text buffer.
 	#[inline]
 	pub fn buffer_mut(&mut self) -> &mut Buffer {
 		self.buffers.focused_buffer_mut()
@@ -36,14 +36,23 @@ impl Editor {
 		self.buffers.is_text_focused()
 	}
 
-	/// Returns true if the focused view is a terminal.
+	/// Returns true if the focused view is a panel.
+	pub fn is_panel_focused(&self) -> bool {
+		matches!(self.focused_view(), BufferView::Panel(_))
+	}
+
+	/// Returns true if the focused view is a terminal panel.
 	pub fn is_terminal_focused(&self) -> bool {
-		self.buffers.is_terminal_focused()
+		self.focused_view()
+			.as_panel()
+			.is_some_and(|id| self.panels.get::<TerminalBuffer>(id).is_some())
 	}
 
 	/// Returns true if the focused view is a debug panel.
 	pub fn is_debug_focused(&self) -> bool {
-		self.focused_view().is_debug()
+		self.focused_view()
+			.as_panel()
+			.is_some_and(|id| self.panels.get::<crate::debug::DebugPanel>(id).is_some())
 	}
 
 	/// Returns the ID of the focused text buffer, if one is focused.
@@ -51,19 +60,14 @@ impl Editor {
 		self.buffers.focused_buffer_id()
 	}
 
-	/// Returns the ID of the focused terminal, if one is focused.
-	pub fn focused_terminal_id(&self) -> Option<TerminalId> {
-		self.buffers.focused_terminal_id()
+	/// Returns the ID of the focused panel, if one is focused.
+	pub fn focused_panel_id(&self) -> Option<PanelId> {
+		self.focused_view().as_panel()
 	}
 
 	/// Returns all text buffer IDs.
 	pub fn buffer_ids(&self) -> Vec<BufferId> {
 		self.buffers.buffer_ids().collect()
-	}
-
-	/// Returns all terminal IDs.
-	pub fn terminal_ids(&self) -> Vec<TerminalId> {
-		self.buffers.terminal_ids().collect()
 	}
 
 	/// Returns a reference to a specific buffer by ID.
@@ -76,14 +80,14 @@ impl Editor {
 		self.buffers.get_buffer_mut(id)
 	}
 
-	/// Returns a reference to a specific terminal by ID.
-	pub fn get_terminal(&self, id: TerminalId) -> Option<&TerminalBuffer> {
-		self.buffers.get_terminal(id)
+	/// Returns a reference to a terminal panel by ID.
+	pub fn get_terminal(&self, id: PanelId) -> Option<&TerminalBuffer> {
+		self.panels.get::<TerminalBuffer>(id)
 	}
 
-	/// Returns a mutable reference to a specific terminal by ID.
-	pub fn get_terminal_mut(&mut self, id: TerminalId) -> Option<&mut TerminalBuffer> {
-		self.buffers.get_terminal_mut(id)
+	/// Returns a mutable reference to a terminal panel by ID.
+	pub fn get_terminal_mut(&mut self, id: PanelId) -> Option<&mut TerminalBuffer> {
+		self.panels.get_mut::<TerminalBuffer>(id)
 	}
 
 	/// Returns the number of open text buffers.
@@ -91,15 +95,10 @@ impl Editor {
 		self.buffers.buffer_count()
 	}
 
-	/// Returns the number of open terminals.
-	pub fn terminal_count(&self) -> usize {
-		self.buffers.terminal_count()
-	}
-
-	/// Returns the cursor style for the focused terminal, if any.
+	/// Returns the cursor style for the focused terminal panel, if any.
 	pub fn focused_terminal_cursor_style(&self) -> Option<evildoer_manifest::SplitCursorStyle> {
-		let terminal_id = self.focused_terminal_id()?;
-		let terminal = self.get_terminal(terminal_id)?;
+		let panel_id = self.focused_panel_id()?;
+		let terminal = self.get_terminal(panel_id)?;
 		terminal.cursor().map(|c| c.style)
 	}
 }

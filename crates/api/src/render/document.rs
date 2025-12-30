@@ -214,18 +214,6 @@ impl Editor {
 							ensure_buffer_cursor_visible(buffer, *area);
 						}
 					}
-					BufferView::Terminal(terminal_id) => {
-						if let Some(terminal) = self.get_terminal_mut(*terminal_id) {
-							let size = evildoer_manifest::SplitSize::new(area.width, area.height);
-							terminal.resize(size);
-						}
-					}
-					BufferView::Debug(_) => {
-						if let Some(debug) = &mut self.debug_panel {
-							let size = evildoer_manifest::SplitSize::new(area.width, area.height);
-							debug.resize(size);
-						}
-					}
 					BufferView::Panel(panel_id) => {
 						self.resize_panel(*panel_id, *area);
 					}
@@ -267,16 +255,6 @@ impl Editor {
 							let result =
 								ctx.render_buffer(buffer, *area, use_block_cursor, is_focused);
 							frame.render_widget(result.widget, *area);
-						}
-					}
-					BufferView::Terminal(terminal_id) => {
-						if let Some(terminal) = self.get_terminal(*terminal_id) {
-							self.render_terminal(frame, terminal, *area, is_focused);
-						}
-					}
-					BufferView::Debug(_) => {
-						if let Some(debug) = &self.debug_panel {
-							self.render_debug_panel(frame, debug, *area, is_focused);
 						}
 					}
 					BufferView::Panel(panel_id) => {

@@ -3,12 +3,10 @@
 //! The `Layout` enum represents how buffers are arranged in the editor window.
 //! It supports recursive splitting for complex layouts.
 //!
-//! The layout system is view-agnostic: it can contain text buffers, terminals,
-//! or any other content type via the `BufferView` enum.
+//! The layout system is view-agnostic: it can contain text buffers or panels.
 //!
 //! Split positions are stored as absolute screen coordinates, not ratios.
-//! This ensures splits remain stable when other UI elements (like the dock
-//! terminal) appear or disappear.
+//! This ensures splits remain stable when other UI elements appear or disappear.
 
 mod areas;
 mod navigation;
@@ -18,13 +16,13 @@ mod types;
 
 use evildoer_manifest::PanelId;
 use evildoer_tui::layout::Rect;
-pub use types::{BufferView, DebugPanelId, SplitDirection, SplitPath, TerminalId};
+pub use types::{BufferView, SplitDirection, SplitPath};
 
 use super::BufferId;
 
 /// Layout tree for buffer arrangement.
 ///
-/// Represents how views (text buffers and terminals) are arranged in splits.
+/// Represents how views (text buffers and panels) are arranged in splits.
 /// The layout is a binary tree where leaves are single views and internal
 /// nodes are splits.
 ///
@@ -35,19 +33,7 @@ use super::BufferId;
 /// ├── first: Layout::Single(BufferView::Text(1))
 /// └── second: Layout::Split
 ///     ├── first: Layout::Single(BufferView::Text(2))
-///     └── second: Layout::Single(BufferView::Terminal(1))
-/// ```
-///
-/// # Creating Layouts
-///
-/// Splits require the current view area to compute absolute separator positions:
-///
-/// ```ignore
-/// let layout = Layout::side_by_side(
-///     Layout::text(buffer_id),
-///     Layout::terminal(terminal_id),
-///     view_area,
-/// );
+///     └── second: Layout::Single(BufferView::Panel(...))
 /// ```
 #[derive(Debug, Clone)]
 pub enum Layout {
@@ -83,12 +69,7 @@ impl Layout {
 		Layout::Single(BufferView::Text(buffer_id))
 	}
 
-	/// Creates a new single-view layout for a terminal.
-	pub fn terminal(terminal_id: TerminalId) -> Self {
-		Layout::Single(BufferView::Terminal(terminal_id))
-	}
-
-	/// Creates a new single-view layout for a generic panel.
+	/// Creates a new single-view layout for a panel.
 	pub fn panel(panel_id: PanelId) -> Self {
 		Layout::Single(BufferView::Panel(panel_id))
 	}
@@ -139,9 +120,7 @@ impl Layout {
 	pub fn first_buffer(&self) -> Option<BufferId> {
 		match self {
 			Layout::Single(BufferView::Text(id)) => Some(*id),
-			Layout::Single(
-				BufferView::Terminal(_) | BufferView::Debug(_) | BufferView::Panel(_),
-			) => None,
+			Layout::Single(BufferView::Panel(_)) => None,
 			Layout::Split { first, second, .. } => {
 				first.first_buffer().or_else(|| second.first_buffer())
 			}
@@ -168,14 +147,6 @@ impl Layout {
 			.collect()
 	}
 
-	/// Returns all terminal IDs in this layout.
-	pub fn terminal_ids(&self) -> Vec<TerminalId> {
-		self.views()
-			.into_iter()
-			.filter_map(|v| v.as_terminal())
-			.collect()
-	}
-
 	/// Returns all panel IDs in this layout.
 	pub fn panel_ids(&self) -> Vec<PanelId> {
 		self.views()
@@ -197,11 +168,6 @@ impl Layout {
 	/// Checks if this layout contains a specific text buffer.
 	pub fn contains(&self, buffer_id: BufferId) -> bool {
 		self.contains_view(BufferView::Text(buffer_id))
-	}
-
-	/// Checks if this layout contains a specific terminal.
-	pub fn contains_terminal(&self, terminal_id: TerminalId) -> bool {
-		self.contains_view(BufferView::Terminal(terminal_id))
 	}
 
 	/// Checks if this layout contains a specific panel.
@@ -256,11 +222,6 @@ impl Layout {
 	/// Removes a buffer from the layout, collapsing splits as needed.
 	pub fn remove(&self, target: BufferId) -> Option<Layout> {
 		self.remove_view(BufferView::Text(target))
-	}
-
-	/// Removes a terminal from the layout, collapsing splits as needed.
-	pub fn remove_terminal(&self, target: TerminalId) -> Option<Layout> {
-		self.remove_view(BufferView::Terminal(target))
 	}
 
 	/// Removes a panel from the layout, collapsing splits as needed.

@@ -4,13 +4,6 @@ use evildoer_manifest::PanelId;
 
 use super::super::BufferId;
 
-/// Unique identifier for a debug panel.
-///
-/// Currently only one debug panel is supported (ID 0), but this allows for
-/// future expansion to multiple debug views.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct DebugPanelId(pub u64);
-
 /// Path to a split in the layout tree.
 ///
 /// Each element indicates which branch to take: `false` for first child,
@@ -30,43 +23,23 @@ pub enum SplitDirection {
 	Vertical,
 }
 
-/// Unique identifier for a terminal buffer.
-///
-/// Terminal IDs are assigned sequentially starting from 1 when terminals
-/// are created via [`Editor::split_horizontal_terminal`] or
-/// [`Editor::split_vertical_terminal`].
-///
-/// [`Editor::split_horizontal_terminal`]: crate::Editor::split_horizontal_terminal
-/// [`Editor::split_vertical_terminal`]: crate::Editor::split_vertical_terminal
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TerminalId(pub u64);
-
-/// A view in the layout - either a text buffer, terminal, debug panel, or generic panel.
+/// A view in the layout - either a text buffer or a panel.
 ///
 /// This enum enables the layout system to manage heterogeneous content types
 /// in splits. The editor tracks the focused view via this type, allowing
-/// seamless navigation between text editing and other content.
+/// seamless navigation between text editing and panel content.
 ///
 /// # Focus Handling
 ///
-/// When a non-text view is focused, text-editing operations are unavailable.
+/// When a panel is focused, text-editing operations are unavailable.
 /// Use [`Editor::is_text_focused`] to check focus type before operations.
-///
-/// # Panel System
-///
-/// The `Panel` variant uses the generic panel system for extensible panel types.
-/// The legacy `Terminal` and `Debug` variants are retained for backward compatibility.
 ///
 /// [`Editor::is_text_focused`]: crate::Editor::is_text_focused
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BufferView {
 	/// A text buffer for document editing.
 	Text(BufferId),
-	/// An embedded terminal emulator (legacy variant).
-	Terminal(TerminalId),
-	/// A debug panel showing logs and diagnostics (legacy variant).
-	Debug(DebugPanelId),
-	/// A generic panel (terminal, debug, file tree, etc.) via the panel system.
+	/// A panel (terminal, debug, file tree, etc.).
 	Panel(PanelId),
 }
 
@@ -75,31 +48,15 @@ impl BufferView {
 	pub fn as_text(&self) -> Option<BufferId> {
 		match self {
 			BufferView::Text(id) => Some(*id),
-			BufferView::Terminal(_) | BufferView::Debug(_) | BufferView::Panel(_) => None,
+			BufferView::Panel(_) => None,
 		}
 	}
 
-	/// Returns the terminal ID if this is a terminal view.
-	pub fn as_terminal(&self) -> Option<TerminalId> {
-		match self {
-			BufferView::Terminal(id) => Some(*id),
-			BufferView::Text(_) | BufferView::Debug(_) | BufferView::Panel(_) => None,
-		}
-	}
-
-	/// Returns the debug panel ID if this is a debug view.
-	pub fn as_debug(&self) -> Option<DebugPanelId> {
-		match self {
-			BufferView::Debug(id) => Some(*id),
-			BufferView::Text(_) | BufferView::Terminal(_) | BufferView::Panel(_) => None,
-		}
-	}
-
-	/// Returns the panel ID if this is a generic panel view.
+	/// Returns the panel ID if this is a panel view.
 	pub fn as_panel(&self) -> Option<PanelId> {
 		match self {
 			BufferView::Panel(id) => Some(*id),
-			BufferView::Text(_) | BufferView::Terminal(_) | BufferView::Debug(_) => None,
+			BufferView::Text(_) => None,
 		}
 	}
 
@@ -108,35 +65,19 @@ impl BufferView {
 		matches!(self, BufferView::Text(_))
 	}
 
-	/// Returns true if this is a terminal view.
-	pub fn is_terminal(&self) -> bool {
-		matches!(self, BufferView::Terminal(_))
-	}
-
-	/// Returns true if this is a debug panel view.
-	pub fn is_debug(&self) -> bool {
-		matches!(self, BufferView::Debug(_))
-	}
-
-	/// Returns true if this is a generic panel view.
+	/// Returns true if this is a panel view.
 	pub fn is_panel(&self) -> bool {
 		matches!(self, BufferView::Panel(_))
-	}
-
-	/// Returns true if this is any non-text view (terminal, debug, or panel).
-	pub fn is_non_text(&self) -> bool {
-		!self.is_text()
 	}
 
 	/// Returns the visual priority of this view type.
 	///
 	/// Higher values indicate lighter backgrounds. Separators use the background
-	/// color of the adjacent view with the highest priority, ensuring borders
-	/// blend with the lighter pane.
+	/// color of the adjacent view with the highest priority.
 	pub fn visual_priority(&self) -> u8 {
 		match self {
 			BufferView::Text(_) => 0,
-			BufferView::Terminal(_) | BufferView::Debug(_) | BufferView::Panel(_) => 1,
+			BufferView::Panel(_) => 1,
 		}
 	}
 }
@@ -144,18 +85,6 @@ impl BufferView {
 impl From<BufferId> for BufferView {
 	fn from(id: BufferId) -> Self {
 		BufferView::Text(id)
-	}
-}
-
-impl From<TerminalId> for BufferView {
-	fn from(id: TerminalId) -> Self {
-		BufferView::Terminal(id)
-	}
-}
-
-impl From<DebugPanelId> for BufferView {
-	fn from(id: DebugPanelId) -> Self {
-		BufferView::Debug(id)
 	}
 }
 
