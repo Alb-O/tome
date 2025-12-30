@@ -11,9 +11,9 @@ use super::Editor;
 impl Editor {
 	/// Returns the line number containing the cursor.
 	///
-	/// Returns 0 if a terminal is focused.
+	/// Returns 0 if a terminal or debug panel is focused.
 	pub fn cursor_line(&self) -> usize {
-		if self.is_terminal_focused() {
+		if self.is_terminal_focused() || self.is_debug_focused() {
 			0
 		} else {
 			self.buffer().cursor_line()
@@ -22,9 +22,9 @@ impl Editor {
 
 	/// Returns the column of the cursor within its line.
 	///
-	/// Returns 0 if a terminal is focused.
+	/// Returns 0 if a terminal or debug panel is focused.
 	pub fn cursor_col(&self) -> usize {
-		if self.is_terminal_focused() {
+		if self.is_terminal_focused() || self.is_debug_focused() {
 			0
 		} else {
 			self.buffer().cursor_col()
@@ -33,9 +33,9 @@ impl Editor {
 
 	/// Computes the gutter width based on total line count.
 	///
-	/// Returns 0 if a terminal is focused.
+	/// Returns 0 if a terminal or debug panel is focused.
 	pub fn gutter_width(&self) -> u16 {
-		if self.is_terminal_focused() {
+		if self.is_terminal_focused() || self.is_debug_focused() {
 			0
 		} else {
 			self.buffer().gutter_width()

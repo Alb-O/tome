@@ -147,6 +147,10 @@ impl BufferOpsAccess for Editor {
 		Editor::toggle_terminal(self);
 	}
 
+	fn toggle_debug_panel(&mut self) {
+		Editor::toggle_debug_panel(self);
+	}
+
 	fn buffer_next(&mut self) {
 		self.focus_next_buffer();
 	}

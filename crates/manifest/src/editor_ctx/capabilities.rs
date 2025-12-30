@@ -267,6 +267,8 @@ pub trait BufferOpsAccess {
 	fn split_terminal_vertical(&mut self);
 	/// Toggle terminal split (open if closed, close if open).
 	fn toggle_terminal(&mut self);
+	/// Toggle the debug panel (open if closed, close if open).
+	fn toggle_debug_panel(&mut self);
 	/// Switch to the next buffer.
 	fn buffer_next(&mut self);
 	/// Switch to the previous buffer.

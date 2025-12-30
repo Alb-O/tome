@@ -17,7 +17,7 @@ mod tests;
 mod types;
 
 use evildoer_tui::layout::Rect;
-pub use types::{BufferView, SplitDirection, SplitPath, TerminalId};
+pub use types::{BufferView, DebugPanelId, SplitDirection, SplitPath, TerminalId};
 
 use super::BufferId;
 
@@ -133,7 +133,7 @@ impl Layout {
 	pub fn first_buffer(&self) -> Option<BufferId> {
 		match self {
 			Layout::Single(BufferView::Text(id)) => Some(*id),
-			Layout::Single(BufferView::Terminal(_)) => None,
+			Layout::Single(BufferView::Terminal(_) | BufferView::Debug(_)) => None,
 			Layout::Split { first, second, .. } => {
 				first.first_buffer().or_else(|| second.first_buffer())
 			}

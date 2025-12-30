@@ -2,6 +2,13 @@
 
 use super::super::BufferId;
 
+/// Unique identifier for a debug panel.
+///
+/// Currently only one debug panel is supported (ID 0), but this allows for
+/// future expansion to multiple debug views.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct DebugPanelId(pub u64);
+
 /// Path to a split in the layout tree.
 ///
 /// Each element indicates which branch to take: `false` for first child,
@@ -52,6 +59,8 @@ pub enum BufferView {
 	Text(BufferId),
 	/// An embedded terminal emulator.
 	Terminal(TerminalId),
+	/// A debug panel showing logs and diagnostics.
+	Debug(DebugPanelId),
 }
 
 impl BufferView {
@@ -59,15 +68,23 @@ impl BufferView {
 	pub fn as_text(&self) -> Option<BufferId> {
 		match self {
 			BufferView::Text(id) => Some(*id),
-			BufferView::Terminal(_) => None,
+			BufferView::Terminal(_) | BufferView::Debug(_) => None,
 		}
 	}
 
 	/// Returns the terminal ID if this is a terminal view.
 	pub fn as_terminal(&self) -> Option<TerminalId> {
 		match self {
-			BufferView::Text(_) => None,
 			BufferView::Terminal(id) => Some(*id),
+			BufferView::Text(_) | BufferView::Debug(_) => None,
+		}
+	}
+
+	/// Returns the debug panel ID if this is a debug view.
+	pub fn as_debug(&self) -> Option<DebugPanelId> {
+		match self {
+			BufferView::Debug(id) => Some(*id),
+			BufferView::Text(_) | BufferView::Terminal(_) => None,
 		}
 	}
 
@@ -81,6 +98,11 @@ impl BufferView {
 		matches!(self, BufferView::Terminal(_))
 	}
 
+	/// Returns true if this is a debug panel view.
+	pub fn is_debug(&self) -> bool {
+		matches!(self, BufferView::Debug(_))
+	}
+
 	/// Returns the visual priority of this view type.
 	///
 	/// Higher values indicate lighter backgrounds. Separators use the background
@@ -90,6 +112,7 @@ impl BufferView {
 		match self {
 			BufferView::Text(_) => 0,
 			BufferView::Terminal(_) => 1,
+			BufferView::Debug(_) => 1,
 		}
 	}
 }
@@ -103,5 +126,11 @@ impl From<BufferId> for BufferView {
 impl From<TerminalId> for BufferView {
 	fn from(id: TerminalId) -> Self {
 		BufferView::Terminal(id)
+	}
+}
+
+impl From<DebugPanelId> for BufferView {
+	fn from(id: DebugPanelId) -> Self {
+		BufferView::Debug(id)
 	}
 }

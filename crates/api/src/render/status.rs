@@ -30,6 +30,17 @@ impl Editor {
 					0,
 					0,
 				)
+			} else if self.is_debug_focused() {
+				(
+					None,
+					Some("debug".to_string()),
+					false,
+					"DEBUG",
+					0,
+					0,
+					0,
+					0,
+				)
 			} else {
 				let buffer = self.buffer();
 				let path_str = buffer

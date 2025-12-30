@@ -28,6 +28,7 @@
 
 pub mod buffer;
 pub mod capabilities;
+pub mod debug;
 pub mod editor;
 #[cfg(feature = "lsp")]
 pub mod lsp;
@@ -39,6 +40,7 @@ pub mod test_events;
 pub mod ui;
 
 pub use buffer::{Buffer, BufferId, HistoryResult};
+pub use debug::{DebugPanel, DebugPanelLayer};
 pub use editor::Editor;
 pub use evildoer_manifest::{
 	PopupColors, StatusColors, THEMES, Theme, ThemeColors, UiColors, blend_colors, get_theme,

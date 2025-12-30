@@ -723,6 +723,8 @@ dependencies = [
  "tokio",
  "tokio-util",
  "toml",
+ "tracing",
+ "tracing-subscriber",
  "tree-house",
  "unicode-segmentation",
  "unicode-width 0.2.2",
@@ -956,6 +958,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "toml",
+ "tracing-subscriber",
 ]
 
 [[package]]

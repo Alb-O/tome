@@ -220,6 +220,12 @@ impl Editor {
 							terminal.resize(size);
 						}
 					}
+					BufferView::Debug(_) => {
+						if let Some(debug) = &mut self.debug_panel {
+							let size = evildoer_manifest::SplitSize::new(area.width, area.height);
+							debug.resize(size);
+						}
+					}
 				}
 			}
 		}
@@ -263,6 +269,11 @@ impl Editor {
 					BufferView::Terminal(terminal_id) => {
 						if let Some(terminal) = self.get_terminal(*terminal_id) {
 							self.render_terminal(frame, terminal, *area, is_focused);
+						}
+					}
+					BufferView::Debug(_) => {
+						if let Some(debug) = &self.debug_panel {
+							self.render_debug_panel(frame, debug, *area, is_focused);
 						}
 					}
 				}
@@ -514,6 +525,63 @@ impl Editor {
 			let y = area.y + cursor.row;
 			if x < area.x + area.width && y < area.y + area.height {
 				frame.set_cursor_position(evildoer_tui::layout::Position { x, y });
+			}
+		}
+	}
+
+	/// Renders a debug panel into the given area.
+	fn render_debug_panel(
+		&self,
+		frame: &mut evildoer_tui::Frame,
+		debug: &crate::debug::DebugPanel,
+		area: Rect,
+		_is_focused: bool,
+	) {
+		let base_style = Style::default()
+			.bg(self.theme.colors.popup.bg.into())
+			.fg(self.theme.colors.popup.fg.into());
+
+		frame.render_widget(Block::default().style(base_style), area);
+
+		let mut cells_to_render = Vec::new();
+		debug.for_each_cell(|row, col, cell| {
+			if row < area.height && col < area.width && !cell.wide_continuation {
+				cells_to_render.push((row, col, cell.clone()));
+			}
+		});
+
+		let buf = frame.buffer_mut();
+		for (row, col, cell) in cells_to_render {
+			let x = area.x + col;
+			let y = area.y + row;
+
+			let mut style = base_style;
+
+			if let Some(fg) = cell.fg {
+				style = style.fg(convert_split_color(fg));
+			}
+			if let Some(bg) = cell.bg {
+				style = style.bg(convert_split_color(bg));
+			}
+
+			let mut mods = Modifier::empty();
+			if cell.attrs.contains(SplitAttrs::BOLD) {
+				mods |= Modifier::BOLD;
+			}
+			if cell.attrs.contains(SplitAttrs::ITALIC) {
+				mods |= Modifier::ITALIC;
+			}
+			if cell.attrs.contains(SplitAttrs::UNDERLINE) {
+				mods |= Modifier::UNDERLINED;
+			}
+			style = style.add_modifier(mods);
+
+			let out = &mut buf[(x, y)];
+			out.set_style(style);
+			if cell.symbol.is_empty() {
+				out.set_symbol(" ");
+			} else {
+				out.set_symbol(&cell.symbol);
 			}
 		}
 	}

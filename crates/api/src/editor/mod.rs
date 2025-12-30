@@ -26,7 +26,8 @@ pub use layout_manager::{LayoutManager, SeparatorHit, SeparatorId};
 pub use types::{HistoryEntry, Registers};
 
 pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
-use crate::buffer::{BufferId, BufferView, Layout, TerminalId};
+use crate::buffer::{BufferId, BufferView, DebugPanelId, Layout, TerminalId};
+use crate::debug::DebugPanel;
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
 use crate::ui::UiManager;
@@ -126,12 +127,15 @@ pub struct Editor {
 
 	/// Views with sticky focus (resist mouse hover focus changes).
 	sticky_views: HashSet<BufferView>,
+
+	pub debug_panel: Option<DebugPanel>,
+	debug_panel_id: Option<DebugPanelId>,
 }
 
 impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
 	fn is_modified(&self) -> bool {
-		// Terminals are never considered "modified" for save purposes
-		if self.is_terminal_focused() {
+		// Terminals and debug panels are never considered "modified" for save purposes
+		if self.is_terminal_focused() || self.is_debug_focused() {
 			return false;
 		}
 		self.buffer().modified()
@@ -143,10 +147,15 @@ impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
 		Box<dyn std::future::Future<Output = Result<(), evildoer_manifest::CommandError>> + '_>,
 	> {
 		Box::pin(async move {
-			// Cannot save a terminal
+			// Cannot save a terminal or debug panel
 			if self.is_terminal_focused() {
 				return Err(evildoer_manifest::CommandError::InvalidArgument(
 					"Cannot save a terminal".to_string(),
+				));
+			}
+			if self.is_debug_focused() {
+				return Err(evildoer_manifest::CommandError::InvalidArgument(
+					"Cannot save a debug panel".to_string(),
 				));
 			}
 
@@ -285,6 +294,8 @@ impl Editor {
 			dirty_buffers: HashSet::new(),
 			docked_terminal: None,
 			sticky_views: HashSet::new(),
+			debug_panel: None,
+			debug_panel_id: None,
 		}
 	}
 
@@ -534,6 +545,41 @@ impl Editor {
 		self.focus_terminal(terminal_id);
 	}
 
+	/// Layer index for the debug panel.
+	const DEBUG_LAYER: usize = 2;
+
+	/// Toggles the debug panel.
+	///
+	/// If visible, hides it (preserving state). Otherwise shows it on layer 2.
+	pub fn toggle_debug_panel(&mut self) {
+		let debug_view = self.debug_panel_id.map(BufferView::Debug);
+
+		if let Some(view) = debug_view
+			&& self.layout.contains_view(view)
+		{
+			self.sticky_views.remove(&view);
+			self.layout.set_layer(Self::DEBUG_LAYER, None);
+			let new_focus = self.layout.first_view();
+			self.buffers.set_focused_view(new_focus);
+			self.needs_redraw = true;
+			return;
+		}
+
+		let debug_id = self.debug_panel_id.unwrap_or_else(|| {
+			let id = DebugPanelId(DebugPanel::next_id());
+			self.debug_panel = Some(DebugPanel::new());
+			self.debug_panel_id = Some(id);
+			id
+		});
+
+		let debug_view = BufferView::Debug(debug_id);
+		self.sticky_views.insert(debug_view);
+		self.layout
+			.set_layer(Self::DEBUG_LAYER, Some(Layout::single(debug_view)));
+		self.buffers.set_focused_view(debug_view);
+		self.needs_redraw = true;
+	}
+
 	pub fn request_quit(&mut self) {
 		self.pending_quit = true;
 	}
@@ -580,13 +626,16 @@ impl Editor {
 			return false;
 		}
 
-		// Remove the actual buffer/terminal
+		// Remove the actual buffer/terminal/debug panel
 		match view {
 			BufferView::Text(id) => {
 				self.buffers.remove_buffer(id);
 			}
 			BufferView::Terminal(id) => {
 				self.buffers.remove_terminal(id);
+			}
+			BufferView::Debug(_) => {
+				self.debug_panel = None;
 			}
 		}
 
@@ -628,12 +677,12 @@ impl Editor {
 	pub fn close_current_buffer(&mut self) -> bool {
 		match self.buffers.focused_view() {
 			BufferView::Text(id) => self.close_buffer(id),
-			BufferView::Terminal(_) => false,
+			BufferView::Terminal(_) | BufferView::Debug(_) => false,
 		}
 	}
 
 	pub fn mode(&self) -> Mode {
-		if self.is_terminal_focused() {
+		if self.is_terminal_focused() || self.is_debug_focused() {
 			// Check if we're in window mode (using first buffer's input handler)
 			if let Some(first_buffer_id) = self.layout.first_buffer()
 				&& let Some(buffer) = self.buffers.get_buffer(first_buffer_id)
@@ -643,7 +692,7 @@ impl Editor {
 					return mode;
 				}
 			}
-			Mode::Insert // Terminal is always in "insert" mode effectively
+			Mode::Normal // Non-text views show as Normal mode
 		} else {
 			self.buffer().input.mode()
 		}
@@ -659,6 +708,8 @@ impl Editor {
 				return buffer.input.mode_name();
 			}
 			"TERMINAL"
+		} else if self.is_debug_focused() {
+			"DEBUG"
 		} else {
 			self.buffer().input.mode_name()
 		}
@@ -699,6 +750,14 @@ impl Editor {
 					// Terminal exited, close it
 					self.close_terminal(id);
 				}
+			}
+		}
+
+		// Tick the debug panel
+		if let Some(debug) = &mut self.debug_panel {
+			let result = debug.tick(Duration::from_millis(16));
+			if result.needs_redraw {
+				self.needs_redraw = true;
 			}
 		}
 

@@ -22,7 +22,7 @@ use evildoer_input::InputHandler;
 use evildoer_language::LanguageLoader;
 use evildoer_manifest::Mode;
 pub use history::HistoryResult;
-pub use layout::{BufferView, Layout, SplitDirection, SplitPath, TerminalId};
+pub use layout::{BufferView, DebugPanelId, Layout, SplitDirection, SplitPath, TerminalId};
 
 /// Unique identifier for a buffer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

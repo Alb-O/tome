@@ -41,6 +41,11 @@ impl Editor {
 		self.buffers.is_terminal_focused()
 	}
 
+	/// Returns true if the focused view is a debug panel.
+	pub fn is_debug_focused(&self) -> bool {
+		self.focused_view().is_debug()
+	}
+
 	/// Returns the ID of the focused text buffer, if one is focused.
 	pub fn focused_buffer_id(&self) -> Option<BufferId> {
 		self.buffers.focused_buffer_id()

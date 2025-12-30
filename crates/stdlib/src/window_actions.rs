@@ -49,6 +49,14 @@ action!(toggle_terminal, {
 	handler_slice: RESULT_TOGGLE_TERMINAL_HANDLERS,
 }, |ops| ops.toggle_terminal());
 
+action!(toggle_debug_panel, {
+	description: "Toggle debug panel",
+	key: Key::char('D'),
+	mode: Normal,
+	result: ToggleDebugPanel,
+	handler_slice: RESULT_TOGGLE_DEBUG_PANEL_HANDLERS,
+}, |ops| ops.toggle_debug_panel());
+
 action!(focus_left, {
 	description: "Focus split to the left",
 	key: Key::char('h'),

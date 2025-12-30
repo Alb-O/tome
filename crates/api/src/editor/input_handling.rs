@@ -140,6 +140,34 @@ impl Editor {
 			return false;
 		}
 
+		// If a debug panel is focused, route input to it
+		if let BufferView::Debug(_) = self.focused_view() {
+			// Escape releases focus back to the first text buffer
+			if key.code == KeyCode::Escape {
+				if let Some(first_buffer) = self.layout.first_buffer() {
+					self.focus_buffer(first_buffer);
+				}
+				self.needs_redraw = true;
+				return false;
+			}
+
+			// Route all other keys to the debug panel
+			if let Some(split_key) = convert_termina_key(&key)
+				&& let Some(debug) = &mut self.debug_panel
+			{
+				let result = debug.handle_key(split_key);
+				if result.needs_redraw {
+					self.needs_redraw = true;
+				}
+				if result.release_focus {
+					if let Some(first_buffer) = self.layout.first_buffer() {
+						self.focus_buffer(first_buffer);
+					}
+				}
+			}
+			return false;
+		}
+
 		self.handle_key_active(key).await
 	}
 
@@ -435,6 +463,21 @@ impl Editor {
 				&& let Some(terminal) = self.get_terminal_mut(terminal_id)
 			{
 				let result = terminal.handle_mouse(split_mouse);
+				if result.needs_redraw {
+					self.needs_redraw = true;
+				}
+			}
+			return false;
+		}
+
+		if let BufferView::Debug(_) = self.focused_view() {
+			let local_x = mouse_x.saturating_sub(view_area.x);
+			let local_y = mouse_y.saturating_sub(view_area.y);
+
+			if let Some(split_mouse) = convert_mouse_event(&mouse, local_x, local_y)
+				&& let Some(debug) = &mut self.debug_panel
+			{
+				let result = debug.handle_mouse(split_mouse);
 				if result.needs_redraw {
 					self.needs_redraw = true;
 				}

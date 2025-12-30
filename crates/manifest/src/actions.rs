@@ -53,6 +53,9 @@ pub enum ActionResult {
 	/// Toggle terminal split.
 	#[terminal_safe]
 	ToggleTerminal,
+	/// Toggle debug panel.
+	#[terminal_safe]
+	ToggleDebugPanel,
 	/// Switch to next buffer.
 	#[terminal_safe]
 	BufferNext,
