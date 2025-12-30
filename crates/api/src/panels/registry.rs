@@ -1,6 +1,5 @@
-//! Panel instance registry using type-erased storage.
+//! Panel instance registry using trait object storage.
 
-use std::any::Any;
 use std::collections::HashMap;
 
 use evildoer_manifest::{PanelId, SplitBuffer, find_factory, find_panel, panel_kind_index};
@@ -11,10 +10,10 @@ use evildoer_manifest::{PanelId, SplitBuffer, find_factory, find_panel, panel_ki
 /// and access. Each panel type can have multiple instances (unless marked
 /// as singleton in its definition).
 ///
-/// Panels are stored type-erased (`Box<dyn Any + Send>`) and can be retrieved
-/// via downcasting. This follows the same pattern as [`ExtensionMap`](crate::editor::extensions::ExtensionMap).
+/// Panels are stored as trait objects (`Box<dyn SplitBuffer>`) providing
+/// uniform access to all panel operations without type dispatch.
 pub struct PanelRegistry {
-	instances: HashMap<PanelId, Box<dyn Any + Send>>,
+	instances: HashMap<PanelId, Box<dyn SplitBuffer>>,
 	next_instance: HashMap<u16, u16>,
 }
 
@@ -61,11 +60,7 @@ impl PanelRegistry {
 	/// Inserts a panel instance directly.
 	///
 	/// Useful when the panel is created externally (e.g., by the Editor).
-	pub fn insert<T: SplitBuffer + Send + 'static>(
-		&mut self,
-		name: &str,
-		panel: T,
-	) -> Option<PanelId> {
+	pub fn insert<T: SplitBuffer + 'static>(&mut self, name: &str, panel: T) -> Option<PanelId> {
 		let kind = panel_kind_index(name)?;
 		let instance = self.next_instance.entry(kind).or_insert(0);
 		let id = PanelId::new(kind, *instance);
@@ -93,24 +88,19 @@ impl PanelRegistry {
 			.copied()
 	}
 
-	/// Returns a reference to a panel by ID, downcasted to the expected type.
-	pub fn get<T: 'static>(&self, id: PanelId) -> Option<&T> {
-		self.instances.get(&id)?.downcast_ref()
+	/// Returns a reference to a panel by ID.
+	pub fn get(&self, id: PanelId) -> Option<&(dyn SplitBuffer + 'static)> {
+		self.instances.get(&id).map(|b| &**b)
 	}
 
-	/// Returns a mutable reference to a panel by ID, downcasted to the expected type.
-	pub fn get_mut<T: 'static>(&mut self, id: PanelId) -> Option<&mut T> {
-		self.instances.get_mut(&id)?.downcast_mut()
-	}
-
-	/// Removes a panel instance, returning it if the type matches.
-	pub fn remove<T: 'static>(&mut self, id: PanelId) -> Option<T> {
-		self.instances.remove(&id)?.downcast().ok().map(|b| *b)
+	/// Returns a mutable reference to a panel by ID.
+	pub fn get_mut(&mut self, id: PanelId) -> Option<&mut (dyn SplitBuffer + 'static)> {
+		self.instances.get_mut(&id).map(|b| &mut **b)
 	}
 
 	/// Removes a panel by ID.
-	pub fn remove_any(&mut self, id: PanelId) -> bool {
-		self.instances.remove(&id).is_some()
+	pub fn remove(&mut self, id: PanelId) -> Option<Box<dyn SplitBuffer>> {
+		self.instances.remove(&id)
 	}
 
 	/// Returns true if a panel with the given ID exists.

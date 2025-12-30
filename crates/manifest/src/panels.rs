@@ -7,11 +7,10 @@
 //! Define panels with the [`panel!`](crate::panel) macro, which registers a
 //! [`PanelDef`] and optionally a [`PanelFactoryDef`] for creating instances.
 
-use std::any::Any;
-
 use linkme::distributed_slice;
 
 use crate::RegistrySource;
+use crate::split_buffer::SplitBuffer;
 
 /// Unique identifier for a panel instance.
 ///
@@ -98,7 +97,9 @@ impl crate::RegistryMetadata for PanelDef {
 pub static PANELS: [PanelDef];
 
 /// Factory function type for creating panel instances.
-pub type PanelFactory = fn() -> Box<dyn Any + Send>;
+///
+/// Returns a boxed trait object implementing [`SplitBuffer`].
+pub type PanelFactory = fn() -> Box<dyn SplitBuffer>;
 
 /// Registration for a panel factory.
 ///

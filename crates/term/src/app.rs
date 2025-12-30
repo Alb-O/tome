@@ -42,14 +42,13 @@ pub async fn run_editor(mut editor: Editor) -> io::Result<()> {
 
 			terminal.draw(|frame| editor.render(frame))?;
 
-			// Set terminal cursor style based on mode.
-			// Priority: focused panel > focused terminal > editor mode
+			// Priority: UI panel > split buffer panel > editor mode
 			let cursor_style = editor
 				.ui
 				.cursor_style()
 				.or_else(|| {
 					editor
-						.focused_terminal_cursor_style()
+						.focused_panel_cursor_style()
 						.map(split_cursor_to_termina)
 				})
 				.unwrap_or_else(|| cursor_style_for_mode(editor.mode()));

@@ -66,31 +66,6 @@ impl TerminalBuffer {
 		self.terminal.as_ref().map(|t| t.screen())
 	}
 
-	/// Returns true if the cell at (row, col) is selected.
-	///
-	/// Trailing whitespace (empty cells at end of line) is excluded from selection
-	/// to match text editor behavior.
-	pub fn is_selected(&self, row: u16, col: u16) -> bool {
-		let Some(sel) = self.selection else {
-			return false;
-		};
-		if !sel.contains(row, col) {
-			return false;
-		}
-		let Some(screen) = self.screen() else {
-			return true;
-		};
-		let (_, cols) = screen.size();
-		for c in (col..cols).rev() {
-			if let Some(cell) = screen.cell(row, c)
-				&& cell.has_contents()
-			{
-				return c >= col;
-			}
-		}
-		false
-	}
-
 	fn start_prewarm(&mut self) {
 		if self.terminal.is_some() || self.prewarm.is_some() {
 			return;
@@ -260,10 +235,28 @@ impl SplitBuffer for TerminalBuffer {
 		})
 	}
 
-	fn for_each_cell<F>(&self, mut f: F)
-	where
-		F: FnMut(u16, u16, &SplitCell),
-	{
+	fn is_selected(&self, row: u16, col: u16) -> bool {
+		let Some(sel) = self.selection else {
+			return false;
+		};
+		if !sel.contains(row, col) {
+			return false;
+		}
+		let Some(screen) = self.screen() else {
+			return true;
+		};
+		let (_, cols) = screen.size();
+		for c in (col..cols).rev() {
+			if let Some(cell) = screen.cell(row, c)
+				&& cell.has_contents()
+			{
+				return c >= col;
+			}
+		}
+		false
+	}
+
+	fn for_each_cell(&self, f: &mut dyn FnMut(u16, u16, &SplitCell)) {
 		let Some(term) = &self.terminal else {
 			return;
 		};

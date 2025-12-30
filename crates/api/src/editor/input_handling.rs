@@ -1,8 +1,7 @@
 use evildoer_base::{Key, Position, Selection};
 use evildoer_input::KeyResult;
 use evildoer_manifest::{
-	Mode, SplitBuffer, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction,
-	SplitMouseButton,
+	Mode, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction, SplitMouseButton,
 };
 use termina::event::{KeyCode, Modifiers};
 
@@ -529,37 +528,27 @@ impl Editor {
 		self.ui.compute_layout(main_area).doc_area
 	}
 
-	/// Handles a key event for a generic panel.
+	/// Handles a key event for a panel.
 	fn handle_panel_key(
 		&mut self,
 		panel_id: evildoer_manifest::PanelId,
 		key: SplitKey,
 	) -> evildoer_manifest::SplitEventResult {
-		use crate::debug::DebugPanel;
-		use crate::terminal::TerminalBuffer;
-
-		if let Some(terminal) = self.panels.get_mut::<TerminalBuffer>(panel_id) {
-			terminal.handle_key(key)
-		} else if let Some(debug) = self.panels.get_mut::<DebugPanel>(panel_id) {
-			debug.handle_key(key)
+		if let Some(panel) = self.panels.get_mut(panel_id) {
+			panel.handle_key(key)
 		} else {
 			evildoer_manifest::SplitEventResult::ignored()
 		}
 	}
 
-	/// Handles a mouse event for a generic panel.
+	/// Handles a mouse event for a panel.
 	fn handle_panel_mouse(
 		&mut self,
 		panel_id: evildoer_manifest::PanelId,
 		mouse: SplitMouse,
 	) -> evildoer_manifest::SplitEventResult {
-		use crate::debug::DebugPanel;
-		use crate::terminal::TerminalBuffer;
-
-		if let Some(terminal) = self.panels.get_mut::<TerminalBuffer>(panel_id) {
-			terminal.handle_mouse(mouse)
-		} else if let Some(debug) = self.panels.get_mut::<DebugPanel>(panel_id) {
-			debug.handle_mouse(mouse)
+		if let Some(panel) = self.panels.get_mut(panel_id) {
+			panel.handle_mouse(mouse)
 		} else {
 			evildoer_manifest::SplitEventResult::ignored()
 		}

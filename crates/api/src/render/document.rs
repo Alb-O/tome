@@ -2,7 +2,7 @@ mod wrapping;
 
 use std::time::{Duration, SystemTime};
 
-use evildoer_manifest::{SplitAttrs, SplitBuffer, SplitColor};
+use evildoer_manifest::{SplitAttrs, SplitColor};
 use evildoer_tui::animation::Animatable;
 use evildoer_tui::layout::{Constraint, Direction, Layout, Rect};
 use evildoer_tui::style::{Color, Modifier, Style};
@@ -437,147 +437,11 @@ impl Editor {
 		}
 	}
 
-	/// Renders a terminal buffer into the given area.
-	fn render_terminal(
-		&self,
-		frame: &mut evildoer_tui::Frame,
-		terminal: &crate::terminal::TerminalBuffer,
-		area: Rect,
-		is_focused: bool,
-	) {
-		let base_style =
-			Style::default()
-				.bg(self.theme.colors.popup.bg)
-				.fg(self.theme.colors.popup.fg);
-
-		frame.render_widget(Block::default().style(base_style), area);
-
-		let mut cells_to_render = Vec::new();
-		terminal.for_each_cell(|row, col, cell| {
-			if row < area.height && col < area.width && !cell.wide_continuation {
-				cells_to_render.push((row, col, cell.clone(), terminal.is_selected(row, col)));
-			}
-		});
-
-		let buf = frame.buffer_mut();
-		for (row, col, cell, selected) in cells_to_render {
-			let x = area.x + col;
-			let y = area.y + row;
-
-			let mut style = base_style;
-
-			if let Some(fg) = cell.fg {
-				style = style.fg(convert_split_color(fg));
-			}
-			if let Some(bg) = cell.bg {
-				style = style.bg(convert_split_color(bg));
-			}
-
-			let mut mods = Modifier::empty();
-			if cell.attrs.contains(SplitAttrs::BOLD) {
-				mods |= Modifier::BOLD;
-			}
-			if cell.attrs.contains(SplitAttrs::ITALIC) {
-				mods |= Modifier::ITALIC;
-			}
-			if cell.attrs.contains(SplitAttrs::UNDERLINE) {
-				mods |= Modifier::UNDERLINED;
-			}
-			style = style.add_modifier(mods);
-
-			if cell.attrs.contains(SplitAttrs::INVERSE) != selected {
-				let fg = style.fg;
-				let bg = style.bg;
-				style = style.fg(bg.unwrap_or(Color::Reset));
-				style = style.bg(fg.unwrap_or(Color::Reset));
-			}
-
-			let out = &mut buf[(x, y)];
-			out.set_style(style);
-			if cell.symbol.is_empty() {
-				out.set_symbol(" ");
-			} else {
-				out.set_symbol(&cell.symbol);
-			}
-		}
-
-		if is_focused && let Some(cursor) = terminal.cursor() {
-			let x = area.x + cursor.col;
-			let y = area.y + cursor.row;
-			if x < area.x + area.width && y < area.y + area.height {
-				frame.set_cursor_position(evildoer_tui::layout::Position { x, y });
-			}
-		}
-	}
-
-	/// Renders a debug panel into the given area.
-	fn render_debug_panel(
-		&self,
-		frame: &mut evildoer_tui::Frame,
-		debug: &crate::debug::DebugPanel,
-		area: Rect,
-		_is_focused: bool,
-	) {
-		let base_style =
-			Style::default()
-				.bg(self.theme.colors.popup.bg)
-				.fg(self.theme.colors.popup.fg);
-
-		frame.render_widget(Block::default().style(base_style), area);
-
-		let mut cells_to_render = Vec::new();
-		debug.for_each_cell(|row, col, cell| {
-			if row < area.height && col < area.width && !cell.wide_continuation {
-				cells_to_render.push((row, col, cell.clone()));
-			}
-		});
-
-		let buf = frame.buffer_mut();
-		for (row, col, cell) in cells_to_render {
-			let x = area.x + col;
-			let y = area.y + row;
-
-			let mut style = base_style;
-
-			if let Some(fg) = cell.fg {
-				style = style.fg(convert_split_color(fg));
-			}
-			if let Some(bg) = cell.bg {
-				style = style.bg(convert_split_color(bg));
-			}
-
-			let mut mods = Modifier::empty();
-			if cell.attrs.contains(SplitAttrs::BOLD) {
-				mods |= Modifier::BOLD;
-			}
-			if cell.attrs.contains(SplitAttrs::ITALIC) {
-				mods |= Modifier::ITALIC;
-			}
-			if cell.attrs.contains(SplitAttrs::UNDERLINE) {
-				mods |= Modifier::UNDERLINED;
-			}
-			style = style.add_modifier(mods);
-
-			let out = &mut buf[(x, y)];
-			out.set_style(style);
-			if cell.symbol.is_empty() {
-				out.set_symbol(" ");
-			} else {
-				out.set_symbol(&cell.symbol);
-			}
-		}
-	}
-
 	/// Resizes a panel by ID.
 	fn resize_panel(&mut self, panel_id: evildoer_manifest::PanelId, area: Rect) {
-		use crate::debug::DebugPanel;
-		use crate::terminal::TerminalBuffer;
-
 		let size = evildoer_manifest::SplitSize::new(area.width, area.height);
-		if let Some(terminal) = self.panels.get_mut::<TerminalBuffer>(panel_id) {
-			terminal.resize(size);
-		} else if let Some(debug) = self.panels.get_mut::<DebugPanel>(panel_id) {
-			debug.resize(size);
+		if let Some(panel) = self.panels.get_mut(panel_id) {
+			panel.resize(size);
 		}
 	}
 
@@ -589,13 +453,79 @@ impl Editor {
 		area: Rect,
 		is_focused: bool,
 	) {
-		use crate::debug::DebugPanel;
-		use crate::terminal::TerminalBuffer;
+		if let Some(panel) = self.panels.get(panel_id) {
+			render_split_buffer(frame, panel, area, is_focused, &self.theme.colors.popup);
+		}
+	}
+}
 
-		if let Some(terminal) = self.panels.get::<TerminalBuffer>(panel_id) {
-			self.render_terminal(frame, terminal, area, is_focused);
-		} else if let Some(debug) = self.panels.get::<DebugPanel>(panel_id) {
-			self.render_debug_panel(frame, debug, area, is_focused);
+/// Renders any SplitBuffer into the given area.
+fn render_split_buffer(
+	frame: &mut evildoer_tui::Frame,
+	buffer: &dyn evildoer_manifest::SplitBuffer,
+	area: Rect,
+	is_focused: bool,
+	colors: &evildoer_manifest::PopupColors,
+) {
+	let base_style = Style::default().bg(colors.bg).fg(colors.fg);
+
+	frame.render_widget(Block::default().style(base_style), area);
+
+	let mut cells_to_render = Vec::new();
+	buffer.for_each_cell(&mut |row, col, cell| {
+		if row < area.height && col < area.width && !cell.wide_continuation {
+			let selected = buffer.is_selected(row, col);
+			cells_to_render.push((row, col, cell.clone(), selected));
+		}
+	});
+
+	let buf = frame.buffer_mut();
+	for (row, col, cell, selected) in cells_to_render {
+		let x = area.x + col;
+		let y = area.y + row;
+
+		let mut style = base_style;
+
+		if let Some(fg) = cell.fg {
+			style = style.fg(convert_split_color(fg));
+		}
+		if let Some(bg) = cell.bg {
+			style = style.bg(convert_split_color(bg));
+		}
+
+		let mut mods = Modifier::empty();
+		if cell.attrs.contains(SplitAttrs::BOLD) {
+			mods |= Modifier::BOLD;
+		}
+		if cell.attrs.contains(SplitAttrs::ITALIC) {
+			mods |= Modifier::ITALIC;
+		}
+		if cell.attrs.contains(SplitAttrs::UNDERLINE) {
+			mods |= Modifier::UNDERLINED;
+		}
+		style = style.add_modifier(mods);
+
+		if cell.attrs.contains(SplitAttrs::INVERSE) != selected {
+			let fg = style.fg;
+			let bg = style.bg;
+			style = style.fg(bg.unwrap_or(Color::Reset));
+			style = style.bg(fg.unwrap_or(Color::Reset));
+		}
+
+		let out = &mut buf[(x, y)];
+		out.set_style(style);
+		if cell.symbol.is_empty() {
+			out.set_symbol(" ");
+		} else {
+			out.set_symbol(&cell.symbol);
+		}
+	}
+
+	if is_focused && let Some(cursor) = buffer.cursor() {
+		let x = area.x + cursor.col;
+		let y = area.y + cursor.row;
+		if x < area.x + area.width && y < area.y + area.height {
+			frame.set_cursor_position(evildoer_tui::layout::Position { x, y });
 		}
 	}
 }

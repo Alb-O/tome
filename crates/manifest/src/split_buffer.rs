@@ -266,13 +266,18 @@ pub trait SplitBuffer: Send {
 	/// Returns cursor information if visible.
 	fn cursor(&self) -> Option<SplitCursor>;
 
+	/// Returns whether the cell at (row, col) is selected.
+	///
+	/// Used for rendering selection highlights. Default returns false.
+	fn is_selected(&self, _row: u16, _col: u16) -> bool {
+		false
+	}
+
 	/// Iterate over cells for rendering.
 	///
 	/// The closure receives `(row, col, cell)` for each cell that has content.
 	/// Cells not yielded are assumed to be empty with default styling.
-	fn for_each_cell<F>(&self, f: F)
-	where
-		F: FnMut(u16, u16, &SplitCell);
+	fn for_each_cell(&self, f: &mut dyn FnMut(u16, u16, &SplitCell));
 }
 
 /// A single cell in a split buffer.

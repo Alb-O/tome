@@ -3,11 +3,10 @@
 //! Provides convenient methods for accessing the focused view and navigating
 //! between buffers and panels. These delegate to [`BufferManager`] and [`PanelRegistry`].
 
-use evildoer_manifest::{PanelId, SplitBuffer};
+use evildoer_manifest::PanelId;
 
 use super::Editor;
 use crate::buffer::{Buffer, BufferId, BufferView};
-use crate::terminal::TerminalBuffer;
 
 impl Editor {
 	/// Returns a reference to the currently focused text buffer.
@@ -43,16 +42,16 @@ impl Editor {
 
 	/// Returns true if the focused view is a terminal panel.
 	pub fn is_terminal_focused(&self) -> bool {
-		self.focused_view()
-			.as_panel()
-			.is_some_and(|id| self.panels.get::<TerminalBuffer>(id).is_some())
+		self.focused_panel_id()
+			.and_then(|id| self.panels.get(id))
+			.is_some_and(|p| p.id() == "terminal")
 	}
 
 	/// Returns true if the focused view is a debug panel.
 	pub fn is_debug_focused(&self) -> bool {
-		self.focused_view()
-			.as_panel()
-			.is_some_and(|id| self.panels.get::<crate::debug::DebugPanel>(id).is_some())
+		self.focused_panel_id()
+			.and_then(|id| self.panels.get(id))
+			.is_some_and(|p| p.id() == "debug")
 	}
 
 	/// Returns the ID of the focused text buffer, if one is focused.
@@ -80,25 +79,15 @@ impl Editor {
 		self.buffers.get_buffer_mut(id)
 	}
 
-	/// Returns a reference to a terminal panel by ID.
-	pub fn get_terminal(&self, id: PanelId) -> Option<&TerminalBuffer> {
-		self.panels.get::<TerminalBuffer>(id)
-	}
-
-	/// Returns a mutable reference to a terminal panel by ID.
-	pub fn get_terminal_mut(&mut self, id: PanelId) -> Option<&mut TerminalBuffer> {
-		self.panels.get_mut::<TerminalBuffer>(id)
-	}
-
 	/// Returns the number of open text buffers.
 	pub fn buffer_count(&self) -> usize {
 		self.buffers.buffer_count()
 	}
 
-	/// Returns the cursor style for the focused terminal panel, if any.
-	pub fn focused_terminal_cursor_style(&self) -> Option<evildoer_manifest::SplitCursorStyle> {
+	/// Returns the cursor style for the focused panel, if any.
+	pub fn focused_panel_cursor_style(&self) -> Option<evildoer_manifest::SplitCursorStyle> {
 		let panel_id = self.focused_panel_id()?;
-		let terminal = self.get_terminal(panel_id)?;
-		terminal.cursor().map(|c| c.style)
+		let panel = self.panels.get(panel_id)?;
+		panel.cursor().map(|c| c.style)
 	}
 }

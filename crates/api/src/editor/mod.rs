@@ -569,7 +569,7 @@ impl Editor {
 				self.buffers.remove_buffer(id);
 			}
 			BufferView::Panel(id) => {
-				self.panels.remove_any(id);
+				self.panels.remove(id);
 			}
 		}
 
@@ -669,28 +669,19 @@ impl Editor {
 	pub fn tick(&mut self) {
 		use std::time::Duration;
 
-		use evildoer_manifest::SplitBuffer;
-
-		use crate::debug::DebugPanel;
 		use crate::editor::extensions::TICK_EXTENSIONS;
-		use crate::terminal::TerminalBuffer;
 
 		// Tick all panels (terminals, debug panels, etc.)
 		let panel_ids: Vec<_> = self.panels.ids().collect();
 		let mut panels_to_close = Vec::new();
 		for id in panel_ids {
-			if let Some(terminal) = self.panels.get_mut::<TerminalBuffer>(id) {
-				let result = terminal.tick(Duration::from_millis(16));
+			if let Some(panel) = self.panels.get_mut(id) {
+				let result = panel.tick(Duration::from_millis(16));
 				if result.needs_redraw {
 					self.needs_redraw = true;
 				}
 				if result.wants_close {
 					panels_to_close.push(id);
-				}
-			} else if let Some(debug) = self.panels.get_mut::<DebugPanel>(id) {
-				let result = debug.tick(Duration::from_millis(16));
-				if result.needs_redraw {
-					self.needs_redraw = true;
 				}
 			}
 		}

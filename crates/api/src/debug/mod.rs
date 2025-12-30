@@ -199,10 +199,7 @@ impl SplitBuffer for DebugPanel {
 		})
 	}
 
-	fn for_each_cell<F>(&self, mut f: F)
-	where
-		F: FnMut(u16, u16, &SplitCell),
-	{
+	fn for_each_cell(&self, f: &mut dyn FnMut(u16, u16, &SplitCell)) {
 		let entries = self.visible_entries();
 		let width = self.size.width as usize;
 
