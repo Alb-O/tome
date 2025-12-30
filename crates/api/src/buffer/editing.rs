@@ -2,7 +2,6 @@
 
 use evildoer_base::Transaction;
 use evildoer_language::LanguageLoader;
-use evildoer_manifest::Mode;
 use evildoer_stdlib::movement;
 
 use super::Buffer;
@@ -10,16 +9,10 @@ use super::Buffer;
 impl Buffer {
 	/// Inserts text at all cursor positions.
 	///
-	/// In insert mode, this groups consecutive inserts into a single undo.
 	/// Returns the transaction that was applied, for sibling buffer synchronization.
+	/// Note: Undo state should be saved by the caller (Editor) before calling this.
 	pub fn insert_text(&mut self, text: &str) -> Transaction {
 		self.ensure_valid_selection();
-
-		if self.mode() == Mode::Insert {
-			self.save_insert_undo_state();
-		} else {
-			self.save_undo_state();
-		}
 
 		// Collapse all selections to their insertion points
 		let mut insertion_points = self.selection.clone();
@@ -110,11 +103,11 @@ impl Buffer {
 	/// Deletes the current selection.
 	///
 	/// Returns the transaction if anything was deleted, for sibling buffer synchronization.
+	/// Note: Undo state should be saved by the caller (Editor) before calling this.
 	pub fn delete_selection(&mut self) -> Option<Transaction> {
 		self.ensure_valid_selection();
 
 		if !self.selection.primary().is_empty() {
-			self.save_undo_state();
 			let tx = {
 				let doc = self.doc();
 				Transaction::delete(doc.content.slice(..), &self.selection)

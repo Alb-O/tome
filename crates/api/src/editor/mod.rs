@@ -781,6 +781,12 @@ impl Editor {
 	}
 
 	pub fn insert_text(&mut self, text: &str) {
+		// Save undo state with insert grouping based on mode
+		if self.buffer().mode() == evildoer_manifest::Mode::Insert {
+			self.save_insert_undo_state();
+		} else {
+			self.save_undo_state();
+		}
 		let tx = self.buffer_mut().insert_text(text);
 		self.sync_sibling_selections(&tx);
 		if let BufferView::Text(id) = self.buffers.focused_view() {
@@ -799,6 +805,7 @@ impl Editor {
 		if self.registers.yank.is_empty() {
 			return;
 		}
+		self.save_undo_state();
 		let yank = self.registers.yank.clone();
 		if let Some(tx) = self.buffer_mut().paste_after(&yank) {
 			self.sync_sibling_selections(&tx);
@@ -812,6 +819,7 @@ impl Editor {
 		if self.registers.yank.is_empty() {
 			return;
 		}
+		self.save_undo_state();
 		let yank = self.registers.yank.clone();
 		if let Some(tx) = self.buffer_mut().paste_before(&yank) {
 			self.sync_sibling_selections(&tx);
@@ -879,6 +887,10 @@ impl Editor {
 	}
 
 	pub fn delete_selection(&mut self) {
+		// Only save undo if there's something to delete
+		if !self.buffer().selection.primary().is_empty() {
+			self.save_undo_state();
+		}
 		if let Some(tx) = self.buffer_mut().delete_selection() {
 			self.sync_sibling_selections(&tx);
 			if let BufferView::Text(id) = self.buffers.focused_view() {

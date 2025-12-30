@@ -1,11 +1,22 @@
+use std::collections::HashMap;
+
 use evildoer_base::{Rope, Selection};
 use evildoer_manifest::CompletionItem;
 
+use crate::buffer::BufferId;
+
 /// A history entry for undo/redo.
+///
+/// Stores the document state and selections for all views of the document.
+/// This allows proper selection restoration across split views on undo/redo.
 #[derive(Clone)]
 pub struct HistoryEntry {
 	pub doc: Rope,
-	pub selection: Selection,
+	/// Selections for each buffer viewing this document.
+	/// The primary selection is the one from the buffer that made the edit.
+	pub selections: HashMap<BufferId, Selection>,
+	/// The buffer that made this edit (used as fallback for selection restore).
+	pub primary_buffer: BufferId,
 }
 
 #[derive(Default)]

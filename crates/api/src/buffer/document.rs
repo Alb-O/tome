@@ -4,6 +4,7 @@
 //! Multiple buffers can reference the same document, enabling split views of
 //! the same file with shared undo history.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -11,6 +12,7 @@ use evildoer_base::{Rope, Selection};
 use evildoer_language::LanguageLoader;
 use evildoer_language::syntax::Syntax;
 
+use crate::buffer::BufferId;
 use crate::editor::types::HistoryEntry;
 
 /// Counter for generating unique document IDs.
@@ -120,11 +122,17 @@ impl Document {
 
 	/// Pushes the current state onto the undo stack.
 	///
-	/// The selection is passed in because it belongs to the view making the edit.
-	pub(crate) fn push_undo_snapshot(&mut self, selection: &Selection) {
+	/// Takes selections from all buffers viewing this document so they can be
+	/// restored on undo. The primary_buffer is the one making the edit.
+	pub(crate) fn push_undo_snapshot(
+		&mut self,
+		selections: HashMap<BufferId, Selection>,
+		primary_buffer: BufferId,
+	) {
 		self.undo_stack.push(HistoryEntry {
 			doc: self.content.clone(),
-			selection: selection.clone(),
+			selections,
+			primary_buffer,
 		});
 		self.redo_stack.clear();
 
@@ -137,62 +145,77 @@ impl Document {
 	/// Saves current state to undo history.
 	///
 	/// Explicit calls reset any grouped insert session.
-	pub fn save_undo_state(&mut self, selection: &Selection) {
+	pub fn save_undo_state(
+		&mut self,
+		selections: HashMap<BufferId, Selection>,
+		primary_buffer: BufferId,
+	) {
 		self.insert_undo_active = false;
-		self.push_undo_snapshot(selection);
+		self.push_undo_snapshot(selections, primary_buffer);
 	}
 
 	/// Saves undo state for insert mode, grouping consecutive inserts.
 	///
 	/// Returns true if a new snapshot was created.
-	pub fn save_insert_undo_state(&mut self, selection: &Selection) -> bool {
+	pub fn save_insert_undo_state(
+		&mut self,
+		selections: HashMap<BufferId, Selection>,
+		primary_buffer: BufferId,
+	) -> bool {
 		if self.insert_undo_active {
 			return false;
 		}
 		self.insert_undo_active = true;
-		self.push_undo_snapshot(selection);
+		self.push_undo_snapshot(selections, primary_buffer);
 		true
 	}
 
 	/// Undoes the last change.
 	///
-	/// Returns the restored selection if successful, or None if nothing to undo.
-	pub fn undo(&mut self, language_loader: &LanguageLoader) -> Option<Selection> {
-		self.insert_undo_active = false;
-		if let Some(current_selection) = self.undo_stack.last().map(|e| e.selection.clone()) {
-			// Save current state to redo before popping
-			if let Some(entry) = self.undo_stack.pop() {
-				self.redo_stack.push(HistoryEntry {
-					doc: self.content.clone(),
-					selection: current_selection,
-				});
-
-				self.content = entry.doc;
-				self.reparse_syntax(language_loader);
-				return Some(entry.selection);
-			}
-		}
-		None
-	}
-
-	/// Redoes the last undone change.
-	///
-	/// Returns the restored selection if successful, or None if nothing to redo.
-	pub fn redo(
+	/// Returns the restored selections for all buffers if successful.
+	pub fn undo(
 		&mut self,
-		current_selection: &Selection,
+		current_selections: HashMap<BufferId, Selection>,
+		primary_buffer: BufferId,
 		language_loader: &LanguageLoader,
-	) -> Option<Selection> {
+	) -> Option<HashMap<BufferId, Selection>> {
 		self.insert_undo_active = false;
-		if let Some(entry) = self.redo_stack.pop() {
-			self.undo_stack.push(HistoryEntry {
+		if let Some(entry) = self.undo_stack.pop() {
+			// Save current state to redo before restoring
+			self.redo_stack.push(HistoryEntry {
 				doc: self.content.clone(),
-				selection: current_selection.clone(),
+				selections: current_selections,
+				primary_buffer,
 			});
 
 			self.content = entry.doc;
 			self.reparse_syntax(language_loader);
-			Some(entry.selection)
+			Some(entry.selections)
+		} else {
+			None
+		}
+	}
+
+	/// Redoes the last undone change.
+	///
+	/// Returns the restored selections for all buffers if successful.
+	pub fn redo(
+		&mut self,
+		current_selections: HashMap<BufferId, Selection>,
+		primary_buffer: BufferId,
+		language_loader: &LanguageLoader,
+	) -> Option<HashMap<BufferId, Selection>> {
+		self.insert_undo_active = false;
+		if let Some(entry) = self.redo_stack.pop() {
+			self.undo_stack.push(HistoryEntry {
+				doc: self.content.clone(),
+				selections: current_selections,
+				primary_buffer,
+			});
+
+			self.content = entry.doc;
+			self.reparse_syntax(language_loader);
+			Some(entry.selections)
 		} else {
 			None
 		}
