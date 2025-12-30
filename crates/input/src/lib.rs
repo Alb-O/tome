@@ -1,6 +1,5 @@
 pub mod handler;
 pub mod insert;
-pub mod normal;
 pub mod pending;
 #[cfg(test)]
 mod tests;

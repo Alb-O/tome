@@ -10,12 +10,14 @@ repository.workspace = true
 doctest = false
 
 [features]
-default = ["derive", "termina", "kdl"]
+default = ["derive", "termina", "kdl", "evildoer-base"]
 derive = ["dep:evildoer-keymap-derive"]
 termina = ["dep:termina"]
 kdl = ["dep:kdl"]
+evildoer-base = ["dep:evildoer-base"]
 
 [dependencies]
+evildoer-base = { workspace = true, optional = true }
 evildoer-keymap-derive = { path = "./derive", optional = true }
 evildoer-keymap-parser = { path = "./parser" }
 kdl = { workspace = true, optional = true }

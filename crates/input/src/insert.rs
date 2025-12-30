@@ -1,5 +1,9 @@
+//! Insert mode key handling.
+
 use evildoer_base::key::{Key, KeyCode, Modifiers};
-use evildoer_manifest::{BindingMode, find_binding_resolved, resolve_action_id};
+use evildoer_keymap::ToKeyMap;
+use evildoer_manifest::keymap_registry::LookupResult;
+use evildoer_manifest::{BindingMode, get_keymap_registry, resolve_action_id};
 
 use crate::InputHandler;
 use crate::types::{KeyResult, Mode};
@@ -39,44 +43,52 @@ impl InputHandler {
 			key
 		};
 
+		let registry = get_keymap_registry();
+
 		// Try insert-mode keybindings first
-		if let Some(resolved) = find_binding_resolved(BindingMode::Insert, key) {
-			let count = if self.count > 0 {
-				self.count as usize
-			} else {
-				1
-			};
-			let extend = self.extend;
-			let register = self.register;
-			self.reset_params();
-			return KeyResult::ActionById {
-				id: resolved.action_id,
-				count,
-				extend,
-				register,
-			};
-		}
+		if let Ok(node) = key.to_keymap() {
+			if let LookupResult::Match(entry) = registry.lookup(BindingMode::Insert, &[node.clone()])
+			{
+				let count = if self.count > 0 {
+					self.count as usize
+				} else {
+					1
+				};
+				let extend = self.extend;
+				let register = self.register;
+				self.reset_params();
+				return KeyResult::ActionById {
+					id: entry.action_id,
+					count,
+					extend,
+					register,
+				};
+			}
 
-		// Fall back to normal mode bindings for navigation keys
-		let is_navigation_key =
-			!matches!(key.code, KeyCode::Char(_)) || key.modifiers.ctrl || key.modifiers.alt;
+			// Fall back to normal mode bindings for navigation keys
+			let is_navigation_key =
+				!matches!(key.code, KeyCode::Char(_)) || key.modifiers.ctrl || key.modifiers.alt;
 
-		if is_navigation_key && let Some(resolved) = find_binding_resolved(BindingMode::Normal, key)
-		{
-			let count = if self.count > 0 {
-				self.count as usize
-			} else {
-				1
-			};
-			let extend = self.extend;
-			let register = self.register;
-			self.reset_params();
-			return KeyResult::ActionById {
-				id: resolved.action_id,
-				count,
-				extend,
-				register,
-			};
+			if is_navigation_key {
+				if let LookupResult::Match(entry) =
+					registry.lookup(BindingMode::Normal, &[node])
+				{
+					let count = if self.count > 0 {
+						self.count as usize
+					} else {
+						1
+					};
+					let extend = self.extend;
+					let register = self.register;
+					self.reset_params();
+					return KeyResult::ActionById {
+						id: entry.action_id,
+						count,
+						extend,
+						register,
+					};
+				}
+			}
 		}
 
 		// Regular character insertion

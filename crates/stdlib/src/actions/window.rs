@@ -4,61 +4,111 @@
 //! - `split_horizontal` (Ctrl+w s): horizontal divider → windows stacked top/bottom
 //! - `split_vertical` (Ctrl+w v): vertical divider → windows side-by-side left/right
 
-use evildoer_base::key::Key;
-use evildoer_manifest::action;
-use evildoer_manifest::keybindings::{KEYBINDINGS_WINDOW, KeyBindingDef};
-use linkme::distributed_slice;
+use evildoer_manifest::{action, result_handler};
 
 action!(split_horizontal, {
 	description: "Split horizontally (new buffer below)",
-	key: Key::char('s'),
-	mode: Window,
-	result: SplitHorizontal,
-	handler_slice: RESULT_SPLIT_HORIZONTAL_HANDLERS,
-}, |ops| ops.split_horizontal());
+	bindings: r#"window "s""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::SplitHorizontal);
+
+result_handler!(
+	RESULT_SPLIT_HORIZONTAL_HANDLERS,
+	HANDLE_SPLIT_HORIZONTAL,
+	"split_horizontal",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::SplitHorizontal) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.split_horizontal();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(split_vertical, {
 	description: "Split vertically (new buffer to right)",
-	key: Key::char('v'),
-	mode: Window,
-	result: SplitVertical,
-	handler_slice: RESULT_SPLIT_VERTICAL_HANDLERS,
-}, |ops| ops.split_vertical());
+	bindings: r#"window "v""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::SplitVertical);
+
+result_handler!(
+	RESULT_SPLIT_VERTICAL_HANDLERS,
+	HANDLE_SPLIT_VERTICAL,
+	"split_vertical",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::SplitVertical) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.split_vertical();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(split_terminal_horizontal, {
 	description: "Open terminal in horizontal split (below)",
-	key: Key::char('t'),
-	mode: Window,
-	result: SplitTerminalHorizontal,
-	handler_slice: RESULT_SPLIT_TERMINAL_HORIZONTAL_HANDLERS,
-}, |ops| ops.split_terminal_horizontal());
+	bindings: r#"window "t""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::SplitTerminalHorizontal);
+
+result_handler!(
+	RESULT_SPLIT_TERMINAL_HORIZONTAL_HANDLERS,
+	HANDLE_SPLIT_TERMINAL_HORIZONTAL,
+	"split_terminal_horizontal",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::SplitTerminalHorizontal) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.split_terminal_horizontal();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(split_terminal_vertical, {
 	description: "Open terminal in vertical split (right)",
-	key: Key::char('T'),
-	mode: Window,
-	result: SplitTerminalVertical,
-	handler_slice: RESULT_SPLIT_TERMINAL_VERTICAL_HANDLERS,
-}, |ops| ops.split_terminal_vertical());
+	bindings: r#"window "T""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::SplitTerminalVertical);
+
+result_handler!(
+	RESULT_SPLIT_TERMINAL_VERTICAL_HANDLERS,
+	HANDLE_SPLIT_TERMINAL_VERTICAL,
+	"split_terminal_vertical",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::SplitTerminalVertical) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.split_terminal_vertical();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(toggle_terminal, {
 	description: "Toggle terminal split",
-	key: Key::char(':'),
-	mode: Normal,
-	result: ToggleTerminal,
-	handler_slice: RESULT_TOGGLE_PANEL_HANDLERS,
-}, |ops| ops.toggle_terminal());
+	bindings: r#"normal ":""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::ToggleTerminal);
 
 action!(toggle_debug_panel, {
 	description: "Toggle debug panel",
-	key: Key::char('D'),
-	mode: Normal,
-	result: ToggleDebugPanel,
-	handler_slice: RESULT_TOGGLE_PANEL_HANDLERS,
-}, |ops| ops.toggle_debug_panel());
+	bindings: r#"normal "D""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::ToggleDebugPanel);
 
-// Handler for generic TogglePanel(&str) result
-evildoer_manifest::result_handler!(
+result_handler!(
 	RESULT_TOGGLE_PANEL_HANDLERS,
 	TOGGLE_PANEL_BY_NAME,
 	"toggle_panel_by_name",
@@ -79,72 +129,184 @@ evildoer_manifest::result_handler!(
 
 action!(focus_left, {
 	description: "Focus split to the left",
-	key: Key::char('h'),
-	mode: Window,
-	result: FocusLeft,
-	handler_slice: RESULT_FOCUS_LEFT_HANDLERS,
-}, |ops| ops.focus_left());
+	bindings: r#"window "h""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::FocusLeft);
+
+result_handler!(
+	RESULT_FOCUS_LEFT_HANDLERS,
+	HANDLE_FOCUS_LEFT,
+	"focus_left",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::FocusLeft) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.focus_left();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(focus_down, {
 	description: "Focus split below",
-	key: Key::char('j'),
-	mode: Window,
-	result: FocusDown,
-	handler_slice: RESULT_FOCUS_DOWN_HANDLERS,
-}, |ops| ops.focus_down());
+	bindings: r#"window "j""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::FocusDown);
+
+result_handler!(
+	RESULT_FOCUS_DOWN_HANDLERS,
+	HANDLE_FOCUS_DOWN,
+	"focus_down",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::FocusDown) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.focus_down();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(focus_up, {
 	description: "Focus split above",
-	key: Key::char('k'),
-	mode: Window,
-	result: FocusUp,
-	handler_slice: RESULT_FOCUS_UP_HANDLERS,
-}, |ops| ops.focus_up());
+	bindings: r#"window "k""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::FocusUp);
+
+result_handler!(
+	RESULT_FOCUS_UP_HANDLERS,
+	HANDLE_FOCUS_UP,
+	"focus_up",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::FocusUp) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.focus_up();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(focus_right, {
 	description: "Focus split to the right",
-	key: Key::char('l'),
-	mode: Window,
-	result: FocusRight,
-	handler_slice: RESULT_FOCUS_RIGHT_HANDLERS,
-}, |ops| ops.focus_right());
+	bindings: r#"window "l""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::FocusRight);
+
+result_handler!(
+	RESULT_FOCUS_RIGHT_HANDLERS,
+	HANDLE_FOCUS_RIGHT,
+	"focus_right",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::FocusRight) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.focus_right();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(buffer_next, {
 	description: "Switch to next buffer",
-	key: Key::char('n'),
-	mode: Window,
-	result: BufferNext,
-	handler_slice: RESULT_BUFFER_NEXT_HANDLERS,
-}, |ops| ops.buffer_next());
+	bindings: r#"window "n""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::BufferNext);
+
+result_handler!(
+	RESULT_BUFFER_NEXT_HANDLERS,
+	HANDLE_BUFFER_NEXT,
+	"buffer_next",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::BufferNext) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.buffer_next();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(buffer_prev, {
 	description: "Switch to previous buffer",
-	key: Key::char('p'),
-	mode: Window,
-	result: BufferPrev,
-	handler_slice: RESULT_BUFFER_PREV_HANDLERS,
-}, |ops| ops.buffer_prev());
+	bindings: r#"window "p""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::BufferPrev);
+
+result_handler!(
+	RESULT_BUFFER_PREV_HANDLERS,
+	HANDLE_BUFFER_PREV,
+	"buffer_prev",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::BufferPrev) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.buffer_prev();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(close_split, {
 	description: "Close current split",
-	key: Key::char('q'),
-	mode: Window,
-	result: CloseSplit,
-	handler_slice: RESULT_CLOSE_SPLIT_HANDLERS,
-}, |ops| ops.close_split());
+	bindings: r#"window "q" "c""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::CloseSplit);
+
+result_handler!(
+	RESULT_CLOSE_SPLIT_HANDLERS,
+	HANDLE_CLOSE_SPLIT,
+	"close_split",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::CloseSplit) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.close_split();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
 
 action!(close_other_buffers, {
 	description: "Close all other buffers",
-	key: Key::char('o'),
-	mode: Window,
-	result: CloseOtherBuffers,
-	handler_slice: RESULT_CLOSE_OTHER_BUFFERS_HANDLERS,
-}, |ops| ops.close_other_buffers());
+	bindings: r#"window "o""#,
+}, |_ctx| evildoer_manifest::actions::ActionResult::CloseOtherBuffers);
 
-#[distributed_slice(KEYBINDINGS_WINDOW)]
-static KB_CLOSE_SPLIT_ALT: KeyBindingDef = KeyBindingDef {
-	mode: evildoer_manifest::keybindings::BindingMode::Window,
-	key: Key::char('c'),
-	action: "close_split",
-	priority: 100,
-};
+result_handler!(
+	RESULT_CLOSE_OTHER_BUFFERS_HANDLERS,
+	HANDLE_CLOSE_OTHER_BUFFERS,
+	"close_other_buffers",
+	|r, ctx, _| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::{HandleOutcome, MessageAccess};
+		if matches!(r, ActionResult::CloseOtherBuffers) {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.close_other_buffers();
+			} else {
+				ctx.notify("warning", "Buffer operations not available");
+			}
+		}
+		HandleOutcome::Handled
+	}
+);

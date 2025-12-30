@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 async-trait.workspace = true
 evildoer-base.workspace = true
+evildoer-keymap.workspace = true
 evildoer-macro.workspace = true
 futures.workspace = true
 linkme.workspace = true

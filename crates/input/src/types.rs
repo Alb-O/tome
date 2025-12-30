@@ -13,6 +13,14 @@ pub enum KeyResult {
 		extend: bool,
 		register: Option<char>,
 	},
+	/// Waiting for more keys to complete a sequence.
+	///
+	/// The UI should display a "which-key" style indicator showing
+	/// that we're waiting for additional input.
+	Pending {
+		/// Number of keys accumulated so far.
+		keys_so_far: usize,
+	},
 	/// An action with a character argument using typed ActionId (preferred).
 	ActionByIdWithChar {
 		id: ActionId,

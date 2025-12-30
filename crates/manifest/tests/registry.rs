@@ -7,14 +7,15 @@
 // Force linkage of evildoer-stdlib to ensure all registrations occur.
 extern crate evildoer_stdlib;
 
-use evildoer_base::key::Key;
+use evildoer_keymap::parser::parse_seq;
 use evildoer_manifest::actions::{
 	RESULT_CURSOR_MOVE_HANDLERS, RESULT_EDIT_HANDLERS, RESULT_ERROR_HANDLERS,
 	RESULT_INSERT_WITH_MOTION_HANDLERS, RESULT_MODE_CHANGE_HANDLERS, RESULT_MOTION_HANDLERS,
 	RESULT_OK_HANDLERS, RESULT_QUIT_HANDLERS,
 };
+use evildoer_manifest::keymap_registry::LookupResult;
 use evildoer_manifest::{
-	BindingMode, find_action, find_action_by_id, find_binding_resolved, resolve_action_id,
+	BindingMode, find_action, find_action_by_id, get_keymap_registry, resolve_action_id,
 };
 
 #[test]
@@ -67,16 +68,21 @@ fn test_handler_coverage_counts() {
 }
 
 #[test]
-fn test_find_binding_resolved() {
-	// Test that find_binding_resolved returns ActionId
-	let resolved = find_binding_resolved(BindingMode::Normal, Key::char('h'));
-	assert!(resolved.is_some(), "should find binding for 'h'");
-	let resolved = resolved.unwrap();
-	assert_eq!(resolved.binding.action, "move_left");
-	assert!(resolved.action_id.is_valid(), "ActionId should be valid");
+fn test_keymap_registry_lookup() {
+	let registry = get_keymap_registry();
 
-	// Verify round-trip: resolved ActionId should map back to same action
-	let action = find_action_by_id(resolved.action_id);
-	assert!(action.is_some());
-	assert_eq!(action.unwrap().name, "move_left");
+	// Test that "h" is bound to move_left in normal mode
+	let keys = parse_seq("h").unwrap();
+	match registry.lookup(BindingMode::Normal, &keys) {
+		LookupResult::Match(entry) => {
+			assert_eq!(entry.action_name, "move_left");
+			assert!(entry.action_id.is_valid(), "ActionId should be valid");
+
+			// Verify round-trip: ActionId should map back to same action
+			let action = find_action_by_id(entry.action_id);
+			assert!(action.is_some());
+			assert_eq!(action.unwrap().name, "move_left");
+		}
+		other => panic!("Expected Match for 'h', got {other:?}"),
+	}
 }

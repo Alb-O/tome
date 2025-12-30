@@ -162,6 +162,10 @@ impl Editor {
 		}
 
 		match result {
+			KeyResult::Pending { .. } => {
+				self.needs_redraw = true;
+				false
+			}
 			KeyResult::ModeChange(new_mode) => {
 				let leaving_insert = !matches!(new_mode, Mode::Insert);
 				if new_mode != old_mode {

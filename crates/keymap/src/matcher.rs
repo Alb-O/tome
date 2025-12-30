@@ -35,6 +35,18 @@ use std::collections::HashMap;
 
 use evildoer_keymap_parser::node::{CharGroup, Key, Node};
 
+/// Result of looking up a key sequence in the matcher.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MatchResult<'a, T> {
+	/// Complete match - the sequence matches a binding exactly.
+	Complete(&'a T),
+	/// Partial match - the sequence is a prefix of one or more bindings.
+	/// Contains whether this prefix also has a value (for "sticky" behavior).
+	Partial { has_value: Option<&'a T> },
+	/// No match - the sequence doesn't match any binding.
+	None,
+}
+
 #[derive(Debug)]
 struct Trie<T> {
 	value: Option<T>,
@@ -109,6 +121,21 @@ impl<T> Matcher<T> {
 	pub fn get(&self, nodes: &[Node]) -> Option<&T> {
 		search(&self.root, nodes, 0)
 	}
+
+	/// Looks up a key sequence, returning detailed match information.
+	///
+	/// Returns:
+	/// - `Complete(value)` if the sequence exactly matches a binding
+	/// - `Partial { has_value }` if the sequence is a prefix of bindings (with optional intermediate value)
+	/// - `None` if the sequence doesn't match anything
+	pub fn lookup(&self, nodes: &[Node]) -> MatchResult<'_, T> {
+		lookup_with_info(&self.root, nodes, 0)
+	}
+
+	/// Check if any bindings exist that start with the given prefix.
+	pub fn has_prefix(&self, nodes: &[Node]) -> bool {
+		!matches!(self.lookup(nodes), MatchResult::None)
+	}
 }
 
 /// Recursively searches the Trie for a matching value.
@@ -152,6 +179,63 @@ fn search<'a, T>(node: &'a Trie<T>, nodes: &[Node], pos: usize) -> Option<&'a T>
 			None
 		}
 	})
+}
+
+/// Looks up a key sequence with detailed match information.
+fn lookup_with_info<'a, T>(node: &'a Trie<T>, nodes: &[Node], pos: usize) -> MatchResult<'a, T> {
+	if pos == nodes.len() {
+		// We've consumed all input nodes, check what we have at this position
+		let has_children = !node.exact.is_empty() || !node.groups.is_empty();
+
+		return if has_children {
+			// More keys possible - partial match
+			MatchResult::Partial {
+				has_value: node.value.as_ref(),
+			}
+		} else if let Some(val) = node.value.as_ref() {
+			// No more keys possible, but we have a value - complete match
+			MatchResult::Complete(val)
+		} else {
+			// No value and no children - shouldn't happen in well-formed trie
+			MatchResult::None
+		};
+	}
+
+	let input_node = &nodes[pos];
+
+	// 1. Try exact match
+	if let Some(child) = node.exact.get(input_node) {
+		let result = lookup_with_info(child, nodes, pos + 1);
+		if !matches!(result, MatchResult::None) {
+			return result;
+		}
+	}
+
+	// 2. Try group match
+	if let Key::Char(ch) = input_node.key {
+		for (n, child) in &node.groups {
+			if let Key::Group(group) = n.key {
+				if n.modifiers == input_node.modifiers && group.matches(ch) {
+					let result = lookup_with_info(child, nodes, pos + 1);
+					if !matches!(result, MatchResult::None) {
+						return result;
+					}
+				}
+			}
+		}
+	}
+
+	// 3. Try @any group match
+	for (n, child) in &node.groups {
+		if matches!(n.key, Key::Group(CharGroup::Any)) {
+			let result = lookup_with_info(child, nodes, pos + 1);
+			if !matches!(result, MatchResult::None) {
+				return result;
+			}
+		}
+	}
+
+	MatchResult::None
 }
 
 #[cfg(test)]
@@ -208,5 +292,70 @@ mod tests {
 			("a enter", "a enter", true),
 			("ctrl-@any shift-@upper", "ctrl-x shift-B", true),
 		]);
+	}
+
+	#[test]
+	fn test_lookup_complete() {
+		let mut matcher = Matcher::new();
+		matcher.add(parse_seq("a").unwrap(), 1);
+		matcher.add(parse_seq("b").unwrap(), 2);
+
+		assert_eq!(
+			matcher.lookup(&parse_seq("a").unwrap()),
+			MatchResult::Complete(&1)
+		);
+		assert_eq!(
+			matcher.lookup(&parse_seq("b").unwrap()),
+			MatchResult::Complete(&2)
+		);
+	}
+
+	#[test]
+	fn test_lookup_partial() {
+		let mut matcher = Matcher::new();
+		matcher.add(parse_seq("g g").unwrap(), 1);
+		matcher.add(parse_seq("g j").unwrap(), 2);
+
+		// "g" alone is a partial match
+		match matcher.lookup(&parse_seq("g").unwrap()) {
+			MatchResult::Partial { has_value: None } => {}
+			other => panic!("Expected Partial without value, got {other:?}"),
+		}
+
+		// "g g" is complete
+		assert_eq!(
+			matcher.lookup(&parse_seq("g g").unwrap()),
+			MatchResult::Complete(&1)
+		);
+	}
+
+	#[test]
+	fn test_lookup_partial_with_value() {
+		let mut matcher = Matcher::new();
+		matcher.add(parse_seq("g").unwrap(), 1); // "g" alone does something
+		matcher.add(parse_seq("g g").unwrap(), 2); // "g g" does something else
+
+		// "g" is partial but also has a value (sticky mode behavior)
+		match matcher.lookup(&parse_seq("g").unwrap()) {
+			MatchResult::Partial {
+				has_value: Some(&1),
+			} => {}
+			other => panic!("Expected Partial with value 1, got {other:?}"),
+		}
+	}
+
+	#[test]
+	fn test_lookup_none() {
+		let mut matcher = Matcher::new();
+		matcher.add(parse_seq("a").unwrap(), 1);
+
+		assert_eq!(
+			matcher.lookup(&parse_seq("x").unwrap()),
+			MatchResult::None
+		);
+		assert_eq!(
+			matcher.lookup(&parse_seq("a b").unwrap()),
+			MatchResult::None
+		);
 	}
 }

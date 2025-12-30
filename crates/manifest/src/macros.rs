@@ -130,46 +130,6 @@ macro_rules! command {
 #[macro_export]
 macro_rules! action {
 	($name:ident, {
-		description: $desc:expr,
-		key: $key:expr,
-		mode: $mode:ident,
-		result: $result:ident,
-		handler_slice: $slice:ident
-		$(,)?
-	}, |$ops:ident| $body:expr) => {
-		paste::paste! {
-			$crate::action!($name, { description: $desc },
-				|_ctx| $crate::actions::ActionResult::$result);
-
-			#[::linkme::distributed_slice($crate::keybindings::[<KEYBINDINGS_ $mode:upper>])]
-			static [<KB_ $name:upper>]: $crate::keybindings::KeyBindingDef =
-				$crate::keybindings::KeyBindingDef {
-					mode: $crate::keybindings::BindingMode::$mode,
-					key: $key,
-					action: stringify!($name),
-					priority: 100,
-				};
-
-			#[::linkme::distributed_slice($crate::actions::$slice)]
-			static [<HANDLE_ $name:upper>]: $crate::editor_ctx::ResultHandler =
-				$crate::editor_ctx::ResultHandler {
-					name: stringify!($name),
-					handle: |r, ctx, _| {
-						use $crate::editor_ctx::MessageAccess;
-						if matches!(r, $crate::actions::ActionResult::$result) {
-							if let Some($ops) = ctx.buffer_ops() {
-								$body;
-							} else {
-								ctx.notify("warning", "Buffer operations not available");
-							}
-						}
-						$crate::editor_ctx::HandleOutcome::Handled
-					},
-				};
-		}
-	};
-
-	($name:ident, {
 		$(aliases: $aliases:expr,)?
 		description: $desc:expr,
 		bindings: $kdl:literal

@@ -1,10 +1,10 @@
 //! Keybinding registration system.
 //!
-//! Keybindings map keys to actions in different modes. This replaces
-//! the hardcoded keymap arrays with an extensible registry.
+//! Keybindings map key sequences to actions in different modes. Uses a trie-based
+//! registry for efficient sequence matching (e.g., `g g` for document_start).
 //!
-//! All keybindings are now colocated with their action definitions using
-//! the `action!` macro with `bindings:` syntax. For example:
+//! All keybindings are colocated with their action definitions using the `action!`
+//! macro with `bindings:` syntax:
 //!
 //! ```ignore
 //! action!(
@@ -12,48 +12,34 @@
 //!     {
 //!         description: "Move to document start",
 //!         bindings: r#"
-//!             normal "C-home"
-//!             goto "g" "k"
-//!             insert "C-home"
+//!             normal "g g" "ctrl-home"
+//!             insert "ctrl-home"
 //!         "#
 //!     },
 //!     |_ctx| { ... }
 //! );
 //! ```
 
-use evildoer_base::key::Key;
 use linkme::distributed_slice;
 
-use crate::index::resolve_action_id;
-use crate::{ActionId, Mode};
+use crate::Mode;
 
-macro_rules! keybinding_slices {
-    ($($slice:ident),+ $(,)?) => {
-        $(#[distributed_slice]
-        pub static $slice: [KeyBindingDef];)+
-    };
-}
-
-keybinding_slices!(
-	KEYBINDINGS_NORMAL,
-	KEYBINDINGS_INSERT,
-	KEYBINDINGS_GOTO,
-	KEYBINDINGS_VIEW,
-	KEYBINDINGS_MATCH,
-	KEYBINDINGS_WINDOW,
-	KEYBINDINGS_SPACE,
-);
-
-/// Keybinding definition mapping a [`Key`] to an action in a [`BindingMode`].
+/// Distributed slice for key sequence bindings.
 ///
-/// Registered at compile time via [`linkme`] distributed slices, typically
-/// using the `bindings:` syntax in [`action!`](crate::action).
+/// Populated at compile time by the `action!` macro's `bindings:` syntax.
+#[distributed_slice]
+pub static KEYBINDINGS: [KeyBindingDef];
+
+/// Key sequence binding definition.
+///
+/// Maps a key sequence (e.g., `"g g"`, `"ctrl-w s"`) to an action in a mode.
 #[derive(Clone, Copy)]
 pub struct KeyBindingDef {
 	/// Mode this binding is active in.
 	pub mode: BindingMode,
-	/// Key that triggers this binding.
-	pub key: Key,
+	/// Key sequence string (e.g., `"g g"`, `"ctrl-home"`).
+	/// Parsed with `parse_seq()` at registry initialization.
+	pub keys: &'static str,
 	/// Action to execute (looked up by name in the action registry).
 	pub action: &'static str,
 	/// Priority for conflict resolution (lower wins).
@@ -65,7 +51,7 @@ impl std::fmt::Debug for KeyBindingDef {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("KeyBindingDef")
 			.field("mode", &self.mode)
-			.field("key", &self.key)
+			.field("keys", &self.keys)
 			.field("action", &self.action)
 			.field("priority", &self.priority)
 			.finish()
@@ -73,17 +59,15 @@ impl std::fmt::Debug for KeyBindingDef {
 }
 
 /// Mode in which a keybinding is active.
-///
-/// Each mode has its own distributed slice of [`KeyBindingDef`] entries.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BindingMode {
 	/// Normal mode (default editing mode).
 	Normal,
 	/// Insert mode (text input).
 	Insert,
-	/// Goto mode (g prefix).
+	/// Goto mode (g prefix) - DEPRECATED, use sequences instead.
 	Goto,
-	/// View mode (z prefix).
+	/// View mode (z prefix) - DEPRECATED, use sequences instead.
 	View,
 	/// Match mode (m prefix).
 	Match,
@@ -106,81 +90,17 @@ impl From<Mode> for BindingMode {
 	}
 }
 
-fn slice_for_mode(mode: BindingMode) -> &'static [KeyBindingDef] {
-	match mode {
-		BindingMode::Normal => &KEYBINDINGS_NORMAL,
-		BindingMode::Insert => &KEYBINDINGS_INSERT,
-		BindingMode::Goto => &KEYBINDINGS_GOTO,
-		BindingMode::View => &KEYBINDINGS_VIEW,
-		BindingMode::Match => &KEYBINDINGS_MATCH,
-		BindingMode::Window => &KEYBINDINGS_WINDOW,
-		BindingMode::Space => &KEYBINDINGS_SPACE,
-	}
+/// Returns all registered keybindings.
+pub fn all_bindings() -> impl Iterator<Item = &'static KeyBindingDef> {
+	KEYBINDINGS.iter()
 }
 
-fn all_slices() -> impl Iterator<Item = &'static KeyBindingDef> {
-	KEYBINDINGS_NORMAL
-		.iter()
-		.chain(KEYBINDINGS_INSERT.iter())
-		.chain(KEYBINDINGS_GOTO.iter())
-		.chain(KEYBINDINGS_VIEW.iter())
-		.chain(KEYBINDINGS_MATCH.iter())
-		.chain(KEYBINDINGS_WINDOW.iter())
-		.chain(KEYBINDINGS_SPACE.iter())
-}
-
-/// Finds the keybinding for `key` in `mode`.
-///
-/// Returns the highest-priority binding (lowest priority value) if multiple
-/// bindings match.
-pub fn find_binding(mode: BindingMode, key: Key) -> Option<&'static KeyBindingDef> {
-	slice_for_mode(mode)
-		.iter()
-		.filter(|kb| kb.key == key)
-		.min_by_key(|kb| kb.priority)
-}
-
-/// Keybinding with its action resolved to a typed [`ActionId`].
-///
-/// Returned by [`find_binding_resolved`] for efficient dispatch without
-/// repeated string lookups.
-#[derive(Debug, Clone, Copy)]
-pub struct ResolvedBinding {
-	/// Original keybinding definition.
-	pub binding: &'static KeyBindingDef,
-	/// Resolved action ID for type-safe dispatch.
-	pub action_id: ActionId,
-}
-
-/// Finds and resolves a keybinding to a typed [`ActionId`].
-///
-/// Preferred method for input handling as it enables type-safe dispatch.
-/// Returns [`None`] if no binding exists or if the action name cannot be
-/// resolved (indicating a configuration error).
-pub fn find_binding_resolved(mode: BindingMode, key: Key) -> Option<ResolvedBinding> {
-	let binding = find_binding(mode, key)?;
-	let action_id = resolve_action_id(binding.action)?;
-	Some(ResolvedBinding { binding, action_id })
-}
-
-/// Returns all keybindings registered for `mode`.
+/// Returns all keybindings for a specific mode.
 pub fn bindings_for_mode(mode: BindingMode) -> impl Iterator<Item = &'static KeyBindingDef> {
-	slice_for_mode(mode).iter()
+	KEYBINDINGS.iter().filter(move |kb| kb.mode == mode)
 }
 
-/// Returns all keybindings that trigger `action` (across all modes).
+/// Returns all keybindings that trigger a specific action.
 pub fn bindings_for_action(action: &str) -> impl Iterator<Item = &'static KeyBindingDef> {
-	all_slices().filter(move |kb| kb.action == action)
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_binding_mode_from_mode() {
-		assert_eq!(BindingMode::from(Mode::Normal), BindingMode::Normal);
-		assert_eq!(BindingMode::from(Mode::Insert), BindingMode::Insert);
-		assert_eq!(BindingMode::from(Mode::Goto), BindingMode::Goto);
-	}
+	KEYBINDINGS.iter().filter(move |kb| kb.action == action)
 }

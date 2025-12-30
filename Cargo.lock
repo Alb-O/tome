@@ -782,6 +782,7 @@ name = "evildoer-input"
 version = "0.3.0"
 dependencies = [
  "evildoer-base",
+ "evildoer-keymap",
  "evildoer-manifest",
  "evildoer-stdlib",
  "log",
@@ -792,6 +793,7 @@ dependencies = [
 name = "evildoer-keymap"
 version = "0.3.0"
 dependencies = [
+ "evildoer-base",
  "evildoer-keymap-derive",
  "evildoer-keymap-parser",
  "kdl",
@@ -884,6 +886,7 @@ version = "0.3.0"
 dependencies = [
  "async-trait",
  "evildoer-base",
+ "evildoer-keymap",
  "evildoer-macro",
  "evildoer-stdlib",
  "futures",

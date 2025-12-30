@@ -1,5 +1,10 @@
+//! Input handler managing key processing and mode state.
+
 use evildoer_base::key::{Key, KeyCode, MouseButton, MouseEvent};
-use evildoer_manifest::{BindingMode, find_binding, find_binding_resolved};
+use evildoer_keymap::parser::Node;
+use evildoer_keymap::ToKeyMap;
+use evildoer_manifest::keymap_registry::{KeymapRegistry, LookupResult};
+use evildoer_manifest::{BindingMode, get_keymap_registry};
 
 use crate::types::{KeyResult, Mode};
 
@@ -12,11 +17,9 @@ pub struct InputHandler {
 	/// For commands that extend selection.
 	pub(crate) extend: bool,
 	/// Last search pattern for n/N repeat.
-	///
-	/// Tuple contains: (pattern, is_reverse)
-	/// - `pattern`: The regex pattern being searched
-	/// - `is_reverse`: True for backward search (?), false for forward (/)
 	pub(crate) last_search: Option<(String, bool)>,
+	/// Accumulated key sequence for multi-key bindings (e.g., `g g`).
+	pub(crate) key_sequence: Vec<Node>,
 }
 
 impl Default for InputHandler {
@@ -33,6 +36,7 @@ impl InputHandler {
 			register: None,
 			extend: false,
 			last_search: None,
+			key_sequence: Vec::new(),
 		}
 	}
 
@@ -75,12 +79,10 @@ impl InputHandler {
 		}
 	}
 
-	/// Set the last search pattern (called by editor after executing search).
 	pub fn set_last_search(&mut self, pattern: String, reverse: bool) {
 		self.last_search = Some((pattern, reverse));
 	}
 
-	/// Get the last search pattern.
 	pub fn last_search(&self) -> Option<(&str, bool)> {
 		self.last_search.as_ref().map(|(p, r)| (p.as_str(), *r))
 	}
@@ -89,21 +91,152 @@ impl InputHandler {
 		self.count = 0;
 		self.register = None;
 		self.extend = false;
+		self.key_sequence.clear();
+	}
+
+	pub fn pending_key_count(&self) -> usize {
+		self.key_sequence.len()
+	}
+
+	pub fn clear_key_sequence(&mut self) {
+		self.key_sequence.clear();
 	}
 
 	/// Process a key and return the result.
 	pub fn handle_key(&mut self, key: Key) -> KeyResult {
+		let registry = get_keymap_registry();
+
 		match &self.mode {
-			Mode::Normal => self.handle_normal_key(key),
+			Mode::Normal => self.handle_mode_key(key, BindingMode::Normal, registry),
 			Mode::Insert => self.handle_insert_key(key),
-			Mode::Goto => self.handle_goto_key(key),
-			Mode::View => self.handle_view_key(key),
-			Mode::Window => self.handle_window_key(key),
+			Mode::Goto => self.handle_mode_key(key, BindingMode::Goto, registry),
+			Mode::View => self.handle_mode_key(key, BindingMode::View, registry),
+			Mode::Window => self.handle_mode_key(key, BindingMode::Window, registry),
 			Mode::PendingAction(kind) => {
 				let kind = *kind;
 				self.handle_pending_action_key(key, kind)
 			}
 		}
+	}
+
+	fn handle_mode_key(
+		&mut self,
+		key: Key,
+		binding_mode: BindingMode,
+		registry: &KeymapRegistry,
+	) -> KeyResult {
+		if binding_mode == BindingMode::Normal {
+			if let Some(digit) = key.as_digit()
+				&& (digit != 0 || self.count > 0)
+			{
+				self.count = self.count.saturating_mul(10).saturating_add(digit);
+				return KeyResult::Consumed;
+			}
+		}
+
+		if key.is_escape() {
+			if !self.key_sequence.is_empty() {
+				self.key_sequence.clear();
+				return KeyResult::Consumed;
+			}
+			if binding_mode != BindingMode::Normal {
+				self.mode = Mode::Normal;
+				self.reset_params();
+				return KeyResult::ModeChange(Mode::Normal);
+			}
+			self.reset_params();
+			return KeyResult::Consumed;
+		}
+
+		let key = self.process_shift_extend(key);
+
+		let Ok(node) = key.to_keymap() else {
+			self.reset_params();
+			return KeyResult::Unhandled;
+		};
+
+		self.key_sequence.push(node.clone());
+
+		let lookup_result = registry.lookup(binding_mode, &self.key_sequence);
+
+		let lookup_result = match (&lookup_result, key.code) {
+			(LookupResult::None, KeyCode::Char(c)) if c.is_ascii_uppercase() => {
+				self.key_sequence.pop();
+				let lowercase_key = Key {
+					code: KeyCode::Char(c.to_ascii_lowercase()),
+					modifiers: key.modifiers,
+				};
+				if let Ok(lowercase_node) = lowercase_key.to_keymap() {
+					self.key_sequence.push(lowercase_node);
+					registry.lookup(binding_mode, &self.key_sequence)
+				} else {
+					lookup_result
+				}
+			}
+			_ => lookup_result,
+		};
+
+		match lookup_result {
+			LookupResult::Match(entry) => {
+				let count = if self.count > 0 {
+					self.count as usize
+				} else {
+					1
+				};
+				let extend = self.extend;
+				let register = self.register;
+				let action_id = entry.action_id;
+
+				if binding_mode != BindingMode::Normal {
+					self.mode = Mode::Normal;
+				}
+				self.reset_params();
+
+				KeyResult::ActionById {
+					id: action_id,
+					count,
+					extend,
+					register,
+				}
+			}
+			LookupResult::Pending { sticky } => {
+				if let Some(entry) = sticky {
+					log::debug!(
+						"Pending with sticky action '{}' after {} keys",
+						entry.action_name,
+						self.key_sequence.len()
+					);
+				}
+				KeyResult::Pending {
+					keys_so_far: self.key_sequence.len(),
+				}
+			}
+			LookupResult::None => {
+				if binding_mode != BindingMode::Normal {
+					self.mode = Mode::Normal;
+				}
+				self.reset_params();
+				KeyResult::Unhandled
+			}
+		}
+	}
+
+	fn process_shift_extend(&mut self, key: Key) -> Key {
+		if let KeyCode::Char(c) = key.code
+			&& c.is_ascii_uppercase()
+		{
+			if key.modifiers.shift {
+				self.extend = true;
+			}
+			return key.drop_shift();
+		}
+
+		if key.modifiers.shift {
+			self.extend = true;
+			return key.drop_shift();
+		}
+
+		key
 	}
 
 	pub fn handle_mouse(&mut self, event: MouseEvent) -> KeyResult {
@@ -130,146 +263,5 @@ impl InputHandler {
 			},
 			_ => KeyResult::Consumed,
 		}
-	}
-
-	pub(crate) fn handle_goto_key(&mut self, key: Key) -> KeyResult {
-		if key.is_escape() {
-			self.mode = Mode::Normal;
-			self.reset_params();
-			return KeyResult::ModeChange(Mode::Normal);
-		}
-
-		let count = if self.count > 0 {
-			self.count as usize
-		} else {
-			1
-		};
-		let extend = self.extend;
-		let register = self.register;
-
-		let key = self.extend_and_lower_if_shift(key);
-
-		// Use typed ActionId dispatch
-		if let Some(resolved) = find_binding_resolved(BindingMode::Goto, key) {
-			self.mode = Mode::Normal;
-			self.reset_params();
-			return KeyResult::ActionById {
-				id: resolved.action_id,
-				count,
-				extend,
-				register,
-			};
-		}
-
-		self.mode = Mode::Normal;
-		self.reset_params();
-		KeyResult::Unhandled
-	}
-
-	pub(crate) fn handle_view_key(&mut self, key: Key) -> KeyResult {
-		if key.is_escape() {
-			self.mode = Mode::Normal;
-			self.reset_params();
-			return KeyResult::ModeChange(Mode::Normal);
-		}
-
-		let count = if self.count > 0 {
-			self.count as usize
-		} else {
-			1
-		};
-		let extend = self.extend;
-		let register = self.register;
-
-		let key = key.normalize().drop_shift();
-
-		// Use typed ActionId dispatch
-		if let Some(resolved) = find_binding_resolved(BindingMode::View, key) {
-			self.mode = Mode::Normal;
-			self.reset_params();
-			return KeyResult::ActionById {
-				id: resolved.action_id,
-				count,
-				extend,
-				register,
-			};
-		}
-
-		self.mode = Mode::Normal;
-		self.reset_params();
-		KeyResult::Unhandled
-	}
-
-	pub(crate) fn handle_window_key(&mut self, key: Key) -> KeyResult {
-		if key.is_escape() {
-			self.mode = Mode::Normal;
-			self.reset_params();
-			return KeyResult::ModeChange(Mode::Normal);
-		}
-
-		let count = if self.count > 0 {
-			self.count as usize
-		} else {
-			1
-		};
-		let extend = self.extend;
-		let register = self.register;
-
-		let key = key.normalize().drop_shift();
-
-		// Use typed ActionId dispatch
-		if let Some(resolved) = find_binding_resolved(BindingMode::Window, key) {
-			self.mode = Mode::Normal;
-			self.reset_params();
-			return KeyResult::ActionById {
-				id: resolved.action_id,
-				count,
-				extend,
-				register,
-			};
-		}
-
-		self.mode = Mode::Normal;
-		self.reset_params();
-		KeyResult::Unhandled
-	}
-
-	/// If shift is held, set extend mode. For uppercase letters, use the uppercase binding
-	/// if it exists, otherwise lowercase for binding lookup.
-	pub(crate) fn extend_and_lower_if_shift(&mut self, key: Key) -> Key {
-		// Handle Uppercase characters (Shift+Char or CapsLock+Char)
-		// These always imply extend unless explicitly bound.
-		if let KeyCode::Char(c) = key.code
-			&& c.is_ascii_uppercase()
-		{
-			// Terminal may send uppercase without shift modifier (CapsLock or explicit uppercase key).
-			// Only set extend if the Shift modifier was actually present; otherwise keep existing extend state.
-			if key.modifiers.shift {
-				self.extend = true;
-			}
-
-			// Check if uppercase key has its own binding (e.g. 'W')
-			// We look up using the key without Shift modifier (since the char itself is uppercase)
-			let lookup_key = key.drop_shift();
-
-			if find_binding(BindingMode::Normal, lookup_key).is_some() {
-				return lookup_key;
-			}
-
-			// If uppercase key not found, fallback to lowercase variant
-			return Key {
-				code: KeyCode::Char(c.to_ascii_lowercase()),
-				modifiers: lookup_key.modifiers,
-			};
-		}
-
-		// For non-uppercase chars, only handle explicit Shift modifier
-		if !key.modifiers.shift {
-			return key;
-		}
-
-		// Both char and special keys with Shift -> extend selection
-		self.extend = true;
-		key.drop_shift()
 	}
 }

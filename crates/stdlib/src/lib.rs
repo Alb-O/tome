@@ -30,7 +30,7 @@ pub use evildoer_manifest::{
 	EditorCapabilities, EditorContext, EditorOps, HOOKS, HandleOutcome, HookContext, HookDef,
 	HookEvent, HookResult, KeyBindingDef, MOTIONS, MUTABLE_HOOKS, MotionDef, MutableHookContext,
 	MutableHookDef, OPTIONS, ObjectSelectionKind, OptionDef, OptionScope, OptionType, OptionValue,
-	PendingAction, PendingKind, RegistryMetadata, RegistrySource, RenderedSegment, ResolvedBinding,
+	PendingAction, PendingKind, RegistryMetadata, RegistrySource, RenderedSegment,
 	STATUSLINE_SEGMENTS, ScrollAmount, ScrollDir, SegmentPosition, SegmentStyle, StatuslineContext,
 	StatuslineSegmentDef, TEXT_OBJECTS, TextObjectDef, VisualDirection, action, command,
 	dispatch_result, hook, motion, option, result_handler, statusline_segment, text_object,

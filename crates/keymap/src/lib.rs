@@ -12,7 +12,7 @@ pub use config::{Config, DerivedConfig, Item, KeyMapConfig};
 pub use evildoer_keymap_derive::KeyMap;
 pub use evildoer_keymap_parser as parser;
 pub use keymap::{Error, FromKeyMap, IntoKeyMap, KeyMap, ToKeyMap};
-pub use matcher::Matcher;
+pub use matcher::{MatchResult, Matcher};
 
 pub mod backend;
 pub mod config;

@@ -1,4 +1,7 @@
 //! KDL keybinding parsing macro.
+//!
+//! Parses keybindings in KDL format and emits them to the KEYBINDINGS distributed slice.
+//! Supports key sequences like `"g g"` for multi-key bindings.
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
@@ -66,8 +69,6 @@ fn generate_keybindings(
 			}
 		};
 
-		let slice_ident = format_ident!("KEYBINDINGS_{}", mode_upper);
-
 		for (idx, entry) in node.entries().iter().enumerate() {
 			if entry.name().is_some() {
 				continue;
@@ -77,20 +78,19 @@ fn generate_keybindings(
 				continue;
 			};
 
-			let parsed = evildoer_keymap_parser::parse(key_str)
-				.map_err(|e| format!("Invalid key \"{key_str}\": {e}"))?;
-
-			let key_tokens = node_to_key_tokens(&parsed)?;
+			// Validate the key sequence at compile time
+			evildoer_keymap_parser::parse_seq(key_str)
+				.map_err(|e| format!("Invalid key sequence \"{key_str}\": {e}"))?;
 
 			let static_ident = format_ident!("KB_{}_{}__{}", action_upper, mode_upper, idx);
 
 			statics.push(quote! {
 				#[allow(non_upper_case_globals)]
-				#[::linkme::distributed_slice(evildoer_manifest::keybindings::#slice_ident)]
+				#[::linkme::distributed_slice(evildoer_manifest::keybindings::KEYBINDINGS)]
 				static #static_ident: evildoer_manifest::keybindings::KeyBindingDef =
 					evildoer_manifest::keybindings::KeyBindingDef {
 						mode: evildoer_manifest::keybindings::BindingMode::#mode_variant,
-						key: #key_tokens,
+						keys: #key_str,
 						action: #action_name,
 						priority: 100,
 					};
@@ -99,35 +99,4 @@ fn generate_keybindings(
 	}
 
 	Ok(quote! { #(#statics)* })
-}
-
-fn node_to_key_tokens(
-	node: &evildoer_keymap_parser::Node,
-) -> Result<proc_macro2::TokenStream, String> {
-	use evildoer_keymap_parser::{Key as ParserKey, Modifier};
-
-	let code_tokens = match &node.key {
-		ParserKey::Char(c) => quote! { evildoer_base::key::KeyCode::Char(#c) },
-		ParserKey::F(n) => quote! { evildoer_base::key::KeyCode::F(#n) },
-		ParserKey::Group(g) => {
-			return Err(format!(
-				"Key groups (@{g:?}) not supported in compile-time bindings"
-			));
-		}
-		key => {
-			let variant = format_ident!("{}", format!("{key:?}"));
-			quote! { evildoer_base::key::KeyCode::#variant }
-		}
-	};
-
-	let ctrl = node.modifiers & (Modifier::Ctrl as u8) != 0;
-	let alt = node.modifiers & (Modifier::Alt as u8) != 0;
-	let shift = node.modifiers & (Modifier::Shift as u8) != 0;
-
-	Ok(quote! {
-		evildoer_base::key::Key {
-			code: #code_tokens,
-			modifiers: evildoer_base::key::Modifiers { ctrl: #ctrl, alt: #alt, shift: #shift },
-		}
-	})
 }

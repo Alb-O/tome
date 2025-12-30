@@ -168,6 +168,7 @@ pub mod editor_ctx;
 pub mod hooks;
 pub mod index;
 pub mod keybindings;
+pub mod keymap_registry;
 pub mod macros;
 pub mod mode;
 pub mod notifications;
@@ -268,9 +269,9 @@ pub use index::{
 	resolve_action_id,
 };
 pub use keybindings::{
-	BindingMode, KeyBindingDef, ResolvedBinding, bindings_for_action, bindings_for_mode,
-	find_binding, find_binding_resolved,
+	BindingMode, KEYBINDINGS, KeyBindingDef, all_bindings, bindings_for_action, bindings_for_mode,
 };
+pub use keymap_registry::{BindingEntry, KeymapRegistry, LookupResult, get_keymap_registry};
 pub use mode::Mode;
 pub use notifications::{
 	Animation, AutoDismiss, Level, NOTIFICATION_TYPES, NotificationTypeDef, Timing,
