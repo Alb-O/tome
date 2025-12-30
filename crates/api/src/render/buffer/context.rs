@@ -49,8 +49,8 @@ impl<'a> BufferRenderContext<'a> {
 	/// Creates cursor styling configuration based on theme and mode.
 	pub fn make_cursor_styles(&self) -> CursorStyles {
 		let primary_cursor_style = Style::default()
-			.bg(self.theme.colors.ui.cursor_bg.into())
-			.fg(self.theme.colors.ui.cursor_fg.into())
+			.bg(self.theme.colors.ui.cursor_bg)
+			.fg(self.theme.colors.ui.cursor_fg)
 			.add_modifier(Modifier::BOLD);
 
 		let secondary_cursor_style = {
@@ -66,17 +66,14 @@ impl<'a> BufferRenderContext<'a> {
 				.ui
 				.cursor_fg
 				.blend(self.theme.colors.ui.fg, 0.4);
-			Style::default()
-				.bg(bg.into())
-				.fg(fg.into())
-				.add_modifier(Modifier::BOLD)
+			Style::default().bg(bg).fg(fg).add_modifier(Modifier::BOLD)
 		};
 
-		let base_style = Style::default().fg(self.theme.colors.ui.fg.into());
+		let base_style = Style::default().fg(self.theme.colors.ui.fg);
 
 		let selection_style = Style::default()
-			.bg(self.theme.colors.ui.selection_bg.into())
-			.fg(self.theme.colors.ui.selection_fg.into());
+			.bg(self.theme.colors.ui.selection_bg)
+			.fg(self.theme.colors.ui.selection_fg);
 
 		CursorStyles {
 			primary: primary_cursor_style,
@@ -139,7 +136,7 @@ impl<'a> BufferRenderContext<'a> {
 		highlighter
 			.map(|span| {
 				let abstract_style = highlight_styles.style_for_highlight(span.highlight);
-				let evildoer_tui_style: Style = abstract_style.into();
+				let evildoer_tui_style: Style = abstract_style;
 				(span, evildoer_tui_style)
 			})
 			.collect()
@@ -173,7 +170,7 @@ impl<'a> BufferRenderContext<'a> {
 		let modified = match modification {
 			StyleMod::Dim(factor) => {
 				// Convert theme bg color to evildoer_tui color for blending
-				let bg: evildoer_tui::style::Color = self.theme.colors.ui.bg.into();
+				let bg: evildoer_tui::style::Color = self.theme.colors.ui.bg;
 				if let Some(fg) = style.fg {
 					// Blend fg toward bg using Animatable::lerp
 					// factor=1.0 means no dimming (full fg), factor=0.0 means full bg
@@ -226,7 +223,7 @@ impl<'a> BufferRenderContext<'a> {
 
 		let highlight_spans = self.collect_highlight_spans(buffer, area);
 		let cursor_line = buffer.cursor_line();
-		let cursorline_bg: evildoer_tui::style::Color = self.theme.colors.ui.cursorline_bg.into();
+		let cursorline_bg: evildoer_tui::style::Color = self.theme.colors.ui.cursorline_bg;
 
 		let mut output_lines: Vec<Line> = Vec::new();
 		let mut current_line_idx = buffer.scroll_line;
@@ -267,7 +264,7 @@ impl<'a> BufferRenderContext<'a> {
 					format!("{:>width$} ", "\u{2506}", width = gutter_width as usize - 1)
 				};
 				let gutter_style = if is_first_segment {
-					let style = Style::default().fg(self.theme.colors.ui.gutter_fg.into());
+					let style = Style::default().fg(self.theme.colors.ui.gutter_fg);
 					if is_cursor_line {
 						style.bg(cursorline_bg)
 					} else {
@@ -280,7 +277,7 @@ impl<'a> BufferRenderContext<'a> {
 						.ui
 						.gutter_fg
 						.blend(self.theme.colors.ui.bg, 0.5);
-					let style = Style::default().fg(dim_color.into());
+					let style = Style::default().fg(dim_color);
 					if is_cursor_line {
 						style.bg(cursorline_bg)
 					} else {
@@ -322,14 +319,14 @@ impl<'a> BufferRenderContext<'a> {
 					let non_cursor_style = if in_selection {
 						// Invert: syntax fg becomes bg, use contrasting color as fg
 						let base = syntax_style.unwrap_or(styles.base);
-						let syntax_fg = base.fg.unwrap_or(self.theme.colors.ui.fg.into());
+						let syntax_fg = base.fg.unwrap_or(self.theme.colors.ui.fg);
 						let text_fg = match self.theme.variant {
 							ThemeVariant::Dark => self.theme.colors.ui.bg,
 							ThemeVariant::Light => self.theme.colors.ui.fg,
 						};
 						Style::default()
 							.bg(syntax_fg)
-							.fg(text_fg.into())
+							.fg(text_fg)
 							.add_modifier(base.add_modifier)
 					} else {
 						let base = syntax_style.unwrap_or(styles.base);
@@ -387,7 +384,7 @@ impl<'a> BufferRenderContext<'a> {
 						.ui
 						.gutter_fg
 						.blend(self.theme.colors.ui.bg, 0.5);
-					let mut fill_style = Style::default().fg(dim_color.into());
+					let mut fill_style = Style::default().fg(dim_color);
 					if is_cursor_line {
 						fill_style = fill_style.bg(cursorline_bg);
 					}
@@ -441,7 +438,7 @@ impl<'a> BufferRenderContext<'a> {
 					current_line_idx + 1,
 					width = gutter_width as usize - 1
 				);
-				let mut gutter_style = Style::default().fg(self.theme.colors.ui.gutter_fg.into());
+				let mut gutter_style = Style::default().fg(self.theme.colors.ui.gutter_fg);
 				if is_cursor_line {
 					gutter_style = gutter_style.bg(cursorline_bg);
 				}
@@ -497,7 +494,7 @@ impl<'a> BufferRenderContext<'a> {
 				.blend(self.theme.colors.ui.bg, 0.5);
 			output_lines.push(Line::from(vec![Span::styled(
 				line_num_str,
-				Style::default().fg(dim_color.into()),
+				Style::default().fg(dim_color),
 			)]));
 		}
 

@@ -909,7 +909,7 @@ impl Editor {
 		highlighter
 			.map(|span| {
 				let abstract_style = highlight_styles.style_for_highlight(span.highlight);
-				let evildoer_tui_style: evildoer_tui::style::Style = abstract_style.into();
+				let evildoer_tui_style: evildoer_tui::style::Style = abstract_style;
 				(span, evildoer_tui_style)
 			})
 			.collect()
@@ -948,7 +948,7 @@ impl Editor {
 		let modified = match modification {
 			StyleMod::Dim(factor) => {
 				// Convert theme bg color to evildoer_tui color for blending
-				let bg: evildoer_tui::style::Color = self.theme.colors.ui.bg.into();
+				let bg: evildoer_tui::style::Color = self.theme.colors.ui.bg;
 				if let Some(fg) = style.fg {
 					// Blend fg toward bg using Animatable::lerp
 					// factor=1.0 means no dimming (full fg), factor=0.0 means full bg

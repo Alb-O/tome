@@ -120,17 +120,15 @@ impl Editor {
 			}
 
 			// Check if we're in window mode (using first buffer's input handler, terminal panels only)
-			if is_terminal {
-				if let Some(first_buffer_id) = self.layout.first_buffer() {
-					let in_window_mode = self
-						.buffers
-						.get_buffer(first_buffer_id)
-						.is_some_and(|b| matches!(b.input.mode(), Mode::Window));
+			if is_terminal && let Some(first_buffer_id) = self.layout.first_buffer() {
+				let in_window_mode = self
+					.buffers
+					.get_buffer(first_buffer_id)
+					.is_some_and(|b| matches!(b.input.mode(), Mode::Window));
 
-					if in_window_mode {
-						// Process window mode key through first buffer's input handler
-						return self.handle_terminal_window_key(key, first_buffer_id).await;
-					}
+				if in_window_mode {
+					// Process window mode key through first buffer's input handler
+					return self.handle_terminal_window_key(key, first_buffer_id).await;
 				}
 			}
 
@@ -140,10 +138,10 @@ impl Editor {
 				if result.needs_redraw {
 					self.needs_redraw = true;
 				}
-				if result.release_focus {
-					if let Some(first_buffer) = self.layout.first_buffer() {
-						self.focus_buffer(first_buffer);
-					}
+				if result.release_focus
+					&& let Some(first_buffer) = self.layout.first_buffer()
+				{
+					self.focus_buffer(first_buffer);
 				}
 			}
 			return false;

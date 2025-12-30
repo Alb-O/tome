@@ -31,16 +31,7 @@ impl Editor {
 					0,
 				)
 			} else if self.is_debug_focused() {
-				(
-					None,
-					Some("debug".to_string()),
-					false,
-					"DEBUG",
-					0,
-					0,
-					0,
-					0,
-				)
+				(None, Some("debug".to_string()), false, "DEBUG", 0, 0, 0, 0)
 			} else {
 				let buffer = self.buffer();
 				let path_str = buffer
@@ -96,39 +87,35 @@ impl Editor {
 
 	pub fn segment_to_span(&self, segment: &RenderedSegment) -> Span<'static> {
 		let style = match segment.style {
-			SegmentStyle::Normal => Style::default().fg(self.theme.colors.ui.fg.into()),
+			SegmentStyle::Normal => Style::default().fg(self.theme.colors.ui.fg),
 			SegmentStyle::Mode => {
 				let base = match self.mode() {
 					Mode::Normal => Style::default()
-						.bg(self.theme.colors.status.normal_bg.into())
-						.fg(self.theme.colors.status.normal_fg.into()),
+						.bg(self.theme.colors.status.normal_bg)
+						.fg(self.theme.colors.status.normal_fg),
 					Mode::Insert => Style::default()
-						.bg(self.theme.colors.status.insert_bg.into())
-						.fg(self.theme.colors.status.insert_fg.into()),
+						.bg(self.theme.colors.status.insert_bg)
+						.fg(self.theme.colors.status.insert_fg),
 					Mode::Goto => Style::default()
-						.bg(self.theme.colors.status.goto_bg.into())
-						.fg(self.theme.colors.status.goto_fg.into()),
+						.bg(self.theme.colors.status.goto_bg)
+						.fg(self.theme.colors.status.goto_fg),
 					Mode::View => Style::default()
-						.bg(self.theme.colors.status.view_bg.into())
-						.fg(self.theme.colors.status.view_fg.into()),
+						.bg(self.theme.colors.status.view_bg)
+						.fg(self.theme.colors.status.view_fg),
 					Mode::Window => Style::default()
-						.bg(self.theme.colors.status.goto_bg.into())
-						.fg(self.theme.colors.status.goto_fg.into()),
+						.bg(self.theme.colors.status.goto_bg)
+						.fg(self.theme.colors.status.goto_fg),
 					Mode::PendingAction(_) => Style::default()
-						.bg(self.theme.colors.status.command_bg.into())
-						.fg(self.theme.colors.status.command_fg.into()),
+						.bg(self.theme.colors.status.command_bg)
+						.fg(self.theme.colors.status.command_fg),
 				};
 				base.add_modifier(Modifier::BOLD)
 			}
 			SegmentStyle::Inverted => Style::default().add_modifier(Modifier::REVERSED),
-			SegmentStyle::Dim => Style::default().fg(self.theme.colors.status.dim_fg.into()),
-			SegmentStyle::Warning => {
-				Style::default().fg(self.theme.colors.status.warning_fg.into())
-			}
-			SegmentStyle::Error => Style::default().fg(self.theme.colors.status.error_fg.into()),
-			SegmentStyle::Success => {
-				Style::default().fg(self.theme.colors.status.success_fg.into())
-			}
+			SegmentStyle::Dim => Style::default().fg(self.theme.colors.status.dim_fg),
+			SegmentStyle::Warning => Style::default().fg(self.theme.colors.status.warning_fg),
+			SegmentStyle::Error => Style::default().fg(self.theme.colors.status.error_fg),
+			SegmentStyle::Success => Style::default().fg(self.theme.colors.status.success_fg),
 		};
 		Span::styled(segment.text.clone(), style)
 	}

@@ -46,18 +46,15 @@ impl SeparatorStyle {
 				.and_then(|ds| editor.layout.separator_rect(doc_area, &ds.id)),
 			anim_rect: editor.layout.animation_rect(),
 			anim_intensity: editor.layout.animation_intensity(),
-			base_bg: [
-				editor.theme.colors.ui.bg.into(),
-				editor.theme.colors.popup.bg.into(),
-			],
+			base_bg: [editor.theme.colors.ui.bg, editor.theme.colors.popup.bg],
 			base_fg: [
-				editor.theme.colors.ui.gutter_fg.into(),
-				editor.theme.colors.popup.fg.into(),
+				editor.theme.colors.ui.gutter_fg,
+				editor.theme.colors.popup.fg,
 			],
-			hover_fg: editor.theme.colors.ui.cursor_fg.into(),
-			hover_bg: editor.theme.colors.ui.selection_bg.into(),
-			drag_fg: editor.theme.colors.ui.bg.into(),
-			drag_bg: editor.theme.colors.ui.fg.into(),
+			hover_fg: editor.theme.colors.ui.cursor_fg,
+			hover_bg: editor.theme.colors.ui.selection_bg,
+			drag_fg: editor.theme.colors.ui.bg,
+			drag_bg: editor.theme.colors.ui.fg,
 		}
 	}
 
@@ -136,7 +133,7 @@ impl Editor {
 
 		frame.render_widget(Clear, area);
 
-		let bg_block = Block::default().style(Style::default().bg(self.theme.colors.ui.bg.into()));
+		let bg_block = Block::default().style(Style::default().bg(self.theme.colors.ui.bg));
 		frame.render_widget(bg_block, area);
 
 		let chunks = Layout::default()
@@ -161,8 +158,7 @@ impl Editor {
 		}
 		self.ui = ui;
 
-		let status_bg =
-			Block::default().style(Style::default().bg(self.theme.colors.popup.bg.into()));
+		let status_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
 		frame.render_widget(status_bg, chunks[1]);
 		frame.render_widget(self.render_status_line(), chunks[1]);
 
@@ -449,9 +445,10 @@ impl Editor {
 		area: Rect,
 		is_focused: bool,
 	) {
-		let base_style = Style::default()
-			.bg(self.theme.colors.popup.bg.into())
-			.fg(self.theme.colors.popup.fg.into());
+		let base_style =
+			Style::default()
+				.bg(self.theme.colors.popup.bg)
+				.fg(self.theme.colors.popup.fg);
 
 		frame.render_widget(Block::default().style(base_style), area);
 
@@ -521,9 +518,10 @@ impl Editor {
 		area: Rect,
 		_is_focused: bool,
 	) {
-		let base_style = Style::default()
-			.bg(self.theme.colors.popup.bg.into())
-			.fg(self.theme.colors.popup.fg.into());
+		let base_style =
+			Style::default()
+				.bg(self.theme.colors.popup.bg)
+				.fg(self.theme.colors.popup.fg);
 
 		frame.render_widget(Block::default().style(base_style), area);
 

@@ -26,7 +26,7 @@ impl Editor {
 		let semantic = type_def
 			.map(|t| t.semantic)
 			.unwrap_or(evildoer_manifest::SEMANTIC_INFO);
-		let notif_style: Style = self.theme.colors.notification_style(semantic).into();
+		let notif_style: Style = self.theme.colors.notification_style(semantic);
 		let accent = notif_style.fg.unwrap_or_default();
 
 		let mut toast = Toast::new(text)

@@ -132,10 +132,7 @@ pub fn find_panel_by_id(id: &str) -> Option<&'static PanelDef> {
 
 /// Returns the index of a panel in the PANELS slice.
 pub fn panel_kind_index(name: &str) -> Option<u16> {
-	PANELS
-		.iter()
-		.position(|p| p.name == name)
-		.map(|i| i as u16)
+	PANELS.iter().position(|p| p.name == name).map(|i| i as u16)
 }
 
 /// Returns all registered panels.

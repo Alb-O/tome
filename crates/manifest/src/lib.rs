@@ -279,6 +279,10 @@ pub use notifications::{
 pub use options::{
 	OPTIONS, OptionDef, OptionScope, OptionType, OptionValue, all_options, find_option,
 };
+pub use panels::{
+	PANEL_FACTORIES, PANELS, PanelDef, PanelFactory, PanelFactoryDef, PanelId, all_panels,
+	find_factory, find_panel, find_panel_by_id, panel_kind_index,
+};
 pub use split_buffer::{
 	SplitAttrs, SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle,
 	SplitDockPreference, SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse,
@@ -292,8 +296,4 @@ pub use theme::{
 	DEFAULT_THEME, DEFAULT_THEME_ID, NotificationColors, OwnedTheme, PopupColors,
 	SemanticColorPair, StatusColors, THEMES, Theme, ThemeColors, ThemeSource, ThemeVariant,
 	UiColors, blend_colors, get_theme, register_runtime_themes, runtime_themes, suggest_theme,
-};
-pub use panels::{
-	PANELS, PANEL_FACTORIES, PanelDef, PanelFactory, PanelFactoryDef, PanelId, all_panels,
-	find_factory, find_panel, find_panel_by_id, panel_kind_index,
 };

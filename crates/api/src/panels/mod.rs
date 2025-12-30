@@ -12,7 +12,6 @@ mod registry;
 
 use evildoer_manifest::{PANEL_FACTORIES, PanelFactoryDef};
 use linkme::distributed_slice;
-
 pub use registry::PanelRegistry;
 
 use crate::debug::DebugPanel;

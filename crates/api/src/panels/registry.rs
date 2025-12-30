@@ -43,10 +43,10 @@ impl PanelRegistry {
 		let def = find_panel(name)?;
 		let kind = panel_kind_index(name)?;
 
-		if def.singleton {
-			if let Some(id) = self.find_by_kind(kind) {
-				return Some(id);
-			}
+		if def.singleton
+			&& let Some(id) = self.find_by_kind(kind)
+		{
+			return Some(id);
 		}
 
 		let factory = find_factory(name)?;
@@ -61,7 +61,11 @@ impl PanelRegistry {
 	/// Inserts a panel instance directly.
 	///
 	/// Useful when the panel is created externally (e.g., by the Editor).
-	pub fn insert<T: SplitBuffer + Send + 'static>(&mut self, name: &str, panel: T) -> Option<PanelId> {
+	pub fn insert<T: SplitBuffer + Send + 'static>(
+		&mut self,
+		name: &str,
+		panel: T,
+	) -> Option<PanelId> {
 		let kind = panel_kind_index(name)?;
 		let instance = self.next_instance.entry(kind).or_insert(0);
 		let id = PanelId::new(kind, *instance);
@@ -83,7 +87,10 @@ impl PanelRegistry {
 
 	/// Returns all panel IDs of a given type.
 	pub fn all_of_kind(&self, kind: u16) -> impl Iterator<Item = PanelId> + '_ {
-		self.instances.keys().filter(move |id| id.kind == kind).copied()
+		self.instances
+			.keys()
+			.filter(move |id| id.kind == kind)
+			.copied()
 	}
 
 	/// Returns a reference to a panel by ID, downcasted to the expected type.

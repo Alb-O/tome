@@ -28,8 +28,7 @@ use evildoer_manifest::{
 	SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction,
 	SplitSize,
 };
-
-pub use ring_buffer::{LogEntry, LogLevel, LOG_BUFFER, MAX_LOG_ENTRIES};
+pub use ring_buffer::{LOG_BUFFER, LogEntry, LogLevel, MAX_LOG_ENTRIES};
 pub use tracing_layer::DebugPanelLayer;
 
 static NEXT_DEBUG_PANEL_ID: AtomicU64 = AtomicU64::new(0);
@@ -95,7 +94,9 @@ impl DebugPanel {
 	}
 
 	fn scroll_up(&mut self, lines: usize) {
-		let max_offset = self.filtered_count().saturating_sub(self.size.height as usize);
+		let max_offset = self
+			.filtered_count()
+			.saturating_sub(self.size.height as usize);
 		self.scroll_offset = (self.scroll_offset + lines).min(max_offset);
 		self.auto_scroll = false;
 	}
@@ -153,7 +154,9 @@ impl SplitBuffer for DebugPanel {
 			SplitKeyCode::PageUp => self.scroll_up(self.size.height as usize / 2),
 			SplitKeyCode::PageDown => self.scroll_down(self.size.height as usize / 2),
 			SplitKeyCode::Char('g') if key.modifiers == SplitModifiers::NONE => {
-				self.scroll_offset = self.filtered_count().saturating_sub(self.size.height as usize);
+				self.scroll_offset = self
+					.filtered_count()
+					.saturating_sub(self.size.height as usize);
 				self.auto_scroll = false;
 			}
 			SplitKeyCode::Char('G') | SplitKeyCode::End => {
