@@ -168,6 +168,30 @@ impl Editor {
 			return false;
 		}
 
+		// If a generic panel is focused, route input to it
+		if let BufferView::Panel(panel_id) = self.focused_view() {
+			if key.code == KeyCode::Escape {
+				if let Some(first_buffer) = self.layout.first_buffer() {
+					self.focus_buffer(first_buffer);
+				}
+				self.needs_redraw = true;
+				return false;
+			}
+
+			if let Some(split_key) = convert_termina_key(&key) {
+				let result = self.handle_panel_key(panel_id, split_key);
+				if result.needs_redraw {
+					self.needs_redraw = true;
+				}
+				if result.release_focus {
+					if let Some(first_buffer) = self.layout.first_buffer() {
+						self.focus_buffer(first_buffer);
+					}
+				}
+			}
+			return false;
+		}
+
 		self.handle_key_active(key).await
 	}
 
@@ -485,6 +509,19 @@ impl Editor {
 			return false;
 		}
 
+		if let BufferView::Panel(panel_id) = self.focused_view() {
+			let local_x = mouse_x.saturating_sub(view_area.x);
+			let local_y = mouse_y.saturating_sub(view_area.y);
+
+			if let Some(split_mouse) = convert_mouse_event(&mouse, local_x, local_y) {
+				let result = self.handle_panel_mouse(panel_id, split_mouse);
+				if result.needs_redraw {
+					self.needs_redraw = true;
+				}
+			}
+			return false;
+		}
+
 		// Translate screen coordinates to view-local coordinates
 		let local_row = mouse_y.saturating_sub(view_area.y);
 		let local_col = mouse_x.saturating_sub(view_area.x);
@@ -565,6 +602,42 @@ impl Editor {
 			height: main_height,
 		};
 		self.ui.compute_layout(main_area).doc_area
+	}
+
+	/// Handles a key event for a generic panel.
+	fn handle_panel_key(
+		&mut self,
+		panel_id: evildoer_manifest::PanelId,
+		key: SplitKey,
+	) -> evildoer_manifest::SplitEventResult {
+		use crate::debug::DebugPanel;
+		use crate::terminal::TerminalBuffer;
+
+		if let Some(terminal) = self.panels.get_mut::<TerminalBuffer>(panel_id) {
+			terminal.handle_key(key)
+		} else if let Some(debug) = self.panels.get_mut::<DebugPanel>(panel_id) {
+			debug.handle_key(key)
+		} else {
+			evildoer_manifest::SplitEventResult::ignored()
+		}
+	}
+
+	/// Handles a mouse event for a generic panel.
+	fn handle_panel_mouse(
+		&mut self,
+		panel_id: evildoer_manifest::PanelId,
+		mouse: SplitMouse,
+	) -> evildoer_manifest::SplitEventResult {
+		use crate::debug::DebugPanel;
+		use crate::terminal::TerminalBuffer;
+
+		if let Some(terminal) = self.panels.get_mut::<TerminalBuffer>(panel_id) {
+			terminal.handle_mouse(mouse)
+		} else if let Some(debug) = self.panels.get_mut::<DebugPanel>(panel_id) {
+			debug.handle_mouse(mouse)
+		} else {
+			evildoer_manifest::SplitEventResult::ignored()
+		}
 	}
 }
 

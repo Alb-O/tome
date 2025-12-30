@@ -424,10 +424,7 @@ macro_rules! result_handler {
 /// Registers a panel type in the [`PANELS`](crate::panels::PANELS) slice.
 ///
 /// Panels are toggleable split views (terminals, debug logs, file trees, etc.)
-/// that integrate with the editor's layer system. Each panel type gets:
-/// - A [`PanelDef`](crate::panels::PanelDef) registration
-/// - A toggle action with optional keybinding
-/// - Integration with the editor's focus and rendering systems
+/// that integrate with the editor's layer system.
 ///
 /// # Example
 ///
@@ -437,15 +434,6 @@ macro_rules! result_handler {
 ///     mode_name: "DEBUG",
 ///     layer: 2,
 /// });
-///
-/// // With keybinding
-/// panel!(terminal, {
-///     description: "Embedded terminal",
-///     mode_name: "TERMINAL",
-///     layer: 1,
-///     bindings: r#"normal "`""#,
-///     sticky: true,
-/// });
 /// ```
 ///
 /// # Fields
@@ -453,7 +441,6 @@ macro_rules! result_handler {
 /// - `description` (required): Human-readable description
 /// - `mode_name` (required): Status bar mode text when focused (e.g., "DEBUG")
 /// - `layer` (required): Layer index for docking (0 = base, higher overlays lower)
-/// - `bindings` (optional): KDL keybinding string for toggle action
 /// - `singleton` (optional): Only one instance allowed (default: true)
 /// - `sticky` (optional): Resist losing focus on mouse hover (default: false)
 /// - `priority` (optional): Priority within layer (default: 0)
@@ -463,7 +450,6 @@ macro_rules! panel {
 		description: $desc:expr,
 		mode_name: $mode_name:expr,
 		layer: $layer:expr
-		$(, bindings: $bindings:literal)?
 		$(, singleton: $singleton:expr)?
 		$(, sticky: $sticky:expr)?
 		$(, priority: $priority:expr)?
@@ -483,12 +469,6 @@ macro_rules! panel {
 				singleton: $crate::__opt!($({$singleton})?, true),
 				sticky: $crate::__opt!($({$sticky})?, false),
 			};
-
-			// Generate toggle action
-			$crate::action!([<toggle_ $name>], {
-				description: concat!("Toggle ", stringify!($name), " panel")
-				$(, bindings: $bindings)?
-			}, |_ctx| $crate::actions::ActionResult::TogglePanel(stringify!($name)));
 		}
 	};
 }

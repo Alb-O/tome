@@ -226,8 +226,8 @@ impl Editor {
 							debug.resize(size);
 						}
 					}
-					BufferView::Panel(_panel_id) => {
-						// TODO: Resize generic panels via panel registry
+					BufferView::Panel(panel_id) => {
+						self.resize_panel(*panel_id, *area);
 					}
 				}
 			}
@@ -279,8 +279,8 @@ impl Editor {
 							self.render_debug_panel(frame, debug, *area, is_focused);
 						}
 					}
-					BufferView::Panel(_panel_id) => {
-						// TODO: Render generic panels via panel registry
+					BufferView::Panel(panel_id) => {
+						self.render_panel(frame, *panel_id, *area, is_focused);
 					}
 				}
 			}
@@ -589,6 +589,37 @@ impl Editor {
 			} else {
 				out.set_symbol(&cell.symbol);
 			}
+		}
+	}
+
+	/// Resizes a panel by ID.
+	fn resize_panel(&mut self, panel_id: evildoer_manifest::PanelId, area: Rect) {
+		use crate::debug::DebugPanel;
+		use crate::terminal::TerminalBuffer;
+
+		let size = evildoer_manifest::SplitSize::new(area.width, area.height);
+		if let Some(terminal) = self.panels.get_mut::<TerminalBuffer>(panel_id) {
+			terminal.resize(size);
+		} else if let Some(debug) = self.panels.get_mut::<DebugPanel>(panel_id) {
+			debug.resize(size);
+		}
+	}
+
+	/// Renders a panel by ID.
+	fn render_panel(
+		&self,
+		frame: &mut evildoer_tui::Frame,
+		panel_id: evildoer_manifest::PanelId,
+		area: Rect,
+		is_focused: bool,
+	) {
+		use crate::debug::DebugPanel;
+		use crate::terminal::TerminalBuffer;
+
+		if let Some(terminal) = self.panels.get::<TerminalBuffer>(panel_id) {
+			self.render_terminal(frame, terminal, area, is_focused);
+		} else if let Some(debug) = self.panels.get::<DebugPanel>(panel_id) {
+			self.render_debug_panel(frame, debug, area, is_focused);
 		}
 	}
 }

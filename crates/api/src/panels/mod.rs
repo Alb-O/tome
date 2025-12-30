@@ -8,7 +8,12 @@ mod registry;
 
 use std::any::Any;
 
+use linkme::distributed_slice;
+
 pub use registry::PanelRegistry;
+
+use crate::debug::DebugPanel;
+use crate::terminal::TerminalBuffer;
 
 /// Factory function type for creating panel instances.
 pub type PanelFactory = fn() -> Box<dyn Any + Send>;
@@ -24,8 +29,20 @@ pub struct PanelFactoryDef {
 }
 
 /// Distributed slice for panel factories.
-#[linkme::distributed_slice]
+#[distributed_slice]
 pub static PANEL_FACTORIES: [PanelFactoryDef];
+
+#[distributed_slice(PANEL_FACTORIES)]
+static TERMINAL_FACTORY: PanelFactoryDef = PanelFactoryDef {
+	name: "terminal",
+	factory: || Box::new(TerminalBuffer::new()),
+};
+
+#[distributed_slice(PANEL_FACTORIES)]
+static DEBUG_FACTORY: PanelFactoryDef = PanelFactoryDef {
+	name: "debug",
+	factory: || Box::new(DebugPanel::new()),
+};
 
 /// Finds a panel factory by name.
 pub fn find_factory(name: &str) -> Option<&'static PanelFactoryDef> {
