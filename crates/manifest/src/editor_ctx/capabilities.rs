@@ -269,6 +269,8 @@ pub trait BufferOpsAccess {
 	fn toggle_terminal(&mut self);
 	/// Toggle the debug panel (open if closed, close if open).
 	fn toggle_debug_panel(&mut self);
+	/// Toggle a panel by name (open if closed, close if open).
+	fn toggle_panel(&mut self, name: &str);
 	/// Switch to the next buffer.
 	fn buffer_next(&mut self);
 	/// Switch to the previous buffer.

@@ -421,7 +421,79 @@ macro_rules! result_handler {
 	};
 }
 
+/// Registers a panel type in the [`PANELS`](crate::panels::PANELS) slice.
+///
+/// Panels are toggleable split views (terminals, debug logs, file trees, etc.)
+/// that integrate with the editor's layer system. Each panel type gets:
+/// - A [`PanelDef`](crate::panels::PanelDef) registration
+/// - A toggle action with optional keybinding
+/// - Integration with the editor's focus and rendering systems
+///
+/// # Example
+///
+/// ```ignore
+/// panel!(debug, {
+///     description: "Debug log viewer",
+///     mode_name: "DEBUG",
+///     layer: 2,
+/// });
+///
+/// // With keybinding
+/// panel!(terminal, {
+///     description: "Embedded terminal",
+///     mode_name: "TERMINAL",
+///     layer: 1,
+///     bindings: r#"normal "`""#,
+///     sticky: true,
+/// });
+/// ```
+///
+/// # Fields
+///
+/// - `description` (required): Human-readable description
+/// - `mode_name` (required): Status bar mode text when focused (e.g., "DEBUG")
+/// - `layer` (required): Layer index for docking (0 = base, higher overlays lower)
+/// - `bindings` (optional): KDL keybinding string for toggle action
+/// - `singleton` (optional): Only one instance allowed (default: true)
+/// - `sticky` (optional): Resist losing focus on mouse hover (default: false)
+/// - `priority` (optional): Priority within layer (default: 0)
+#[macro_export]
+macro_rules! panel {
+	($name:ident, {
+		description: $desc:expr,
+		mode_name: $mode_name:expr,
+		layer: $layer:expr
+		$(, bindings: $bindings:literal)?
+		$(, singleton: $singleton:expr)?
+		$(, sticky: $sticky:expr)?
+		$(, priority: $priority:expr)?
+		$(,)?
+	}) => {
+		paste::paste! {
+			#[allow(non_upper_case_globals)]
+			#[linkme::distributed_slice($crate::panels::PANELS)]
+			static [<PANEL_ $name:upper>]: $crate::panels::PanelDef = $crate::panels::PanelDef {
+				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
+				name: stringify!($name),
+				description: $desc,
+				mode_name: $mode_name,
+				layer: $layer,
+				priority: $crate::__opt!($({$priority})?, 0),
+				source: $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME")),
+				singleton: $crate::__opt!($({$singleton})?, true),
+				sticky: $crate::__opt!($({$sticky})?, false),
+			};
+
+			// Generate toggle action
+			$crate::action!([<toggle_ $name>], {
+				description: concat!("Toggle ", stringify!($name), " panel")
+				$(, bindings: $bindings)?
+			}, |_ctx| $crate::actions::ActionResult::TogglePanel(stringify!($name)));
+		}
+	};
+}
+
 pub use crate::{
-	__opt, __opt_slice, __opt_static, action, bind, command, hook, motion, option, result_handler,
-	statusline_segment, text_object,
+	__opt, __opt_slice, __opt_static, action, bind, command, hook, motion, option, panel,
+	result_handler, statusline_segment, text_object,
 };

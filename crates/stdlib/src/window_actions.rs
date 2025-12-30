@@ -46,7 +46,7 @@ action!(toggle_terminal, {
 	key: Key::char(':'),
 	mode: Normal,
 	result: ToggleTerminal,
-	handler_slice: RESULT_TOGGLE_TERMINAL_HANDLERS,
+	handler_slice: RESULT_TOGGLE_PANEL_HANDLERS,
 }, |ops| ops.toggle_terminal());
 
 action!(toggle_debug_panel, {
@@ -54,8 +54,28 @@ action!(toggle_debug_panel, {
 	key: Key::char('D'),
 	mode: Normal,
 	result: ToggleDebugPanel,
-	handler_slice: RESULT_TOGGLE_DEBUG_PANEL_HANDLERS,
+	handler_slice: RESULT_TOGGLE_PANEL_HANDLERS,
 }, |ops| ops.toggle_debug_panel());
+
+// Handler for generic TogglePanel(&str) result
+evildoer_manifest::result_handler!(
+	RESULT_TOGGLE_PANEL_HANDLERS,
+	TOGGLE_PANEL_BY_NAME,
+	"toggle_panel_by_name",
+	|result, ctx, _extend| {
+		use evildoer_manifest::actions::ActionResult;
+		use evildoer_manifest::editor_ctx::HandleOutcome;
+
+		if let ActionResult::TogglePanel(name) = result {
+			if let Some(ops) = ctx.buffer_ops() {
+				ops.toggle_panel(name);
+			}
+			HandleOutcome::Handled
+		} else {
+			HandleOutcome::NotHandled
+		}
+	}
+);
 
 action!(focus_left, {
 	description: "Focus split to the left",

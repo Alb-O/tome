@@ -172,6 +172,7 @@ pub mod macros;
 pub mod mode;
 pub mod notifications;
 pub mod options;
+pub mod panels;
 pub mod split_buffer;
 pub mod statusline;
 pub mod theme;
@@ -292,3 +293,4 @@ pub use theme::{
 	SemanticColorPair, StatusColors, THEMES, Theme, ThemeColors, ThemeSource, ThemeVariant,
 	UiColors, blend_colors, get_theme, register_runtime_themes, runtime_themes, suggest_theme,
 };
+pub use panels::{PANELS, PanelDef, PanelId, all_panels, find_panel, find_panel_by_id, panel_kind_index};

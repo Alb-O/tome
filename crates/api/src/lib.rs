@@ -32,6 +32,7 @@ pub mod debug;
 pub mod editor;
 #[cfg(feature = "lsp")]
 pub mod lsp;
+pub mod panels;
 pub mod paths;
 pub mod render;
 pub mod styles;
@@ -46,5 +47,6 @@ pub use evildoer_manifest::{
 	PopupColors, StatusColors, THEMES, Theme, ThemeColors, UiColors, blend_colors, get_theme,
 	suggest_theme,
 };
+pub use panels::{PanelFactory, PanelFactoryDef, PanelRegistry, PANEL_FACTORIES};
 pub use terminal::TerminalBuffer;
 pub use ui::UiManager;

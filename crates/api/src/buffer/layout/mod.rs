@@ -16,6 +16,7 @@ mod navigation;
 mod tests;
 mod types;
 
+use evildoer_manifest::PanelId;
 use evildoer_tui::layout::Rect;
 pub use types::{BufferView, DebugPanelId, SplitDirection, SplitPath, TerminalId};
 
@@ -87,6 +88,11 @@ impl Layout {
 		Layout::Single(BufferView::Terminal(terminal_id))
 	}
 
+	/// Creates a new single-view layout for a generic panel.
+	pub fn panel(panel_id: PanelId) -> Self {
+		Layout::Single(BufferView::Panel(panel_id))
+	}
+
 	/// Creates a side-by-side split (first on left, second on right).
 	///
 	/// The separator is placed at the horizontal center of the given area.
@@ -133,7 +139,9 @@ impl Layout {
 	pub fn first_buffer(&self) -> Option<BufferId> {
 		match self {
 			Layout::Single(BufferView::Text(id)) => Some(*id),
-			Layout::Single(BufferView::Terminal(_) | BufferView::Debug(_)) => None,
+			Layout::Single(
+				BufferView::Terminal(_) | BufferView::Debug(_) | BufferView::Panel(_),
+			) => None,
 			Layout::Split { first, second, .. } => {
 				first.first_buffer().or_else(|| second.first_buffer())
 			}
@@ -168,6 +176,14 @@ impl Layout {
 			.collect()
 	}
 
+	/// Returns all panel IDs in this layout.
+	pub fn panel_ids(&self) -> Vec<PanelId> {
+		self.views()
+			.into_iter()
+			.filter_map(|v| v.as_panel())
+			.collect()
+	}
+
 	/// Checks if this layout contains a specific view.
 	pub fn contains_view(&self, view: BufferView) -> bool {
 		match self {
@@ -186,6 +202,11 @@ impl Layout {
 	/// Checks if this layout contains a specific terminal.
 	pub fn contains_terminal(&self, terminal_id: TerminalId) -> bool {
 		self.contains_view(BufferView::Terminal(terminal_id))
+	}
+
+	/// Checks if this layout contains a specific panel.
+	pub fn contains_panel(&self, panel_id: PanelId) -> bool {
+		self.contains_view(BufferView::Panel(panel_id))
 	}
 
 	/// Replaces a view with a new layout (for splitting). Returns true if replaced.
@@ -240,6 +261,11 @@ impl Layout {
 	/// Removes a terminal from the layout, collapsing splits as needed.
 	pub fn remove_terminal(&self, target: TerminalId) -> Option<Layout> {
 		self.remove_view(BufferView::Terminal(target))
+	}
+
+	/// Removes a panel from the layout, collapsing splits as needed.
+	pub fn remove_panel(&self, target: PanelId) -> Option<Layout> {
+		self.remove_view(BufferView::Panel(target))
 	}
 
 	/// Counts the number of views in this layout.

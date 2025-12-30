@@ -1,5 +1,7 @@
 //! Layout type definitions.
 
+use evildoer_manifest::PanelId;
+
 use super::super::BufferId;
 
 /// Unique identifier for a debug panel.
@@ -39,28 +41,33 @@ pub enum SplitDirection {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TerminalId(pub u64);
 
-/// A view in the layout - either a text buffer or a terminal.
+/// A view in the layout - either a text buffer, terminal, debug panel, or generic panel.
 ///
 /// This enum enables the layout system to manage heterogeneous content types
 /// in splits. The editor tracks the focused view via this type, allowing
-/// seamless navigation between text editing and terminal sessions.
+/// seamless navigation between text editing and other content.
 ///
 /// # Focus Handling
 ///
-/// When a terminal is focused, text-editing operations are unavailable.
-/// Use [`Editor::is_text_focused`] or [`Editor::is_terminal_focused`] to
-/// check focus type before operations.
+/// When a non-text view is focused, text-editing operations are unavailable.
+/// Use [`Editor::is_text_focused`] to check focus type before operations.
+///
+/// # Panel System
+///
+/// The `Panel` variant uses the generic panel system for extensible panel types.
+/// The legacy `Terminal` and `Debug` variants are retained for backward compatibility.
 ///
 /// [`Editor::is_text_focused`]: crate::Editor::is_text_focused
-/// [`Editor::is_terminal_focused`]: crate::Editor::is_terminal_focused
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BufferView {
 	/// A text buffer for document editing.
 	Text(BufferId),
-	/// An embedded terminal emulator.
+	/// An embedded terminal emulator (legacy variant).
 	Terminal(TerminalId),
-	/// A debug panel showing logs and diagnostics.
+	/// A debug panel showing logs and diagnostics (legacy variant).
 	Debug(DebugPanelId),
+	/// A generic panel (terminal, debug, file tree, etc.) via the panel system.
+	Panel(PanelId),
 }
 
 impl BufferView {
@@ -68,7 +75,7 @@ impl BufferView {
 	pub fn as_text(&self) -> Option<BufferId> {
 		match self {
 			BufferView::Text(id) => Some(*id),
-			BufferView::Terminal(_) | BufferView::Debug(_) => None,
+			BufferView::Terminal(_) | BufferView::Debug(_) | BufferView::Panel(_) => None,
 		}
 	}
 
@@ -76,7 +83,7 @@ impl BufferView {
 	pub fn as_terminal(&self) -> Option<TerminalId> {
 		match self {
 			BufferView::Terminal(id) => Some(*id),
-			BufferView::Text(_) | BufferView::Debug(_) => None,
+			BufferView::Text(_) | BufferView::Debug(_) | BufferView::Panel(_) => None,
 		}
 	}
 
@@ -84,7 +91,15 @@ impl BufferView {
 	pub fn as_debug(&self) -> Option<DebugPanelId> {
 		match self {
 			BufferView::Debug(id) => Some(*id),
-			BufferView::Text(_) | BufferView::Terminal(_) => None,
+			BufferView::Text(_) | BufferView::Terminal(_) | BufferView::Panel(_) => None,
+		}
+	}
+
+	/// Returns the panel ID if this is a generic panel view.
+	pub fn as_panel(&self) -> Option<PanelId> {
+		match self {
+			BufferView::Panel(id) => Some(*id),
+			BufferView::Text(_) | BufferView::Terminal(_) | BufferView::Debug(_) => None,
 		}
 	}
 
@@ -103,6 +118,16 @@ impl BufferView {
 		matches!(self, BufferView::Debug(_))
 	}
 
+	/// Returns true if this is a generic panel view.
+	pub fn is_panel(&self) -> bool {
+		matches!(self, BufferView::Panel(_))
+	}
+
+	/// Returns true if this is any non-text view (terminal, debug, or panel).
+	pub fn is_non_text(&self) -> bool {
+		!self.is_text()
+	}
+
 	/// Returns the visual priority of this view type.
 	///
 	/// Higher values indicate lighter backgrounds. Separators use the background
@@ -111,8 +136,7 @@ impl BufferView {
 	pub fn visual_priority(&self) -> u8 {
 		match self {
 			BufferView::Text(_) => 0,
-			BufferView::Terminal(_) => 1,
-			BufferView::Debug(_) => 1,
+			BufferView::Terminal(_) | BufferView::Debug(_) | BufferView::Panel(_) => 1,
 		}
 	}
 }
@@ -132,5 +156,11 @@ impl From<TerminalId> for BufferView {
 impl From<DebugPanelId> for BufferView {
 	fn from(id: DebugPanelId) -> Self {
 		BufferView::Debug(id)
+	}
+}
+
+impl From<PanelId> for BufferView {
+	fn from(id: PanelId) -> Self {
+		BufferView::Panel(id)
 	}
 }

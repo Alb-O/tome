@@ -226,6 +226,9 @@ impl Editor {
 							debug.resize(size);
 						}
 					}
+					BufferView::Panel(_panel_id) => {
+						// TODO: Resize generic panels via panel registry
+					}
 				}
 			}
 		}
@@ -275,6 +278,9 @@ impl Editor {
 						if let Some(debug) = &self.debug_panel {
 							self.render_debug_panel(frame, debug, *area, is_focused);
 						}
+					}
+					BufferView::Panel(_panel_id) => {
+						// TODO: Render generic panels via panel registry
 					}
 				}
 			}

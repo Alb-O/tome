@@ -1,0 +1,130 @@
+//! Panel instance registry using type-erased storage.
+
+use std::any::Any;
+use std::collections::HashMap;
+
+use evildoer_manifest::{PanelId, SplitBuffer, find_panel, panel_kind_index};
+
+use super::find_factory;
+
+/// Runtime registry for panel instances.
+///
+/// Manages the lifecycle of panel instances, including creation, storage,
+/// and access. Each panel type can have multiple instances (unless marked
+/// as singleton in its definition).
+///
+/// Panels are stored type-erased (`Box<dyn Any + Send>`) and can be retrieved
+/// via downcasting. This follows the same pattern as [`ExtensionMap`](crate::editor::extensions::ExtensionMap).
+pub struct PanelRegistry {
+	instances: HashMap<PanelId, Box<dyn Any + Send>>,
+	next_instance: HashMap<u16, u16>,
+}
+
+impl Default for PanelRegistry {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+impl PanelRegistry {
+	/// Creates an empty panel registry.
+	pub fn new() -> Self {
+		Self {
+			instances: HashMap::new(),
+			next_instance: HashMap::new(),
+		}
+	}
+
+	/// Creates or returns the existing singleton panel of the given type.
+	///
+	/// For singleton panels, returns the existing instance if one exists.
+	/// For non-singleton panels, always creates a new instance.
+	///
+	/// Returns `None` if the panel type is not registered or has no factory.
+	pub fn get_or_create(&mut self, name: &str) -> Option<PanelId> {
+		let def = find_panel(name)?;
+		let kind = panel_kind_index(name)?;
+
+		if def.singleton {
+			if let Some(id) = self.find_by_kind(kind) {
+				return Some(id);
+			}
+		}
+
+		let factory = find_factory(name)?;
+		let instance = self.next_instance.entry(kind).or_insert(0);
+		let id = PanelId::new(kind, *instance);
+		*instance += 1;
+
+		self.instances.insert(id, (factory.factory)());
+		Some(id)
+	}
+
+	/// Inserts a panel instance directly.
+	///
+	/// Useful when the panel is created externally (e.g., by the Editor).
+	pub fn insert<T: SplitBuffer + Send + 'static>(&mut self, name: &str, panel: T) -> Option<PanelId> {
+		let kind = panel_kind_index(name)?;
+		let instance = self.next_instance.entry(kind).or_insert(0);
+		let id = PanelId::new(kind, *instance);
+		*instance += 1;
+
+		self.instances.insert(id, Box::new(panel));
+		Some(id)
+	}
+
+	/// Finds an existing panel instance by kind.
+	pub fn find_by_kind(&self, kind: u16) -> Option<PanelId> {
+		self.instances.keys().find(|id| id.kind == kind).copied()
+	}
+
+	/// Finds an existing panel instance by name.
+	pub fn find_by_name(&self, name: &str) -> Option<PanelId> {
+		self.find_by_kind(panel_kind_index(name)?)
+	}
+
+	/// Returns all panel IDs of a given type.
+	pub fn all_of_kind(&self, kind: u16) -> impl Iterator<Item = PanelId> + '_ {
+		self.instances.keys().filter(move |id| id.kind == kind).copied()
+	}
+
+	/// Returns a reference to a panel by ID, downcasted to the expected type.
+	pub fn get<T: 'static>(&self, id: PanelId) -> Option<&T> {
+		self.instances.get(&id)?.downcast_ref()
+	}
+
+	/// Returns a mutable reference to a panel by ID, downcasted to the expected type.
+	pub fn get_mut<T: 'static>(&mut self, id: PanelId) -> Option<&mut T> {
+		self.instances.get_mut(&id)?.downcast_mut()
+	}
+
+	/// Removes a panel instance, returning it if the type matches.
+	pub fn remove<T: 'static>(&mut self, id: PanelId) -> Option<T> {
+		self.instances.remove(&id)?.downcast().ok().map(|b| *b)
+	}
+
+	/// Removes a panel by ID.
+	pub fn remove_any(&mut self, id: PanelId) -> bool {
+		self.instances.remove(&id).is_some()
+	}
+
+	/// Returns true if a panel with the given ID exists.
+	pub fn contains(&self, id: PanelId) -> bool {
+		self.instances.contains_key(&id)
+	}
+
+	/// Returns the number of panel instances.
+	pub fn len(&self) -> usize {
+		self.instances.len()
+	}
+
+	/// Returns true if there are no panel instances.
+	pub fn is_empty(&self) -> bool {
+		self.instances.is_empty()
+	}
+
+	/// Returns all panel IDs.
+	pub fn ids(&self) -> impl Iterator<Item = PanelId> + '_ {
+		self.instances.keys().copied()
+	}
+}

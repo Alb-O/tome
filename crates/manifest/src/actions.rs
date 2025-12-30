@@ -50,12 +50,17 @@ pub enum ActionResult {
 	/// Open terminal in vertical split.
 	#[terminal_safe]
 	SplitTerminalVertical,
-	/// Toggle terminal split.
+	/// Toggle terminal split (legacy, use TogglePanel("terminal") instead).
 	#[terminal_safe]
+	#[handler(TogglePanel)]
 	ToggleTerminal,
-	/// Toggle debug panel.
+	/// Toggle debug panel (legacy, use TogglePanel("debug") instead).
 	#[terminal_safe]
+	#[handler(TogglePanel)]
 	ToggleDebugPanel,
+	/// Toggle a named panel.
+	#[terminal_safe]
+	TogglePanel(&'static str),
 	/// Switch to next buffer.
 	#[terminal_safe]
 	BufferNext,

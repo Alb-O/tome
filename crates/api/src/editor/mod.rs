@@ -130,6 +130,9 @@ pub struct Editor {
 
 	pub debug_panel: Option<DebugPanel>,
 	debug_panel_id: Option<DebugPanelId>,
+
+	/// Generic panel registry for new panel types.
+	pub panels: crate::panels::PanelRegistry,
 }
 
 impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
@@ -296,6 +299,7 @@ impl Editor {
 			sticky_views: HashSet::new(),
 			debug_panel: None,
 			debug_panel_id: None,
+			panels: crate::panels::PanelRegistry::new(),
 		}
 	}
 
@@ -580,6 +584,47 @@ impl Editor {
 		self.needs_redraw = true;
 	}
 
+	/// Toggles a panel by name.
+	///
+	/// If the panel is visible, hides it. Otherwise shows it on its configured layer.
+	pub fn toggle_panel(&mut self, name: &str) -> bool {
+		use evildoer_manifest::{find_panel, panel_kind_index};
+
+		let Some(def) = find_panel(name) else {
+			self.notify("error", format!("Unknown panel: {}", name));
+			return false;
+		};
+		let Some(kind) = panel_kind_index(name) else {
+			return false;
+		};
+
+		if let Some(panel_id) = self.panels.find_by_kind(kind) {
+			let view = BufferView::Panel(panel_id);
+			if self.layout.contains_view(view) {
+				self.sticky_views.remove(&view);
+				self.layout.set_layer(def.layer, None);
+				self.buffers.set_focused_view(self.layout.first_view());
+				self.needs_redraw = true;
+				return true;
+			}
+		}
+
+		let Some(panel_id) = self.panels.get_or_create(name) else {
+			self.notify("error", format!("Failed to create panel: {}", name));
+			return false;
+		};
+
+		let panel_view = BufferView::Panel(panel_id);
+		if def.sticky {
+			self.sticky_views.insert(panel_view);
+		}
+		self.layout
+			.set_layer(def.layer, Some(Layout::single(panel_view)));
+		self.buffers.set_focused_view(panel_view);
+		self.needs_redraw = true;
+		true
+	}
+
 	pub fn request_quit(&mut self) {
 		self.pending_quit = true;
 	}
@@ -626,7 +671,6 @@ impl Editor {
 			return false;
 		}
 
-		// Remove the actual buffer/terminal/debug panel
 		match view {
 			BufferView::Text(id) => {
 				self.buffers.remove_buffer(id);
@@ -636,6 +680,9 @@ impl Editor {
 			}
 			BufferView::Debug(_) => {
 				self.debug_panel = None;
+			}
+			BufferView::Panel(id) => {
+				self.panels.remove_any(id);
 			}
 		}
 
@@ -677,7 +724,7 @@ impl Editor {
 	pub fn close_current_buffer(&mut self) -> bool {
 		match self.buffers.focused_view() {
 			BufferView::Text(id) => self.close_buffer(id),
-			BufferView::Terminal(_) | BufferView::Debug(_) => false,
+			BufferView::Terminal(_) | BufferView::Debug(_) | BufferView::Panel(_) => false,
 		}
 	}
 

@@ -123,12 +123,12 @@ impl BufferManager {
 
 	/// Sets the focused view. Returns true if the view exists.
 	///
-	/// For debug panels, always returns true since they are managed separately.
+	/// For debug panels and generic panels, always returns true since they are managed separately.
 	pub fn set_focused_view(&mut self, view: BufferView) -> bool {
 		let exists = match view {
 			BufferView::Text(id) => self.buffers.contains_key(&id),
 			BufferView::Terminal(id) => self.terminals.contains_key(&id),
-			BufferView::Debug(_) => true,
+			BufferView::Debug(_) | BufferView::Panel(_) => true,
 		};
 		if exists {
 			self.focused_view = view;
@@ -167,6 +167,7 @@ impl BufferManager {
 			BufferView::Text(id) => self.buffers.get(&id).expect("focused buffer must exist"),
 			BufferView::Terminal(_) => panic!("focused view is a terminal, not a text buffer"),
 			BufferView::Debug(_) => panic!("focused view is a debug panel, not a text buffer"),
+			BufferView::Panel(_) => panic!("focused view is a panel, not a text buffer"),
 		}
 	}
 
@@ -184,6 +185,7 @@ impl BufferManager {
 				.expect("focused buffer must exist"),
 			BufferView::Terminal(_) => panic!("focused view is a terminal, not a text buffer"),
 			BufferView::Debug(_) => panic!("focused view is a debug panel, not a text buffer"),
+			BufferView::Panel(_) => panic!("focused view is a panel, not a text buffer"),
 		}
 	}
 
