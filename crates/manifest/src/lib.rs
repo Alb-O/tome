@@ -293,4 +293,7 @@ pub use theme::{
 	SemanticColorPair, StatusColors, THEMES, Theme, ThemeColors, ThemeSource, ThemeVariant,
 	UiColors, blend_colors, get_theme, register_runtime_themes, runtime_themes, suggest_theme,
 };
-pub use panels::{PANELS, PanelDef, PanelId, all_panels, find_panel, find_panel_by_id, panel_kind_index};
+pub use panels::{
+	PANELS, PANEL_FACTORIES, PanelDef, PanelFactory, PanelFactoryDef, PanelId, all_panels,
+	find_factory, find_panel, find_panel_by_id, panel_kind_index,
+};

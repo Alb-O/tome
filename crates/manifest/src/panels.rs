@@ -5,7 +5,9 @@
 //! management lives in `evildoer-api`.
 //!
 //! Define panels with the [`panel!`](crate::panel) macro, which registers a
-//! [`PanelDef`] and generates a toggle action.
+//! [`PanelDef`] and optionally a [`PanelFactoryDef`] for creating instances.
+
+use std::any::Any;
 
 use linkme::distributed_slice;
 
@@ -94,6 +96,29 @@ impl crate::RegistryMetadata for PanelDef {
 /// Registry of all panel definitions.
 #[distributed_slice]
 pub static PANELS: [PanelDef];
+
+/// Factory function type for creating panel instances.
+pub type PanelFactory = fn() -> Box<dyn Any + Send>;
+
+/// Registration for a panel factory.
+///
+/// Links a panel type name to its factory function. Registered via the
+/// [`panel!`] macro when a `factory:` parameter is provided.
+pub struct PanelFactoryDef {
+	/// Panel type name (must match a [`PanelDef`] name).
+	pub name: &'static str,
+	/// Factory function to create new instances.
+	pub factory: PanelFactory,
+}
+
+/// Registry of all panel factories.
+#[distributed_slice]
+pub static PANEL_FACTORIES: [PanelFactoryDef];
+
+/// Finds a panel factory by name.
+pub fn find_factory(name: &str) -> Option<&'static PanelFactoryDef> {
+	PANEL_FACTORIES.iter().find(|f| f.name == name)
+}
 
 /// Finds a panel definition by name.
 pub fn find_panel(name: &str) -> Option<&'static PanelDef> {

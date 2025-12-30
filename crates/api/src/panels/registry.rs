@@ -3,9 +3,7 @@
 use std::any::Any;
 use std::collections::HashMap;
 
-use evildoer_manifest::{PanelId, SplitBuffer, find_panel, panel_kind_index};
-
-use super::find_factory;
+use evildoer_manifest::{PanelId, SplitBuffer, find_factory, find_panel, panel_kind_index};
 
 /// Runtime registry for panel instances.
 ///

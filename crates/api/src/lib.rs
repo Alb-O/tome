@@ -44,9 +44,9 @@ pub use buffer::{Buffer, BufferId, HistoryResult};
 pub use debug::{DebugPanel, DebugPanelLayer};
 pub use editor::Editor;
 pub use evildoer_manifest::{
-	PopupColors, StatusColors, THEMES, Theme, ThemeColors, UiColors, blend_colors, get_theme,
-	suggest_theme,
+	PANEL_FACTORIES, PanelFactory, PanelFactoryDef, PopupColors, StatusColors, THEMES, Theme,
+	ThemeColors, UiColors, blend_colors, get_theme, suggest_theme,
 };
-pub use panels::{PanelFactory, PanelFactoryDef, PanelRegistry, PANEL_FACTORIES};
+pub use panels::PanelRegistry;
 pub use terminal::TerminalBuffer;
 pub use ui::UiManager;

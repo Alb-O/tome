@@ -3,11 +3,14 @@
 //! This module provides the [`PanelRegistry`] which manages panel instances at runtime.
 //! Panel types are registered at compile time via [`panel!`](evildoer_manifest::panel),
 //! and this registry handles creating, storing, and accessing panel instances.
+//!
+//! Panel factories are registered in the [`PANEL_FACTORIES`](evildoer_manifest::PANEL_FACTORIES)
+//! distributed slice, either inline via `panel!` macro's `factory:` parameter, or
+//! separately for types defined in downstream crates.
 
 mod registry;
 
-use std::any::Any;
-
+use evildoer_manifest::{PANEL_FACTORIES, PanelFactoryDef};
 use linkme::distributed_slice;
 
 pub use registry::PanelRegistry;
@@ -15,22 +18,8 @@ pub use registry::PanelRegistry;
 use crate::debug::DebugPanel;
 use crate::terminal::TerminalBuffer;
 
-/// Factory function type for creating panel instances.
-pub type PanelFactory = fn() -> Box<dyn Any + Send>;
-
-/// Registration for a panel factory.
-///
-/// Links a panel type name to its factory function.
-pub struct PanelFactoryDef {
-	/// Panel type name (must match a [`PanelDef`](evildoer_manifest::PanelDef) name).
-	pub name: &'static str,
-	/// Factory function to create new instances.
-	pub factory: PanelFactory,
-}
-
-/// Distributed slice for panel factories.
-#[distributed_slice]
-pub static PANEL_FACTORIES: [PanelFactoryDef];
+// Register factories for panel types defined in this crate.
+// These use the PANEL_FACTORIES slice from evildoer-manifest.
 
 #[distributed_slice(PANEL_FACTORIES)]
 static TERMINAL_FACTORY: PanelFactoryDef = PanelFactoryDef {
@@ -43,8 +32,3 @@ static DEBUG_FACTORY: PanelFactoryDef = PanelFactoryDef {
 	name: "debug",
 	factory: || Box::new(DebugPanel::new()),
 };
-
-/// Finds a panel factory by name.
-pub fn find_factory(name: &str) -> Option<&'static PanelFactoryDef> {
-	PANEL_FACTORIES.iter().find(|f| f.name == name)
-}
