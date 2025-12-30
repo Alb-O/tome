@@ -9,7 +9,64 @@ use termina::event::{KeyCode, Modifiers};
 use crate::buffer::BufferView;
 use crate::editor::Editor;
 
+enum ActionDispatch {
+	Executed(bool),
+	NotAction,
+}
+
 impl Editor {
+	fn dispatch_action(&mut self, result: &KeyResult) -> ActionDispatch {
+		use evildoer_manifest::find_action_by_id;
+
+		match result {
+			KeyResult::ActionById {
+				id,
+				count,
+				extend,
+				register,
+			} => {
+				let quit = if let Some(action) = find_action_by_id(*id) {
+					self.execute_action(action.name, *count, *extend, *register)
+				} else {
+					self.notify("error", format!("Unknown action ID: {}", id));
+					false
+				};
+				ActionDispatch::Executed(quit)
+			}
+			KeyResult::ActionByIdWithChar {
+				id,
+				count,
+				extend,
+				register,
+				char_arg,
+			} => {
+				let quit = if let Some(action) = find_action_by_id(*id) {
+					self.execute_action_with_char(action.name, *count, *extend, *register, *char_arg)
+				} else {
+					self.notify("error", format!("Unknown action ID: {}", id));
+					false
+				};
+				ActionDispatch::Executed(quit)
+			}
+			KeyResult::Action {
+				name,
+				count,
+				extend,
+				register,
+			} => ActionDispatch::Executed(self.execute_action(name, *count, *extend, *register)),
+			KeyResult::ActionWithChar {
+				name,
+				count,
+				extend,
+				register,
+				char_arg,
+			} => ActionDispatch::Executed(
+				self.execute_action_with_char(name, *count, *extend, *register, *char_arg),
+			),
+			_ => ActionDispatch::NotAction,
+		}
+	}
+
 	pub async fn handle_key(&mut self, key: termina::event::KeyEvent) -> bool {
 		// UI global bindings (panels, focus, etc.)
 		if self.ui.handle_global_key(&key) {
@@ -81,56 +138,18 @@ impl Editor {
 	}
 
 	pub(crate) async fn handle_key_active(&mut self, key: termina::event::KeyEvent) -> bool {
-		use evildoer_manifest::{HookContext, HookEventData, emit_hook, find_action_by_id};
+		use evildoer_manifest::{HookContext, HookEventData, emit_hook};
 
 		let old_mode = self.mode();
 		let key: Key = key.into();
 
 		let result = self.buffer_mut().input.handle_key(key);
 
+		if let ActionDispatch::Executed(quit) = self.dispatch_action(&result) {
+			return quit;
+		}
+
 		match result {
-			// Typed ActionId dispatch (preferred path)
-			KeyResult::ActionById {
-				id,
-				count,
-				extend,
-				register,
-			} => {
-				if let Some(action) = find_action_by_id(id) {
-					self.execute_action(action.name, count, extend, register)
-				} else {
-					self.notify("error", format!("Unknown action ID: {}", id));
-					false
-				}
-			}
-			KeyResult::ActionByIdWithChar {
-				id,
-				count,
-				extend,
-				register,
-				char_arg,
-			} => {
-				if let Some(action) = find_action_by_id(id) {
-					self.execute_action_with_char(action.name, count, extend, register, char_arg)
-				} else {
-					self.notify("error", format!("Unknown action ID: {}", id));
-					false
-				}
-			}
-			// String-based dispatch (backward compatibility)
-			KeyResult::Action {
-				name,
-				count,
-				extend,
-				register,
-			} => self.execute_action(name, count, extend, register),
-			KeyResult::ActionWithChar {
-				name,
-				count,
-				extend,
-				register,
-				char_arg,
-			} => self.execute_action_with_char(name, count, extend, register, char_arg),
 			KeyResult::ModeChange(new_mode) => {
 				let leaving_insert = !matches!(new_mode, Mode::Insert);
 				if new_mode != old_mode {
@@ -152,8 +171,7 @@ impl Editor {
 				self.insert_text(&c.to_string());
 				false
 			}
-			KeyResult::Consumed => false,
-			KeyResult::Unhandled => false,
+			KeyResult::Consumed | KeyResult::Unhandled => false,
 			KeyResult::Quit => true,
 			KeyResult::MouseClick { row, col, extend } => {
 				// Keyboard-triggered mouse events use screen coordinates relative to
@@ -171,26 +189,22 @@ impl Editor {
 				self.handle_mouse_drag_local(local_row, local_col);
 				false
 			}
-			KeyResult::MouseScroll { direction, count } => {
+		KeyResult::MouseScroll { direction, count } => {
 				self.handle_mouse_scroll(direction, count);
 				false
 			}
+			_ => unreachable!(),
 		}
 	}
 
 	/// Handles window mode keys when a terminal is focused.
-	///
-	/// Uses the specified buffer's input handler for window mode processing.
 	async fn handle_terminal_window_key(
 		&mut self,
 		key: termina::event::KeyEvent,
 		buffer_id: crate::buffer::BufferId,
 	) -> bool {
-		use evildoer_manifest::find_action_by_id;
-
 		let key: Key = key.into();
 
-		// Get the result from the buffer's input handler
 		let result = {
 			let Some(buffer) = self.buffers.get_buffer_mut(buffer_id) else {
 				return false;
@@ -198,57 +212,17 @@ impl Editor {
 			buffer.input.handle_key(key)
 		};
 
+		if let ActionDispatch::Executed(quit) = self.dispatch_action(&result) {
+			return quit;
+		}
+
 		match result {
-			KeyResult::ActionById {
-				id,
-				count,
-				extend,
-				register,
-			} => {
-				if let Some(action) = find_action_by_id(id) {
-					self.execute_action(action.name, count, extend, register)
-				} else {
-					self.notify("error", format!("Unknown action ID: {}", id));
-					false
-				}
-			}
-			KeyResult::ActionByIdWithChar {
-				id,
-				count,
-				extend,
-				register,
-				char_arg,
-			} => {
-				if let Some(action) = find_action_by_id(id) {
-					self.execute_action_with_char(action.name, count, extend, register, char_arg)
-				} else {
-					self.notify("error", format!("Unknown action ID: {}", id));
-					false
-				}
-			}
-			KeyResult::Action {
-				name,
-				count,
-				extend,
-				register,
-			} => self.execute_action(name, count, extend, register),
-			KeyResult::ActionWithChar {
-				name,
-				count,
-				extend,
-				register,
-				char_arg,
-			} => self.execute_action_with_char(name, count, extend, register, char_arg),
+			KeyResult::Quit => true,
 			KeyResult::ModeChange(_) | KeyResult::Consumed | KeyResult::Unhandled => {
 				self.needs_redraw = true;
 				false
 			}
-			KeyResult::Quit => true,
-			// These shouldn't happen in window mode but handle gracefully
-			KeyResult::InsertChar(_)
-			| KeyResult::MouseClick { .. }
-			| KeyResult::MouseDrag { .. }
-			| KeyResult::MouseScroll { .. } => false,
+			_ => false,
 		}
 	}
 
