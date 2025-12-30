@@ -17,7 +17,6 @@ pub mod notifications;
 pub mod objects;
 pub mod options;
 pub mod statusline;
-mod window_actions;
 
 pub use evildoer_base::range::CharIdx;
 pub use evildoer_base::{

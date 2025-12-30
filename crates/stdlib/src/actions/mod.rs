@@ -21,6 +21,7 @@ mod motions;
 mod scroll;
 mod selection_ops;
 mod text_objects;
+mod window;
 
 // Re-export all action types from evildoer_manifest
 /// Look up an action by name.
