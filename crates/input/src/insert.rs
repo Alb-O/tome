@@ -40,7 +40,8 @@ impl InputHandler {
 
 		// Try insert-mode keybindings first
 		if let Ok(node) = key.to_keymap() {
-			if let LookupResult::Match(entry) = registry.lookup(BindingMode::Insert, &[node.clone()])
+			if let LookupResult::Match(entry) =
+				registry.lookup(BindingMode::Insert, std::slice::from_ref(&node))
 			{
 				let count = if self.count > 0 {
 					self.count as usize
@@ -62,25 +63,23 @@ impl InputHandler {
 			let is_navigation_key =
 				!matches!(key.code, KeyCode::Char(_)) || key.modifiers.ctrl || key.modifiers.alt;
 
-			if is_navigation_key {
-				if let LookupResult::Match(entry) =
-					registry.lookup(BindingMode::Normal, &[node])
-				{
-					let count = if self.count > 0 {
-						self.count as usize
-					} else {
-						1
-					};
-					let extend = self.extend;
-					let register = self.register;
-					self.reset_params();
-					return KeyResult::ActionById {
-						id: entry.action_id,
-						count,
-						extend,
-						register,
-					};
-				}
+			if is_navigation_key
+				&& let LookupResult::Match(entry) = registry.lookup(BindingMode::Normal, &[node])
+			{
+				let count = if self.count > 0 {
+					self.count as usize
+				} else {
+					1
+				};
+				let extend = self.extend;
+				let register = self.register;
+				self.reset_params();
+				return KeyResult::ActionById {
+					id: entry.action_id,
+					count,
+					extend,
+					register,
+				};
 			}
 		}
 

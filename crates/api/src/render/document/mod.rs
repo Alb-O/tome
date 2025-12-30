@@ -14,6 +14,9 @@ use crate::Editor;
 use crate::buffer::{BufferView, SplitDirection};
 use crate::test_events::SeparatorAnimationEvent;
 
+/// Per-layer rendering data: (layer_index, layer_area, view_areas, separators).
+type LayerRenderData = (usize, Rect, Vec<(BufferView, Rect)>, Vec<(SplitDirection, u8, Rect)>);
+
 fn color_to_rgb(color: Color) -> Option<(u8, u8, u8)> {
 	match color {
 		Color::Rgb(r, g, b) => Some((r, g, b)),
@@ -182,12 +185,7 @@ impl Editor {
 		let focused_view = self.focused_view();
 
 		let layer_count = self.layout.layer_count();
-		let mut layer_data: Vec<(
-			usize,
-			Rect,
-			Vec<(BufferView, Rect)>,
-			Vec<(SplitDirection, u8, Rect)>,
-		)> = Vec::new();
+		let mut layer_data: Vec<LayerRenderData> = Vec::new();
 
 		for layer_idx in 0..layer_count {
 			if self.layout.layer(layer_idx).is_some() {
@@ -380,12 +378,7 @@ impl Editor {
 		frame: &mut evildoer_tui::Frame,
 		boundary_rect: Rect,
 		boundary_priority: u8,
-		layer_data: &[(
-			usize,
-			Rect,
-			Vec<(BufferView, Rect)>,
-			Vec<(SplitDirection, u8, Rect)>,
-		)],
+		layer_data: &[LayerRenderData],
 		sep_style: &SeparatorStyle,
 	) {
 		use std::collections::HashMap;

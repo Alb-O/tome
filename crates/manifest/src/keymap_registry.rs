@@ -65,10 +65,7 @@ impl KeymapRegistry {
 
 	/// Adds a binding to the registry.
 	pub fn add(&mut self, mode: BindingMode, keys: Vec<Node>, entry: BindingEntry) {
-		self.matchers
-			.entry(mode)
-			.or_insert_with(Matcher::new)
-			.add(keys, entry);
+		self.matchers.entry(mode).or_default().add(keys, entry);
 	}
 
 	/// Looks up a key sequence in the given mode.

@@ -154,8 +154,10 @@ pub fn buffer_ops_handler(input: TokenStream) -> TokenStream {
 		body,
 	} = parse_macro_input!(input as Input);
 
-	let handler_name =
-		format_ident!("HANDLE_{}", dispatch::to_screaming_snake_case(&name.to_string()));
+	let handler_name = format_ident!(
+		"HANDLE_{}",
+		dispatch::to_screaming_snake_case(&name.to_string())
+	);
 	let slice_name = format_ident!(
 		"RESULT_{}_HANDLERS",
 		dispatch::to_screaming_snake_case(&result.to_string())

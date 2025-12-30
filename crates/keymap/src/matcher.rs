@@ -214,12 +214,13 @@ fn lookup_with_info<'a, T>(node: &'a Trie<T>, nodes: &[Node], pos: usize) -> Mat
 	// 2. Try group match
 	if let Key::Char(ch) = input_node.key {
 		for (n, child) in &node.groups {
-			if let Key::Group(group) = n.key {
-				if n.modifiers == input_node.modifiers && group.matches(ch) {
-					let result = lookup_with_info(child, nodes, pos + 1);
-					if !matches!(result, MatchResult::None) {
-						return result;
-					}
+			if let Key::Group(group) = n.key
+				&& n.modifiers == input_node.modifiers
+				&& group.matches(ch)
+			{
+				let result = lookup_with_info(child, nodes, pos + 1);
+				if !matches!(result, MatchResult::None) {
+					return result;
 				}
 			}
 		}
@@ -349,10 +350,7 @@ mod tests {
 		let mut matcher = Matcher::new();
 		matcher.add(parse_seq("a").unwrap(), 1);
 
-		assert_eq!(
-			matcher.lookup(&parse_seq("x").unwrap()),
-			MatchResult::None
-		);
+		assert_eq!(matcher.lookup(&parse_seq("x").unwrap()), MatchResult::None);
 		assert_eq!(
 			matcher.lookup(&parse_seq("a b").unwrap()),
 			MatchResult::None

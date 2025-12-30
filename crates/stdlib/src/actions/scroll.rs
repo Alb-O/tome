@@ -1,9 +1,9 @@
 //! Scroll/view actions.
 
+use evildoer_manifest::action;
 use evildoer_manifest::actions::{
 	ActionResult, EditAction, ScrollAmount, ScrollDir, VisualDirection,
 };
-use evildoer_manifest::action;
 
 action!(scroll_up, { description: "Scroll view up", bindings: r#"normal "z k""# }, |ctx| {
 	ActionResult::Edit(EditAction::Scroll {

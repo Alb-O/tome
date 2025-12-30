@@ -1,8 +1,8 @@
 //! Input handler managing key processing and mode state.
 
 use evildoer_base::key::{Key, KeyCode, MouseButton, MouseEvent};
-use evildoer_keymap::parser::Node;
 use evildoer_keymap::ToKeyMap;
+use evildoer_keymap::parser::Node;
 use evildoer_manifest::keymap_registry::{KeymapRegistry, LookupResult};
 use evildoer_manifest::{BindingMode, get_keymap_registry};
 
@@ -121,13 +121,12 @@ impl InputHandler {
 		binding_mode: BindingMode,
 		registry: &KeymapRegistry,
 	) -> KeyResult {
-		if binding_mode == BindingMode::Normal {
-			if let Some(digit) = key.as_digit()
-				&& (digit != 0 || self.count > 0)
-			{
-				self.count = self.count.saturating_mul(10).saturating_add(digit);
-				return KeyResult::Consumed;
-			}
+		if binding_mode == BindingMode::Normal
+			&& let Some(digit) = key.as_digit()
+			&& (digit != 0 || self.count > 0)
+		{
+			self.count = self.count.saturating_mul(10).saturating_add(digit);
+			return KeyResult::Consumed;
 		}
 
 		if key.is_escape() {
