@@ -20,35 +20,30 @@ action!(move_down, { description: "Move down" }, |ctx| cursor_motion(ctx, "move_
 
 action!(move_line_start, {
 	description: "Move to line start",
-	bindings: r#"normal "0" "home" "alt-h"
-goto "h"
+	bindings: r#"normal "0" "home" "alt-h" "g h"
 insert "home""#,
 }, |ctx| cursor_motion(ctx, "line_start"));
 
 action!(move_line_end, {
 	description: "Move to line end",
-	bindings: r#"normal "$" "end" "alt-l"
-goto "l"
+	bindings: r#"normal "$" "end" "alt-l" "g l"
 insert "end""#,
 }, |ctx| cursor_motion(ctx, "line_end"));
 
 action!(move_first_nonblank, {
 	description: "Move to first non-blank",
-	bindings: r#"normal "^"
-goto "i""#,
+	bindings: r#"normal "^" "g i""#,
 }, |ctx| cursor_motion(ctx, "first_nonwhitespace"));
 
 action!(document_start, {
 	description: "Move to document start",
-	bindings: r#"normal "ctrl-home"
-goto "g" "k"
+	bindings: r#"normal "ctrl-home" "g g" "g k"
 insert "ctrl-home""#,
 }, |ctx| cursor_motion(ctx, "document_start"));
 
 action!(document_end, {
 	description: "Move to document end",
-	bindings: r#"normal "G" "ctrl-end"
-goto "j" "e"
+	bindings: r#"normal "G" "ctrl-end" "g j" "g e"
 insert "ctrl-end""#,
 }, |ctx| cursor_motion(ctx, "document_end"));
 

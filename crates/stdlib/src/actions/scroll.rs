@@ -3,9 +3,9 @@
 use evildoer_manifest::actions::{
 	ActionResult, EditAction, ScrollAmount, ScrollDir, VisualDirection,
 };
-use evildoer_manifest::{action, bind};
+use evildoer_manifest::action;
 
-action!(scroll_up, { description: "Scroll view up" }, |ctx| {
+action!(scroll_up, { description: "Scroll view up", bindings: r#"normal "z k""# }, |ctx| {
 	ActionResult::Edit(EditAction::Scroll {
 		direction: ScrollDir::Up,
 		amount: ScrollAmount::Line(ctx.count),
@@ -13,16 +13,13 @@ action!(scroll_up, { description: "Scroll view up" }, |ctx| {
 	})
 });
 
-action!(scroll_down, { description: "Scroll view down" }, |ctx| {
+action!(scroll_down, { description: "Scroll view down", bindings: r#"normal "z j""# }, |ctx| {
 	ActionResult::Edit(EditAction::Scroll {
 		direction: ScrollDir::Down,
 		amount: ScrollAmount::Line(ctx.count),
 		extend: ctx.extend,
 	})
 });
-
-bind!(scroll_up, r#"view "k""#);
-bind!(scroll_down, r#"view "j""#);
 
 action!(scroll_half_page_up, {
 	description: "Scroll half page up",

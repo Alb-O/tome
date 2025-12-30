@@ -134,8 +134,6 @@ impl From<&Mode> for BindingMode {
 		match mode {
 			Mode::Normal => BindingMode::Normal,
 			Mode::Insert => BindingMode::Insert,
-			Mode::Goto => BindingMode::Goto,
-			Mode::View => BindingMode::View,
 			Mode::Window => BindingMode::Window,
 			Mode::PendingAction(_) => BindingMode::Normal,
 		}

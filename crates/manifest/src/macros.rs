@@ -42,17 +42,6 @@ macro_rules! __opt_slice {
 	};
 }
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __opt_static {
-	({$val:expr}) => {
-		Some($val)
-	};
-	() => {
-		None
-	};
-}
-
 /// Registers a configuration option in the [`OPTIONS`](crate::options::OPTIONS) slice.
 #[macro_export]
 macro_rules! option {
@@ -263,7 +252,7 @@ macro_rules! action {
 /// # Example
 ///
 /// ```ignore
-/// bind!(scroll_down, r#"view "j""#);
+/// bind!(scroll_down, r#"normal "z j""#);
 /// ```
 #[macro_export]
 macro_rules! bind {
@@ -515,6 +504,6 @@ macro_rules! panel {
 }
 
 pub use crate::{
-	__opt, __opt_slice, __opt_static, action, bind, command, hook, motion, option, panel,
-	result_handler, statusline_segment, text_object,
+	__opt, __opt_slice, action, bind, command, hook, motion, option, panel, result_handler,
+	statusline_segment, text_object,
 };

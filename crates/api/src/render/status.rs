@@ -96,12 +96,6 @@ impl Editor {
 					Mode::Insert => Style::default()
 						.bg(self.theme.colors.status.insert_bg)
 						.fg(self.theme.colors.status.insert_fg),
-					Mode::Goto => Style::default()
-						.bg(self.theme.colors.status.goto_bg)
-						.fg(self.theme.colors.status.goto_fg),
-					Mode::View => Style::default()
-						.bg(self.theme.colors.status.view_bg)
-						.fg(self.theme.colors.status.view_fg),
 					Mode::Window => Style::default()
 						.bg(self.theme.colors.status.goto_bg)
 						.fg(self.theme.colors.status.goto_fg),

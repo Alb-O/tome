@@ -28,7 +28,6 @@
 //!
 //! These traits are defined but not yet connected to [`EditorCapabilities`]:
 //!
-//! - [`TransformAccess`] - Text transformations (align, trim)
 //! - [`JumpAccess`] - Jump list navigation
 //! - [`MacroAccess`] - Macro recording/playback
 //!
@@ -131,25 +130,6 @@ pub trait UndoAccess {
 	fn can_undo(&self) -> bool;
 	/// Returns true if redo is available.
 	fn can_redo(&self) -> bool;
-}
-
-/// Text transformation operations (not yet wired).
-///
-/// Provides structural text transformations that operate on selections.
-/// Add to [`Capability`] enum and implement `transform()` accessor when ready.
-///
-/// [`Capability`]: crate::Capability
-pub trait TransformAccess {
-	/// Aligns selections to a common column.
-	fn align(&mut self);
-	/// Copies indentation from the previous line.
-	fn copy_indent(&mut self);
-	/// Converts tabs to spaces in selections.
-	fn tabs_to_spaces(&mut self);
-	/// Converts spaces to tabs in selections.
-	fn spaces_to_tabs(&mut self);
-	/// Trims whitespace from selection boundaries.
-	fn trim_selections(&mut self);
 }
 
 /// Jump list operations (not yet wired).
@@ -261,10 +241,6 @@ pub trait BufferOpsAccess {
 	/// Split vertically (new buffer to right). Matches Vim `:vsplit` / Helix `vsplit`.
 	fn split_vertical(&mut self);
 
-	/// Open a terminal in a horizontal split (terminal below).
-	fn split_terminal_horizontal(&mut self);
-	/// Open a terminal in a vertical split (terminal to the right).
-	fn split_terminal_vertical(&mut self);
 	/// Toggle terminal split (open if closed, close if open).
 	fn toggle_terminal(&mut self);
 	/// Toggle the debug panel (open if closed, close if open).

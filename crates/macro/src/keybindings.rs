@@ -57,14 +57,12 @@ fn generate_keybindings(
 		let mode_variant = match mode_name {
 			"normal" => quote! { Normal },
 			"insert" => quote! { Insert },
-			"goto" => quote! { Goto },
-			"view" => quote! { View },
 			"window" => quote! { Window },
 			"match" => quote! { Match },
 			"space" => quote! { Space },
 			other => {
 				return Err(format!(
-					"Unknown mode: {other}. Valid modes: normal, insert, goto, view, window, match, space"
+					"Unknown mode: {other}. Valid modes: normal, insert, window, match, space"
 				));
 			}
 		};

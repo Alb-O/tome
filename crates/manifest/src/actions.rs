@@ -44,12 +44,6 @@ pub enum ActionResult {
 	/// Split vertically with current buffer.
 	#[terminal_safe]
 	SplitVertical,
-	/// Open terminal in horizontal split.
-	#[terminal_safe]
-	SplitTerminalHorizontal,
-	/// Open terminal in vertical split.
-	#[terminal_safe]
-	SplitTerminalVertical,
 	/// Toggle a named panel.
 	#[terminal_safe]
 	TogglePanel(&'static str),
@@ -97,16 +91,6 @@ pub enum ActionResult {
 	/// Use current selection as search pattern.
 	#[handler(UseSelectionSearch)]
 	UseSelectionAsSearch,
-	/// Align selections.
-	Align,
-	/// Copy indentation.
-	CopyIndent,
-	/// Convert tabs to spaces.
-	TabsToSpaces,
-	/// Convert spaces to tabs.
-	SpacesToTabs,
-	/// Trim whitespace from selections.
-	TrimSelections,
 }
 
 /// Edit operation to apply to buffer content.
@@ -185,8 +169,6 @@ pub enum ScrollAmount {
 pub enum ActionMode {
 	Normal,
 	Insert,
-	Goto,
-	View,
 	Window,
 }
 

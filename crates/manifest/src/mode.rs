@@ -8,8 +8,6 @@ pub enum Mode {
 	#[default]
 	Normal,
 	Insert,
-	Goto,
-	View,
 	/// Window/split management mode (Ctrl+w prefix).
 	Window,
 	/// Waiting for character input to complete an action.
@@ -22,8 +20,6 @@ impl Mode {
 		match self {
 			Mode::Normal => "normal",
 			Mode::Insert => "insert",
-			Mode::Goto => "goto",
-			Mode::View => "view",
 			Mode::Window => "window",
 			Mode::PendingAction(_) => "pending",
 		}

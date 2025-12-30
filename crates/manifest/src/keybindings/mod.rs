@@ -65,10 +65,6 @@ pub enum BindingMode {
 	Normal,
 	/// Insert mode (text input).
 	Insert,
-	/// Goto mode (g prefix) - DEPRECATED, use sequences instead.
-	Goto,
-	/// View mode (z prefix) - DEPRECATED, use sequences instead.
-	View,
 	/// Match mode (m prefix).
 	Match,
 	/// Window mode (Ctrl+w prefix).
@@ -82,8 +78,6 @@ impl From<Mode> for BindingMode {
 		match mode {
 			Mode::Normal => BindingMode::Normal,
 			Mode::Insert => BindingMode::Insert,
-			Mode::Goto => BindingMode::Goto,
-			Mode::View => BindingMode::View,
 			Mode::Window => BindingMode::Window,
 			Mode::PendingAction(_) => BindingMode::Normal,
 		}

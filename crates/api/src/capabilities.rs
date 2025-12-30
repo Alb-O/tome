@@ -135,14 +135,6 @@ impl BufferOpsAccess for Editor {
 		Editor::split_vertical(self, new_id);
 	}
 
-	fn split_terminal_horizontal(&mut self) {
-		self.notify("info", "Use toggle_panel(\"terminal\") instead");
-	}
-
-	fn split_terminal_vertical(&mut self) {
-		self.notify("info", "Use toggle_panel(\"terminal\") instead");
-	}
-
 	fn toggle_terminal(&mut self) {
 		Editor::toggle_panel(self, "terminal");
 	}

@@ -65,7 +65,7 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 /// ```kdl
 /// normal "h" "left" "ctrl-h"
 /// insert "left"
-/// goto "h"
+/// window "s"
 /// ```
 ///
 /// Called internally by `action!` macro:

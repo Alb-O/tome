@@ -18,18 +18,6 @@ action!(split_vertical, {
 	result: SplitVertical,
 }, |ops| ops.split_vertical());
 
-action!(split_terminal_horizontal, {
-	description: "Open terminal in horizontal split (below)",
-	bindings: r#"window "t""#,
-	result: SplitTerminalHorizontal,
-}, |ops| ops.split_terminal_horizontal());
-
-action!(split_terminal_vertical, {
-	description: "Open terminal in vertical split (right)",
-	bindings: r#"window "T""#,
-	result: SplitTerminalVertical,
-}, |ops| ops.split_terminal_vertical());
-
 action!(toggle_terminal, {
 	description: "Toggle terminal split",
 	bindings: r#"normal ":""#,
