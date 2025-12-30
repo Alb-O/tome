@@ -1,11 +1,11 @@
-//! Character find functions (Kakoune's f, t, F, T commands).
+//! Character find movement functions (`f`, `t`, `F`, `T` commands).
 
 use evildoer_base::range::Range;
 use ropey::RopeSlice;
 
 use super::make_range_select;
 
-/// Find character forward (Kakoune's `f` and `t` commands).
+/// Find character forward (`f` and `t` commands).
 ///
 /// # Arguments
 /// * `inclusive` - If true, includes the target character (`f` command).
@@ -56,7 +56,7 @@ pub fn find_char_forward(
 	range
 }
 
-/// Find character backward (Kakoune's `alt-f` and `alt-t` commands).
+/// Find character backward (`F` and `T` commands).
 pub fn find_char_backward(
 	text: RopeSlice,
 	range: Range,

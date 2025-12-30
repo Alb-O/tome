@@ -54,9 +54,8 @@ pub trait CursorAccess {
 
 /// Selection access (required).
 ///
-/// Provides access to the editor's selection state. Evildoer uses Kakoune-style
-/// selections where multiple selections are supported and the cursor is
-/// always part of a selection.
+/// Provides access to the editor's selection state. Multiple selections are
+/// supported and the cursor is always part of a selection.
 pub trait SelectionAccess {
 	/// Returns a reference to the current selection.
 	fn selection(&self) -> &Selection;

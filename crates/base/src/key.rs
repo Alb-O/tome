@@ -1,4 +1,4 @@
-//! Key representation for Kakoune-compatible keybindings.
+//! Key and input event types.
 //!
 //! This module provides a unified key representation that handles:
 //! - Regular character keys

@@ -1,11 +1,11 @@
-//! Word movement functions (Kakoune's w, b, e commands).
+//! Word movement functions (`w`, `b`, `e` commands).
 
 use evildoer_base::range::{CharIdx, Range};
 use ropey::RopeSlice;
 
 use super::{WordType, is_word_char, make_range_select};
 
-/// Move to next word start (Kakoune's `w` command).
+/// Move to next word start (`w` command).
 /// Selects the word and following whitespace on the right.
 pub fn move_to_next_word_start(
 	text: RopeSlice,
@@ -58,7 +58,7 @@ pub fn move_to_next_word_start(
 	make_range_select(range, pos.min(len), extend)
 }
 
-/// Move to next word end (Kakoune's `e` command).
+/// Move to next word end (`e` command).
 pub fn move_to_next_word_end(
 	text: RopeSlice,
 	range: Range,
@@ -112,7 +112,7 @@ pub fn move_to_next_word_end(
 	make_range_select(range, end_pos, extend)
 }
 
-/// Move to previous word start (Kakoune's `b` command).
+/// Move to previous word start (`b` command).
 pub fn move_to_prev_word_start(
 	text: RopeSlice,
 	range: Range,

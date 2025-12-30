@@ -13,7 +13,7 @@ use ropey::RopeSlice;
 pub use search::{escape_pattern, find_all_matches, find_next, find_prev, matches_pattern};
 pub use word::{move_to_next_word_end, move_to_next_word_start, move_to_prev_word_start};
 
-/// Word type for word movements (Kakoune style).
+/// Word type for word movements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WordType {
 	/// A word is alphanumeric characters (and those in extra_word_chars).
