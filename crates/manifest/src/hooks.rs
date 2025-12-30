@@ -403,7 +403,7 @@ pub struct HookDef {
 	/// Short description.
 	pub description: &'static str,
 	/// Priority (lower runs first, default 100).
-	pub priority: i32,
+	pub priority: i16,
 	/// The hook handler function.
 	///
 	/// Returns [`HookAction::Done`] for sync completion or [`HookAction::Async`]
@@ -424,9 +424,29 @@ impl std::fmt::Debug for HookDef {
 	}
 }
 
+impl crate::RegistryMetadata for HookDef {
+	fn id(&self) -> &'static str {
+		self.id
+	}
+
+	fn name(&self) -> &'static str {
+		self.name
+	}
+
+	fn priority(&self) -> i16 {
+		self.priority
+	}
+
+	fn source(&self) -> RegistrySource {
+		self.source
+	}
+}
+
 /// A mutable hook that can modify editor state.
 #[derive(Clone, Copy)]
 pub struct MutableHookDef {
+	/// Unique identifier.
+	pub id: &'static str,
 	/// Hook name for debugging/logging.
 	pub name: &'static str,
 	/// The event this hook responds to.
@@ -434,9 +454,11 @@ pub struct MutableHookDef {
 	/// Short description.
 	pub description: &'static str,
 	/// Priority (lower runs first, default 100).
-	pub priority: i32,
+	pub priority: i16,
 	/// The hook handler function.
 	pub handler: fn(&mut MutableHookContext) -> HookAction,
+	/// Origin of the hook.
+	pub source: RegistrySource,
 }
 
 impl std::fmt::Debug for MutableHookDef {
@@ -447,6 +469,24 @@ impl std::fmt::Debug for MutableHookDef {
 			.field("priority", &self.priority)
 			.field("description", &self.description)
 			.finish()
+	}
+}
+
+impl crate::RegistryMetadata for MutableHookDef {
+	fn id(&self) -> &'static str {
+		self.id
+	}
+
+	fn name(&self) -> &'static str {
+		self.name
+	}
+
+	fn priority(&self) -> i16 {
+		self.priority
+	}
+
+	fn source(&self) -> RegistrySource {
+		self.source
 	}
 }
 

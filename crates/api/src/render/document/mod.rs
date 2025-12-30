@@ -15,7 +15,12 @@ use crate::buffer::{BufferView, SplitDirection};
 use crate::test_events::SeparatorAnimationEvent;
 
 /// Per-layer rendering data: (layer_index, layer_area, view_areas, separators).
-type LayerRenderData = (usize, Rect, Vec<(BufferView, Rect)>, Vec<(SplitDirection, u8, Rect)>);
+type LayerRenderData = (
+	usize,
+	Rect,
+	Vec<(BufferView, Rect)>,
+	Vec<(SplitDirection, u8, Rect)>,
+);
 
 fn color_to_rgb(color: Color) -> Option<(u8, u8, u8)> {
 	match color {

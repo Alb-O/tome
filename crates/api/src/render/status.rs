@@ -1,5 +1,5 @@
 use evildoer_manifest::{
-	Mode, RenderedSegment, SegmentPosition, SegmentStyle, StatuslineContext, render_position,
+	RenderedSegment, SegmentPosition, SegmentStyle, StatuslineContext, render_position,
 };
 use evildoer_tui::style::{Modifier, Style};
 use evildoer_tui::text::{Line, Span};
@@ -86,30 +86,15 @@ impl Editor {
 	}
 
 	pub fn segment_to_span(&self, segment: &RenderedSegment) -> Span<'static> {
+		let colors = &self.theme.colors;
 		let style = match segment.style {
-			SegmentStyle::Normal => Style::default().fg(self.theme.colors.ui.fg),
-			SegmentStyle::Mode => {
-				let base = match self.mode() {
-					Mode::Normal => Style::default()
-						.bg(self.theme.colors.status.normal_bg)
-						.fg(self.theme.colors.status.normal_fg),
-					Mode::Insert => Style::default()
-						.bg(self.theme.colors.status.insert_bg)
-						.fg(self.theme.colors.status.insert_fg),
-					Mode::Window => Style::default()
-						.bg(self.theme.colors.status.prefix_mode_bg)
-						.fg(self.theme.colors.status.prefix_mode_fg),
-					Mode::PendingAction(_) => Style::default()
-						.bg(self.theme.colors.status.command_bg)
-						.fg(self.theme.colors.status.command_fg),
-				};
-				base.add_modifier(Modifier::BOLD)
-			}
+			SegmentStyle::Normal => Style::default().fg(colors.ui.fg),
+			SegmentStyle::Mode => colors.mode_style(&self.mode()).add_modifier(Modifier::BOLD),
 			SegmentStyle::Inverted => Style::default().add_modifier(Modifier::REVERSED),
-			SegmentStyle::Dim => Style::default().fg(self.theme.colors.status.dim_fg),
-			SegmentStyle::Warning => Style::default().fg(self.theme.colors.status.warning_fg),
-			SegmentStyle::Error => Style::default().fg(self.theme.colors.status.error_fg),
-			SegmentStyle::Success => Style::default().fg(self.theme.colors.status.success_fg),
+			SegmentStyle::Dim => Style::default().fg(colors.status.dim_fg),
+			SegmentStyle::Warning => Style::default().fg(colors.status.warning_fg),
+			SegmentStyle::Error => Style::default().fg(colors.status.error_fg),
+			SegmentStyle::Success => Style::default().fg(colors.status.success_fg),
 		};
 		Span::styled(segment.text.clone(), style)
 	}

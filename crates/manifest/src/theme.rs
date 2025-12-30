@@ -114,6 +114,18 @@ pub struct ThemeColors {
 }
 
 impl ThemeColors {
+	/// Get the style for a given editor mode (for status line mode indicator).
+	#[inline]
+	pub fn mode_style(&self, mode: &crate::Mode) -> Style {
+		let s = &self.status;
+		match mode {
+			crate::Mode::Normal => Style::new().bg(s.normal_bg).fg(s.normal_fg),
+			crate::Mode::Insert => Style::new().bg(s.insert_bg).fg(s.insert_fg),
+			crate::Mode::Window => Style::new().bg(s.prefix_mode_bg).fg(s.prefix_mode_fg),
+			crate::Mode::PendingAction(_) => Style::new().bg(s.command_bg).fg(s.command_fg),
+		}
+	}
+
 	/// Resolve notification style for a given semantic identifier.
 	/// Uses notification-specific overrides if set, otherwise inherits from popup/status colors.
 	pub fn notification_style(&self, semantic: &str) -> Style {

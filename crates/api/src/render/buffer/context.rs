@@ -48,32 +48,22 @@ pub struct CursorStyles {
 impl<'a> BufferRenderContext<'a> {
 	/// Creates cursor styling configuration based on theme and mode.
 	pub fn make_cursor_styles(&self) -> CursorStyles {
+		let ui = &self.theme.colors.ui;
+
 		let primary_cursor_style = Style::default()
-			.bg(self.theme.colors.ui.cursor_bg)
-			.fg(self.theme.colors.ui.cursor_fg)
+			.bg(ui.cursor_bg)
+			.fg(ui.cursor_fg)
 			.add_modifier(Modifier::BOLD);
 
 		let secondary_cursor_style = {
-			let bg = self
-				.theme
-				.colors
-				.ui
-				.cursor_bg
-				.blend(self.theme.colors.ui.bg, 0.4);
-			let fg = self
-				.theme
-				.colors
-				.ui
-				.cursor_fg
-				.blend(self.theme.colors.ui.fg, 0.4);
+			let bg = ui.cursor_bg.blend(ui.bg, 0.4);
+			let fg = ui.cursor_fg.blend(ui.fg, 0.4);
 			Style::default().bg(bg).fg(fg).add_modifier(Modifier::BOLD)
 		};
 
-		let base_style = Style::default().fg(self.theme.colors.ui.fg);
+		let base_style = Style::default().fg(ui.fg);
 
-		let selection_style = Style::default()
-			.bg(self.theme.colors.ui.selection_bg)
-			.fg(self.theme.colors.ui.selection_fg);
+		let selection_style = Style::default().bg(ui.selection_bg).fg(ui.selection_fg);
 
 		CursorStyles {
 			primary: primary_cursor_style,
