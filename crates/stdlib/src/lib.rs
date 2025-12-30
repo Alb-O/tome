@@ -16,7 +16,6 @@ pub mod movement;
 pub mod notifications;
 pub mod objects;
 pub mod options;
-mod panels;
 pub mod statusline;
 mod window_actions;
 
