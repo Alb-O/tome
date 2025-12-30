@@ -6,7 +6,6 @@
 
 mod hooks;
 
-use tracing::{debug, warn};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -14,6 +13,7 @@ use evildoer_api::editor::extensions::{EXTENSIONS, ExtensionInitDef, ExtensionMa
 use evildoer_lsp::lsp_types::Url;
 use evildoer_lsp::{LanguageServerConfig, Registry};
 use linkme::distributed_slice;
+use tracing::{debug, warn};
 
 /// Manager for LSP client connections.
 ///

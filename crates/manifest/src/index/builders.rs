@@ -2,11 +2,11 @@
 
 use std::collections::HashMap;
 
+use tracing::{debug, warn};
+
 use super::collision::{Collision, CollisionKind};
 use super::diagnostics::diagnostics_internal;
 use super::types::{ActionRegistryIndex, ExtensionRegistry, RegistryIndex};
-use tracing::{debug, warn};
-
 use crate::{
 	ACTIONS, ActionDef, ActionId, COMMANDS, CommandDef, MOTIONS, MotionDef, RegistryMetadata,
 	TEXT_OBJECTS, TextObjectDef,

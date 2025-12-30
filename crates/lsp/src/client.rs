@@ -25,7 +25,6 @@
 //! let hover = client.hover(uri, position).await?;
 //! ```
 
-use tracing::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
@@ -47,6 +46,7 @@ use parking_lot::Mutex;
 use serde_json::Value;
 use tokio::process::Command;
 use tokio::sync::{Notify, OnceCell};
+use tracing::{debug, error, info, warn};
 
 use crate::router::Router;
 use crate::{MainLoop, Result, ServerSocket};

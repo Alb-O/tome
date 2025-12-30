@@ -235,68 +235,76 @@ impl SplitBuffer for DebugPanel {
 				col += 1;
 			}
 
-			if let Some(ref action_ctx) = entry.action_ctx {
-				if let Some(ref action_name) = action_ctx.action_name {
-					let action_color = SplitColor::Indexed(5);
+			if let Some(ref action_ctx) = entry.action_ctx
+				&& let Some(ref action_name) = action_ctx.action_name
+			{
+				let action_color = SplitColor::Indexed(5);
 
+				if (col as usize) < width {
+					f(row, col, &SplitCell::new("[").with_fg(action_color));
+					col += 1;
+				}
+
+				for ch in action_name.chars() {
+					if (col as usize) >= width {
+						break;
+					}
+					f(
+						row,
+						col,
+						&SplitCell::new(ch.to_string())
+							.with_fg(action_color)
+							.with_attrs(SplitAttrs::BOLD),
+					);
+					col += 1;
+				}
+
+				// Show char_arg if present (e.g., for find char 'f')
+				if let Some(ch) = action_ctx.char_arg {
 					if (col as usize) < width {
-						f(row, col, &SplitCell::new("[").with_fg(action_color));
+						f(row, col, &SplitCell::new("'").with_fg(action_color));
 						col += 1;
 					}
+					if (col as usize) < width {
+						f(
+							row,
+							col,
+							&SplitCell::new(ch.to_string()).with_fg(action_color),
+						);
+						col += 1;
+					}
+					if (col as usize) < width {
+						f(row, col, &SplitCell::new("'").with_fg(action_color));
+						col += 1;
+					}
+				}
 
-					for ch in action_name.chars() {
+				// Show count if > 1
+				if let Some(count) = action_ctx.count
+					&& count > 1
+				{
+					let count_str = format!("x{}", count);
+					for ch in count_str.chars() {
 						if (col as usize) >= width {
 							break;
 						}
 						f(
 							row,
 							col,
-							&SplitCell::new(ch.to_string())
-								.with_fg(action_color)
-								.with_attrs(SplitAttrs::BOLD),
+							&SplitCell::new(ch.to_string()).with_fg(action_color),
 						);
 						col += 1;
 					}
+				}
 
-					// Show char_arg if present (e.g., for find char 'f')
-					if let Some(ch) = action_ctx.char_arg {
-						if (col as usize) < width {
-							f(row, col, &SplitCell::new("'").with_fg(action_color));
-							col += 1;
-						}
-						if (col as usize) < width {
-							f(row, col, &SplitCell::new(ch.to_string()).with_fg(action_color));
-							col += 1;
-						}
-						if (col as usize) < width {
-							f(row, col, &SplitCell::new("'").with_fg(action_color));
-							col += 1;
-						}
-					}
+				if (col as usize) < width {
+					f(row, col, &SplitCell::new("]").with_fg(action_color));
+					col += 1;
+				}
 
-					// Show count if > 1
-					if let Some(count) = action_ctx.count {
-						if count > 1 {
-							let count_str = format!("x{}", count);
-							for ch in count_str.chars() {
-								if (col as usize) >= width {
-									break;
-								}
-								f(row, col, &SplitCell::new(ch.to_string()).with_fg(action_color));
-								col += 1;
-							}
-						}
-					}
-
-					if (col as usize) < width {
-						f(row, col, &SplitCell::new("]").with_fg(action_color));
-						col += 1;
-					}
-
-					if (col as usize) < width {
-						f(row, col, &SplitCell::new(" "));
-						col += 1;
-					}
+				if (col as usize) < width {
+					f(row, col, &SplitCell::new(" "));
+					col += 1;
 				}
 			}
 

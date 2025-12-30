@@ -97,7 +97,9 @@ struct ActionSpanVisitor(ActionSpanData);
 impl Visit for ActionSpanVisitor {
 	fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
 		match field.name() {
-			"name" => self.0.action_name = Some(format!("{:?}", value).trim_matches('"').to_string()),
+			"name" => {
+				self.0.action_name = Some(format!("{:?}", value).trim_matches('"').to_string())
+			}
 			"id" => self.0.action_id = Some(format!("{:?}", value).trim_matches('"').to_string()),
 			_ => {}
 		}

@@ -13,11 +13,11 @@ evildoer-runtime.workspace = true
 kdl.workspace = true
 libloading.workspace = true
 once_cell.workspace = true
-tracing.workspace = true
 regex.workspace = true
 ropey.workspace = true
 serde = { workspace = true, features = ["derive"] }
 thiserror.workspace = true
+tracing.workspace = true
 tree-house.workspace = true
 
 [dev-dependencies]

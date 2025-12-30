@@ -7,8 +7,8 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
 
-pub use tree_house::Language as LanguageId;
 use tracing::error;
+pub use tree_house::Language as LanguageId;
 use tree_house::{InjectionLanguageMarker, Language, LanguageConfig as TreeHouseConfig};
 
 use crate::config::load_language_configs;

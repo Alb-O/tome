@@ -65,7 +65,10 @@ pub fn load_grammar_or_build(name: &str) -> Result<Grammar, GrammarError> {
 	match load_grammar(name) {
 		Ok(grammar) => return Ok(grammar),
 		Err(GrammarError::NotFound(_)) => {
-			info!(grammar = name, "Grammar not found, attempting to fetch and build");
+			info!(
+				grammar = name,
+				"Grammar not found, attempting to fetch and build"
+			);
 		}
 		Err(e) => return Err(e),
 	}
