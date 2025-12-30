@@ -2,6 +2,7 @@ use evildoer_base::Selection;
 use evildoer_base::range::{CharIdx, Range};
 use evildoer_macro::DispatchResult;
 use ropey::RopeSlice;
+use tracing::debug;
 
 use crate::{Capability, RegistrySource, find_motion};
 
@@ -313,6 +314,13 @@ pub fn cursor_motion(ctx: &ActionContext, motion_name: &str) -> ActionResult {
 		return ActionResult::Error(format!("Unknown motion: {}", motion_name));
 	};
 
+	debug!(
+		motion = motion_name,
+		count = ctx.count,
+		extend = ctx.extend,
+		"Applying cursor motion"
+	);
+
 	let new_ranges: Vec<Range> = ctx
 		.selection
 		.ranges()
@@ -352,6 +360,13 @@ pub fn selection_motion(ctx: &ActionContext, motion_name: &str) -> ActionResult 
 	let Some(motion) = find_motion(motion_name) else {
 		return ActionResult::Error(format!("Unknown motion: {}", motion_name));
 	};
+
+	debug!(
+		motion = motion_name,
+		count = ctx.count,
+		extend = ctx.extend,
+		"Applying selection motion"
+	);
 
 	if ctx.extend {
 		let primary_index = ctx.selection.primary_index();

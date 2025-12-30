@@ -28,7 +28,7 @@ use evildoer_manifest::{
 	SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction,
 	SplitSize,
 };
-pub use ring_buffer::{LOG_BUFFER, LogEntry, LogLevel, MAX_LOG_ENTRIES};
+pub use ring_buffer::{ActionSpanContext, LOG_BUFFER, LogEntry, LogLevel, MAX_LOG_ENTRIES};
 pub use tracing_layer::DebugPanelLayer;
 
 static NEXT_DEBUG_PANEL_ID: AtomicU64 = AtomicU64::new(0);
@@ -233,6 +233,71 @@ impl SplitBuffer for DebugPanel {
 			if (col as usize) < width {
 				f(row, col, &SplitCell::new(" "));
 				col += 1;
+			}
+
+			if let Some(ref action_ctx) = entry.action_ctx {
+				if let Some(ref action_name) = action_ctx.action_name {
+					let action_color = SplitColor::Indexed(5);
+
+					if (col as usize) < width {
+						f(row, col, &SplitCell::new("[").with_fg(action_color));
+						col += 1;
+					}
+
+					for ch in action_name.chars() {
+						if (col as usize) >= width {
+							break;
+						}
+						f(
+							row,
+							col,
+							&SplitCell::new(ch.to_string())
+								.with_fg(action_color)
+								.with_attrs(SplitAttrs::BOLD),
+						);
+						col += 1;
+					}
+
+					// Show char_arg if present (e.g., for find char 'f')
+					if let Some(ch) = action_ctx.char_arg {
+						if (col as usize) < width {
+							f(row, col, &SplitCell::new("'").with_fg(action_color));
+							col += 1;
+						}
+						if (col as usize) < width {
+							f(row, col, &SplitCell::new(ch.to_string()).with_fg(action_color));
+							col += 1;
+						}
+						if (col as usize) < width {
+							f(row, col, &SplitCell::new("'").with_fg(action_color));
+							col += 1;
+						}
+					}
+
+					// Show count if > 1
+					if let Some(count) = action_ctx.count {
+						if count > 1 {
+							let count_str = format!("x{}", count);
+							for ch in count_str.chars() {
+								if (col as usize) >= width {
+									break;
+								}
+								f(row, col, &SplitCell::new(ch.to_string()).with_fg(action_color));
+								col += 1;
+							}
+						}
+					}
+
+					if (col as usize) < width {
+						f(row, col, &SplitCell::new("]").with_fg(action_color));
+						col += 1;
+					}
+
+					if (col as usize) < width {
+						f(row, col, &SplitCell::new(" "));
+						col += 1;
+					}
+				}
 			}
 
 			let target_color = SplitColor::Indexed(6);

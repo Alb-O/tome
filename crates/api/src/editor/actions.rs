@@ -2,11 +2,13 @@ use evildoer_base::range::{Direction as MoveDir, Range};
 use evildoer_base::{Selection, Transaction};
 use evildoer_manifest::{EditAction, Mode, ScrollAmount, ScrollDir, VisualDirection};
 use evildoer_stdlib::movement;
+use tracing::debug;
 
 use super::Editor;
 
 impl Editor {
 	pub(crate) fn do_execute_edit_action(&mut self, action: EditAction, _extend: bool) {
+		debug!(edit = ?action, "Executing edit action");
 		match action {
 			EditAction::Delete { yank } => {
 				if yank {

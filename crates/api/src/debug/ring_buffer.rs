@@ -31,12 +31,29 @@ impl From<tracing::Level> for LogLevel {
 	}
 }
 
+/// Context from the enclosing action span, if any.
+#[derive(Debug, Clone, Default)]
+pub struct ActionSpanContext {
+	/// Action name (e.g., "move_line_down").
+	pub action_name: Option<String>,
+	/// Full action ID (e.g., "evildoer-stdlib::move_line_down").
+	pub action_id: Option<String>,
+	/// Repeat count for the action.
+	pub count: Option<usize>,
+	/// Whether selection is being extended.
+	pub extend: Option<bool>,
+	/// Character argument for pending actions (e.g., 'f', 'r').
+	pub char_arg: Option<char>,
+}
+
 /// A single log entry.
 #[derive(Debug, Clone)]
 pub struct LogEntry {
 	pub level: LogLevel,
 	pub target: String,
 	pub message: String,
+	/// Context from enclosing action span, if event occurred within one.
+	pub action_ctx: Option<ActionSpanContext>,
 }
 
 /// Thread-safe ring buffer for log entries.

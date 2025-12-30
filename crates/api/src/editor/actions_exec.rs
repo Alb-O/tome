@@ -1,6 +1,7 @@
 use evildoer_base::Selection;
 use evildoer_manifest::{ActionArgs, ActionContext, ActionResult, find_action};
 use ropey::Rope;
+use tracing::{debug, info_span};
 
 use crate::editor::Editor;
 
@@ -29,6 +30,15 @@ impl Editor {
 				return false;
 			}
 		}
+
+		let span = info_span!(
+			"action",
+			name = action.name,
+			id = action.id,
+			count = count,
+			extend = extend,
+		);
+		let _guard = span.enter();
 
 		// When terminal is focused, use a dummy context for workspace-level actions
 		// (window mode actions like split_horizontal, buffer_next, etc. don't use the context)
@@ -71,6 +81,7 @@ impl Editor {
 			(action.handler)(&ctx)
 		};
 
+		debug!(result = ?result, "Action completed");
 		self.apply_action_result(result, extend)
 	}
 
@@ -99,6 +110,16 @@ impl Editor {
 				return false;
 			}
 		}
+
+		let span = info_span!(
+			"action",
+			name = action.name,
+			id = action.id,
+			count = count,
+			extend = extend,
+			char_arg = %char_arg,
+		);
+		let _guard = span.enter();
 
 		// When terminal is focused, use a dummy context for workspace-level actions
 		let result = if self.is_terminal_focused() {
@@ -146,6 +167,7 @@ impl Editor {
 			(action.handler)(&ctx)
 		};
 
+		debug!(result = ?result, "Action completed");
 		self.apply_action_result(result, extend)
 	}
 
