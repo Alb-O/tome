@@ -14,11 +14,8 @@ pub mod types;
 mod views;
 
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::path::PathBuf;
 
-use agentfs_sdk::filesystem::FileSystem;
-use agentfs_sdk::filesystem::hostfs::HostFS;
 pub use buffer_manager::BufferManager;
 use evildoer_base::Transaction;
 use evildoer_language::LanguageLoader;
@@ -112,9 +109,6 @@ pub struct Editor {
 	/// Extension map (typemap for extension state).
 	pub extensions: ExtensionMap,
 
-	/// Filesystem abstraction.
-	pub fs: Arc<dyn FileSystem>,
-
 	/// Language configuration loader.
 	pub language_loader: LanguageLoader,
 
@@ -180,14 +174,7 @@ impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
 				content.extend_from_slice(chunk.as_bytes());
 			}
 
-			let virtual_path = self.path_to_virtual(&path_owned).ok_or_else(|| {
-				evildoer_manifest::CommandError::Io(format!(
-					"Path contains invalid UTF-8: {}",
-					path_owned.display()
-				))
-			})?;
-			self.fs
-				.write_file(&virtual_path, &content)
+			tokio::fs::write(&path_owned, &content)
 				.await
 				.map_err(|e| evildoer_manifest::CommandError::Io(e.to_string()))?;
 
@@ -228,40 +215,20 @@ impl evildoer_manifest::EditorOps for Editor {}
 
 impl Editor {
 	pub async fn new(path: PathBuf) -> anyhow::Result<Self> {
-		let cwd = std::env::current_dir()?;
-		let fs = Arc::new(HostFS::new(cwd.clone())?);
-
-		let virtual_path = Self::compute_virtual_path(&path, &cwd)
-			.ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", path.display()))?;
-
-		let content = if fs.stat(&virtual_path).await?.is_some() {
-			let bytes = fs.read_file(&virtual_path).await?.unwrap_or_default();
-			String::from_utf8_lossy(&bytes).to_string()
-		} else {
-			String::new()
+		let content = match tokio::fs::read_to_string(&path).await {
+			Ok(s) => s,
+			Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+			Err(e) => return Err(e.into()),
 		};
 
-		Ok(Self::from_content(fs, content, Some(path)))
-	}
-
-	fn compute_virtual_path(path: &Path, cwd: &Path) -> Option<String> {
-		let path_str = path.to_str()?;
-
-		if path.is_absolute()
-			&& let Ok(relative) = path.strip_prefix(cwd)
-		{
-			return relative.to_str().map(String::from);
-		}
-
-		Some(path_str.to_string())
+		Ok(Self::from_content(content, Some(path)))
 	}
 
 	pub fn new_scratch() -> Self {
-		let fs = Arc::new(HostFS::new(std::env::current_dir().unwrap()).unwrap());
-		Self::from_content(fs, String::new(), None)
+		Self::from_content(String::new(), None)
 	}
 
-	pub fn from_content(fs: Arc<dyn FileSystem>, content: String, path: Option<PathBuf>) -> Self {
+	pub fn from_content(content: String, path: Option<PathBuf>) -> Self {
 		// Initialize language loader from embedded languages.kdl
 		let language_loader = LanguageLoader::from_embedded();
 
@@ -312,7 +279,6 @@ impl Editor {
 				}
 				map
 			},
-			fs,
 			language_loader,
 			style_overlays: StyleOverlays::new(),
 			hook_runtime,
@@ -388,15 +354,10 @@ impl Editor {
 	///
 	/// Returns the new buffer's ID, or an error if the file couldn't be read.
 	pub async fn open_file(&mut self, path: PathBuf) -> anyhow::Result<BufferId> {
-		let cwd = std::env::current_dir()?;
-		let virtual_path = Self::compute_virtual_path(&path, &cwd)
-			.ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", path.display()))?;
-
-		let content = if self.fs.stat(&virtual_path).await?.is_some() {
-			let bytes = self.fs.read_file(&virtual_path).await?.unwrap_or_default();
-			String::from_utf8_lossy(&bytes).to_string()
-		} else {
-			String::new()
+		let content = match tokio::fs::read_to_string(&path).await {
+			Ok(s) => s,
+			Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+			Err(e) => return Err(e.into()),
 		};
 
 		Ok(self.open_buffer(content, Some(path)).await)
@@ -914,10 +875,6 @@ impl Editor {
 		}
 	}
 
-	pub fn set_filesystem(&mut self, fs: Arc<dyn FileSystem>) {
-		self.fs = fs;
-	}
-
 	pub fn collect_highlight_spans(
 		&self,
 		area: evildoer_tui::layout::Rect,
@@ -1037,10 +994,5 @@ impl Editor {
 			.get_buffer_mut(buffer_id)
 			.expect("focused buffer must exist");
 		buffer.reparse_syntax(&self.language_loader);
-	}
-
-	fn path_to_virtual(&self, path: &Path) -> Option<String> {
-		let cwd = std::env::current_dir().ok()?;
-		Self::compute_virtual_path(path, &cwd)
 	}
 }

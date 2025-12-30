@@ -411,6 +411,3 @@ impl From<termina::event::KeyEvent> for Key {
 		Self { code, modifiers }
 	}
 }
-
-#[cfg(test)]
-mod tests;

@@ -10,7 +10,6 @@ default = []
 lsp = ["dep:evildoer-lsp"]
 
 [dependencies]
-agentfs-sdk.workspace = true
 anyhow = "1.0"
 async-trait = "0.1"
 clap.workspace = true

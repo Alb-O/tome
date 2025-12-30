@@ -10,7 +10,6 @@ repository = "https://github.com/Alb-O/evildoer"
 
 [workspace.dependencies]
 agent-client-protocol = { version = "0.9", features = ["unstable_session_model"] }
-agentfs-sdk = "0.4.0-pre.6"
 anyhow = "1.0"
 async-trait = "0.1"
 clap = { version = "4", features = ["derive"] }
