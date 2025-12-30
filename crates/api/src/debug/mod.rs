@@ -18,6 +18,7 @@
 //! ```
 
 mod ring_buffer;
+mod selection;
 mod tracing_layer;
 
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -26,10 +27,12 @@ use std::time::Duration;
 use evildoer_manifest::{
 	SplitAttrs, SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle,
 	SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction,
-	SplitSize,
+	SplitMouseButton, SplitSize,
 };
 pub use ring_buffer::{ActionSpanContext, LOG_BUFFER, LogEntry, LogLevel, MAX_LOG_ENTRIES};
 pub use tracing_layer::DebugPanelLayer;
+
+use self::selection::DebugSelection;
 
 static NEXT_DEBUG_PANEL_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -43,6 +46,7 @@ pub struct DebugPanel {
 	auto_scroll: bool,
 	min_level: LogLevel,
 	last_log_count: usize,
+	selection: Option<DebugSelection>,
 }
 
 impl Default for DebugPanel {
@@ -59,6 +63,7 @@ impl DebugPanel {
 			auto_scroll: true,
 			min_level: LogLevel::Trace,
 			last_log_count: 0,
+			selection: None,
 		}
 	}
 
@@ -174,6 +179,8 @@ impl SplitBuffer for DebugPanel {
 	}
 
 	fn handle_mouse(&mut self, mouse: SplitMouse) -> SplitEventResult {
+		let (row, col) = (mouse.position.y as u16, mouse.position.x as u16);
+
 		match mouse.action {
 			SplitMouseAction::ScrollUp => {
 				self.scroll_up(3);
@@ -183,8 +190,33 @@ impl SplitBuffer for DebugPanel {
 				self.scroll_down(3);
 				SplitEventResult::consumed()
 			}
+			SplitMouseAction::Press(SplitMouseButton::Left) => {
+				self.selection = Some(DebugSelection {
+					anchor_row: row,
+					anchor_col: col,
+					cursor_row: row,
+					cursor_col: col,
+				});
+				SplitEventResult::consumed()
+			}
+			SplitMouseAction::Drag(SplitMouseButton::Left) => {
+				if let Some(sel) = &mut self.selection {
+					sel.cursor_row = row;
+					sel.cursor_col = col;
+				}
+				SplitEventResult::consumed()
+			}
+			SplitMouseAction::Release(SplitMouseButton::Left) => SplitEventResult::consumed(),
+			SplitMouseAction::Press(SplitMouseButton::Right | SplitMouseButton::Middle) => {
+				self.selection = None;
+				SplitEventResult::consumed()
+			}
 			_ => SplitEventResult::ignored(),
 		}
+	}
+
+	fn is_selected(&self, row: u16, col: u16) -> bool {
+		self.selection.map_or(false, |sel| sel.contains(row, col))
 	}
 
 	fn size(&self) -> SplitSize {

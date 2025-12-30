@@ -12,22 +12,7 @@ use tracing_subscriber::registry::LookupSpan;
 
 use super::ring_buffer::{ActionSpanContext, LOG_BUFFER, LogEntry, LogLevel};
 
-/// Attempts to parse and pretty-print JSON in a string.
-/// Returns the original string if it's not valid JSON or doesn't look like JSON.
-fn try_pretty_json(s: &str) -> String {
-	let trimmed = s.trim();
-	// Quick check: only try to parse if it looks like JSON
-	if !((trimmed.starts_with('{') && trimmed.ends_with('}'))
-		|| (trimmed.starts_with('[') && trimmed.ends_with(']')))
-	{
-		return s.to_string();
-	}
 
-	match serde_json::from_str::<serde_json::Value>(trimmed) {
-		Ok(value) => serde_json::to_string_pretty(&value).unwrap_or_else(|_| s.to_string()),
-		Err(_) => s.to_string(),
-	}
-}
 
 /// Data stored per-span for action context extraction.
 #[derive(Debug, Default)]
@@ -75,11 +60,24 @@ impl MessageVisitor {
 
 impl Visit for MessageVisitor {
 	fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
+		let formatted = format!("{:?}", value);
+		// Debug formatting adds quotes around strings - strip them for cleaner output
+		let cleaned = formatted
+			.strip_prefix('"')
+			.and_then(|s| s.strip_suffix('"'))
+			.map(|s| {
+				// Also unescape any escaped characters common in JSON
+				s.replace("\\\"", "\"")
+					.replace("\\\\", "\\")
+					.replace("\\n", "\n")
+					.replace("\\t", "\t")
+			})
+			.unwrap_or(formatted);
+
 		if field.name() == "message" {
-			self.message = format!("{:?}", value);
+			self.message = cleaned;
 		} else {
-			self.fields
-				.push((field.name().to_string(), format!("{:?}", value)));
+			self.fields.push((field.name().to_string(), cleaned));
 		}
 	}
 
@@ -193,14 +191,11 @@ where
 			visitor.message
 		};
 
-		// Try to pretty-print JSON in the message
-		message = try_pretty_json(&message);
-
 		if !visitor.fields.is_empty() {
 			let fields_str = visitor
 				.fields
 				.iter()
-				.map(|(k, v)| format!("{}={}", k, try_pretty_json(v)))
+				.map(|(k, v)| format!("{}={}", k, v))
 				.collect::<Vec<_>>()
 				.join(" ");
 			message = if message.is_empty() {
