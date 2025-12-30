@@ -523,6 +523,18 @@ impl Color {
 			Color::Indexed(idx) => indexed_to_rgb(idx),
 		}
 	}
+
+	/// Blend this color with another using alpha compositing.
+	///
+	/// When `alpha` is 0.0, returns `other`. When `alpha` is 1.0, returns `self`.
+	/// Both colors are converted to RGB for blending.
+	pub fn blend(self, other: Self, alpha: f32) -> Self {
+		let (r1, g1, b1) = self.to_rgb();
+		let (r2, g2, b2) = other.to_rgb();
+		let alpha = alpha.clamp(0.0, 1.0);
+		let blend = |a: u8, b: u8| (a as f32 * alpha + b as f32 * (1.0 - alpha)).round() as u8;
+		Self::Rgb(blend(r1, r2), blend(g1, g2), blend(b1, b2))
+	}
 }
 
 /// Converts an indexed color (0-255) to RGB.

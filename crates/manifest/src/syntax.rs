@@ -20,9 +20,7 @@
 //! // Returns keyword.control.import style, or falls back to keyword.control, then keyword
 //! ```
 
-// Re-export abstract color types from evildoer-base
-use evildoer_base::Style;
-pub use evildoer_base::color::{Color, Modifier};
+pub use evildoer_base::{Color, Modifier, Style};
 
 /// A syntax style with optional foreground, background, and modifiers.
 #[derive(Clone, Copy, Debug, Default)]
@@ -62,11 +60,14 @@ impl SyntaxStyle {
 
 	/// Convert to abstract Style.
 	pub fn to_style(self) -> Style {
-		Style {
-			fg: self.fg,
-			bg: self.bg,
-			modifiers: self.modifiers,
+		let mut style = Style::new().add_modifier(self.modifiers);
+		if let Some(fg) = self.fg {
+			style = style.fg(fg);
 		}
+		if let Some(bg) = self.bg {
+			style = style.bg(bg);
+		}
+		style
 	}
 }
 

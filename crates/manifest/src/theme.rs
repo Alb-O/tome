@@ -6,7 +6,7 @@
 
 use std::sync::OnceLock;
 
-pub use evildoer_base::color::{Color, Modifier};
+pub use evildoer_base::{Color, Modifier, Style};
 use linkme::distributed_slice;
 
 pub use crate::syntax::{SyntaxStyle, SyntaxStyles};
@@ -114,7 +114,7 @@ pub struct ThemeColors {
 impl ThemeColors {
 	/// Resolve notification style for a given semantic identifier.
 	/// Uses notification-specific overrides if set, otherwise inherits from popup/status colors.
-	pub fn notification_style(&self, semantic: &str) -> evildoer_base::Style {
+	pub fn notification_style(&self, semantic: &str) -> Style {
 		let override_pair = self
 			.notification
 			.overrides
@@ -135,7 +135,7 @@ impl ThemeColors {
 			}
 		});
 
-		evildoer_base::Style::new().bg(bg).fg(fg)
+		Style::new().bg(bg).fg(fg)
 	}
 
 	/// Resolve notification border color.
@@ -284,8 +284,6 @@ pub fn get_theme(name: &str) -> Option<&'static Theme> {
 }
 
 /// Blend two colors with the given alpha (0.0 = bg, 1.0 = fg).
-///
-/// This is a convenience wrapper around `Color::blend`.
 #[inline]
 pub fn blend_colors(fg: Color, bg: Color, alpha: f32) -> Color {
 	fg.blend(bg, alpha)
