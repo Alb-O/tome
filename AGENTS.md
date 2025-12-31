@@ -128,7 +128,9 @@ Fine-grained traits in `manifest/src/editor_ctx/capabilities.rs`:
 | `EditAccess`      | Optional | Text modifications      |
 | `SearchAccess`    | Optional | Pattern search          |
 | `UndoAccess`      | Optional | Undo/redo history       |
-| `BufferOpsAccess` | Optional | Buffer/split management |
+| `SplitOps`        | Optional | Split management        |
+| `PanelOps`        | Optional | Panel management        |
+| `FocusOps`        | Optional | Focus/buffer navigation |
 | `FileOpsAccess`   | Optional | Save/load operations    |
 
 **Pending traits** (documented as "not yet wired"): `JumpAccess`, `MacroAccess`, `TextAccess`.

@@ -74,7 +74,6 @@ pub enum Capability {
 	Edit,
 	Search,
 	Undo,
-	BufferOps,
 	FileOps,
 }
 
@@ -89,7 +88,6 @@ impl std::fmt::Display for Capability {
 			Capability::Edit => write!(f, "Edit"),
 			Capability::Search => write!(f, "Search"),
 			Capability::Undo => write!(f, "Undo"),
-			Capability::BufferOps => write!(f, "BufferOps"),
 			Capability::FileOps => write!(f, "FileOps"),
 		}
 	}

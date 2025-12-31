@@ -5,9 +5,8 @@
 use evildoer_base::Selection;
 use evildoer_base::range::CharIdx;
 use evildoer_manifest::editor_ctx::{
-	BufferOpsAccess, CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, FocusOps,
-	MessageAccess, ModeAccess, PanelOps, SearchAccess, SelectionAccess, SplitOps, ThemeAccess,
-	UndoAccess,
+	CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, FocusOps, MessageAccess,
+	ModeAccess, PanelOps, SearchAccess, SelectionAccess, SplitOps, ThemeAccess, UndoAccess,
 };
 use evildoer_manifest::{EditAction, Mode, panel_kind_index};
 
@@ -231,8 +230,6 @@ impl FocusOps for Editor {
 	}
 }
 
-impl BufferOpsAccess for Editor {}
-
 impl EditorCapabilities for Editor {
 	fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		Some(self)
@@ -255,10 +252,6 @@ impl EditorCapabilities for Editor {
 	}
 
 	fn focus_ops(&mut self) -> Option<&mut dyn FocusOps> {
-		Some(self)
-	}
-
-	fn buffer_ops(&mut self) -> Option<&mut dyn BufferOpsAccess> {
 		Some(self)
 	}
 

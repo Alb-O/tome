@@ -24,7 +24,6 @@
 //! - [`SplitOps`] - Split management
 //! - [`PanelOps`] - Panel management
 //! - [`FocusOps`] - Focus and buffer navigation
-//! - [`BufferOpsAccess`] - Backward-compatible buffer ops supertrait
 //! - [`FileOpsAccess`] - Save/load operations
 //!
 //! # Not Yet Wired
@@ -284,9 +283,6 @@ pub trait FocusOps {
 	/// Focus the split below.
 	fn focus_down(&mut self);
 }
-
-/// Supertrait for backward-compatible buffer operations.
-pub trait BufferOpsAccess: SplitOps + PanelOps + FocusOps {}
 
 /// Convenience trait combining common capabilities for command handlers.
 pub trait EditorOps: MessageAccess + FileOpsAccess + ThemeAccess {}

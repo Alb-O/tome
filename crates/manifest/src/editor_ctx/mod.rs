@@ -10,7 +10,7 @@
 //!
 //! - **Required**: [`CursorAccess`], [`SelectionAccess`], [`ModeAccess`], [`MessageAccess`]
 //! - **Optional**: [`SearchAccess`], [`UndoAccess`], [`EditAccess`], [`SplitOps`],
-//!   [`PanelOps`], [`FocusOps`], [`BufferOpsAccess`], etc.
+//!   [`PanelOps`], [`FocusOps`], etc.
 //!
 //! Note: [`TextAccess`] is intentionally NOT required for result handlers.
 //! Actions receive text through [`ActionContext`] which is built separately
@@ -146,15 +146,6 @@ impl<'a> EditorContext<'a> {
 		self.inner.focus_ops()
 	}
 
-	pub fn buffer_ops(&mut self) -> Option<&mut dyn BufferOpsAccess> {
-		self.inner.buffer_ops()
-	}
-
-	pub fn require_buffer_ops(&mut self) -> Result<&mut dyn BufferOpsAccess, CommandError> {
-		self.inner
-			.buffer_ops()
-			.ok_or(CommandError::MissingCapability(Capability::BufferOps))
-	}
 
 	pub fn check_capability(&mut self, cap: Capability) -> bool {
 		use Capability::*;
@@ -163,7 +154,6 @@ impl<'a> EditorContext<'a> {
 			Edit => self.inner.edit().is_some(),
 			Search => self.inner.search().is_some(),
 			Undo => self.inner.undo().is_some(),
-			BufferOps => self.inner.buffer_ops().is_some(),
 			FileOps => self.inner.file_ops().is_some(),
 		}
 	}
@@ -211,21 +201,16 @@ pub trait EditorCapabilities: CursorAccess + SelectionAccess + ModeAccess + Mess
 
 	/// Access to split management operations (optional).
 	fn split_ops(&mut self) -> Option<&mut dyn SplitOps> {
-		self.buffer_ops().map(|ops| ops as &mut dyn SplitOps)
+		None
 	}
 
 	/// Access to panel management operations (optional).
 	fn panel_ops(&mut self) -> Option<&mut dyn PanelOps> {
-		self.buffer_ops().map(|ops| ops as &mut dyn PanelOps)
+		None
 	}
 
 	/// Access to focus and buffer navigation operations (optional).
 	fn focus_ops(&mut self) -> Option<&mut dyn FocusOps> {
-		self.buffer_ops().map(|ops| ops as &mut dyn FocusOps)
-	}
-
-	/// Access to buffer/split management operations (optional).
-	fn buffer_ops(&mut self) -> Option<&mut dyn BufferOpsAccess> {
 		None
 	}
 
