@@ -13,8 +13,6 @@ use crate::layout::{Position, Rect};
 use crate::style::Style;
 use crate::text::{Line, Span};
 
-mod assert;
-
 mod cell;
 pub use cell::Cell;
 
@@ -74,44 +72,6 @@ impl Buffer {
 		&self.area
 	}
 
-	/// Returns a reference to the [`Cell`] at the given coordinates
-	///
-	/// Callers should use [`Buffer[]`](Self::index) or [`Buffer::cell`] instead of this method.
-	///
-	/// Note: idiomatically methods named `get` usually return `Option<&T>`, but this method panics
-	/// instead. This is kept for backwards compatibility. See [`cell`](Self::cell) for a safe
-	/// alternative.
-	///
-	/// # Panics
-	///
-	/// Panics if the index is out of bounds.
-	#[track_caller]
-	#[deprecated = "use `Buffer[(x, y)]` instead. To avoid panicking, use `Buffer::cell((x, y))`. Both methods take `impl Into<Position>`."]
-	#[must_use]
-	pub fn get(&self, x: u16, y: u16) -> &Cell {
-		let i = self.index_of(x, y);
-		&self.content[i]
-	}
-
-	/// Returns a mutable reference to the [`Cell`] at the given coordinates.
-	///
-	/// Callers should use [`Buffer[]`](Self::index_mut) or [`Buffer::cell_mut`] instead of this
-	/// method.
-	///
-	/// Note: idiomatically methods named `get_mut` usually return `Option<&mut T>`, but this method
-	/// panics instead. This is kept for backwards compatibility. See [`cell_mut`](Self::cell_mut)
-	/// for a safe alternative.
-	///
-	/// # Panics
-	///
-	/// Panics if the position is outside the `Buffer`'s area.
-	#[track_caller]
-	#[deprecated = "use `Buffer[(x, y)]` instead. To avoid panicking, use `Buffer::cell_mut((x, y))`. Both methods take `impl Into<Position>`."]
-	#[must_use]
-	pub fn get_mut(&mut self, x: u16, y: u16) -> &mut Cell {
-		let i = self.index_of(x, y);
-		&mut self.content[i]
-	}
 
 	/// Returns a reference to the [`Cell`] at the given position or [`None`] if the position is
 	/// outside the `Buffer`'s area.

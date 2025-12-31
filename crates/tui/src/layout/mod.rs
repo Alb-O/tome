@@ -67,7 +67,6 @@
 //!
 //! ## Alignment
 //!
-//! - [`Alignment`] (alias for [`HorizontalAlignment`]) - Horizontal text/content alignment
 //! - [`HorizontalAlignment`] - Horizontal alignment options (left, center, right)
 //! - [`VerticalAlignment`] - Vertical alignment options (top, center, bottom)
 //!
@@ -213,7 +212,6 @@
 //!   each element; gaps between elements are twice the edge spacing
 //! - [`Flex::SpaceEvenly`] - Distribute space *evenly*: equal spacing between all elements,
 //!   including before the first and after the last.
-//! - [`Flex::Legacy`] - Legacy behavior (puts excess space in the last element)
 //!
 //! # Positioning and Alignment
 //!
@@ -221,14 +219,14 @@
 //! alignment types for controlling content positioning within areas:
 //!
 //! ```rust
-//! use evildoer_tui::layout::{Alignment, Position, Rect, Size};
+//! use evildoer_tui::layout::{HorizontalAlignment, Position, Rect, Size};
 //!
 //! let pos = Position::new(10, 5);
 //! let size = Size::new(80, 24);
 //! let rect = Rect::new(pos.x, pos.y, size.width, size.height);
 //!
 //! // Alignment for content within areas
-//! let center = Alignment::Center;
+//! let center = HorizontalAlignment::Center;
 //! ```
 //!
 //! # Advanced Features
@@ -300,7 +298,7 @@ mod size;
 mod solver;
 mod spacing;
 
-pub use alignment::{Alignment, HorizontalAlignment, VerticalAlignment};
+pub use alignment::{HorizontalAlignment, VerticalAlignment};
 pub use constraint::Constraint;
 pub use direction::Direction;
 pub use engine::Layout;

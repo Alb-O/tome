@@ -132,17 +132,19 @@ impl TestBackend {
 
 	/// Asserts that the `TestBackend`'s buffer is equal to the expected buffer.
 	///
-	/// This is a shortcut for `assert_eq!(self.buffer(), &expected)`.
+	/// This reports a readable buffer diff on failure.
 	///
 	/// # Panics
 	///
-	/// When they are not equal, a panic occurs with a detailed error message showing the
-	/// differences between the expected and actual buffers.
-	#[expect(deprecated)]
+	/// When they are not equal, a panic occurs with an assertion failure.
 	#[track_caller]
 	pub fn assert_buffer(&self, expected: &Buffer) {
-		// TODO: use assert_eq!()
-		crate::assert_buffer_eq!(&self.buffer, expected);
+		assert!(
+			&self.buffer == expected,
+			"buffer contents not equal\nexpected:\n{}\nactual:\n{}",
+			buffer_view(expected),
+			buffer_view(&self.buffer)
+		);
 	}
 
 	/// Asserts that the `TestBackend`'s scrollback buffer is equal to the expected buffer.

@@ -17,15 +17,12 @@
 //! 2. Walks up the syntax tree to find a "significant" container (function, struct, etc.)
 //! 3. Registers a style overlay that dims everything outside that container
 
-mod commands;
-
 use std::ops::Range;
 
 use evildoer_api::editor::Editor;
-use evildoer_api::editor::extensions::{
-	EXTENSIONS, ExtensionInitDef, ExtensionRenderDef, RENDER_EXTENSIONS,
-};
-use linkme::distributed_slice;
+use evildoer_macro::extension;
+use evildoer_manifest::{CommandContext, CommandError, CommandOutcome};
+use evildoer_stdlib::NotifyINFOExt;
 
 /// Primary focus node types - these are the main code units we want to focus on.
 ///
@@ -152,7 +149,9 @@ impl Default for ZenmodeState {
 	}
 }
 
+#[extension(id = "zenmode", priority = 50)]
 impl ZenmodeState {
+	#[init]
 	pub fn new() -> Self {
 		Self {
 			enabled: false,
@@ -309,6 +308,26 @@ impl ZenmodeState {
 			None => true,
 		}
 	}
+
+	#[command(
+		"zenmode",
+		aliases = ["zen", "focus"],
+		description = "Toggle zen/focus mode for syntax highlighting"
+	)]
+	fn toggle_command(
+		&mut self,
+		ctx: &mut CommandContext<'_>,
+	) -> Result<CommandOutcome, CommandError> {
+		self.toggle();
+		let status = if self.enabled { "enabled" } else { "disabled" };
+		ctx.info(&format!("Zen mode {}", status));
+		Ok(CommandOutcome::Ok)
+	}
+
+	#[render(priority = 100)]
+	fn update_zenmode(&mut self, editor: &mut Editor) {
+		update_zenmode_state(editor, self);
+	}
 }
 
 /// Finds the best focus node by walking up the tree from the cursor position.
@@ -356,14 +375,12 @@ fn find_focus_range(
 
 /// Updates the focus range based on cursor position and syntax tree,
 /// and registers style overlays to dim out-of-focus regions.
-fn update_zenmode(editor: &mut Editor) {
+fn update_zenmode_state(editor: &mut Editor, state: &mut ZenmodeState) {
 	// First, read the state to check if enabled and get config
-	let (enabled, dim_factor, animate, current_range) = {
-		match editor.extensions.get::<ZenmodeState>() {
-			Some(s) => (s.enabled, s.dim_factor, s.animate, s.focus_range.clone()),
-			None => return,
-		}
-	};
+	let enabled = state.enabled;
+	let dim_factor = state.dim_factor;
+	let animate = state.animate;
+	let current_range = state.focus_range.clone();
 
 	if !enabled {
 		return;
@@ -378,10 +395,8 @@ fn update_zenmode(editor: &mut Editor) {
 			None => {
 				drop(doc);
 				// Clear focus range when no syntax tree
-				if let Some(state) = editor.extensions.get_mut::<ZenmodeState>() {
-					state.request_focus_range(None);
-					state.commit_pending();
-				}
+				state.request_focus_range(None);
+				state.commit_pending();
 				return;
 			}
 		};
@@ -409,25 +424,16 @@ fn update_zenmode(editor: &mut Editor) {
 	};
 
 	// Request the focus range change (debounced)
-	if let Some(state) = editor.extensions.get_mut::<ZenmodeState>() {
-		state.request_focus_range(new_focus_range);
-		state.commit_pending();
-	}
+	state.request_focus_range(new_focus_range);
+	state.commit_pending();
 
 	// Read current state for rendering
-	let (effective_range, is_animating, progress, prev_focus_range, has_pending, is_undim_all) = {
-		match editor.extensions.get::<ZenmodeState>() {
-			Some(s) => (
-				s.effective_range().cloned(),
-				s.is_animating(),
-				s.animation_progress(),
-				s.prev_focus_range.clone(),
-				s.has_pending(),
-				s.is_undim_all(),
-			),
-			None => return,
-		}
-	};
+	let effective_range = state.effective_range().cloned();
+	let is_animating = state.is_animating();
+	let progress = state.animation_progress();
+	let prev_focus_range = state.prev_focus_range.clone();
+	let has_pending = state.has_pending();
+	let is_undim_all = state.is_undim_all();
 
 	let doc_len = editor.buffer().doc().content.len_bytes();
 
@@ -495,17 +501,3 @@ fn update_zenmode(editor: &mut Editor) {
 	}
 }
 
-#[distributed_slice(EXTENSIONS)]
-static ZENMODE_INIT: ExtensionInitDef = ExtensionInitDef {
-	id: "zenmode",
-	priority: 50,
-	init: |map| {
-		map.insert(ZenmodeState::new());
-	},
-};
-
-#[distributed_slice(RENDER_EXTENSIONS)]
-static ZENMODE_RENDER: ExtensionRenderDef = ExtensionRenderDef {
-	priority: 100,
-	update: update_zenmode,
-};

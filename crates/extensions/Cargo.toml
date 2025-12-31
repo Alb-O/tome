@@ -11,6 +11,7 @@ evildoer-api.workspace = true
 evildoer-language.workspace = true
 evildoer-lsp = { workspace = true, features = ["client", "position"] }
 evildoer-manifest.workspace = true
+evildoer-macro.workspace = true
 evildoer-stdlib.workspace = true
 futures.workspace = true
 linkme.workspace = true

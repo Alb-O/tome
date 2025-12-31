@@ -121,14 +121,6 @@ fn footer() {
 }
 
 #[test]
-#[expect(deprecated)]
-fn highlight_style() {
-	let style = Style::default().red().italic();
-	let table = Table::default().highlight_style(style);
-	assert_eq!(table.row_highlight_style, style);
-}
-
-#[test]
 fn row_highlight_style() {
 	let style = Style::default().red().italic();
 	let table = Table::default().row_highlight_style(style);

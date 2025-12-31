@@ -120,11 +120,6 @@ impl LayoutManager {
 		self.layers[0].as_ref().expect("base layer always exists")
 	}
 
-	/// Returns a mutable reference to the base layer.
-	fn base_layer_mut(&mut self) -> &mut Layout {
-		self.layers[0].as_mut().expect("base layer always exists")
-	}
-
 	/// Returns the layout at a specific layer, if it exists.
 	pub fn layer(&self, index: LayerIndex) -> Option<&Layout> {
 		self.layers.get(index).and_then(|l| l.as_ref())
@@ -156,16 +151,6 @@ impl LayoutManager {
 	/// Returns the number of layers (including empty ones).
 	pub fn layer_count(&self) -> usize {
 		self.layers.len()
-	}
-
-	/// Returns a reference to the layout tree (base layer for compatibility).
-	pub fn layout(&self) -> &Layout {
-		self.base_layer()
-	}
-
-	/// Returns a mutable reference to the layout tree (base layer for compatibility).
-	pub fn layout_mut(&mut self) -> &mut Layout {
-		self.base_layer_mut()
 	}
 
 	/// Returns the first view in the layout (from topmost non-empty layer).

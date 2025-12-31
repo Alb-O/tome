@@ -329,13 +329,6 @@ impl<'a> Span<'a> {
 		Line::from(self).left_aligned()
 	}
 
-	#[expect(clippy::wrong_self_convention)]
-	#[deprecated = "use `into_left_aligned_line()` instead"]
-	/// Converts this Span into a left-aligned [`Line`]
-	pub fn to_left_aligned_line(self) -> Line<'a> {
-		self.into_left_aligned_line()
-	}
-
 	/// Converts this Span into a center-aligned [`Line`]
 	///
 	/// # Example
@@ -348,13 +341,6 @@ impl<'a> Span<'a> {
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn into_centered_line(self) -> Line<'a> {
 		Line::from(self).centered()
-	}
-
-	#[expect(clippy::wrong_self_convention)]
-	#[deprecated = "use `into_centered_line()` instead"]
-	/// Converts this Span into a center-aligned [`Line`]
-	pub fn to_centered_line(self) -> Line<'a> {
-		self.into_centered_line()
 	}
 
 	/// Converts this Span into a right-aligned [`Line`]
@@ -371,12 +357,6 @@ impl<'a> Span<'a> {
 		Line::from(self).right_aligned()
 	}
 
-	#[expect(clippy::wrong_self_convention)]
-	#[deprecated = "use `into_right_aligned_line()` instead"]
-	/// Converts this Span into a right-aligned [`Line`]
-	pub fn to_right_aligned_line(self) -> Line<'a> {
-		self.into_right_aligned_line()
-	}
 }
 
 impl UnicodeWidthStr for Span<'_> {

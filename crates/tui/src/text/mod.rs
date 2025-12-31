@@ -59,7 +59,7 @@ use core::fmt;
 use unicode_width::UnicodeWidthStr;
 
 use crate::buffer::Buffer;
-use crate::layout::{Alignment, Rect};
+use crate::layout::{HorizontalAlignment, Rect};
 use crate::style::{Style, Styled};
 use crate::widgets::Widget;
 
@@ -92,7 +92,7 @@ pub use span::{Span, ToSpan};
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
 pub struct Text<'a> {
 	/// The alignment of this text.
-	pub alignment: Option<Alignment>,
+	pub alignment: Option<HorizontalAlignment>,
 	/// The style of this text.
 	pub style: Style,
 	/// The lines that make up this piece of text.
@@ -112,9 +112,9 @@ impl fmt::Debug for Text<'_> {
 		}
 		self.style.fmt_stylize(f)?;
 		match self.alignment {
-			Some(Alignment::Left) => f.write_str(".left_aligned()")?,
-			Some(Alignment::Center) => f.write_str(".centered()")?,
-			Some(Alignment::Right) => f.write_str(".right_aligned()")?,
+			Some(HorizontalAlignment::Left) => f.write_str(".left_aligned()")?,
+			Some(HorizontalAlignment::Center) => f.write_str(".centered()")?,
+			Some(HorizontalAlignment::Right) => f.write_str(".right_aligned()")?,
 			_ => (),
 		}
 		Ok(())
@@ -177,7 +177,7 @@ impl<'a> Text<'a> {
 
 	/// Sets the alignment. Individual lines can override.
 	#[must_use = "method moves the value of self and returns the modified value"]
-	pub fn alignment(self, alignment: Alignment) -> Self {
+	pub fn alignment(self, alignment: HorizontalAlignment) -> Self {
 		Self {
 			alignment: Some(alignment),
 			..self
@@ -187,19 +187,19 @@ impl<'a> Text<'a> {
 	/// Left-aligns the whole text.
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn left_aligned(self) -> Self {
-		self.alignment(Alignment::Left)
+		self.alignment(HorizontalAlignment::Left)
 	}
 
 	/// Center-aligns the whole text.
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn centered(self) -> Self {
-		self.alignment(Alignment::Center)
+		self.alignment(HorizontalAlignment::Center)
 	}
 
 	/// Right-aligns the whole text.
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn right_aligned(self) -> Self {
-		self.alignment(Alignment::Right)
+		self.alignment(HorizontalAlignment::Right)
 	}
 
 	/// Returns an iterator over the lines.

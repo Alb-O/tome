@@ -9,7 +9,7 @@ mod log_mode_change;
 // Re-export types from evildoer-manifest for use in hook implementations
 pub use evildoer_manifest::Mode;
 pub use evildoer_manifest::hooks::{
-	BoxFuture, HOOKS, HookAction, HookContext, HookDef, HookEvent, HookEventData, HookResult,
-	MUTABLE_HOOKS, MutableHookContext, MutableHookDef, all_hooks, emit, emit_mutable, emit_sync,
+	BoxFuture, HOOKS, HookAction, HookContext, HookDef, HookEvent, HookEventData, HookHandler,
+	HookMutability, HookResult, MutableHookContext, all_hooks, emit, emit_mutable, emit_sync,
 	find_hooks,
 };

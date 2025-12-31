@@ -392,6 +392,20 @@ impl From<()> for HookAction {
 	}
 }
 
+/// Whether a hook can mutate editor state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HookMutability {
+	Immutable,
+	Mutable,
+}
+
+/// Handler function for a hook.
+#[derive(Clone, Copy)]
+pub enum HookHandler {
+	Immutable(fn(&HookContext) -> HookAction),
+	Mutable(fn(&mut MutableHookContext) -> HookAction),
+}
+
 /// A hook that responds to editor events.
 #[derive(Clone, Copy)]
 pub struct HookDef {
@@ -405,11 +419,13 @@ pub struct HookDef {
 	pub description: &'static str,
 	/// Priority (lower runs first, default 100).
 	pub priority: i16,
+	/// Whether this hook can mutate editor state.
+	pub mutability: HookMutability,
 	/// The hook handler function.
 	///
 	/// Returns [`HookAction::Done`] for sync completion or [`HookAction::Async`]
 	/// with a future for async work.
-	pub handler: fn(&HookContext) -> HookAction,
+	pub handler: HookHandler,
 	/// Origin of the hook.
 	pub source: RegistrySource,
 }
@@ -419,6 +435,7 @@ impl std::fmt::Debug for HookDef {
 		f.debug_struct("HookDef")
 			.field("name", &self.name)
 			.field("event", &self.event)
+			.field("mutability", &self.mutability)
 			.field("priority", &self.priority)
 			.field("description", &self.description)
 			.finish()
@@ -426,54 +443,6 @@ impl std::fmt::Debug for HookDef {
 }
 
 impl crate::RegistryMetadata for HookDef {
-	fn id(&self) -> &'static str {
-		self.id
-	}
-
-	fn name(&self) -> &'static str {
-		self.name
-	}
-
-	fn priority(&self) -> i16 {
-		self.priority
-	}
-
-	fn source(&self) -> RegistrySource {
-		self.source
-	}
-}
-
-/// A mutable hook that can modify editor state.
-#[derive(Clone, Copy)]
-pub struct MutableHookDef {
-	/// Unique identifier.
-	pub id: &'static str,
-	/// Hook name for debugging/logging.
-	pub name: &'static str,
-	/// The event this hook responds to.
-	pub event: HookEvent,
-	/// Short description.
-	pub description: &'static str,
-	/// Priority (lower runs first, default 100).
-	pub priority: i16,
-	/// The hook handler function.
-	pub handler: fn(&mut MutableHookContext) -> HookAction,
-	/// Origin of the hook.
-	pub source: RegistrySource,
-}
-
-impl std::fmt::Debug for MutableHookDef {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("MutableHookDef")
-			.field("name", &self.name)
-			.field("event", &self.event)
-			.field("priority", &self.priority)
-			.field("description", &self.description)
-			.finish()
-	}
-}
-
-impl crate::RegistryMetadata for MutableHookDef {
 	fn id(&self) -> &'static str {
 		self.id
 	}
@@ -507,10 +476,6 @@ pub struct MutableHookContext<'a> {
 #[distributed_slice]
 pub static HOOKS: [HookDef];
 
-/// Registry of mutable hook definitions.
-#[distributed_slice]
-pub static MUTABLE_HOOKS: [MutableHookDef];
-
 /// Emit an event to all registered hooks.
 ///
 /// Hooks are executed in priority order (lower priority runs first).
@@ -523,7 +488,14 @@ pub async fn emit(ctx: &HookContext<'_>) -> HookResult {
 	matching.sort_by_key(|h| h.priority);
 
 	for hook in matching {
-		let result = match (hook.handler)(ctx) {
+		if hook.mutability != HookMutability::Immutable {
+			continue;
+		}
+		let handler = match hook.handler {
+			HookHandler::Immutable(handler) => handler,
+			HookHandler::Mutable(_) => continue,
+		};
+		let result = match handler(ctx) {
 			HookAction::Done(result) => result,
 			HookAction::Async(fut) => fut.await,
 		};
@@ -544,7 +516,14 @@ pub fn emit_sync(ctx: &HookContext<'_>) -> HookResult {
 	matching.sort_by_key(|h| h.priority);
 
 	for hook in matching {
-		match (hook.handler)(ctx) {
+		if hook.mutability != HookMutability::Immutable {
+			continue;
+		}
+		let handler = match hook.handler {
+			HookHandler::Immutable(handler) => handler,
+			HookHandler::Mutable(_) => continue,
+		};
+		match handler(ctx) {
 			HookAction::Done(result) => {
 				if result == HookResult::Cancel {
 					return HookResult::Cancel;
@@ -566,11 +545,18 @@ pub fn emit_sync(ctx: &HookContext<'_>) -> HookResult {
 /// Returns [`HookResult::Cancel`] if any hook cancels, otherwise [`HookResult::Continue`].
 pub async fn emit_mutable(ctx: &mut MutableHookContext<'_>) -> HookResult {
 	let event = ctx.event;
-	let mut matching: Vec<_> = MUTABLE_HOOKS.iter().filter(|h| h.event == event).collect();
+	let mut matching: Vec<_> = HOOKS.iter().filter(|h| h.event == event).collect();
 	matching.sort_by_key(|h| h.priority);
 
 	for hook in matching {
-		let result = match (hook.handler)(ctx) {
+		if hook.mutability != HookMutability::Mutable {
+			continue;
+		}
+		let handler = match hook.handler {
+			HookHandler::Mutable(handler) => handler,
+			HookHandler::Immutable(_) => continue,
+		};
+		let result = match handler(ctx) {
 			HookAction::Done(result) => result,
 			HookAction::Async(fut) => fut.await,
 		};
@@ -614,7 +600,14 @@ pub fn emit_sync_with<S: HookScheduler>(ctx: &HookContext<'_>, scheduler: &mut S
 	matching.sort_by_key(|h| h.priority);
 
 	for hook in matching {
-		match (hook.handler)(ctx) {
+		if hook.mutability != HookMutability::Immutable {
+			continue;
+		}
+		let handler = match hook.handler {
+			HookHandler::Immutable(handler) => handler,
+			HookHandler::Mutable(_) => continue,
+		};
+		match handler(ctx) {
 			HookAction::Done(result) => {
 				if result == HookResult::Cancel {
 					return HookResult::Cancel;

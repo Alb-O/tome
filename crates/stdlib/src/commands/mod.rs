@@ -12,4 +12,3 @@ mod test_notify;
 mod theme;
 mod write;
 
-pub use theme::CMD_theme;

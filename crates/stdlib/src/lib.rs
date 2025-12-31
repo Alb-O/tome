@@ -28,12 +28,13 @@ pub use evildoer_manifest::{
 	BindingMode, COMMANDS, Capability, CommandContext, CommandDef, CommandError, CommandOutcome,
 	CommandResult, CompletionContext, CompletionItem, CompletionKind, CompletionSource, EditAction,
 	EditorCapabilities, EditorContext, EditorOps, HOOKS, HandleOutcome, HookContext, HookDef,
-	HookEvent, HookResult, KeyBindingDef, MOTIONS, MUTABLE_HOOKS, MotionDef, MutableHookContext,
-	MutableHookDef, OPTIONS, ObjectSelectionKind, OptionDef, OptionScope, OptionType, OptionValue,
+	HookEvent, HookHandler, HookMutability, HookResult, KeyBindingDef, MOTIONS, MotionDef,
+	MutableHookContext, OPTIONS, ObjectSelectionKind, OptionDef, OptionScope, OptionType, OptionValue,
 	PendingAction, PendingKind, RegistryMetadata, RegistrySource, RenderedSegment,
 	STATUSLINE_SEGMENTS, ScrollAmount, ScrollDir, SegmentPosition, SegmentStyle, StatuslineContext,
-	StatuslineSegmentDef, TEXT_OBJECTS, TextObjectDef, VisualDirection, action, command,
-	dispatch_result, hook, motion, option, result_handler, statusline_segment, text_object,
+	StatuslineSegmentDef, TEXT_OBJECTS, TextObjectDef, VisualDirection, action, async_hook,
+	bracket_pair_object, command, dispatch_result, hook, motion, option, result_handler,
+	statusline_segment, symmetric_text_object, text_object,
 };
 #[cfg(feature = "host")]
 pub use movement::WordType;

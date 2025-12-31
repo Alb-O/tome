@@ -2,6 +2,7 @@ use proc_macro::TokenStream;
 
 mod api;
 mod dispatch;
+mod extension;
 mod keybindings;
 mod notification;
 
@@ -21,6 +22,14 @@ mod notification;
 #[proc_macro_attribute]
 pub fn evildoer_api(attr: TokenStream, item: TokenStream) -> TokenStream {
 	api::evildoer_api(attr, item)
+}
+
+/// Generates extension registrations from an `impl` block.
+///
+/// Supports `#[init]`, `#[render]`, `#[command]`, and `#[hook]` method attributes.
+#[proc_macro_attribute]
+pub fn extension(attr: TokenStream, item: TokenStream) -> TokenStream {
+	extension::extension(attr, item)
 }
 
 /// Registers a notification type with the notification system.

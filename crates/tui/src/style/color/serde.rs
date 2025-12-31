@@ -1,11 +1,11 @@
 //! Tests for serde serialization/deserialization of Color.
 
-use serde::de::{Deserialize, IntoDeserializer};
+use ::serde::de::{self, Deserialize, IntoDeserializer};
 
 use super::*;
 
 #[test]
-fn deserialize() -> Result<(), serde::de::value::Error> {
+fn deserialize() -> Result<(), de::value::Error> {
 	assert_eq!(
 		Color::Black,
 		Color::deserialize("Black".into_deserializer())?
@@ -35,12 +35,15 @@ fn deserialize() -> Result<(), serde::de::value::Error> {
 
 #[test]
 fn deserialize_error() {
-	let color: Result<_, serde::de::value::Error> =
+	let color: Result<_, de::value::Error> =
 		Color::deserialize("invalid".into_deserializer());
 	assert!(color.is_err());
 
-	let color: Result<_, serde::de::value::Error> =
+	let color: Result<_, de::value::Error> =
 		Color::deserialize("#00000000".into_deserializer());
+	assert!(color.is_err());
+
+	let color: Result<Color, _> = serde_json::from_str(r#"{"Rgb":[255,0,255]}"#);
 	assert!(color.is_err());
 }
 
@@ -66,16 +69,3 @@ fn serialize_then_deserialize() -> Result<(), serde_json::Error> {
 	Ok(())
 }
 
-#[test]
-fn deserialize_with_previous_format() -> Result<(), serde_json::Error> {
-	assert_eq!(Color::White, serde_json::from_str::<Color>("\"White\"")?);
-	assert_eq!(
-		Color::Rgb(255, 0, 255),
-		serde_json::from_str::<Color>(r#"{"Rgb":[255,0,255]}"#)?
-	);
-	assert_eq!(
-		Color::Indexed(10),
-		serde_json::from_str::<Color>(r#"{"Indexed":10}"#)?
-	);
-	Ok(())
-}

@@ -1,10 +1,7 @@
 use alloc::format;
 use alloc::string::ToString;
 use core::iter;
-use std::{dbg, println};
-
-use itertools::Itertools;
-use rstest::{fixture, rstest};
+use std::println;
 
 use super::*;
 use crate::style::{Color, Modifier, Stylize};

@@ -1,9 +1,8 @@
 //! Tests for the Text type.
 
 use alloc::format;
-use core::iter;
 
-use rstest::{fixture, rstest};
+use rstest::fixture;
 
 use super::*;
 use crate::style::{Color, Modifier, Stylize};
@@ -84,19 +83,19 @@ fn stylize() {
 #[test]
 fn left_aligned() {
 	let text = Text::from("Hello, world!").left_aligned();
-	assert_eq!(text.alignment, Some(Alignment::Left));
+	assert_eq!(text.alignment, Some(HorizontalAlignment::Left));
 }
 
 #[test]
 fn centered() {
 	let text = Text::from("Hello, world!").centered();
-	assert_eq!(text.alignment, Some(Alignment::Center));
+	assert_eq!(text.alignment, Some(HorizontalAlignment::Center));
 }
 
 #[test]
 fn right_aligned() {
 	let text = Text::from("Hello, world!").right_aligned();
-	assert_eq!(text.alignment, Some(Alignment::Right));
+	assert_eq!(text.alignment, Some(HorizontalAlignment::Right));
 }
 
 #[test]

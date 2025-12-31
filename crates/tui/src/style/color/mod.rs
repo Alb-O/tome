@@ -159,13 +159,7 @@ impl<'de> serde::Deserialize<'de> for Color {
 	/// This is used to deserialize a value into Color via serde.
 	///
 	/// This implementation uses the `FromStr` trait to deserialize strings, so named colours, RGB,
-	/// and indexed values are able to be deserialized. In addition, values that were produced by
-	/// the the older serialization implementation of Color are also able to be deserialized.
-	///
-	/// Prior to v0.26.0, Ratatui would be serialized using a map for indexed and RGB values, for
-	/// examples in json `{"Indexed": 10}` and `{"Rgb": [255, 0, 255]}` respectively. Now they are
-	/// serialized using the string representation of the index and the RGB hex value, for example
-	/// in json it would now be `"10"` and `"#FF00FF"` respectively.
+	/// and indexed values are able to be deserialized.
 	///
 	/// See the [`Color`] documentation for more information on color names.
 	///
@@ -198,12 +192,6 @@ impl<'de> serde::Deserialize<'de> for Color {
 	///     "Failed to parse Colors at line 1 column 20"
 	/// );
 	///
-	/// // Deserializing from the previous serialization implementation
-	/// let theme: Theme = serde_json::from_str(r#"{"color": {"Rgb":[255,0,255]}}"#)?;
-	/// assert_eq!(theme.color, Color::Rgb(255, 0, 255));
-	///
-	/// let theme: Theme = serde_json::from_str(r#"{"color": {"Indexed":10}}"#)?;
-	/// assert_eq!(theme.color, Color::Indexed(10));
 	/// # Ok(())
 	/// # }
 	/// ```
@@ -214,36 +202,9 @@ impl<'de> serde::Deserialize<'de> for Color {
 		use alloc::format;
 		use alloc::string::String;
 
-		/// Colors are currently serialized with the `Display` implementation, so
-		/// RGB values are serialized via hex, for example "#FFFFFF".
-		///
-		/// Previously they were serialized using serde derive, which encoded
-		/// RGB values as a map, for example { "rgb": [255, 255, 255] }.
-		///
-		/// The deserialization implementation utilises a `Helper` struct
-		/// to be able to support both formats for backwards compatibility.
-		#[derive(serde::Deserialize)]
-		enum ColorWrapper {
-			Rgb(u8, u8, u8),
-			Indexed(u8),
-		}
-
-		#[derive(serde::Deserialize)]
-		#[serde(untagged)]
-		enum ColorFormat {
-			V2(String),
-			V1(ColorWrapper),
-		}
-
-		let multi_type = ColorFormat::deserialize(deserializer)
+		let value = <String as serde::Deserialize>::deserialize(deserializer)
 			.map_err(|err| serde::de::Error::custom(format!("Failed to parse Colors: {err}")))?;
-		match multi_type {
-			ColorFormat::V2(s) => FromStr::from_str(&s).map_err(serde::de::Error::custom),
-			ColorFormat::V1(color_wrapper) => match color_wrapper {
-				ColorWrapper::Rgb(red, green, blue) => Ok(Self::Rgb(red, green, blue)),
-				ColorWrapper::Indexed(index) => Ok(Self::Indexed(index)),
-			},
-		}
+		FromStr::from_str(&value).map_err(serde::de::Error::custom)
 	}
 }
 

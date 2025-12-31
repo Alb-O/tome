@@ -114,7 +114,7 @@ use crate::layout::Rect;
 ///         let list = List::new(items);
 ///         // Finally the widget is rendered using the associated state. `events.state` is
 ///         // effectively the only thing that we will "remember" from this draw call.
-///         f.render_stateful_widget(list, f.size(), &mut events.state);
+///         f.render_stateful_widget(list, f.area(), &mut events.state);
 ///     });
 ///
 ///     // In response to some input events or an external http request or whatever:

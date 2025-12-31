@@ -124,7 +124,7 @@ fn find_separator_fg_color(colors: &[AnsiColor]) -> Option<(u8, u8, u8)> {
 		.iter()
 		.filter(|c| c.is_foreground && c.rgb.is_some())
 		.filter_map(|c| c.rgb)
-		.last()
+		.next_back()
 }
 
 /// Tests that hovering over a separator triggers an animated fade-in.

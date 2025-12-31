@@ -5,7 +5,7 @@ use std::sync::mpsc::{Receiver, TryRecvError, channel};
 use std::thread;
 
 use evildoer_manifest::SplitCursorStyle;
-use evildoer_tui::widgets::terminal::vt100::{self, Parser};
+use vt100::{self, Parser};
 use portable_pty::{CommandBuilder, MasterPty, NativePtySystem, PtySize, PtySystem};
 
 use super::escape::parse_decscusr;

@@ -37,10 +37,10 @@ fn inner_takes_into_account_the_borders(
 }
 
 #[rstest]
-#[case::left(Alignment::Left)]
-#[case::center(Alignment::Center)]
-#[case::right(Alignment::Right)]
-fn inner_takes_into_account_the_title(#[case] alignment: Alignment) {
+#[case::left(HorizontalAlignment::Left)]
+#[case::center(HorizontalAlignment::Center)]
+#[case::right(HorizontalAlignment::Right)]
+fn inner_takes_into_account_the_title(#[case] alignment: HorizontalAlignment) {
 	let area = Rect::new(0, 0, 0, 1);
 	let expected = Rect::new(0, 1, 0, 0);
 

@@ -10,7 +10,7 @@ use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
 use crate::buffer::Buffer;
-use crate::layout::{Alignment, Rect};
+use crate::layout::{HorizontalAlignment, Rect};
 use crate::style::{Style, Styled};
 use crate::text::{Span, StyledGrapheme, Text};
 use crate::widgets::Widget;
@@ -36,7 +36,7 @@ pub struct Line<'a> {
 	pub style: Style,
 
 	/// The alignment of this line of text.
-	pub alignment: Option<Alignment>,
+	pub alignment: Option<HorizontalAlignment>,
 
 	/// The spans that make up this line of text.
 	pub spans: Vec<Span<'a>>,
@@ -61,9 +61,9 @@ impl fmt::Debug for Line<'_> {
 		}
 		self.style.fmt_stylize(f)?;
 		match self.alignment {
-			Some(Alignment::Left) => write!(f, ".left_aligned()"),
-			Some(Alignment::Center) => write!(f, ".centered()"),
-			Some(Alignment::Right) => write!(f, ".right_aligned()"),
+			Some(HorizontalAlignment::Left) => write!(f, ".left_aligned()"),
+			Some(HorizontalAlignment::Center) => write!(f, ".centered()"),
+			Some(HorizontalAlignment::Right) => write!(f, ".right_aligned()"),
 			None => Ok(()),
 		}
 	}
@@ -121,7 +121,7 @@ impl<'a> Line<'a> {
 
 	/// Sets the alignment. Overrides parent widget alignment.
 	#[must_use = "method moves the value of self and returns the modified value"]
-	pub fn alignment(self, alignment: Alignment) -> Self {
+	pub fn alignment(self, alignment: HorizontalAlignment) -> Self {
 		Self {
 			alignment: Some(alignment),
 			..self
@@ -131,19 +131,19 @@ impl<'a> Line<'a> {
 	/// Left-aligns this line.
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn left_aligned(self) -> Self {
-		self.alignment(Alignment::Left)
+		self.alignment(HorizontalAlignment::Left)
 	}
 
 	/// Center-aligns this line.
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn centered(self) -> Self {
-		self.alignment(Alignment::Center)
+		self.alignment(HorizontalAlignment::Center)
 	}
 
 	/// Right-aligns this line.
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn right_aligned(self) -> Self {
-		self.alignment(Alignment::Right)
+		self.alignment(HorizontalAlignment::Right)
 	}
 
 	/// Returns the unicode width of the line.
@@ -343,7 +343,7 @@ impl Line<'_> {
 		&self,
 		area: Rect,
 		buf: &mut Buffer,
-		parent_alignment: Option<Alignment>,
+		parent_alignment: Option<HorizontalAlignment>,
 	) {
 		let area = area.intersection(buf.area);
 		if area.is_empty() {
@@ -363,9 +363,9 @@ impl Line<'_> {
 		let can_render_complete_line = line_width <= area_width;
 		if can_render_complete_line {
 			let indent_width = match alignment {
-				Some(Alignment::Center) => (area_width.saturating_sub(line_width)) / 2,
-				Some(Alignment::Right) => area_width.saturating_sub(line_width),
-				Some(Alignment::Left) | None => 0,
+				Some(HorizontalAlignment::Center) => (area_width.saturating_sub(line_width)) / 2,
+				Some(HorizontalAlignment::Right) => area_width.saturating_sub(line_width),
+				Some(HorizontalAlignment::Left) | None => 0,
 			};
 			let indent_width = u16::try_from(indent_width).unwrap_or(u16::MAX);
 			let area = area.indent_x(indent_width);
@@ -374,9 +374,9 @@ impl Line<'_> {
 			// There is not enough space to render the whole line. As the right side is truncated by
 			// the area width, only truncate the left.
 			let skip_width = match alignment {
-				Some(Alignment::Center) => (line_width.saturating_sub(area_width)) / 2,
-				Some(Alignment::Right) => line_width.saturating_sub(area_width),
-				Some(Alignment::Left) | None => 0,
+				Some(HorizontalAlignment::Center) => (line_width.saturating_sub(area_width)) / 2,
+				Some(HorizontalAlignment::Right) => line_width.saturating_sub(area_width),
+				Some(HorizontalAlignment::Left) | None => 0,
 			};
 			render_spans(&self.spans, area, buf, skip_width);
 		}

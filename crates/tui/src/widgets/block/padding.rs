@@ -56,12 +56,6 @@ impl Padding {
 		}
 	}
 
-	/// Creates a `Padding` with all fields set to `0`.
-	#[deprecated = "use `Padding::ZERO` instead"]
-	pub const fn zero() -> Self {
-		Self::ZERO
-	}
-
 	/// Creates a `Padding` with the same value for `left` and `right`.
 	pub const fn horizontal(value: u16) -> Self {
 		Self {

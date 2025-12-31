@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use core::mem;
 
 use super::{LineComposer, WrappedLine};
-use crate::layout::Alignment;
+use crate::layout::HorizontalAlignment;
 use crate::text::StyledGrapheme;
 
 /// A state machine that wraps lines on word boundaries.
@@ -13,7 +13,7 @@ use crate::text::StyledGrapheme;
 pub struct WordWrapper<'a, O, I>
 where
 	// Outer iterator providing the individual lines
-	O: Iterator<Item = (I, Alignment)>,
+	O: Iterator<Item = (I, HorizontalAlignment)>,
 	// Inner iterator providing the styled symbols of a line Each line consists of an alignment and
 	// a series of symbols
 	I: Iterator<Item = StyledGrapheme<'a>>,
@@ -22,7 +22,7 @@ where
 	input_lines: O,
 	max_line_width: u16,
 	wrapped_lines: VecDeque<Vec<StyledGrapheme<'a>>>,
-	current_alignment: Alignment,
+	current_alignment: HorizontalAlignment,
 	current_line: Vec<StyledGrapheme<'a>>,
 	/// Removes the leading whitespace from lines
 	trim: bool,
@@ -35,7 +35,7 @@ where
 
 impl<'a, O, I> WordWrapper<'a, O, I>
 where
-	O: Iterator<Item = (I, Alignment)>,
+	O: Iterator<Item = (I, HorizontalAlignment)>,
 	I: Iterator<Item = StyledGrapheme<'a>>,
 {
 	/// Create a new `WordWrapper` with the given lines and maximum line width.
@@ -44,7 +44,7 @@ where
 			input_lines: lines,
 			max_line_width,
 			wrapped_lines: VecDeque::new(),
-			current_alignment: Alignment::Left,
+			current_alignment: HorizontalAlignment::Left,
 			current_line: vec![],
 			trim,
 
@@ -184,7 +184,7 @@ where
 
 impl<'a, O, I> LineComposer<'a> for WordWrapper<'a, O, I>
 where
-	O: Iterator<Item = (I, Alignment)>,
+	O: Iterator<Item = (I, HorizontalAlignment)>,
 	I: Iterator<Item = StyledGrapheme<'a>>,
 {
 	fn next_line<'lend>(&'lend mut self) -> Option<WrappedLine<'lend, 'a>> {

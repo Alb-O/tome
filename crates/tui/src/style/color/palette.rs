@@ -1,6 +1,6 @@
 //! Tests for palette feature HSL/HSLuv conversions.
 
-use palette::{Hsl, Hsluv};
+use ::palette::{Hsl, Hsluv};
 use rstest::rstest;
 
 use super::*;
@@ -23,7 +23,7 @@ use super::*;
 #[case::over_lightness_clamps(Hsl::new(0.0, 0.5, 1.5), Color::Rgb(255, 255, 255))]
 #[case::under_saturation_lightness_clamps(Hsl::new(0.0, -0.5, -0.20), Color::Rgb(0, 0, 0))]
 #[case::over_saturation_lightness_clamps(Hsl::new(0.0, 1.2, 1.5), Color::Rgb(255, 255, 255))]
-fn test_hsl_to_rgb(#[case] hsl: palette::Hsl, #[case] expected: Color) {
+fn test_hsl_to_rgb(#[case] hsl: Hsl, #[case] expected: Color) {
 	assert_eq!(Color::from_hsl(hsl), expected);
 }
 
@@ -45,6 +45,6 @@ fn test_hsl_to_rgb(#[case] hsl: palette::Hsl, #[case] expected: Color) {
 #[case::over_lightness_clamps(Hsluv::new(0.0, 50.0, 150.0), Color::Rgb(255, 255, 255))]
 #[case::under_saturation_lightness_clamps(Hsluv::new(0.0, -50.0, -20.0), Color::Rgb(0, 0, 0))]
 #[case::over_saturation_lightness_clamps(Hsluv::new(0.0, 150.0, 150.0), Color::Rgb(255, 255, 255))]
-fn test_hsluv_to_rgb(#[case] hsluv: palette::Hsluv, #[case] expected: Color) {
+fn test_hsluv_to_rgb(#[case] hsluv: Hsluv, #[case] expected: Color) {
 	assert_eq!(Color::from_hsluv(hsluv), expected);
 }

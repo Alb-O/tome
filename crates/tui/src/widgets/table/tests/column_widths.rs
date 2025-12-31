@@ -123,14 +123,6 @@ fn underconstrained_flex() {
 
 	let table = Table::default()
 		.widths([Min(10), Min(10), Min(1)])
-		.flex(Flex::Legacy);
-	assert_eq!(
-		table.get_column_widths(62, 0, 0),
-		&[(0, 10), (11, 10), (22, 40)]
-	);
-
-	let table = Table::default()
-		.widths([Min(10), Min(10), Min(1)])
 		.flex(Flex::SpaceBetween);
 	assert_eq!(
 		table.get_column_widths(62, 0, 0),
@@ -144,14 +136,6 @@ fn underconstrained_segment_size() {
 	assert_eq!(
 		table.get_column_widths(62, 0, 0),
 		&[(0, 20), (21, 20), (42, 20)]
-	);
-
-	let table = Table::default()
-		.widths([Min(10), Min(10), Min(1)])
-		.flex(Flex::Legacy);
-	assert_eq!(
-		table.get_column_widths(62, 0, 0),
-		&[(0, 10), (11, 10), (22, 40)]
 	);
 }
 
@@ -391,24 +375,6 @@ fn insufficient_area_highlight_symbol_and_column_spacing_allocation() {
 			"       ", // row 3
 		],
 	);
-
-	let table = Table::default()
-		.rows(vec![Row::new(vec!["ABCDE", "12345"])])
-		.highlight_spacing(HighlightSpacing::Always)
-		.flex(Flex::Legacy)
-		.highlight_symbol(">>>")
-		.column_spacing(1);
-	let area = Rect::new(0, 0, 10, 3);
-	let mut buf = Buffer::empty(area);
-	Widget::render(table, area, &mut buf);
-	// highlight_symbol and spacing are prioritized but columns are evenly distributed
-	#[rustfmt::skip]
-            let expected = Buffer::with_lines([
-                "   ABCDE 1",
-                "          ",
-                "          ",
-            ]);
-	assert_eq!(buf, expected);
 
 	let table = Table::default()
 		.rows(vec![Row::new(vec!["ABCDE", "12345"])])

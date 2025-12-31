@@ -23,7 +23,7 @@ fn block_new() {
 		Block {
 			titles: Vec::new(),
 			titles_style: Style::new(),
-			titles_alignment: Alignment::Left,
+			titles_alignment: HorizontalAlignment::Left,
 			titles_position: TitlePosition::Top,
 			borders: Borders::NONE,
 			border_style: Style::new(),
@@ -44,7 +44,7 @@ const fn block_can_be_const() {
 		// .style(_DEFAULT_STYLE)           // no longer const
 		// .border_style(_DEFAULT_STYLE)    // no longer const
 		// .title_style(_DEFAULT_STYLE)     // no longer const
-		.title_alignment(Alignment::Left)
+		.title_alignment(HorizontalAlignment::Left)
 		.title_position(TitlePosition::Top)
 		.padding(_DEFAULT_PADDING);
 }

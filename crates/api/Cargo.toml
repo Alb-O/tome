@@ -41,6 +41,7 @@ tracing-subscriber.workspace = true
 tree-house.workspace = true
 unicode-segmentation.workspace = true
 unicode-width.workspace = true
+vt100 = "0.15"
 
 [dev-dependencies]
 insta.workspace = true

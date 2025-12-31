@@ -2,143 +2,87 @@
 //!
 //! These hooks respond to buffer events and notify language servers.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use evildoer_api::editor::extensions::ExtensionMap;
-use evildoer_manifest::RegistrySource;
-use evildoer_manifest::hooks::{
-	HOOKS, HookAction, HookContext, HookDef, HookEvent, HookResult, OwnedHookContext,
-};
-use linkme::distributed_slice;
+use evildoer_manifest::async_hook;
+use evildoer_manifest::hooks::{HookAction, HookContext, HookResult};
 
 use super::LspManager;
 
-#[distributed_slice(HOOKS)]
-static LSP_BUFFER_OPEN: HookDef = HookDef {
-	id: "evildoer-extensions::lsp::buffer_open",
-	name: "lsp_buffer_open",
-	event: HookEvent::BufferOpen,
-	description: "Notify language servers when a buffer is opened",
-	priority: 50,
-	handler: lsp_buffer_open_handler,
-	source: RegistrySource::Crate("evildoer-extensions"),
-};
-
-fn lsp_buffer_open_handler(ctx: &HookContext) -> HookAction {
-	let Some(lsp) = ctx
-		.extensions::<ExtensionMap>()
+fn lsp_from_ctx(ctx: &HookContext) -> Option<Arc<LspManager>> {
+	ctx.extensions::<ExtensionMap>()
 		.and_then(|ext| ext.get::<Arc<LspManager>>())
 		.cloned()
-	else {
-		return HookAction::done();
-	};
-	let owned = ctx.to_owned();
-
-	HookAction::Async(Box::pin(async move {
-		if let OwnedHookContext::BufferOpen {
-			path,
-			text,
-			file_type,
-		} = owned
-		{
-			lsp.did_open(&path, &text, file_type.as_deref(), 1).await;
-		}
-		HookResult::Continue
-	}))
 }
 
-#[distributed_slice(HOOKS)]
-static LSP_BUFFER_CHANGE: HookDef = HookDef {
-	id: "evildoer-extensions::lsp::buffer_change",
-	name: "lsp_buffer_change",
-	event: HookEvent::BufferChange,
-	description: "Notify language servers when buffer content changes",
-	priority: 50,
-	handler: lsp_buffer_change_handler,
-	source: RegistrySource::Crate("evildoer-extensions"),
-};
-
-fn lsp_buffer_change_handler(ctx: &HookContext) -> HookAction {
-	let Some(lsp) = ctx
-		.extensions::<ExtensionMap>()
-		.and_then(|ext| ext.get::<Arc<LspManager>>())
-		.cloned()
-	else {
-		return HookAction::done();
-	};
-	let owned = ctx.to_owned();
-
-	HookAction::Async(Box::pin(async move {
-		if let OwnedHookContext::BufferChange {
-			path,
-			text,
-			file_type,
-			version,
-		} = owned
-		{
-			let language = file_type.or_else(|| infer_language_from_path(&path));
-			lsp.did_change(&path, &text, language.as_deref(), version)
-				.await;
-		}
+async_hook!(
+	lsp_buffer_open,
+	BufferOpen,
+	50,
+	"Notify language servers when a buffer is opened",
+	setup |ctx| {
+		let Some(lsp) = lsp_from_ctx(ctx) else {
+			return HookAction::done();
+		};
+	}
+	async |path: PathBuf, text: String, file_type: Option<String>| {
+		lsp.did_open(&path, &text, file_type.as_deref(), 1).await;
 		HookResult::Continue
-	}))
-}
+	}
+);
 
-#[distributed_slice(HOOKS)]
-static LSP_BUFFER_CLOSE: HookDef = HookDef {
-	id: "evildoer-extensions::lsp::buffer_close",
-	name: "lsp_buffer_close",
-	event: HookEvent::BufferClose,
-	description: "Notify language servers when a buffer is closed",
-	priority: 50,
-	handler: lsp_buffer_close_handler,
-	source: RegistrySource::Crate("evildoer-extensions"),
-};
-
-fn lsp_buffer_close_handler(ctx: &HookContext) -> HookAction {
-	let Some(lsp) = ctx
-		.extensions::<ExtensionMap>()
-		.and_then(|ext| ext.get::<Arc<LspManager>>())
-		.cloned()
-	else {
-		return HookAction::done();
-	};
-	let owned = ctx.to_owned();
-
-	HookAction::Async(Box::pin(async move {
-		if let OwnedHookContext::BufferClose { path, file_type } = owned {
-			let language = file_type.or_else(|| infer_language_from_path(&path));
-			lsp.did_close(&path, language.as_deref()).await;
-		}
+async_hook!(
+	lsp_buffer_change,
+	BufferChange,
+	50,
+	"Notify language servers when buffer content changes",
+	setup |ctx| {
+		let Some(lsp) = lsp_from_ctx(ctx) else {
+			return HookAction::done();
+		};
+	}
+	async |path: PathBuf, text: String, file_type: Option<String>, version: u64| {
+		let language = file_type.or_else(|| infer_language_from_path(&path));
+		lsp.did_change(&path, &text, language.as_deref(), version)
+			.await;
 		HookResult::Continue
-	}))
-}
+	}
+);
 
-#[distributed_slice(HOOKS)]
-static LSP_EDITOR_QUIT: HookDef = HookDef {
-	id: "evildoer-extensions::lsp::editor_quit",
-	name: "lsp_editor_quit",
-	event: HookEvent::EditorQuit,
-	description: "Shutdown language servers when editor quits",
-	priority: 10,
-	handler: lsp_editor_quit_handler,
-	source: RegistrySource::Crate("evildoer-extensions"),
-};
+async_hook!(
+	lsp_buffer_close,
+	BufferClose,
+	50,
+	"Notify language servers when a buffer is closed",
+	setup |ctx| {
+		let Some(lsp) = lsp_from_ctx(ctx) else {
+			return HookAction::done();
+		};
+	}
+	async |path: PathBuf, file_type: Option<String>| {
+		let language = file_type.or_else(|| infer_language_from_path(&path));
+		lsp.did_close(&path, language.as_deref()).await;
+		HookResult::Continue
+	}
+);
 
-fn lsp_editor_quit_handler(ctx: &HookContext) -> HookAction {
-	let Some(lsp) = ctx
-		.extensions::<ExtensionMap>()
-		.and_then(|ext| ext.get::<Arc<LspManager>>())
-		.cloned()
-	else {
-		return HookAction::done();
-	};
-
-	HookAction::Async(Box::pin(async move {
+async_hook!(
+	lsp_editor_quit,
+	EditorQuit,
+	10,
+	"Shutdown language servers when editor quits",
+	setup |ctx| {
+		let Some(lsp) = lsp_from_ctx(ctx) else {
+			return HookAction::done();
+		};
+	}
+	async || {
 		lsp.shutdown_all().await;
 		HookResult::Continue
-	}))
-}
+	}
+);
 
 /// Infer language name from file path extension.
 fn infer_language_from_path(path: &std::path::Path) -> Option<String> {
@@ -224,11 +168,11 @@ mod tests {
 
 	#[test]
 	fn hook_definitions_have_correct_events() {
-		assert_eq!(LSP_BUFFER_OPEN.event, HookEvent::BufferOpen);
-		assert_eq!(LSP_BUFFER_CHANGE.event, HookEvent::BufferChange);
-		assert_eq!(LSP_BUFFER_CLOSE.event, HookEvent::BufferClose);
-		assert_eq!(LSP_EDITOR_QUIT.event, HookEvent::EditorQuit);
-		assert!(LSP_EDITOR_QUIT.priority < LSP_BUFFER_OPEN.priority);
+		assert_eq!(HOOK_lsp_buffer_open.event, HookEvent::BufferOpen);
+		assert_eq!(HOOK_lsp_buffer_change.event, HookEvent::BufferChange);
+		assert_eq!(HOOK_lsp_buffer_close.event, HookEvent::BufferClose);
+		assert_eq!(HOOK_lsp_editor_quit.event, HookEvent::EditorQuit);
+		assert!(HOOK_lsp_editor_quit.priority < HOOK_lsp_buffer_open.priority);
 	}
 
 	#[test]
@@ -242,7 +186,7 @@ mod tests {
 			},
 			None,
 		);
-		assert!(matches!(lsp_buffer_open_handler(&ctx), HookAction::Done(_)));
+		assert!(matches!(hook_handler_lsp_buffer_open(&ctx), HookAction::Done(_)));
 	}
 
 	#[test]
@@ -257,7 +201,7 @@ mod tests {
 			},
 			Some(&ext_map),
 		);
-		assert!(matches!(lsp_buffer_open_handler(&ctx), HookAction::Done(_)));
+		assert!(matches!(hook_handler_lsp_buffer_open(&ctx), HookAction::Done(_)));
 	}
 
 	#[test]

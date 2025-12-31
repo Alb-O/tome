@@ -86,18 +86,10 @@ fn number_inner(text: RopeSlice, pos: usize) -> Option<Range> {
 	Some(Range::new(start, end))
 }
 
-fn number_around(text: RopeSlice, pos: usize) -> Option<Range> {
-	// For numbers, "around" is the same as "inner" - no surrounding delimiters
-	number_inner(text, pos)
-}
+use crate::symmetric_text_object;
 
-use crate::text_object;
-
-text_object!(
+symmetric_text_object!(
 	number,
 	{ trigger: 'n', description: "Select number" },
-	{
-		inner: number_inner,
-		around: number_around,
-	}
+	number_inner
 );

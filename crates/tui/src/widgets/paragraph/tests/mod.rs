@@ -4,7 +4,7 @@ use rstest::rstest;
 
 use super::*;
 use crate::buffer::Buffer;
-use crate::layout::{Alignment, Rect};
+use crate::layout::{HorizontalAlignment, Rect};
 use crate::style::{Color, Modifier, Style, Stylize};
 use crate::text::{Line, Span, Text};
 use crate::widgets::Widget;
@@ -44,17 +44,17 @@ fn can_be_stylized() {
 #[test]
 fn left_aligned() {
 	let p = Paragraph::new("Hello, world!").left_aligned();
-	assert_eq!(p.alignment, Alignment::Left);
+	assert_eq!(p.alignment, HorizontalAlignment::Left);
 }
 
 #[test]
 fn centered() {
 	let p = Paragraph::new("Hello, world!").centered();
-	assert_eq!(p.alignment, Alignment::Center);
+	assert_eq!(p.alignment, HorizontalAlignment::Center);
 }
 
 #[test]
 fn right_aligned() {
 	let p = Paragraph::new("Hello, world!").right_aligned();
-	assert_eq!(p.alignment, Alignment::Right);
+	assert_eq!(p.alignment, HorizontalAlignment::Right);
 }

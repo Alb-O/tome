@@ -186,10 +186,12 @@ async fn wait_for_response(
 	loop {
 		tokio::time::sleep(Duration::from_millis(100)).await;
 
-		let msgs = messages.lock();
-		if !msgs.is_empty() {
+		let has_messages = {
+			let msgs = messages.lock();
+			!msgs.is_empty()
+		};
+		if has_messages {
 			// Wait a bit more for the full response
-			drop(msgs);
 			tokio::time::sleep(Duration::from_millis(500)).await;
 			break;
 		}

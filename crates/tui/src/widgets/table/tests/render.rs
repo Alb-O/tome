@@ -1,5 +1,5 @@
 use super::*;
-use crate::layout::Alignment;
+use crate::layout::HorizontalAlignment;
 
 #[test]
 fn render_empty_area() {
@@ -175,9 +175,9 @@ fn render_with_tall_row() {
 fn render_with_alignment() {
 	let mut buf = Buffer::empty(Rect::new(0, 0, 10, 3));
 	let rows = vec![
-		Row::new(vec![Line::from("Left").alignment(Alignment::Left)]),
-		Row::new(vec![Line::from("Center").alignment(Alignment::Center)]),
-		Row::new(vec![Line::from("Right").alignment(Alignment::Right)]),
+		Row::new(vec![Line::from("Left").alignment(HorizontalAlignment::Left)]),
+		Row::new(vec![Line::from("Center").alignment(HorizontalAlignment::Center)]),
+		Row::new(vec![Line::from("Right").alignment(HorizontalAlignment::Right)]),
 	];
 	let table = Table::new(rows, [Percentage(100)]);
 	Widget::render(table, Rect::new(0, 0, 10, 3), &mut buf);
@@ -189,8 +189,8 @@ fn render_with_alignment() {
 fn render_with_overflow_does_not_panic() {
 	let mut buf = Buffer::empty(Rect::new(0, 0, 20, 3));
 	let table = Table::new(Vec::<Row>::new(), [Constraint::Min(20); 1])
-		.header(Row::new([Line::from("").alignment(Alignment::Right)]))
-		.footer(Row::new([Line::from("").alignment(Alignment::Right)]));
+		.header(Row::new([Line::from("").alignment(HorizontalAlignment::Right)]))
+		.footer(Row::new([Line::from("").alignment(HorizontalAlignment::Right)]));
 	Widget::render(table, Rect::new(0, 0, 20, 3), &mut buf);
 }
 

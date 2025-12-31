@@ -1,12 +1,12 @@
 use std::dbg;
 
+
 use rstest::{fixture, rstest};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use super::{small_buf, *};
 use crate::buffer::Cell;
-use crate::style::Stylize;
 
 const BLUE: Style = Style::new().blue();
 const GREEN: Style = Style::new().green();
@@ -70,7 +70,7 @@ fn render_truncates() {
 
 #[test]
 fn render_centered() {
-	let line = hello_world().alignment(Alignment::Center);
+	let line = hello_world().alignment(HorizontalAlignment::Center);
 	let mut buf = Buffer::empty(Rect::new(0, 0, 15, 1));
 	line.render(Rect::new(0, 0, 15, 1), &mut buf);
 	let mut expected = Buffer::with_lines([" Hello world!  "]);
@@ -82,7 +82,7 @@ fn render_centered() {
 
 #[test]
 fn render_right_aligned() {
-	let line = hello_world().alignment(Alignment::Right);
+	let line = hello_world().alignment(HorizontalAlignment::Right);
 	let mut buf = Buffer::empty(Rect::new(0, 0, 15, 1));
 	line.render(Rect::new(0, 0, 15, 1), &mut buf);
 	let mut expected = Buffer::with_lines(["   Hello world!"]);
@@ -152,16 +152,16 @@ fn crab_emoji_width() {
 /// Part of a regression test for  which
 /// found panics with truncating lines that contained multi-byte characters.
 #[rstest]
-#[case::left_4(Alignment::Left, 4, "1234")]
-#[case::left_5(Alignment::Left, 5, "1234 ")]
-#[case::left_6(Alignment::Left, 6, "1234🦀")]
-#[case::left_7(Alignment::Left, 7, "1234🦀7")]
-#[case::right_4(Alignment::Right, 4, "7890")]
-#[case::right_5(Alignment::Right, 5, " 7890")]
-#[case::right_6(Alignment::Right, 6, "🦀7890")]
-#[case::right_7(Alignment::Right, 7, "4🦀7890")]
+#[case::left_4(HorizontalAlignment::Left, 4, "1234")]
+#[case::left_5(HorizontalAlignment::Left, 5, "1234 ")]
+#[case::left_6(HorizontalAlignment::Left, 6, "1234🦀")]
+#[case::left_7(HorizontalAlignment::Left, 7, "1234🦀7")]
+#[case::right_4(HorizontalAlignment::Right, 4, "7890")]
+#[case::right_5(HorizontalAlignment::Right, 5, " 7890")]
+#[case::right_6(HorizontalAlignment::Right, 6, "🦀7890")]
+#[case::right_7(HorizontalAlignment::Right, 7, "4🦀7890")]
 fn render_truncates_emoji(
-	#[case] alignment: Alignment,
+	#[case] alignment: HorizontalAlignment,
 	#[case] buf_width: u16,
 	#[case] expected: &str,
 ) {
@@ -230,10 +230,10 @@ fn render_truncates_emoji_center(
 /// characters that are already in the buffer. This is inentional (consider how a line
 /// that is rendered on a border should not overwrite the border with a partial emoji).
 #[rstest]
-#[case::left(Alignment::Left, "XXa🦀bcXXX")]
-#[case::center(Alignment::Center, "XX🦀bc🦀XX")]
-#[case::right(Alignment::Right, "XXXbc🦀dXX")]
-fn render_truncates_away_from_0x0(#[case] alignment: Alignment, #[case] expected: &str) {
+#[case::left(HorizontalAlignment::Left, "XXa🦀bcXXX")]
+#[case::center(HorizontalAlignment::Center, "XX🦀bc🦀XX")]
+#[case::right(HorizontalAlignment::Right, "XXXbc🦀dXX")]
+fn render_truncates_away_from_0x0(#[case] alignment: HorizontalAlignment, #[case] expected: &str) {
 	let line = Line::from(vec![Span::raw("a🦀b"), Span::raw("c🦀d")]).alignment(alignment);
 	// Fill buffer with stuff to ensure the output is indeed padded
 	let mut buf = Buffer::filled(Rect::new(0, 0, 10, 1), Cell::new("X"));
@@ -293,10 +293,10 @@ fn render_truncates_flag(#[case] buf_width: u16, #[case] expected: &str) {
 
 // Buffer width is `u16`. A line can be longer.
 #[rstest]
-#[case::left(Alignment::Left, "This is some content with a some")]
-#[case::right(Alignment::Right, "horribly long Line over u16::MAX")]
+#[case::left(HorizontalAlignment::Left, "This is some content with a some")]
+#[case::right(HorizontalAlignment::Right, "horribly long Line over u16::MAX")]
 fn render_truncates_very_long_line_of_many_spans(
-	#[case] alignment: Alignment,
+	#[case] alignment: HorizontalAlignment,
 	#[case] expected: &str,
 ) {
 	let part = "This is some content with a somewhat long width to be repeated over and over again to create horribly long Line over u16::MAX";
@@ -317,10 +317,10 @@ fn render_truncates_very_long_line_of_many_spans(
 
 // Buffer width is `u16`. A single span inside a line can be longer.
 #[rstest]
-#[case::left(Alignment::Left, "This is some content with a some")]
-#[case::right(Alignment::Right, "horribly long Line over u16::MAX")]
+#[case::left(HorizontalAlignment::Left, "This is some content with a some")]
+#[case::right(HorizontalAlignment::Right, "horribly long Line over u16::MAX")]
 fn render_truncates_very_long_single_span_line(
-	#[case] alignment: Alignment,
+	#[case] alignment: HorizontalAlignment,
 	#[case] expected: &str,
 ) {
 	let part = "This is some content with a somewhat long width to be repeated over and over again to create horribly long Line over u16::MAX";

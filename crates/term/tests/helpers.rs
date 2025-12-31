@@ -27,6 +27,7 @@ pub fn evildoer_cmd_debug_theme(name: &str) -> String {
 ///
 /// The `log_path` should be a file path where debug logs will be written.
 /// Use `kitty_test_harness::create_test_log()` to create the log file.
+#[allow(dead_code, reason = "test helper used by individual test files")]
 pub fn evildoer_cmd_debug_with_log(name: &str, log_path: &Path) -> String {
 	format!(
 		"EVILDOER_TEST_LOG={} {} --theme debug {}",

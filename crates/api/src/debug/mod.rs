@@ -179,7 +179,7 @@ impl SplitBuffer for DebugPanel {
 	}
 
 	fn handle_mouse(&mut self, mouse: SplitMouse) -> SplitEventResult {
-		let (row, col) = (mouse.position.y as u16, mouse.position.x as u16);
+		let (row, col) = (mouse.position.y, mouse.position.x);
 
 		match mouse.action {
 			SplitMouseAction::ScrollUp => {
@@ -216,7 +216,7 @@ impl SplitBuffer for DebugPanel {
 	}
 
 	fn is_selected(&self, row: u16, col: u16) -> bool {
-		self.selection.map_or(false, |sel| sel.contains(row, col))
+		self.selection.is_some_and(|sel| sel.contains(row, col))
 	}
 
 	fn size(&self) -> SplitSize {

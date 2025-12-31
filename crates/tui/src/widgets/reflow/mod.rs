@@ -2,7 +2,7 @@
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
-use crate::layout::Alignment;
+use crate::layout::HorizontalAlignment;
 use crate::text::StyledGrapheme;
 
 mod truncator;
@@ -28,7 +28,7 @@ pub struct WrappedLine<'lend, 'text> {
 	/// The width of the line
 	pub width: u16,
 	/// Whether the line was aligned left or right
-	pub alignment: Alignment,
+	pub alignment: HorizontalAlignment,
 }
 
 /// This function will return a str slice which start at specified offset.

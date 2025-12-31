@@ -25,9 +25,7 @@ fn find_separator_rows(clean: &str) -> Vec<usize> {
 		.lines()
 		.enumerate()
 		.filter(|(_, line)| {
-			line.chars()
-				.all(|c| c == '─' || c == ' ' || c == '\u{2500}')
-				&& line.contains('─')
+			line.chars().all(|c| c == '─' || c == ' ') && line.contains('─')
 		})
 		.map(|(i, _)| i)
 		.collect()
@@ -35,15 +33,16 @@ fn find_separator_rows(clean: &str) -> Vec<usize> {
 
 /// Finds the first line number visible in the buffer (from the gutter).
 /// Returns the line number shown in the first row of content.
+#[allow(dead_code, reason = "helper retained for test debugging")]
 fn find_first_visible_line(clean: &str) -> Option<usize> {
 	// Look for the first line that starts with a line number in the gutter
 	// Format is typically "   1 " or "  10 " etc.
 	for line in clean.lines() {
 		let trimmed = line.trim_start();
-		if let Some(num_end) = trimmed.find(' ') {
-			if let Ok(num) = trimmed[..num_end].parse::<usize>() {
-				return Some(num);
-			}
+		if let Some(num_end) = trimmed.find(' ')
+			&& let Ok(num) = trimmed[..num_end].parse::<usize>()
+		{
+			return Some(num);
 		}
 	}
 	None
@@ -53,10 +52,10 @@ fn find_first_visible_line(clean: &str) -> Option<usize> {
 fn find_line_number_at_row(clean: &str, row: usize) -> Option<usize> {
 	if let Some(line) = clean.lines().nth(row) {
 		let trimmed = line.trim_start();
-		if let Some(num_end) = trimmed.find(' ') {
-			if let Ok(num) = trimmed[..num_end].parse::<usize>() {
-				return Some(num);
-			}
+		if let Some(num_end) = trimmed.find(' ')
+			&& let Ok(num) = trimmed[..num_end].parse::<usize>()
+		{
+			return Some(num);
 		}
 	}
 	None

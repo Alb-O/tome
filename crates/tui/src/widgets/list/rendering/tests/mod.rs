@@ -4,9 +4,8 @@ use alloc::vec::Vec;
 
 use rstest::{fixture, rstest};
 
-use super::*;
 use crate::buffer::Buffer;
-use crate::layout::{Alignment, Rect};
+use crate::layout::{HorizontalAlignment, Rect};
 use crate::style::{Color, Modifier, Style, Stylize};
 use crate::text::Line;
 use crate::widgets::block::Block;

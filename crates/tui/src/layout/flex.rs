@@ -1,4 +1,4 @@
-use strum::{Display, EnumIs, EnumString};
+use strum::{Display, EnumString};
 
 #[expect(unused_imports)]
 use crate::layout::Constraint;
@@ -21,59 +21,9 @@ use crate::layout::Constraint;
 /// - `SpaceAround`: Adds excess space around each element.
 ///
 /// For comprehensive layout documentation and examples, see the [`layout`](crate::layout) module.
-#[derive(Copy, Debug, Default, Display, EnumString, Clone, Eq, PartialEq, Hash, EnumIs)]
+#[derive(Copy, Debug, Default, Display, EnumString, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Flex {
-	/// Fills the available space within the container, putting excess space into the last
-	/// constraint of the lowest priority. This matches the default behavior of evildoer_tui and tui
-	/// applications without [`Flex`]
-	///
-	/// The following examples illustrate the allocation of excess in various combinations of
-	/// constraints. As a refresher, the priorities of constraints are as follows:
-	///
-	/// 1. [`Constraint::Min`]
-	/// 2. [`Constraint::Max`]
-	/// 3. [`Constraint::Length`]
-	/// 4. [`Constraint::Percentage`]
-	/// 5. [`Constraint::Ratio`]
-	/// 6. [`Constraint::Fill`]
-	///
-	/// When every constraint is `Length`, the last element gets the excess.
-	///
-	/// ```plain
-	/// <----------------------------------- 80 px ------------------------------------>
-	/// ┌──────20 px───────┐┌──────20 px───────┐┌────────────────40 px─────────────────┐
-	/// │    Length(20)    ││    Length(20)    ││              Length(20)              │
-	/// └──────────────────┘└──────────────────┘└──────────────────────────────────────┘
-	///                                         ^^^^^^^^^^^^^^^^ EXCESS ^^^^^^^^^^^^^^^^
-	/// ```
-	///
-	/// Fill constraints have the lowest priority amongst all the constraints and hence
-	/// will always take up any excess space available.
-	///
-	/// ```plain
-	/// <----------------------------------- 80 px ------------------------------------>
-	/// ┌──────20 px───────┐┌──────20 px───────┐┌──────20 px───────┐┌──────20 px───────┐
-	/// │      Fill(0)     ││      Max(20)     ││    Length(20)    ││     Length(20)   │
-	/// └──────────────────┘└──────────────────┘└──────────────────┘└──────────────────┘
-	/// ^^^^^^ EXCESS ^^^^^^
-	/// ```
-	///
-	/// # Examples
-	///
-	/// ```plain
-	/// <------------------------------------80 px------------------------------------->
-	/// ┌──────────────────────────60 px───────────────────────────┐┌──────20 px───────┐
-	/// │                          Min(20)                         ││      Max(20)     │
-	/// └──────────────────────────────────────────────────────────┘└──────────────────┘
-	///
-	/// <------------------------------------80 px------------------------------------->
-	/// ┌────────────────────────────────────80 px─────────────────────────────────────┐
-	/// │                                    Max(20)                                   │
-	/// └──────────────────────────────────────────────────────────────────────────────┘
-	/// ```
-	Legacy,
-
 	/// Aligns items to the start of the container.
 	///
 	/// # Examples

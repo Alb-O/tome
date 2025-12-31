@@ -3,7 +3,7 @@
 use unicode_width::UnicodeWidthStr;
 
 use crate::buffer::Buffer;
-use crate::layout::{Alignment, Position, Rect};
+use crate::layout::{HorizontalAlignment, Position, Rect};
 use crate::style::{Style, Styled};
 use crate::text::{Line, StyledGrapheme, Text};
 use crate::widgets::Widget;
@@ -51,7 +51,7 @@ use crate::widgets::reflow::{LineComposer, LineTruncator, WordWrapper, WrappedLi
 /// # Example
 ///
 /// ```
-/// use evildoer_tui::layout::Alignment;
+/// use evildoer_tui::layout::HorizontalAlignment;
 /// use evildoer_tui::style::{Style, Stylize};
 /// use evildoer_tui::text::{Line, Span};
 /// use evildoer_tui::widgets::{Block, Paragraph, Wrap};
@@ -68,7 +68,7 @@ use crate::widgets::reflow::{LineComposer, LineTruncator, WordWrapper, WrappedLi
 /// Paragraph::new(text)
 ///     .block(Block::bordered().title("Paragraph"))
 ///     .style(Style::new().white().on_black())
-///     .alignment(Alignment::Center)
+///     .alignment(HorizontalAlignment::Center)
 ///     .wrap(Wrap { trim: true });
 /// ```
 ///
@@ -85,8 +85,8 @@ pub struct Paragraph<'a> {
 	text: Text<'a>,
 	/// Scroll
 	scroll: Position,
-	/// Alignment of the text
-	alignment: Alignment,
+	/// HorizontalAlignment of the text
+	alignment: HorizontalAlignment,
 }
 
 /// Describes how to wrap text across lines.
@@ -157,7 +157,7 @@ impl<'a> Paragraph<'a> {
 			wrap: None,
 			text: text.into(),
 			scroll: Position::ORIGIN,
-			alignment: Alignment::Left,
+			alignment: HorizontalAlignment::Left,
 		}
 	}
 
@@ -239,26 +239,26 @@ impl<'a> Paragraph<'a> {
 
 	/// Set the text alignment for the given paragraph
 	///
-	/// The alignment is a variant of the [`Alignment`] enum which can be one of Left, Right, or
+	/// The alignment is a variant of the [`HorizontalAlignment`] enum which can be one of Left, Right, or
 	/// Center. If no alignment is specified, the text in a paragraph will be left-aligned.
 	///
 	/// # Example
 	///
 	/// ```rust
-	/// use evildoer_tui::layout::Alignment;
+	/// use evildoer_tui::layout::HorizontalAlignment;
 	/// use evildoer_tui::widgets::Paragraph;
 	///
-	/// let paragraph = Paragraph::new("Hello World").alignment(Alignment::Center);
+	/// let paragraph = Paragraph::new("Hello World").alignment(HorizontalAlignment::Center);
 	/// ```
 	#[must_use = "method moves the value of self and returns the modified value"]
-	pub const fn alignment(mut self, alignment: Alignment) -> Self {
+	pub const fn alignment(mut self, alignment: HorizontalAlignment) -> Self {
 		self.alignment = alignment;
 		self
 	}
 
 	/// Left-aligns the text in the given paragraph.
 	///
-	/// Convenience shortcut for `Paragraph::alignment(Alignment::Left)`.
+	/// Convenience shortcut for `Paragraph::alignment(HorizontalAlignment::Left)`.
 	///
 	/// # Examples
 	///
@@ -269,12 +269,12 @@ impl<'a> Paragraph<'a> {
 	/// ```
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub const fn left_aligned(self) -> Self {
-		self.alignment(Alignment::Left)
+		self.alignment(HorizontalAlignment::Left)
 	}
 
 	/// Center-aligns the text in the given paragraph.
 	///
-	/// Convenience shortcut for `Paragraph::alignment(Alignment::Center)`.
+	/// Convenience shortcut for `Paragraph::alignment(HorizontalAlignment::Center)`.
 	///
 	/// # Examples
 	///
@@ -285,12 +285,12 @@ impl<'a> Paragraph<'a> {
 	/// ```
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub const fn centered(self) -> Self {
-		self.alignment(Alignment::Center)
+		self.alignment(HorizontalAlignment::Center)
 	}
 
 	/// Right-aligns the text in the given paragraph.
 	///
-	/// Convenience shortcut for `Paragraph::alignment(Alignment::Right)`.
+	/// Convenience shortcut for `Paragraph::alignment(HorizontalAlignment::Right)`.
 	///
 	/// # Examples
 	///
@@ -301,7 +301,7 @@ impl<'a> Paragraph<'a> {
 	/// ```
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub const fn right_aligned(self) -> Self {
-		self.alignment(Alignment::Right)
+		self.alignment(HorizontalAlignment::Right)
 	}
 
 	/// Calculates the number of lines needed to fully render.
@@ -466,11 +466,11 @@ fn render_line(wrapped: &WrappedLine<'_, '_>, area: Rect, buf: &mut Buffer, y: u
 	}
 }
 
-const fn get_line_offset(line_width: u16, text_area_width: u16, alignment: Alignment) -> u16 {
+const fn get_line_offset(line_width: u16, text_area_width: u16, alignment: HorizontalAlignment) -> u16 {
 	match alignment {
-		Alignment::Center => (text_area_width / 2).saturating_sub(line_width / 2),
-		Alignment::Right => text_area_width.saturating_sub(line_width),
-		Alignment::Left => 0,
+		HorizontalAlignment::Center => (text_area_width / 2).saturating_sub(line_width / 2),
+		HorizontalAlignment::Right => text_area_width.saturating_sub(line_width),
+		HorizontalAlignment::Left => 0,
 	}
 }
 

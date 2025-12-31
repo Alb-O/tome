@@ -727,6 +727,7 @@ dependencies = [
  "tree-house",
  "unicode-segmentation",
  "unicode-width 0.2.2",
+ "vt100",
 ]
 
 [[package]]
@@ -766,6 +767,7 @@ dependencies = [
  "evildoer-api",
  "evildoer-language",
  "evildoer-lsp",
+ "evildoer-macro",
  "evildoer-manifest",
  "evildoer-stdlib",
  "futures",

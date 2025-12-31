@@ -1,6 +1,5 @@
 use alloc::format;
 use core::iter;
-use std::dbg;
 
 use rstest::{fixture, rstest};
 
@@ -86,8 +85,8 @@ fn style() {
 
 #[test]
 fn alignment() {
-	let line = Line::from("This is left").alignment(Alignment::Left);
-	assert_eq!(Some(Alignment::Left), line.alignment);
+	let line = Line::from("This is left").alignment(HorizontalAlignment::Left);
+	assert_eq!(Some(HorizontalAlignment::Left), line.alignment);
 
 	let line = Line::from("This is default");
 	assert_eq!(None, line.alignment);
@@ -325,19 +324,19 @@ fn display_line_from_styled_span() {
 #[test]
 fn left_aligned() {
 	let line = Line::from("Hello, world!").left_aligned();
-	assert_eq!(line.alignment, Some(Alignment::Left));
+	assert_eq!(line.alignment, Some(HorizontalAlignment::Left));
 }
 
 #[test]
 fn centered() {
 	let line = Line::from("Hello, world!").centered();
-	assert_eq!(line.alignment, Some(Alignment::Center));
+	assert_eq!(line.alignment, Some(HorizontalAlignment::Center));
 }
 
 #[test]
 fn right_aligned() {
 	let line = Line::from("Hello, world!").right_aligned();
-	assert_eq!(line.alignment, Some(Alignment::Right));
+	assert_eq!(line.alignment, Some(HorizontalAlignment::Right));
 }
 
 #[test]

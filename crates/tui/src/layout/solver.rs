@@ -79,15 +79,6 @@ pub(super) mod strengths {
 	/// ```
 	pub const RATIO_SIZE_EQ: Strength = Strength::STRONG.div_f64(10.0);
 
-	/// The strength to apply to Min equality constraints.
-	///
-	/// ```text
-	/// ┌────────┐
-	/// │Min(==x)│
-	/// └────────┘
-	/// ```
-	pub const MIN_SIZE_EQ: Strength = Strength::MEDIUM.mul_f64(10.0);
-
 	/// The strength to apply to Max equality constraints.
 	///
 	/// ```text
@@ -135,7 +126,7 @@ pub(super) mod strengths {
 }
 
 use strengths::{
-	FILL_GROW, GROW, LENGTH_SIZE_EQ, MAX_SIZE_EQ, MAX_SIZE_LE, MIN_SIZE_EQ, MIN_SIZE_GE,
+	FILL_GROW, GROW, LENGTH_SIZE_EQ, MAX_SIZE_EQ, MAX_SIZE_LE, MIN_SIZE_GE,
 	PERCENTAGE_SIZE_EQ, RATIO_SIZE_EQ, SPACE_GROW, SPACER_SIZE_EQ,
 };
 
@@ -270,7 +261,6 @@ pub(super) fn configure_constraints(
 	area: Element,
 	segments: &[Element],
 	constraints: &[Constraint],
-	flex: Flex,
 ) -> Result<(), AddConstraintError> {
 	for (&constraint, &segment) in constraints.iter().zip(segments.iter()) {
 		match constraint {
@@ -280,11 +270,7 @@ pub(super) fn configure_constraints(
 			}
 			Constraint::Min(min) => {
 				solver.add_constraint(segment.has_min_size(min as i16, MIN_SIZE_GE))?;
-				if flex.is_legacy() {
-					solver.add_constraint(segment.has_int_size(min, MIN_SIZE_EQ))?;
-				} else {
-					solver.add_constraint(segment.has_size(area, FILL_GROW))?;
-				}
+				solver.add_constraint(segment.has_size(area, FILL_GROW))?;
 			}
 			Constraint::Length(length) => {
 				solver.add_constraint(segment.has_int_size(length, LENGTH_SIZE_EQ))?;
@@ -318,16 +304,6 @@ pub(super) fn configure_flex_constraints(
 	let spacers_except_first_and_last = spacers.get(1..spacers.len() - 1).unwrap_or(&[]);
 	let spacing_f64 = f64::from(spacing) * FLOAT_PRECISION_MULTIPLIER;
 	match flex {
-		Flex::Legacy => {
-			for spacer in spacers_except_first_and_last {
-				solver.add_constraint(spacer.has_size(spacing_f64, SPACER_SIZE_EQ))?;
-			}
-			if let (Some(first), Some(last)) = (spacers.first(), spacers.last()) {
-				solver.add_constraint(first.is_empty())?;
-				solver.add_constraint(last.is_empty())?;
-			}
-		}
-
 		// All spacers excluding first and last are the same size and will grow to fill
 		// any remaining space after the constraints are satisfied.
 		// All spacers excluding first and last are also twice the size of the first and last
@@ -448,12 +424,11 @@ pub(super) fn configure_fill_constraints(
 	solver: &mut Solver,
 	segments: &[Element],
 	constraints: &[Constraint],
-	flex: Flex,
 ) -> Result<(), AddConstraintError> {
 	for ((&left_constraint, &left_segment), (&right_constraint, &right_segment)) in constraints
 		.iter()
 		.zip(segments.iter())
-		.filter(|(c, _)| c.is_fill() || (!flex.is_legacy() && c.is_min()))
+		.filter(|(c, _)| c.is_fill() || c.is_min())
 		.tuple_combinations()
 	{
 		let left_scaling_factor = match left_constraint {

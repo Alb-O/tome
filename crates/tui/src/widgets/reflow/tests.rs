@@ -19,13 +19,13 @@ fn run_composer<'a>(
 	which: Composer,
 	text: impl Into<Text<'a>>,
 	text_area_width: u16,
-) -> (Vec<String>, Vec<u16>, Vec<Alignment>) {
+) -> (Vec<String>, Vec<u16>, Vec<HorizontalAlignment>) {
 	let text = text.into();
 	let styled_lines = text.iter().map(|line| {
 		(
 			line.iter()
 				.flat_map(|span| span.styled_graphemes(Style::default())),
-			line.alignment.unwrap_or(Alignment::Left),
+			line.alignment.unwrap_or(HorizontalAlignment::Left),
 		)
 	});
 
@@ -341,9 +341,9 @@ fn line_composer_zero_width_at_end() {
 fn line_composer_preserves_line_alignment() {
 	let width = 20;
 	let lines = vec![
-		Line::from("Something that is left aligned.").alignment(Alignment::Left),
-		Line::from("This is right aligned and half short.").alignment(Alignment::Right),
-		Line::from("This should sit in the center.").alignment(Alignment::Center),
+		Line::from("Something that is left aligned.").alignment(HorizontalAlignment::Left),
+		Line::from("This is right aligned and half short.").alignment(HorizontalAlignment::Right),
+		Line::from("This should sit in the center.").alignment(HorizontalAlignment::Center),
 	];
 	let (_, _, wrapped_alignments) =
 		run_composer(Composer::WordWrapper { trim: true }, lines.clone(), width);
@@ -351,18 +351,18 @@ fn line_composer_preserves_line_alignment() {
 	assert_eq!(
 		wrapped_alignments,
 		vec![
-			Alignment::Left,
-			Alignment::Left,
-			Alignment::Right,
-			Alignment::Right,
-			Alignment::Right,
-			Alignment::Center,
-			Alignment::Center
+			HorizontalAlignment::Left,
+			HorizontalAlignment::Left,
+			HorizontalAlignment::Right,
+			HorizontalAlignment::Right,
+			HorizontalAlignment::Right,
+			HorizontalAlignment::Center,
+			HorizontalAlignment::Center
 		]
 	);
 	assert_eq!(
 		truncated_alignments,
-		vec![Alignment::Left, Alignment::Right, Alignment::Center]
+		vec![HorizontalAlignment::Left, HorizontalAlignment::Right, HorizontalAlignment::Center]
 	);
 }
 

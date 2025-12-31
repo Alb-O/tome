@@ -1,17 +1,6 @@
 use strum::{Display, EnumString};
 
-/// A type alias for `HorizontalAlignment`.
-///
-/// Prior to Ratatui 0.30.0, [`HorizontalAlignment`] was named `Alignment`. This alias is provided
-/// for backwards compatibility. Because this type is used almost everywhere in Ratatui related apps
-/// and libraries, it's unlikely that this alias will be removed in the future.
-pub type Alignment = HorizontalAlignment;
-
 /// Horizontal content alignment within a layout area.
-///
-/// Prior to Ratatui 0.30.0, this type was named `Alignment`. In Ratatui 0.30.0, the name was
-/// changed to `HorizontalAlignment` to make it more descriptive. The old name is still available as
-/// an alias for backwards compatibility.
 ///
 /// This type is used throughout Ratatui to control how content is positioned horizontally within
 /// available space. It's commonly used with widgets to control text alignment, but can also be
@@ -57,18 +46,18 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn alignment_to_string() {
-		assert_eq!(Alignment::Left.to_string(), "Left");
-		assert_eq!(Alignment::Center.to_string(), "Center");
-		assert_eq!(Alignment::Right.to_string(), "Right");
+	fn horizontal_alignment_to_string() {
+		assert_eq!(HorizontalAlignment::Left.to_string(), "Left");
+		assert_eq!(HorizontalAlignment::Center.to_string(), "Center");
+		assert_eq!(HorizontalAlignment::Right.to_string(), "Right");
 	}
 
 	#[test]
-	fn alignment_from_str() {
-		assert_eq!("Left".parse::<Alignment>(), Ok(Alignment::Left));
-		assert_eq!("Center".parse::<Alignment>(), Ok(Alignment::Center));
-		assert_eq!("Right".parse::<Alignment>(), Ok(Alignment::Right));
-		assert_eq!("".parse::<Alignment>(), Err(ParseError::VariantNotFound));
+	fn horizontal_alignment_from_str() {
+		assert_eq!("Left".parse::<HorizontalAlignment>(), Ok(HorizontalAlignment::Left));
+		assert_eq!("Center".parse::<HorizontalAlignment>(), Ok(HorizontalAlignment::Center));
+		assert_eq!("Right".parse::<HorizontalAlignment>(), Ok(HorizontalAlignment::Right));
+		assert_eq!("".parse::<HorizontalAlignment>(), Err(ParseError::VariantNotFound));
 	}
 
 	#[test]

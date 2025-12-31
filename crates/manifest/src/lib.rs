@@ -259,7 +259,7 @@ pub use completion::{CompletionContext, CompletionItem, CompletionKind, Completi
 pub use editor_ctx::{EditorCapabilities, EditorContext, EditorOps, HandleOutcome};
 pub use hooks::{
 	BoxFuture as HookBoxFuture, HOOKS, HookAction, HookContext, HookDef, HookEvent, HookEventData,
-	HookResult, HookScheduler, MUTABLE_HOOKS, MutableHookContext, MutableHookDef, OwnedHookContext,
+	HookHandler, HookMutability, HookResult, HookScheduler, MutableHookContext, OwnedHookContext,
 	all_hooks, emit as emit_hook, emit_mutable as emit_mutable_hook, emit_sync as emit_hook_sync,
 	emit_sync_with as emit_hook_sync_with, find_hooks,
 };

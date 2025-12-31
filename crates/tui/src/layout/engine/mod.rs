@@ -310,13 +310,10 @@ impl Layout {
 		configure_variable_in_area_constraints(&mut solver, &variables, area_size)?;
 		configure_variable_constraints(&mut solver, &variables)?;
 		configure_flex_constraints(&mut solver, area_size, &spacers, flex, spacing)?;
-		configure_constraints(&mut solver, area_size, &segments, constraints, flex)?;
-		configure_fill_constraints(&mut solver, &segments, constraints, flex)?;
-
-		if !flex.is_legacy() {
-			for (left, right) in segments.iter().tuple_windows() {
-				solver.add_constraint(left.has_size(right, ALL_SEGMENT_GROW))?;
-			}
+		configure_constraints(&mut solver, area_size, &segments, constraints)?;
+		configure_fill_constraints(&mut solver, &segments, constraints)?;
+		for (left, right) in segments.iter().tuple_windows() {
+			solver.add_constraint(left.has_size(right, ALL_SEGMENT_GROW))?;
 		}
 
 		// `solver.fetch_changes()` can only be called once per solve

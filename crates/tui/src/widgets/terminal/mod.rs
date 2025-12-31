@@ -29,6 +29,4 @@ mod state;
 mod vt100_impl;
 mod widget;
 
-/// Re-export of the vt100 crate for version compatibility
-pub use vt100;
 pub use widget::{Cell, Cursor, PseudoTerminal, Screen};

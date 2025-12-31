@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use unicode_width::UnicodeWidthStr;
 
 use super::{LineComposer, WrappedLine, trim_offset};
-use crate::layout::Alignment;
+use crate::layout::HorizontalAlignment;
 use crate::text::StyledGrapheme;
 
 /// A state machine that truncates overhanging lines.
@@ -13,7 +13,7 @@ use crate::text::StyledGrapheme;
 pub struct LineTruncator<'a, O, I>
 where
 	// Outer iterator providing the individual lines
-	O: Iterator<Item = (I, Alignment)>,
+	O: Iterator<Item = (I, HorizontalAlignment)>,
 	// Inner iterator providing the styled symbols of a line Each line consists of an alignment and
 	// a series of symbols
 	I: Iterator<Item = StyledGrapheme<'a>>,
@@ -28,7 +28,7 @@ where
 
 impl<'a, O, I> LineTruncator<'a, O, I>
 where
-	O: Iterator<Item = (I, Alignment)>,
+	O: Iterator<Item = (I, HorizontalAlignment)>,
 	I: Iterator<Item = StyledGrapheme<'a>>,
 {
 	/// Create a new `LineTruncator` with the given lines and maximum line width.
@@ -49,7 +49,7 @@ where
 
 impl<'a, O, I> LineComposer<'a> for LineTruncator<'a, O, I>
 where
-	O: Iterator<Item = (I, Alignment)>,
+	O: Iterator<Item = (I, HorizontalAlignment)>,
 	I: Iterator<Item = StyledGrapheme<'a>>,
 {
 	fn next_line<'lend>(&'lend mut self) -> Option<WrappedLine<'lend, 'a>> {
@@ -62,7 +62,7 @@ where
 
 		let mut lines_exhausted = true;
 		let mut horizontal_offset = self.horizontal_offset as usize;
-		let mut current_alignment = Alignment::Left;
+		let mut current_alignment = HorizontalAlignment::Left;
 		if let Some((current_line, alignment)) = &mut self.input_lines.next() {
 			lines_exhausted = false;
 			current_alignment = *alignment;
@@ -78,7 +78,7 @@ where
 					break;
 				}
 
-				let symbol = if horizontal_offset == 0 || Alignment::Left != *alignment {
+				let symbol = if horizontal_offset == 0 || HorizontalAlignment::Left != *alignment {
 					symbol
 				} else {
 					let w = symbol.width();

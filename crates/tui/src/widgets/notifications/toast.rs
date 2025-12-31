@@ -3,7 +3,7 @@
 use alloc::string::String;
 
 use super::types::{Anchor, Animation, AutoDismiss, Level, SizeConstraint, SlideDirection, Timing};
-use crate::layout::Alignment;
+use crate::layout::HorizontalAlignment;
 use crate::style::Style;
 use crate::widgets::block::Padding;
 use crate::widgets::{Block, BorderType, Borders};
@@ -241,7 +241,7 @@ impl Toast {
 		if let Some(ref title) = self.title {
 			block = block.title(
 				crate::text::Line::raw(title.as_str())
-					.alignment(Alignment::Center)
+					.alignment(HorizontalAlignment::Center)
 					.style(self.title_style),
 			);
 		}

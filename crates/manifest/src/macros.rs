@@ -42,6 +42,194 @@ macro_rules! __opt_slice {
 	};
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __hook_param_expr {
+	(Option<& $inner:ty>, $value:ident) => {
+		$value.as_deref()
+	};
+	(Option < & $inner:ty >, $value:ident) => {
+		$value.as_deref()
+	};
+	(& $inner:ty, $value:ident) => {
+		&$value
+	};
+	(&$inner:ty, $value:ident) => {
+		&$value
+	};
+	($ty:ty, $value:ident) => {
+		$value
+	};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __hook_extract {
+	(EditorStart, $ctx:ident $(,)?) => {
+		let $crate::hooks::HookEventData::EditorStart = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+	};
+	(EditorQuit, $ctx:ident $(,)?) => {
+		let $crate::hooks::HookEventData::EditorQuit = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+	};
+	(EditorTick, $ctx:ident $(,)?) => {
+		let $crate::hooks::HookEventData::EditorTick = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+	};
+	(FocusGained, $ctx:ident $(,)?) => {
+		let $crate::hooks::HookEventData::FocusGained = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+	};
+	(FocusLost, $ctx:ident $(,)?) => {
+		let $crate::hooks::HookEventData::FocusLost = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+	};
+	(BufferOpen, $ctx:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::HookEventData::BufferOpen { $($param,)* .. } = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+		$(let $param: $ty = $param; )*
+	};
+	(BufferWritePre, $ctx:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::HookEventData::BufferWritePre { $($param,)* .. } = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+		$(let $param: $ty = $param; )*
+	};
+	(BufferWrite, $ctx:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::HookEventData::BufferWrite { $($param,)* .. } = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+		$(let $param: $ty = $param; )*
+	};
+	(BufferClose, $ctx:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::HookEventData::BufferClose { $($param,)* .. } = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+		$(let $param: $ty = $param; )*
+	};
+	(BufferChange, $ctx:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::HookEventData::BufferChange { $($param,)* .. } = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+		$(let $param: $ty = $param; )*
+	};
+	(ModeChange, $ctx:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::HookEventData::ModeChange { $($param,)* .. } = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+		$(let $param: $ty = $param; )*
+	};
+	(CursorMove, $ctx:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::HookEventData::CursorMove { $($param,)* .. } = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+		$(let $param: $ty = $param; )*
+	};
+	(SelectionChange, $ctx:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::HookEventData::SelectionChange { $($param,)* .. } = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+		$(let $param: $ty = $param; )*
+	};
+	(WindowResize, $ctx:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::HookEventData::WindowResize { $($param,)* .. } = &$ctx.data else {
+			return $crate::hooks::HookAction::Done($crate::hooks::HookResult::Continue);
+		};
+		$(let $param: $ty = $param; )*
+	};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __async_hook_extract {
+	(EditorStart, $owned:ident $(,)?) => {
+		let $crate::hooks::OwnedHookContext::EditorStart = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+	};
+	(EditorQuit, $owned:ident $(,)?) => {
+		let $crate::hooks::OwnedHookContext::EditorQuit = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+	};
+	(EditorTick, $owned:ident $(,)?) => {
+		let $crate::hooks::OwnedHookContext::EditorTick = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+	};
+	(FocusGained, $owned:ident $(,)?) => {
+		let $crate::hooks::OwnedHookContext::FocusGained = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+	};
+	(FocusLost, $owned:ident $(,)?) => {
+		let $crate::hooks::OwnedHookContext::FocusLost = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+	};
+	(BufferOpen, $owned:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::OwnedHookContext::BufferOpen { $($param,)* .. } = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+		$(let $param: $ty = $crate::__hook_param_expr!($ty, $param); )*
+	};
+	(BufferWritePre, $owned:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::OwnedHookContext::BufferWritePre { $($param,)* .. } = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+		$(let $param: $ty = $crate::__hook_param_expr!($ty, $param); )*
+	};
+	(BufferWrite, $owned:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::OwnedHookContext::BufferWrite { $($param,)* .. } = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+		$(let $param: $ty = $crate::__hook_param_expr!($ty, $param); )*
+	};
+	(BufferClose, $owned:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::OwnedHookContext::BufferClose { $($param,)* .. } = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+		$(let $param: $ty = $crate::__hook_param_expr!($ty, $param); )*
+	};
+	(BufferChange, $owned:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::OwnedHookContext::BufferChange { $($param,)* .. } = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+		$(let $param: $ty = $crate::__hook_param_expr!($ty, $param); )*
+	};
+	(ModeChange, $owned:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::OwnedHookContext::ModeChange { $($param,)* .. } = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+		$(let $param: $ty = $crate::__hook_param_expr!($ty, $param); )*
+	};
+	(CursorMove, $owned:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::OwnedHookContext::CursorMove { $($param,)* .. } = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+		$(let $param: $ty = $crate::__hook_param_expr!($ty, $param); )*
+	};
+	(SelectionChange, $owned:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::OwnedHookContext::SelectionChange { $($param,)* .. } = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+		$(let $param: $ty = $crate::__hook_param_expr!($ty, $param); )*
+	};
+	(WindowResize, $owned:ident, $( $param:ident : $ty:ty ),* $(,)?) => {
+		let $crate::hooks::OwnedHookContext::WindowResize { $($param,)* .. } = $owned else {
+			return $crate::hooks::HookResult::Continue;
+		};
+		$(let $param: $ty = $crate::__hook_param_expr!($ty, $param); )*
+	};
+}
+
 /// Registers a configuration option in the [`OPTIONS`](crate::options::OPTIONS) slice.
 #[macro_export]
 macro_rules! option {
@@ -274,6 +462,36 @@ macro_rules! bind {
 /// ```
 #[macro_export]
 macro_rules! hook {
+	($name:ident, $event:ident, $priority:expr, $desc:expr, mutable |$ctx:ident| $body:expr) => {
+		paste::paste! {
+			#[allow(clippy::unused_unit)]
+			fn [<hook_handler_ $name>](
+				$ctx: &mut $crate::hooks::MutableHookContext,
+			) -> $crate::hooks::HookAction {
+				let result = { $body };
+				::core::convert::Into::into(result)
+			}
+
+			#[allow(non_upper_case_globals)]
+			#[linkme::distributed_slice($crate::hooks::HOOKS)]
+			static [<HOOK_ $name>]: $crate::hooks::HookDef = $crate::hooks::HookDef {
+				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
+				name: stringify!($name),
+				event: $crate::hooks::HookEvent::$event,
+				description: $desc,
+				priority: $priority,
+				mutability: $crate::hooks::HookMutability::Mutable,
+				handler: $crate::hooks::HookHandler::Mutable([<hook_handler_ $name>]),
+				source: $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME")),
+			};
+		}
+	};
+	($name:ident, $event:ident, $priority:expr, $desc:expr, |$($param:ident : $ty:ty),*| $body:expr) => {
+		$crate::hook!($name, $event, $priority, $desc, |ctx| {
+			$crate::__hook_extract!($event, ctx, $($param : $ty),*);
+			$body
+		});
+	};
 	($name:ident, $event:ident, $priority:expr, $desc:expr, |$ctx:ident| $body:expr) => {
 		paste::paste! {
 			#[allow(clippy::unused_unit)]
@@ -290,10 +508,58 @@ macro_rules! hook {
 				event: $crate::hooks::HookEvent::$event,
 				description: $desc,
 				priority: $priority,
-				handler: [<hook_handler_ $name>],
+				mutability: $crate::hooks::HookMutability::Immutable,
+				handler: $crate::hooks::HookHandler::Immutable([<hook_handler_ $name>]),
 				source: $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME")),
 			};
 		}
+	};
+}
+
+/// Defines an async hook that owns extracted parameters.
+#[macro_export]
+macro_rules! async_hook {
+	($name:ident, $event:ident, $priority:expr, $desc:expr, setup |$ctx:ident| { $($setup:tt)* } async || $body:expr) => {
+		$crate::hook!($name, $event, $priority, $desc, |$ctx| {
+			$($setup)*
+			let owned = $ctx.to_owned();
+			$crate::hooks::HookAction::Async(::std::boxed::Box::pin(async move {
+				$crate::__async_hook_extract!($event, owned);
+				let result = { $body };
+				::core::convert::Into::into(result)
+			}))
+		});
+	};
+	($name:ident, $event:ident, $priority:expr, $desc:expr, async || $body:expr) => {
+		$crate::hook!($name, $event, $priority, $desc, |ctx| {
+			let owned = ctx.to_owned();
+			$crate::hooks::HookAction::Async(::std::boxed::Box::pin(async move {
+				$crate::__async_hook_extract!($event, owned);
+				let result = { $body };
+				::core::convert::Into::into(result)
+			}))
+		});
+	};
+	($name:ident, $event:ident, $priority:expr, $desc:expr, setup |$ctx:ident| { $($setup:tt)* } async |$($param:ident : $ty:ty),*| $body:expr) => {
+		$crate::hook!($name, $event, $priority, $desc, |$ctx| {
+			$($setup)*
+			let owned = $ctx.to_owned();
+			$crate::hooks::HookAction::Async(::std::boxed::Box::pin(async move {
+				$crate::__async_hook_extract!($event, owned, $($param : $ty),*);
+				let result = { $body };
+				::core::convert::Into::into(result)
+			}))
+		});
+	};
+	($name:ident, $event:ident, $priority:expr, $desc:expr, async |$($param:ident : $ty:ty),*| $body:expr) => {
+		$crate::hook!($name, $event, $priority, $desc, |ctx| {
+			let owned = ctx.to_owned();
+			$crate::hooks::HookAction::Async(::std::boxed::Box::pin(async move {
+				$crate::__async_hook_extract!($event, owned, $($param : $ty),*);
+				let result = { $body };
+				::core::convert::Into::into(result)
+			}))
+		});
 	};
 }
 
@@ -331,6 +597,74 @@ macro_rules! text_object {
 				required_caps: $crate::__opt_slice!($({$caps})?),
 				flags: $crate::__opt!($({$flags})?, $crate::flags::NONE),
 			};
+		}
+	};
+}
+
+/// Registers a symmetric text object where inner == around.
+#[macro_export]
+macro_rules! symmetric_text_object {
+	($name:ident, {
+		trigger: $trigger:expr,
+		$(alt_triggers: $alt_triggers:expr,)?
+		$(aliases: $aliases:expr,)?
+		description: $desc:expr
+		$(, priority: $priority:expr)?
+		$(, caps: $caps:expr)?
+		$(, flags: $flags:expr)?
+		$(, source: $source:expr)?
+		$(,)?
+	}, $handler:expr) => {
+		$crate::text_object!($name, {
+			trigger: $trigger,
+			$(alt_triggers: $alt_triggers,)?
+			$(aliases: $aliases,)?
+			description: $desc
+			$(, priority: $priority)?
+			$(, caps: $caps)?
+			$(, flags: $flags)?
+			$(, source: $source)?
+		}, {
+			inner: $handler,
+			around: $handler,
+		});
+	};
+}
+
+/// Registers a bracket-pair text object with surround selection.
+#[macro_export]
+#[allow(clippy::crate_in_macro_def)]
+macro_rules! bracket_pair_object {
+	($name:ident, $open:expr, $close:expr, $trigger:expr, $alt_triggers:expr) => {
+		paste::paste! {
+			fn [<$name _inner>](text: ropey::RopeSlice, pos: usize) -> Option<$crate::Range> {
+				crate::movement::select_surround_object(
+					text,
+					$crate::Range::point(pos),
+					$open,
+					$close,
+					true,
+				)
+			}
+
+			fn [<$name _around>](text: ropey::RopeSlice, pos: usize) -> Option<$crate::Range> {
+				crate::movement::select_surround_object(
+					text,
+					$crate::Range::point(pos),
+					$open,
+					$close,
+					false,
+				)
+			}
+
+			$crate::text_object!($name, {
+				trigger: $trigger,
+				alt_triggers: $alt_triggers,
+				description: concat!("Select ", stringify!($name), " block"),
+			}, {
+				inner: [<$name _inner>],
+				around: [<$name _around>],
+			});
 		}
 	};
 }

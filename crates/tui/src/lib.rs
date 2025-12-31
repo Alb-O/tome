@@ -23,7 +23,6 @@ pub mod buffer;
 pub mod init;
 pub mod layout;
 pub mod macros;
-pub mod prelude;
 pub mod style;
 pub mod symbols;
 pub mod terminal;

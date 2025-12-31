@@ -293,7 +293,7 @@ mod tests {
 			end: 5,
 			replacement: Some(" beautiful".into()),
 		}];
-		let tx = Transaction::change(doc.slice(..), changes.into_iter());
+		let tx = Transaction::change(doc.slice(..), changes);
 
 		let edits = generate_edits(doc.slice(..), tx.changes());
 		assert_eq!(edits.len(), 1);
@@ -311,7 +311,7 @@ mod tests {
 			end: 11,
 			replacement: None,
 		}];
-		let tx = Transaction::change(doc.slice(..), changes.into_iter());
+		let tx = Transaction::change(doc.slice(..), changes);
 
 		let edits = generate_edits(doc.slice(..), tx.changes());
 		assert_eq!(edits.len(), 1);
@@ -329,7 +329,7 @@ mod tests {
 			end: 11,
 			replacement: Some("rust".into()),
 		}];
-		let tx = Transaction::change(doc.slice(..), changes.into_iter());
+		let tx = Transaction::change(doc.slice(..), changes);
 
 		let edits = generate_edits(doc.slice(..), tx.changes());
 		assert_eq!(edits.len(), 1);

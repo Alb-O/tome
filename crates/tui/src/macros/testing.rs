@@ -165,7 +165,7 @@ macro_rules! enum_from_str_tests {
 /// ```ignore
 /// layout_constraint_tests! {
 ///     test_name: percentage_legacy,
-///     flex: Flex::Legacy,
+///     flex: Flex::Start,
 ///     width: 10,
 ///     cases: [
 ///         ([Percentage(0), Percentage(0)], "bbbbbbbbbb"),
@@ -213,8 +213,8 @@ macro_rules! layout_constraint_tests {
 ///
 /// ```ignore
 /// layout_cases!(letters, [
-///     (Flex::Legacy, 10, [Percentage(0), Percentage(0)], "bbbbbbbbbb"),
-///     (Flex::Legacy, 10, [Percentage(0), Percentage(25)], "bbbbbbbbbb"),
+///     (Flex::Start, 10, [Percentage(0), Percentage(0)], "bbbbbbbbbb"),
+///     (Flex::Start, 10, [Percentage(0), Percentage(25)], "bbbbbbbbbb"),
 ///     (Flex::Start, 10, [Percentage(0), Percentage(0)], "          "),
 /// ]);
 /// ```
@@ -236,7 +236,7 @@ macro_rules! layout_cases {
 /// # Examples
 ///
 /// ```ignore
-/// layout_range_test!(constraint_length, Flex::Legacy, 100, [
+/// layout_range_test!(constraint_length, Flex::Start, 100, [
 ///     ([Length(25), Min(100)], [0..0, 0..100]),
 ///     ([Length(25), Min(0)], [0..25, 25..100]),
 /// ]);
@@ -321,9 +321,9 @@ macro_rules! layout_pos_width_tests {
 ///
 /// ```ignore
 /// test_cases!(render_truncates_emoji, render_truncates, [
-///     (Alignment::Left, 4, "1234"),
-///     (Alignment::Left, 5, "1234 "),
-///     (Alignment::Right, 4, "7890"),
+///     (HorizontalAlignment::Left, 4, "1234"),
+///     (HorizontalAlignment::Left, 5, "1234 "),
+///     (HorizontalAlignment::Right, 4, "7890"),
 /// ]);
 /// ```
 #[macro_export]

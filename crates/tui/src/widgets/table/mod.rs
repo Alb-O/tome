@@ -218,13 +218,6 @@ impl<'a> Table<'a> {
 		self
 	}
 
-	/// Deprecated: use [`Self::row_highlight_style`] instead.
-	#[must_use = "method moves the value of self and returns the modified value"]
-	#[deprecated(note = "use `row_highlight_style()` instead")]
-	pub fn highlight_style<S: Into<Style>>(self, highlight_style: S) -> Self {
-		self.row_highlight_style(highlight_style)
-	}
-
 	/// Style for selected row. Overrides row/cell styles, includes selection symbol.
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn row_highlight_style<S: Into<Style>>(mut self, highlight_style: S) -> Self {

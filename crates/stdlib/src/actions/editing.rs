@@ -1,8 +1,7 @@
 //! Editing actions (delete, yank, paste, undo, redo, etc.).
 
-use evildoer_manifest::actions::{ActionDef, ActionResult, EditAction, PendingAction, PendingKind};
-use evildoer_manifest::{ACTIONS, action};
-use linkme::distributed_slice;
+use evildoer_manifest::actions::{ActionResult, EditAction, PendingAction, PendingKind};
+use evildoer_manifest::action;
 
 action!(delete, { description: "Delete selection", bindings: r#"normal "d""# },
 	|_ctx| ActionResult::Edit(EditAction::Delete { yank: true }));
@@ -61,18 +60,8 @@ action!(open_below, { description: "Open line below", bindings: r#"normal "o""# 
 action!(open_above, { description: "Open line above", bindings: r#"normal "O""# },
 	|_ctx| ActionResult::Edit(EditAction::OpenAbove));
 
-#[distributed_slice(ACTIONS)]
-static ACTION_DELETE_BACK: ActionDef = ActionDef {
-	id: concat!(env!("CARGO_PKG_NAME"), "::", "delete_back"),
-	name: "delete_back",
-	aliases: &[],
-	description: "Delete character before cursor",
-	handler: |_ctx| ActionResult::Edit(EditAction::DeleteBack),
-	priority: 0,
-	source: evildoer_manifest::RegistrySource::Crate(env!("CARGO_PKG_NAME")),
-	required_caps: &[],
-	flags: evildoer_manifest::flags::NONE,
-};
+action!(delete_back, { description: "Delete character before cursor" },
+	|_ctx| ActionResult::Edit(EditAction::DeleteBack));
 
 action!(replace_char, {
 	description: "Replace selection with character",

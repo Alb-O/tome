@@ -12,7 +12,7 @@ use strum::{Display, EnumString};
 
 pub use self::padding::Padding;
 use crate::buffer::Buffer;
-use crate::layout::{Alignment, Rect};
+use crate::layout::{HorizontalAlignment, Rect};
 use crate::style::{Style, Styled};
 use crate::symbols::border;
 use crate::symbols::merge::MergeStrategy;
@@ -52,7 +52,7 @@ pub struct Block<'a> {
 	/// The style to be patched to all titles of the block
 	titles_style: Style,
 	/// The default alignment of the titles that don't have one
-	titles_alignment: Alignment,
+	titles_alignment: HorizontalAlignment,
 	/// The default position of the titles that don't have one
 	titles_position: TitlePosition,
 	/// Visible borders
@@ -86,7 +86,7 @@ impl<'a> Block<'a> {
 		Self {
 			titles: Vec::new(),
 			titles_style: Style::new(),
-			titles_alignment: Alignment::Left,
+			titles_alignment: HorizontalAlignment::Left,
 			titles_position: TitlePosition::Top,
 			borders: Borders::NONE,
 			border_style: Style::new(),
@@ -140,7 +140,7 @@ impl<'a> Block<'a> {
 
 	/// Default alignment for titles without explicit alignment.
 	#[must_use = "method moves the value of self and returns the modified value"]
-	pub const fn title_alignment(mut self, alignment: Alignment) -> Self {
+	pub const fn title_alignment(mut self, alignment: HorizontalAlignment) -> Self {
 		self.titles_alignment = alignment;
 		self
 	}
@@ -377,7 +377,7 @@ impl Block<'_> {
 	/// incorrectly. See
 	#[expect(clippy::similar_names)]
 	fn render_right_titles(&self, position: TitlePosition, area: Rect, buf: &mut Buffer) {
-		let titles = self.filtered_titles(position, Alignment::Right);
+		let titles = self.filtered_titles(position, HorizontalAlignment::Right);
 		let mut titles_area = self.titles_area(area, position);
 
 		// render titles in reverse order to align them to the right
@@ -409,7 +409,7 @@ impl Block<'_> {
 	fn render_center_titles(&self, position: TitlePosition, area: Rect, buf: &mut Buffer) {
 		let area = self.titles_area(area, position);
 		let titles = self
-			.filtered_titles(position, Alignment::Center)
+			.filtered_titles(position, HorizontalAlignment::Center)
 			.collect_vec();
 		// titles are rendered with a space after each title except the last one
 		let total_width = titles
@@ -480,7 +480,7 @@ impl Block<'_> {
 	/// Render titles aligned to the left of the block
 	#[expect(clippy::similar_names)]
 	fn render_left_titles(&self, position: TitlePosition, area: Rect, buf: &mut Buffer) {
-		let titles = self.filtered_titles(position, Alignment::Left);
+		let titles = self.filtered_titles(position, HorizontalAlignment::Left);
 		let mut titles_area = self.titles_area(area, position);
 		for title in titles {
 			if titles_area.is_empty() {
@@ -504,7 +504,7 @@ impl Block<'_> {
 	fn filtered_titles(
 		&self,
 		position: TitlePosition,
-		alignment: Alignment,
+		alignment: HorizontalAlignment,
 	) -> impl DoubleEndedIterator<Item = &Line<'_>> {
 		self.titles
 			.iter()

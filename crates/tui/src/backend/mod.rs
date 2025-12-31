@@ -212,24 +212,6 @@ pub trait Backend {
 	/// ```
 	fn set_cursor_position<P: Into<Position>>(&mut self, position: P) -> Result<(), Self::Error>;
 
-	/// Get the current cursor position on the terminal screen.
-	///
-	/// The returned tuple contains the x and y coordinates of the cursor. The origin
-	/// (0, 0) is at the top left corner of the screen.
-	#[deprecated = "use `get_cursor_position()` instead which returns `Result<Position>`"]
-	fn get_cursor(&mut self) -> Result<(u16, u16), Self::Error> {
-		let Position { x, y } = self.get_cursor_position()?;
-		Ok((x, y))
-	}
-
-	/// Set the cursor position on the terminal screen to the given x and y coordinates.
-	///
-	/// The origin (0, 0) is at the top left corner of the screen.
-	#[deprecated = "use `set_cursor_position((x, y))` instead which takes `impl Into<Position>`"]
-	fn set_cursor(&mut self, x: u16, y: u16) -> Result<(), Self::Error> {
-		self.set_cursor_position(Position { x, y })
-	}
-
 	/// Clears the whole terminal screen
 	///
 	/// # Example

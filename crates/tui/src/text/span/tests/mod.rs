@@ -1,11 +1,11 @@
 use alloc::string::String;
-use alloc::{format, vec};
+use alloc::vec;
 
 use rstest::fixture;
 
 use super::*;
 use crate::buffer::Cell;
-use crate::layout::Alignment;
+use crate::layout::HorizontalAlignment;
 use crate::style::Stylize;
 
 mod conversions;
@@ -106,21 +106,21 @@ fn stylize() {
 fn left_aligned() {
 	let span = Span::styled("Test Content", Style::new().green().italic());
 	let line = span.into_left_aligned_line();
-	assert_eq!(line.alignment, Some(Alignment::Left));
+	assert_eq!(line.alignment, Some(HorizontalAlignment::Left));
 }
 
 #[test]
 fn centered() {
 	let span = Span::styled("Test Content", Style::new().green().italic());
 	let line = span.into_centered_line();
-	assert_eq!(line.alignment, Some(Alignment::Center));
+	assert_eq!(line.alignment, Some(HorizontalAlignment::Center));
 }
 
 #[test]
 fn right_aligned() {
 	let span = Span::styled("Test Content", Style::new().green().italic());
 	let line = span.into_right_aligned_line();
-	assert_eq!(line.alignment, Some(Alignment::Right));
+	assert_eq!(line.alignment, Some(HorizontalAlignment::Right));
 }
 
 /// Regression test for  One line contains

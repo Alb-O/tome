@@ -26,9 +26,9 @@ fn title_top_bottom() {
 #[test]
 fn title_alignment() {
 	let tests = vec![
-		(Alignment::Left, "test    "),
-		(Alignment::Center, "  test  "),
-		(Alignment::Right, "    test"),
+		(HorizontalAlignment::Left, "test    "),
+		(HorizontalAlignment::Center, "  test  "),
+		(HorizontalAlignment::Right, "    test"),
 	];
 	for (alignment, expected) in tests {
 		let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));
@@ -43,9 +43,9 @@ fn title_alignment() {
 #[test]
 fn title_alignment_overrides_block_title_alignment() {
 	let tests = vec![
-		(Alignment::Right, Alignment::Left, "test    "),
-		(Alignment::Left, Alignment::Center, "  test  "),
-		(Alignment::Center, Alignment::Right, "    test"),
+		(HorizontalAlignment::Right, HorizontalAlignment::Left, "test    "),
+		(HorizontalAlignment::Left, HorizontalAlignment::Center, "  test  "),
+		(HorizontalAlignment::Center, HorizontalAlignment::Right, "    test"),
 	];
 	for (block_title_alignment, alignment, expected) in tests {
 		let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));
@@ -62,7 +62,7 @@ fn title_alignment_overrides_block_title_alignment() {
 fn render_right_aligned_empty_title() {
 	let mut buffer = Buffer::empty(Rect::new(0, 0, 15, 3));
 	Block::new()
-		.title_alignment(Alignment::Right)
+		.title_alignment(HorizontalAlignment::Right)
 		.title("")
 		.render(buffer.area, &mut buffer);
 	assert_eq!(buffer, Buffer::with_lines(["               "; 3]));

@@ -5,7 +5,7 @@ use super::*;
 #[test]
 fn test_render_paragraph_with_left_alignment() {
 	let text = "Hello, world!";
-	let truncated_paragraph = Paragraph::new(text).alignment(Alignment::Left);
+	let truncated_paragraph = Paragraph::new(text).alignment(HorizontalAlignment::Left);
 	let wrapped_paragraph = truncated_paragraph.clone().wrap(Wrap { trim: false });
 	let trimmed_paragraph = truncated_paragraph.clone().wrap(Wrap { trim: true });
 
@@ -28,7 +28,7 @@ fn test_render_paragraph_with_left_alignment() {
 #[test]
 fn test_render_paragraph_with_center_alignment() {
 	let text = "Hello, world!";
-	let truncated_paragraph = Paragraph::new(text).alignment(Alignment::Center);
+	let truncated_paragraph = Paragraph::new(text).alignment(HorizontalAlignment::Center);
 	let wrapped_paragraph = truncated_paragraph.clone().wrap(Wrap { trim: false });
 	let trimmed_paragraph = truncated_paragraph.clone().wrap(Wrap { trim: true });
 
@@ -53,7 +53,7 @@ fn test_render_paragraph_with_center_alignment() {
 #[test]
 fn test_render_paragraph_with_right_alignment() {
 	let text = "Hello, world!";
-	let truncated_paragraph = Paragraph::new(text).alignment(Alignment::Right);
+	let truncated_paragraph = Paragraph::new(text).alignment(HorizontalAlignment::Right);
 	let wrapped_paragraph = truncated_paragraph.clone().wrap(Wrap { trim: false });
 	let trimmed_paragraph = truncated_paragraph.clone().wrap(Wrap { trim: true });
 
