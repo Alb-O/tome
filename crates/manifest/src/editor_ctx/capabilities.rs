@@ -21,7 +21,10 @@
 //! - [`EditAccess`] - Text modification (delete, yank, paste)
 //! - [`SearchAccess`] - Pattern search and navigation
 //! - [`UndoAccess`] - Undo/redo history
-//! - [`BufferOpsAccess`] - Buffer/split management
+//! - [`SplitOps`] - Split management
+//! - [`PanelOps`] - Panel management
+//! - [`FocusOps`] - Focus and buffer navigation
+//! - [`BufferOpsAccess`] - Backward-compatible buffer ops supertrait
 //! - [`FileOpsAccess`] - Save/load operations
 //!
 //! # Not Yet Wired
@@ -224,7 +227,7 @@ pub trait ThemeAccess {
 	fn set_theme(&mut self, name: &str) -> Result<(), crate::CommandError>;
 }
 
-/// Buffer and split management operations.
+/// Split management operations.
 ///
 /// # Split Naming Convention
 ///
@@ -238,27 +241,40 @@ pub trait ThemeAccess {
 /// - Edits sync across all views of the same document
 /// - Undo history is shared
 /// - Each view has independent cursor, selection, and scroll position
-pub trait BufferOpsAccess {
+pub trait SplitOps {
 	/// Split horizontally (new buffer below). Matches Vim `:split` / Helix `hsplit`.
 	fn split_horizontal(&mut self);
 
 	/// Split vertically (new buffer to right). Matches Vim `:vsplit` / Helix `vsplit`.
 	fn split_vertical(&mut self);
 
+	/// Close the current split.
+	fn close_split(&mut self);
+
+	/// Close all other buffers.
+	fn close_other_buffers(&mut self);
+}
+
+/// Panel management operations.
+pub trait PanelOps {
 	/// Toggle terminal split (open if closed, close if open).
 	fn toggle_terminal(&mut self);
 	/// Toggle the debug panel (open if closed, close if open).
 	fn toggle_debug_panel(&mut self);
 	/// Toggle a panel by name (open if closed, close if open).
 	fn toggle_panel(&mut self, name: &str);
+	/// Open a panel by name (no-op if already open).
+	fn open_panel(&mut self, name: &str);
+	/// Close a panel by name (no-op if not open).
+	fn close_panel(&mut self, name: &str);
+}
+
+/// Focus and buffer navigation operations.
+pub trait FocusOps {
 	/// Switch to the next buffer.
 	fn buffer_next(&mut self);
 	/// Switch to the previous buffer.
 	fn buffer_prev(&mut self);
-	/// Close the current split.
-	fn close_split(&mut self);
-	/// Close all other buffers.
-	fn close_other_buffers(&mut self);
 	/// Focus the split to the left.
 	fn focus_left(&mut self);
 	/// Focus the split to the right.
@@ -268,6 +284,9 @@ pub trait BufferOpsAccess {
 	/// Focus the split below.
 	fn focus_down(&mut self);
 }
+
+/// Supertrait for backward-compatible buffer operations.
+pub trait BufferOpsAccess: SplitOps + PanelOps + FocusOps {}
 
 /// Convenience trait combining common capabilities for command handlers.
 pub trait EditorOps: MessageAccess + FileOpsAccess + ThemeAccess {}

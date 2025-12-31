@@ -5,12 +5,24 @@
 use evildoer_base::Selection;
 use evildoer_base::range::CharIdx;
 use evildoer_manifest::editor_ctx::{
-	BufferOpsAccess, CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, MessageAccess,
-	ModeAccess, SearchAccess, SelectionAccess, ThemeAccess, UndoAccess,
+	BufferOpsAccess, CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, FocusOps,
+	MessageAccess, ModeAccess, PanelOps, SearchAccess, SelectionAccess, SplitOps, ThemeAccess,
+	UndoAccess,
 };
-use evildoer_manifest::{EditAction, Mode};
+use evildoer_manifest::{EditAction, Mode, panel_kind_index};
 
+use crate::buffer::BufferView;
 use crate::editor::Editor;
+
+fn panel_visible(editor: &Editor, name: &str) -> bool {
+	let Some(kind) = panel_kind_index(name) else {
+		return false;
+	};
+	let Some(panel_id) = editor.panels.find_by_kind(kind) else {
+		return false;
+	};
+	editor.layout.contains_view(BufferView::Panel(panel_id))
+}
 
 impl CursorAccess for Editor {
 	fn cursor(&self) -> CharIdx {
@@ -120,7 +132,7 @@ impl ThemeAccess for Editor {
 	}
 }
 
-impl BufferOpsAccess for Editor {
+impl SplitOps for Editor {
 	fn split_horizontal(&mut self) {
 		// Cannot split with buffer content when terminal is focused
 		if self.is_terminal_focused() {
@@ -143,26 +155,6 @@ impl BufferOpsAccess for Editor {
 		Editor::split_vertical(self, new_id);
 	}
 
-	fn toggle_terminal(&mut self) {
-		Editor::toggle_panel(self, "terminal");
-	}
-
-	fn toggle_debug_panel(&mut self) {
-		Editor::toggle_panel(self, "debug");
-	}
-
-	fn toggle_panel(&mut self, name: &str) {
-		Editor::toggle_panel(self, name);
-	}
-
-	fn buffer_next(&mut self) {
-		self.focus_next_buffer();
-	}
-
-	fn buffer_prev(&mut self) {
-		self.focus_prev_buffer();
-	}
-
 	fn close_split(&mut self) {
 		self.close_current_view();
 	}
@@ -180,6 +172,44 @@ impl BufferOpsAccess for Editor {
 		for id in ids {
 			Editor::close_buffer(self, id);
 		}
+	}
+}
+
+impl PanelOps for Editor {
+	fn toggle_terminal(&mut self) {
+		Editor::toggle_panel(self, "terminal");
+	}
+
+	fn toggle_debug_panel(&mut self) {
+		Editor::toggle_panel(self, "debug");
+	}
+
+	fn toggle_panel(&mut self, name: &str) {
+		Editor::toggle_panel(self, name);
+	}
+
+	fn open_panel(&mut self, name: &str) {
+		if panel_visible(self, name) {
+			return;
+		}
+		Editor::toggle_panel(self, name);
+	}
+
+	fn close_panel(&mut self, name: &str) {
+		if !panel_visible(self, name) {
+			return;
+		}
+		Editor::toggle_panel(self, name);
+	}
+}
+
+impl FocusOps for Editor {
+	fn buffer_next(&mut self) {
+		self.focus_next_buffer();
+	}
+
+	fn buffer_prev(&mut self) {
+		self.focus_prev_buffer();
 	}
 
 	fn focus_left(&mut self) {
@@ -201,6 +231,8 @@ impl BufferOpsAccess for Editor {
 	}
 }
 
+impl BufferOpsAccess for Editor {}
+
 impl EditorCapabilities for Editor {
 	fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		Some(self)
@@ -211,6 +243,18 @@ impl EditorCapabilities for Editor {
 	}
 
 	fn edit(&mut self) -> Option<&mut dyn EditAccess> {
+		Some(self)
+	}
+
+	fn split_ops(&mut self) -> Option<&mut dyn SplitOps> {
+		Some(self)
+	}
+
+	fn panel_ops(&mut self) -> Option<&mut dyn PanelOps> {
+		Some(self)
+	}
+
+	fn focus_ops(&mut self) -> Option<&mut dyn FocusOps> {
 		Some(self)
 	}
 
