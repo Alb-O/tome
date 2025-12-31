@@ -16,18 +16,6 @@ if [ -z "$staged_files" ]; then
     exit 0
 fi
 
-# Run Rust check
-if command -v cargo &> /dev/null; then
-    echo "Running cargo check..."
-    if ! cargo check; then
-        echo "Cargo check failed. Please fix errors before committing."
-        exit 1
-    fi
-    echo "Cargo check passed."
-else
-    echo "Warning: cargo not found, skipping check."
-fi
-
 # Run consolidated lint scan
 if command -v lint &> /dev/null; then
     echo "Running lint scan..."

@@ -48,6 +48,41 @@ run_custom_rules() {
     rule_type=$(yq '.type // ""' "$rule_file")
     
     case "$rule_type" in
+      command)
+        run_cmd=$(yq '.run // ""' "$rule_file")
+        [[ -z "$run_cmd" ]] && continue
+        
+        # Special handling for clippy with JSON output
+        if [[ "$rule_id" == "clippy" ]]; then
+          pushd "$PROJECT_ROOT" >/dev/null
+          # Run clippy and parse its JSON output
+          # Schema: { reason, message: { level, message, code, spans, children, rendered } }
+          eval "$run_cmd" 2>&1 | while IFS= read -r line; do
+            # Only process compiler-message lines with actual diagnostics (not notes)
+            if echo "$line" | jq -e '.reason == "compiler-message" and .message.level != "note"' >/dev/null 2>&1; then
+              echo "$line" | jq -c '
+                .message as $msg |
+                ($msg.spans // [])[] |
+                select(.is_primary == true) |
+                {
+                  ruleId: ($msg.code.code // "clippy"),
+                  severity: $msg.level,
+                  message: $msg.message,
+                  note: "",
+                  file: .file_name,
+                  range: {
+                    start: { line: (.line_start - 1), column: (.column_start - 1) },
+                    end: { line: (.line_end - 1), column: (.column_end - 1) }
+                  },
+                  text: ((.text // [{}])[0].text // "")
+                }
+              ' 2>/dev/null || true
+            fi
+          done
+          popd >/dev/null
+        fi
+        ;;
+        
       file-metric)
         check=$(yq '.check // ""' "$rule_file")
         max=$(yq '.max // 0' "$rule_file")
@@ -115,7 +150,7 @@ if [[ "$output_json" == true ]]; then
   cat "$results_file"
 else
   if [[ ! -s "$results_file" ]]; then
-    echo "No lint issues found."
+    echo "ok"
   else
     jq -s -r '
       # Deduplicate by file+line+column+ruleId before grouping

@@ -1,0 +1,21 @@
+id: pub-fn-needs-doc
+language: rust
+severity: info
+message: "Public function lacks documentation."
+note: "Public API functions should have /// doc comments explaining purpose, parameters, and return values."
+files:
+  - "**/src/lib.rs"
+  - "**/src/**/mod.rs"
+ignores:
+  - "**/target/**"
+rule:
+  all:
+    - kind: function_item
+      has:
+        kind: visibility_modifier
+        stopBy: end
+    - not:
+        follows:
+          kind: line_comment
+          regex: ^///
+          stopBy: neighbor

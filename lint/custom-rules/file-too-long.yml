@@ -6,6 +6,7 @@ severity: warning
 message: "File exceeds 450 lines. Consider refactoring into smaller modules."
 note: "Large files are harder to navigate and maintain. Extract related functionality into separate modules."
 files:
-  - "crates/**/*.rs"
+  - "**/*.rs"
 ignores:
-  - "vendor/**"
+  - "**/target/**"
+  - "**/benches/**"

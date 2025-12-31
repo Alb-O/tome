@@ -4,12 +4,11 @@ severity: info
 message: "Short single-line comments may not be necessary. Code should be self-explanatory."
 note: "Consider moving important context to function docstrings with examples, or removing if truly trivial."
 files:
-  - "crates/**/*.rs"
+  - "**/*.rs"
 ignores:
-  - "crates/term/tests/**/*.rs"
-  - "crates/term/src/tests.rs"
-  - "crates/**/benches/**/*.rs"
-  - "vendor/**/*.rs"
+  - "**/target/**"
+  - "**/tests/**/*.rs"
+  - "**/benches/**/*.rs"
 rule:
   all:
     - kind: line_comment
@@ -19,8 +18,3 @@ rule:
           - regex: ^//[/!]
           - regex: ^//\s*(?i)(TODO|FIXME|BUG|SAFETY|NOTE|CHECK|XXX|HACK|DEBUG|INTERNAL|TEST|STUB|WAIT|FALLTHROUGH|REFACTOR|OPTIMIZE|DOCS|FIX|PERF|WARN|WARNING|INFO|LINT|ANCHOR)
           - regex: ^//\s*(\.\.\.|$)
-          # Skip comments that are part of a multi-line comment block
-          - precedes:
-              kind: line_comment
-          - follows:
-              kind: line_comment

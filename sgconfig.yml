@@ -1,2 +1,2 @@
 ruleDirs:
-  - lint/rules
+  - lint/ast-rules

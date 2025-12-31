@@ -1,0 +1,5 @@
+id: clippy
+type: command
+run: cargo clippy --all-targets --all-features --fix --allow-dirty --allow-staged --message-format=json
+severity: warning
+message: "Clippy warning"
