@@ -97,11 +97,16 @@ impl std::fmt::Display for Capability {
 pub struct ActionId(pub u32);
 
 impl ActionId {
+	/// Represents an invalid action ID.
 	pub const INVALID: ActionId = ActionId(u32::MAX);
+
+	/// Returns true if this action ID is valid.
 	#[inline]
 	pub fn is_valid(self) -> bool {
 		self != Self::INVALID
 	}
+
+	/// Returns the underlying u32 value.
 	#[inline]
 	pub fn as_u32(self) -> u32 {
 		self.0

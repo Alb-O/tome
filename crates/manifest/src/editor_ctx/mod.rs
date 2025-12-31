@@ -76,88 +76,108 @@ impl<'a> MessageAccess for EditorContext<'a> {
 }
 
 impl<'a> EditorContext<'a> {
+	/// Creates a new editor context wrapping the given capabilities.
 	pub fn new(inner: &'a mut dyn EditorCapabilities) -> Self {
 		Self { inner }
 	}
 
+	/// Returns the current cursor position as a character index.
 	pub fn cursor(&self) -> CharIdx {
 		self.inner.cursor()
 	}
 
+	/// Returns the cursor position as (line, column), if available.
 	pub fn cursor_line_col(&self) -> Option<(usize, usize)> {
 		self.inner.cursor_line_col()
 	}
 
+	/// Sets the cursor position to the given character index.
 	pub fn set_cursor(&mut self, pos: CharIdx) {
 		self.inner.set_cursor(pos);
 	}
 
+	/// Returns a reference to the current selection.
 	pub fn selection(&self) -> &Selection {
 		self.inner.selection()
 	}
 
+	/// Sets the current selection.
 	pub fn set_selection(&mut self, sel: Selection) {
 		self.inner.set_selection(sel);
 	}
 
+	/// Sets the editor mode (Normal, Insert, etc.).
 	pub fn set_mode(&mut self, mode: Mode) {
 		self.inner.set_mode(mode);
 	}
 
+	/// Returns search access if the capability is available.
 	pub fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		self.inner.search()
 	}
 
+	/// Returns search access or an error if not available.
 	pub fn require_search(&mut self) -> Result<&mut dyn SearchAccess, CommandError> {
 		self.inner
 			.search()
 			.ok_or(CommandError::MissingCapability(Capability::Search))
 	}
 
+	/// Returns undo access if the capability is available.
 	pub fn undo(&mut self) -> Option<&mut dyn UndoAccess> {
 		self.inner.undo()
 	}
 
+	/// Returns undo access or an error if not available.
 	pub fn require_undo(&mut self) -> Result<&mut dyn UndoAccess, CommandError> {
 		self.inner
 			.undo()
 			.ok_or(CommandError::MissingCapability(Capability::Undo))
 	}
 
+	/// Returns edit access if the capability is available.
 	pub fn edit(&mut self) -> Option<&mut dyn EditAccess> {
 		self.inner.edit()
 	}
 
+	/// Returns edit access or an error if not available.
 	pub fn require_edit(&mut self) -> Result<&mut dyn EditAccess, CommandError> {
 		self.inner
 			.edit()
 			.ok_or(CommandError::MissingCapability(Capability::Edit))
 	}
 
+	/// Returns split operations if the capability is available.
 	pub fn split_ops(&mut self) -> Option<&mut dyn SplitOps> {
 		self.inner.split_ops()
 	}
 
+	/// Returns panel operations if the capability is available.
 	pub fn panel_ops(&mut self) -> Option<&mut dyn PanelOps> {
 		self.inner.panel_ops()
 	}
 
+	/// Returns focus operations if the capability is available.
 	pub fn focus_ops(&mut self) -> Option<&mut dyn FocusOps> {
 		self.inner.focus_ops()
 	}
 
+	/// Returns jump list access if the capability is available.
 	pub fn jump_ops(&mut self) -> Option<&mut dyn JumpAccess> {
 		self.inner.jump_ops()
 	}
 
+	/// Returns macro operations if the capability is available.
 	pub fn macro_ops(&mut self) -> Option<&mut dyn MacroAccess> {
 		self.inner.macro_ops()
 	}
 
+	/// Returns command queue access if the capability is available.
 	pub fn command_queue(&mut self) -> Option<&mut dyn CommandQueueAccess> {
 		self.inner.command_queue()
 	}
 
+	/// Checks if a specific capability is available.
 	pub fn check_capability(&mut self, cap: Capability) -> bool {
 		use Capability::*;
 		match cap {
@@ -169,6 +189,7 @@ impl<'a> EditorContext<'a> {
 		}
 	}
 
+	/// Checks if all specified capabilities are available.
 	pub fn check_all_capabilities(&mut self, caps: &[Capability]) -> Result<(), CommandError> {
 		for &cap in caps {
 			if !self.check_capability(cap) {

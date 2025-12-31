@@ -56,6 +56,7 @@ impl Default for DebugPanel {
 }
 
 impl DebugPanel {
+	/// Creates a new debug panel with default settings.
 	pub fn new() -> Self {
 		Self {
 			size: SplitSize::new(80, 24),
@@ -67,6 +68,7 @@ impl DebugPanel {
 		}
 	}
 
+	/// Returns a unique ID for a new debug panel instance.
 	pub fn next_id() -> u64 {
 		NEXT_DEBUG_PANEL_ID.fetch_add(1, Ordering::Relaxed)
 	}

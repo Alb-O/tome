@@ -49,6 +49,7 @@ pub(crate) fn make_range_select(range: Range, new_head: CharIdx, extend: bool) -
 	}
 }
 
+/// Moves the cursor horizontally by the given number of graphemes.
 pub fn move_horizontally(
 	text: RopeSlice,
 	range: Range,
@@ -77,6 +78,7 @@ pub fn move_horizontally(
 	make_range(range, new_pos, extend)
 }
 
+/// Moves the cursor vertically by the given number of lines.
 pub fn move_vertically(
 	text: RopeSlice,
 	range: Range,
@@ -108,12 +110,14 @@ pub fn move_vertically(
 	make_range(range, new_pos, extend)
 }
 
+/// Moves the cursor to the start of the current line.
 pub fn move_to_line_start(text: RopeSlice, range: Range, extend: bool) -> Range {
 	let line = text.char_to_line(range.head);
 	let line_start: CharIdx = text.line_to_char(line);
 	make_range(range, line_start, extend)
 }
 
+/// Moves the cursor to the end of the current line.
 pub fn move_to_line_end(text: RopeSlice, range: Range, extend: bool) -> Range {
 	let line = text.char_to_line(range.head);
 	let line_start = text.line_to_char(line);
@@ -129,6 +133,7 @@ pub fn move_to_line_end(text: RopeSlice, range: Range, extend: bool) -> Range {
 	make_range(range, line_end, extend)
 }
 
+/// Moves the cursor to the first non-whitespace character on the current line.
 pub fn move_to_first_nonwhitespace(text: RopeSlice, range: Range, extend: bool) -> Range {
 	let line = text.char_to_line(range.head);
 	let line_start = text.line_to_char(line);

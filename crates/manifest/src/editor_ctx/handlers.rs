@@ -13,8 +13,8 @@
 //! [`ActionResult`]: crate::ActionResult
 //! [`dispatch_result`]: crate::dispatch_result
 
-use crate::Capability;
 use crate::actions::ActionResult;
+use crate::Capability;
 
 /// Outcome of handling an action result.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

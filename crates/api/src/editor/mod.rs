@@ -167,6 +167,7 @@ pub struct Editor {
 impl evildoer_manifest::EditorOps for Editor {}
 
 impl Editor {
+	/// Creates a new editor by loading content from the given file path.
 	pub async fn new(path: PathBuf) -> anyhow::Result<Self> {
 		let content = match tokio::fs::read_to_string(&path).await {
 			Ok(s) => s,
@@ -177,10 +178,12 @@ impl Editor {
 		Ok(Self::from_content(content, Some(path)))
 	}
 
+	/// Creates a new scratch editor with no file association.
 	pub fn new_scratch() -> Self {
 		Self::from_content(String::new(), None)
 	}
 
+	/// Creates an editor from the given content and optional file path.
 	pub fn from_content(content: String, path: Option<PathBuf>) -> Self {
 		// Initialize language loader from embedded languages.kdl
 		let language_loader = LanguageLoader::from_embedded();

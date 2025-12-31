@@ -34,8 +34,8 @@ use evildoer_base::range::CharIdx;
 use evildoer_base::selection::Selection;
 use ropey::RopeSlice;
 
-use crate::Mode;
 use crate::actions::EditAction;
+use crate::Mode;
 
 /// Cursor position access (required).
 ///
