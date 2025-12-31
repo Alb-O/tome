@@ -19,19 +19,17 @@ impl Editor {
 
 		// Extract data before creating the context to avoid lifetime issues
 		let (path_str, file_type_str, modified, mode_name, line, col, count, total_lines) =
-			if self.is_terminal_focused() {
+			if let Some(panel) = self.focused_panel_def() {
 				(
 					None,
-					Some("terminal".to_string()),
+					Some(panel.name.to_string()),
 					false,
-					"TERMINAL",
+					self.mode_name(),
 					0,
 					0,
 					0,
 					0,
 				)
-			} else if self.is_debug_focused() {
-				(None, Some("debug".to_string()), false, "DEBUG", 0, 0, 0, 0)
 			} else {
 				let buffer = self.buffer();
 				let path_str = buffer

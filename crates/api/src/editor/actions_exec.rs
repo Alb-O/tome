@@ -83,9 +83,12 @@ impl Editor {
 		);
 		let _guard = span.enter();
 
-		// When terminal is focused, use a dummy context for workspace-level actions
+		// When a panel captures input, use a dummy context for workspace-level actions
 		// (window mode actions like split_horizontal, buffer_next, etc. don't use the context)
-		let result = if self.is_terminal_focused() {
+		let result = if self
+			.focused_panel_def()
+			.is_some_and(|panel| panel.captures_input)
+		{
 			let dummy_rope = Rope::new();
 			let dummy_selection = Selection::point(0);
 			let ctx = ActionContext {
@@ -174,8 +177,11 @@ impl Editor {
 		);
 		let _guard = span.enter();
 
-		// When terminal is focused, use a dummy context for workspace-level actions
-		let result = if self.is_terminal_focused() {
+		// When a panel captures input, use a dummy context for workspace-level actions
+		let result = if self
+			.focused_panel_def()
+			.is_some_and(|panel| panel.captures_input)
+		{
 			let dummy_rope = Rope::new();
 			let dummy_selection = Selection::point(0);
 			let ctx = ActionContext {

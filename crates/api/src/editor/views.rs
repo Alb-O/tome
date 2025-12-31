@@ -3,7 +3,7 @@
 //! Provides convenient methods for accessing the focused view and navigating
 //! between buffers and panels. These delegate to [`BufferManager`] and [`PanelRegistry`].
 
-use evildoer_manifest::PanelId;
+use evildoer_manifest::{PanelDef, PanelId, PANELS};
 
 use super::Editor;
 use crate::buffer::{Buffer, BufferId, BufferView};
@@ -40,18 +40,16 @@ impl Editor {
 		matches!(self.focused_view(), BufferView::Panel(_))
 	}
 
-	/// Returns true if the focused view is a terminal panel.
+	/// Returns true if the focused view captures panel input.
 	pub fn is_terminal_focused(&self) -> bool {
-		self.focused_panel_id()
-			.and_then(|id| self.panels.get(id))
-			.is_some_and(|p| p.id() == "terminal")
+		self.focused_panel_def()
+			.is_some_and(|panel| panel.captures_input)
 	}
 
-	/// Returns true if the focused view is a debug panel.
+	/// Returns true if the focused view is a non-capturing panel.
 	pub fn is_debug_focused(&self) -> bool {
-		self.focused_panel_id()
-			.and_then(|id| self.panels.get(id))
-			.is_some_and(|p| p.id() == "debug")
+		self.focused_panel_def()
+			.is_some_and(|panel| !panel.captures_input)
 	}
 
 	/// Returns the ID of the focused text buffer, if one is focused.
@@ -62,6 +60,12 @@ impl Editor {
 	/// Returns the ID of the focused panel, if one is focused.
 	pub fn focused_panel_id(&self) -> Option<PanelId> {
 		self.focused_view().as_panel()
+	}
+
+	/// Returns the panel definition for the focused panel, if any.
+	pub fn focused_panel_def(&self) -> Option<&'static PanelDef> {
+		let panel_id = self.focused_panel_id()?;
+		PANELS.get(panel_id.kind as usize)
 	}
 
 	/// Returns all text buffer IDs.

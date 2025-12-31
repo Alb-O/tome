@@ -34,6 +34,8 @@
 /// - `layer` (required): Layer index for docking (0 = base, higher overlays lower)
 /// - `singleton` (optional): Only one instance allowed (default: true)
 /// - `sticky` (optional): Resist losing focus on mouse hover (default: false)
+/// - `captures_input` (optional): Panel captures input (default: false)
+/// - `supports_window_mode` (optional): Panel supports window mode routing (default: false)
 /// - `priority` (optional): Priority within layer (default: 0)
 /// - `factory` (optional): Factory function `fn() -> Box<dyn Any + Send>`
 #[macro_export]
@@ -44,6 +46,8 @@ macro_rules! panel {
 		layer: $layer:expr
 		$(, singleton: $singleton:expr)?
 		$(, sticky: $sticky:expr)?
+		$(, captures_input: $captures_input:expr)?
+		$(, supports_window_mode: $supports_window_mode:expr)?
 		$(, priority: $priority:expr)?
 		, factory: $factory:expr
 		$(,)?
@@ -61,6 +65,8 @@ macro_rules! panel {
 				source: $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME")),
 				singleton: $crate::__opt!($({$singleton})?, true),
 				sticky: $crate::__opt!($({$sticky})?, false),
+				captures_input: $crate::__opt!($({$captures_input})?, false),
+				supports_window_mode: $crate::__opt!($({$supports_window_mode})?, false),
 			};
 
 			#[allow(non_upper_case_globals)]
@@ -79,6 +85,8 @@ macro_rules! panel {
 		layer: $layer:expr
 		$(, singleton: $singleton:expr)?
 		$(, sticky: $sticky:expr)?
+		$(, captures_input: $captures_input:expr)?
+		$(, supports_window_mode: $supports_window_mode:expr)?
 		$(, priority: $priority:expr)?
 		$(,)?
 	}) => {
@@ -95,6 +103,8 @@ macro_rules! panel {
 				source: $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME")),
 				singleton: $crate::__opt!($({$singleton})?, true),
 				sticky: $crate::__opt!($({$sticky})?, false),
+				captures_input: $crate::__opt!($({$captures_input})?, false),
+				supports_window_mode: $crate::__opt!($({$supports_window_mode})?, false),
 			};
 		}
 	};

@@ -75,6 +75,10 @@ pub struct PanelDef {
 	pub singleton: bool,
 	/// Whether this panel should be sticky (resist losing focus on mouse hover).
 	pub sticky: bool,
+	/// Whether this panel captures input instead of the editor.
+	pub captures_input: bool,
+	/// Whether this panel supports window-mode key routing.
+	pub supports_window_mode: bool,
 }
 
 crate::impl_registry_metadata!(PanelDef);

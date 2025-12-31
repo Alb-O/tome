@@ -16,6 +16,8 @@ panel!(terminal, {
 	mode_name: "TERMINAL",
 	layer: 1,
 	sticky: true,
+	captures_input: true,
+	supports_window_mode: true,
 	factory: || Box::new(TerminalBuffer::new()),
 });
 

@@ -127,20 +127,17 @@ impl Editor {
 	}
 
 	pub fn mode_name(&self) -> &'static str {
-		if self.is_terminal_focused() {
-			if let Some(first_buffer_id) = self.layout.first_buffer()
-				&& let Some(buffer) = self.buffers.get_buffer(first_buffer_id)
-				&& matches!(buffer.input.mode(), Mode::Window)
-			{
-				return buffer.input.mode_name();
+		if let Some(panel) = self.focused_panel_def() {
+			if panel.supports_window_mode {
+				if let Some(first_buffer_id) = self.layout.first_buffer()
+					&& let Some(buffer) = self.buffers.get_buffer(first_buffer_id)
+					&& matches!(buffer.input.mode(), Mode::Window)
+				{
+					return buffer.input.mode_name();
+				}
 			}
-			"TERMINAL"
-		} else if self.is_debug_focused() {
-			"DEBUG"
-		} else if self.is_panel_focused() {
-			"PANEL"
-		} else {
-			self.buffer().input.mode_name()
+			return panel.mode_name;
 		}
+		self.buffer().input.mode_name()
 	}
 }

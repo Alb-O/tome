@@ -81,10 +81,20 @@ impl Editor {
 
 		// If a panel is focused, route input to it
 		if let BufferView::Panel(panel_id) = self.focused_view() {
-			let is_terminal = self.is_terminal_focused();
+			let panel_def = self.focused_panel_def();
+			let captures_input = panel_def.is_some_and(|panel| panel.captures_input);
+			let supports_window_mode = panel_def.is_some_and(|panel| panel.supports_window_mode);
 
-			// Ctrl+w enters window mode - use first buffer's input handler (terminal panels only)
-			if is_terminal
+			if !captures_input {
+				if let Some(first_buffer) = self.layout.first_buffer() {
+					self.focus_buffer(first_buffer);
+					return self.handle_key_active(key).await;
+				}
+				return false;
+			}
+
+			// Ctrl+w enters window mode - use first buffer's input handler (window-mode panels only)
+			if supports_window_mode
 				&& key.code == KeyCode::Char('w')
 				&& key.modifiers.contains(termina::event::Modifiers::CONTROL)
 			{
@@ -106,8 +116,8 @@ impl Editor {
 				return false;
 			}
 
-			// Check if we're in window mode (using first buffer's input handler, terminal panels only)
-			if is_terminal && let Some(first_buffer_id) = self.layout.first_buffer() {
+			// Check if we're in window mode (using first buffer's input handler)
+			if supports_window_mode && let Some(first_buffer_id) = self.layout.first_buffer() {
 				let in_window_mode = self
 					.buffers
 					.get_buffer(first_buffer_id)
