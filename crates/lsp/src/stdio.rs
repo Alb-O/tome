@@ -43,7 +43,7 @@
 use std::io::{self, Error, IoSlice, Read, Result, StdinLock, StdoutLock, Write};
 use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, RawFd};
 
-use rustix::fs::{FileType, OFlags, fcntl_getfl, fcntl_setfl, fstat};
+use rustix::fs::{fcntl_getfl, fcntl_setfl, fstat, FileType, OFlags};
 
 #[derive(Debug)]
 struct NonBlocking<T: AsFd> {
@@ -156,7 +156,6 @@ impl AsRawFd for PipeStdout {
 	}
 }
 
-// NB. See `Read` impl.
 impl Write for &'_ PipeStdout {
 	fn write(&mut self, buf: &[u8]) -> Result<usize> {
 		rustix::io::write(self, buf).map_err(Into::into)
@@ -185,13 +184,11 @@ impl Write for PipeStdout {
 	}
 }
 
-// Tokio compatibility.
-// We can simplify these if we have https://github.com/tokio-rs/tokio/issues/5785
 #[cfg(feature = "tokio")]
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
 mod tokio_impl {
 	use std::pin::Pin;
-	use std::task::{Context, Poll, ready};
+	use std::task::{ready, Context, Poll};
 
 	use tokio::io::unix::AsyncFd;
 	use tokio::io::{Interest, ReadBuf};

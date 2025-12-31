@@ -446,7 +446,6 @@ impl ModifierDiff {
 	where
 		W: io::Write,
 	{
-		//use crossterm::Attribute;
 		let removed = self.from - self.to;
 		if removed.contains(Modifier::REVERSED) {
 			queue!(w, SetAttribute(CrosstermAttribute::NoReverse))?;

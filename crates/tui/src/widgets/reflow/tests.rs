@@ -108,7 +108,8 @@ fn line_composer_long_word() {
 fn line_composer_long_sentence() {
 	let width = 20;
 	let text = "abcd efghij klmnopabcd efgh ijklmnopabcdefg hijkl mnopab c d e f g h i j k l m n o";
-	let text_multi_space = "abcd efghij    klmnopabcd efgh     ijklmnopabcdefg hijkl mnopab c d e f g h i j k l \
+	let text_multi_space =
+		"abcd efghij    klmnopabcd efgh     ijklmnopabcdefg hijkl mnopab c d e f g h i j k l \
          m n o";
 	let (word_wrapper_single_space, _, _) =
 		run_composer(Composer::WordWrapper { trim: true }, text, width as u16);
@@ -236,10 +237,6 @@ fn line_composer_char_plus_lots_of_spaces() {
 	let text = "a                                                                     ";
 	let (word_wrapper, _, _) = run_composer(Composer::WordWrapper { trim: true }, text, width);
 	let (line_truncator, _, _) = run_composer(Composer::LineTruncator, text, width);
-	// What's happening below is: the first line gets consumed, trailing spaces discarded,
-	// after 20 of which a word break occurs (probably shouldn't). The second line break
-	// discards all whitespace. The result should probably be vec!["a"] but it doesn't matter
-	// that much.
 	assert_eq!(word_wrapper, ["a", ""]);
 	assert_eq!(line_truncator, ["a                   "]);
 }
@@ -247,12 +244,6 @@ fn line_composer_char_plus_lots_of_spaces() {
 #[test]
 fn line_composer_word_wrapper_double_width_chars_mixed_with_spaces() {
 	let width = 20;
-	// Japanese seems not to use spaces but we should break on spaces anyway... We're using it
-	// to test double-width chars.
-	// You are more than welcome to add word boundary detection based of alterations of
-	// hiragana and katakana...
-	// This happens to also be a test case for mixed width because regular spaces are single
-	// width.
 	let text =
 		"コンピュ ータ上で文字を扱う場合、 典型的には文 字による 通信を行 う場合にその両端点では、";
 	let (word_wrapper, word_wrapper_width, _) =

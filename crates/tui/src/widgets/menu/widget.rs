@@ -249,27 +249,22 @@ mod tests {
 		state.activate();
 		assert_eq!(state.path, vec![0]);
 
-		// Enter dropdown
 		state.down();
 		assert_eq!(state.path, vec![0, 0]);
 		assert_eq!(state.highlight().unwrap().name(), "New");
 
-		// Move to "Recent" submenu item
 		state.down();
 		assert_eq!(state.path, vec![0, 1]);
 		assert_eq!(state.highlight().unwrap().name(), "Recent");
 
-		// Enter submenu
 		state.right();
 		assert_eq!(state.path, vec![0, 1, 0]);
 		assert_eq!(state.highlight().unwrap().name(), "doc1.txt");
 
-		// Navigate within submenu
 		state.down();
 		assert_eq!(state.path, vec![0, 1, 1]);
 		assert_eq!(state.highlight().unwrap().name(), "doc2.txt");
 
-		// Exit submenu with left
 		state.left();
 		assert_eq!(state.path, vec![0, 1]);
 		assert_eq!(state.highlight().unwrap().name(), "Recent");

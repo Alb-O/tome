@@ -21,7 +21,6 @@ impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
 		&mut self,
 	) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), CommandError>> + '_>> {
 		Box::pin(async move {
-			// Cannot save a panel
 			if self.is_panel_focused() {
 				return Err(CommandError::InvalidArgument(
 					"Cannot save a panel".to_string(),
@@ -73,7 +72,6 @@ impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
 		&mut self,
 		path: PathBuf,
 	) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), CommandError>> + '_>> {
-		// Cannot save a panel
 		if self.is_panel_focused() {
 			return Box::pin(async {
 				Err(CommandError::InvalidArgument(

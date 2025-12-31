@@ -17,8 +17,8 @@ use crate::style::{Style, Styled};
 use crate::symbols::border;
 use crate::symbols::merge::MergeStrategy;
 use crate::text::Line;
-use crate::widgets::Widget;
 use crate::widgets::borders::{BorderType, Borders};
+use crate::widgets::Widget;
 
 mod padding;
 
@@ -401,7 +401,7 @@ impl Block<'_> {
 			titles_area.width = titles_area
 				.width
 				.saturating_sub(title_width)
-				.saturating_sub(1); // space between titles
+				.saturating_sub(1);
 		}
 	}
 

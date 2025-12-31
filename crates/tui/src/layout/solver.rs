@@ -127,7 +127,7 @@ pub(super) mod strengths {
 
 use strengths::{
 	FILL_GROW, GROW, LENGTH_SIZE_EQ, MAX_SIZE_EQ, MAX_SIZE_LE, MIN_SIZE_GE, PERCENTAGE_SIZE_EQ,
-	RATIO_SIZE_EQ, SPACE_GROW, SPACER_SIZE_EQ,
+	RATIO_SIZE_EQ, SPACER_SIZE_EQ, SPACE_GROW,
 };
 
 /// A container used by the solver inside split.
@@ -304,10 +304,6 @@ pub(super) fn configure_flex_constraints(
 	let spacers_except_first_and_last = spacers.get(1..spacers.len() - 1).unwrap_or(&[]);
 	let spacing_f64 = f64::from(spacing) * FLOAT_PRECISION_MULTIPLIER;
 	match flex {
-		// All spacers excluding first and last are the same size and will grow to fill
-		// any remaining space after the constraints are satisfied.
-		// All spacers excluding first and last are also twice the size of the first and last
-		// spacers
 		Flex::SpaceAround => {
 			if spacers.len() <= 2 {
 				// If there are two or less spacers, fallback to Flex::SpaceEvenly
@@ -342,8 +338,6 @@ pub(super) fn configure_flex_constraints(
 			}
 		}
 
-		// All spacers are the same size and will grow to fill any remaining space after the
-		// constraints are satisfied
 		Flex::SpaceEvenly => {
 			for (left, right) in spacers.iter().tuple_combinations() {
 				solver.add_constraint(left.has_size(right, SPACER_SIZE_EQ))?;

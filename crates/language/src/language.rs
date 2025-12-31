@@ -39,7 +39,10 @@ pub struct LanguageData {
 
 impl LanguageData {
 	/// Creates new language data.
-	#[allow(clippy::too_many_arguments)]
+	#[allow(
+		clippy::too_many_arguments,
+		reason = "builder pattern not feasible for language config construction"
+	)]
 	pub fn new(
 		name: String,
 		grammar_name: Option<String>,

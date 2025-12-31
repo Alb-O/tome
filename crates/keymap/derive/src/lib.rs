@@ -2,7 +2,7 @@
 //!
 //! The `KeyMap` derive macro automatically implements the `TryFrom<KeyMap>` trait for enums,
 //! allowing you to easily convert a `KeyMap` to an enum variant based on the specified key bindings.
-use item::{Item, parse_items};
+use item::{parse_items, Item};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DataEnum, DeriveInput, Fields, Ident};
@@ -85,7 +85,6 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
 			Fields::Named(_) => quote! { #name::#ident { .. } },
 		};
 
-		// keymap_item
 		match_arms.push(quote! {
 			#variant => ::evildoer_keymap::Item::new(
 				vec![#(#keys),*],
@@ -93,7 +92,6 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
 			),
 		});
 
-		// keymap_config
 		if !item.ignore {
 			entries.push(quote! {
 				(

@@ -166,14 +166,11 @@ impl AcpBackend {
 		};
 		self.session_id = Some(session_res.session_id.to_string());
 
-		// Extract and store model info from session response
 		if let Some(models) = session_res.models {
-			// Store available models
 			{
 				let mut available = self.state.available_models.lock();
 				*available = models.available_models.clone();
 			}
-			// Store current model
 			{
 				let mut current = self.state.current_model.lock();
 				*current = models.current_model_id.0.to_string();

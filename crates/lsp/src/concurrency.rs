@@ -49,7 +49,6 @@ where
 
 	fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
 		if Arc::weak_count(&self.semaphore) >= self.max_concurrency.get() {
-			// Implicit `Acquire`.
 			self.semaphore.register(cx.waker());
 			// No guards dropped between the check and register?
 			if Arc::weak_count(&self.semaphore) >= self.max_concurrency.get() {
@@ -70,9 +69,7 @@ where
 
 		let (handle, registration) = AbortHandle::new_pair();
 
-		// Regularly purge completed or dead tasks. See also `AbortOnDrop` below.
-		// This costs 2*N time to remove at least N tasks, results in amortized O(1) time cost
-		// for each spawned task.
+		// Purge completed tasks: costs 2*N time to remove N tasks (amortized O(1)).
 		if self.ongoing.len() >= self.max_concurrency.get() * 2 {
 			self.ongoing.retain(|_, handle| !handle.is_aborted());
 		}
@@ -95,9 +92,7 @@ impl Drop for SemaphoreGuard {
 		if let Some(sema) = self.0.upgrade()
 			&& let Some(waker) = sema.take()
 		{
-			// Return the token first.
 			drop(sema);
-			// Wake up `poll_ready`. Implicit "Release".
 			waker.wake();
 		}
 	}

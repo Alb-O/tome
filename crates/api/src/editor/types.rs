@@ -55,7 +55,6 @@ impl JumpList {
 		self.locations.truncate(self.index);
 		self.locations.push(location);
 
-		// Limit size
 		if self.locations.len() > Self::MAX_JUMPS {
 			self.locations.remove(0);
 		} else {

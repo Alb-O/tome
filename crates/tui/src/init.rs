@@ -129,13 +129,13 @@
 //! **Important**: Call the initialization functions *after* installing any other panic hooks to
 //! ensure the terminal is restored before other hooks run.
 
-use std::io::{self, Stdout, stdout};
+use std::io::{self, stdout, Stdout};
 
-use crate::backend::crossterm::CrosstermBackend;
 use crate::backend::crossterm::crossterm::execute;
 use crate::backend::crossterm::crossterm::terminal::{
-	EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+	disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
+use crate::backend::crossterm::CrosstermBackend;
 use crate::terminal::{Terminal, TerminalOptions};
 
 /// A type alias for the default terminal type.
@@ -485,8 +485,6 @@ pub fn restore() {
 /// # Ok::<(), std::io::Error>(())
 /// ```
 pub fn try_restore() -> io::Result<()> {
-	// disabling raw mode first is important as it has more side effects than leaving the alternate
-	// screen buffer
 	disable_raw_mode()?;
 	execute!(stdout(), LeaveAlternateScreen)?;
 	Ok(())

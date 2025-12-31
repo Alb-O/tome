@@ -311,7 +311,6 @@ impl SplitBuffer for DebugPanel {
 					}
 				}
 
-				// Show count if > 1
 				if let Some(count) = action_ctx.count
 					&& count > 1
 				{

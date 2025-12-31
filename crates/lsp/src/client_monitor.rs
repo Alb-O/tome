@@ -61,25 +61,20 @@ impl<S: LspService> Service<AnyRequest> for ClientProcessMonitor<S> {
 					let client = self.client.clone();
 					let spawn_ret = std::thread::Builder::new()
 						.name("client-process-monitor".into())
-						.spawn(move || {
-							match handle.wait() {
-								Ok(()) => {
-									// Ignore channel close.
-									let _: Result<_, _> = client.emit(ClientProcessExited);
-								}
-								Err(err) => {
-									error!(pid = pid, error = %err, "Failed to monitor peer process");
-								}
+						.spawn(move || match handle.wait() {
+							Ok(()) => {
+								let _: Result<_, _> = client.emit(ClientProcessExited);
+							}
+							Err(err) => {
+								error!(pid = pid, error = %err, "Failed to monitor peer process");
 							}
 						});
 					if let Err(err) = spawn_ret {
 						error!(error = %err, "Failed to spawn client process monitor thread");
 					}
 				}
-				// Already exited.
 				#[cfg(unix)]
 				Err(err) if err.raw_os_error() == Some(rustix::io::Errno::SRCH.raw_os_error()) => {
-					// Ignore channel close.
 					let _: Result<_, _> = self.client.emit(ClientProcessExited);
 				}
 				Err(err) => {

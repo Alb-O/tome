@@ -16,10 +16,10 @@ use unicode_width::UnicodeWidthStr;
 use crate::buffer::Buffer;
 use crate::layout::Rect;
 use crate::style::Style;
-use crate::symbols::scrollbar::{DOUBLE_HORIZONTAL, DOUBLE_VERTICAL, Set};
-use crate::widgets::StatefulWidget;
+use crate::symbols::scrollbar::{Set, DOUBLE_HORIZONTAL, DOUBLE_VERTICAL};
 #[cfg(not(feature = "std"))]
 use crate::widgets::polyfills::F64Polyfills;
+use crate::widgets::StatefulWidget;
 
 /// A widget to display a scrollbar
 ///
@@ -371,7 +371,7 @@ impl<'a> Scrollbar<'a> {
 	/// respective setters to change their value.
 	///
 	/// This is a fluent setter method which must be chained or used as it consumes self
-	#[expect(clippy::needless_pass_by_value)] // Breaking change
+	#[expect(clippy::needless_pass_by_value, reason = "breaking API change to fix")]
 	#[must_use = "method moves the value of self and returns the modified value"]
 	pub const fn symbols(mut self, symbols: Set<'a>) -> Self {
 		self.thumb_symbol = symbols.thumb;
@@ -537,15 +537,10 @@ impl Scrollbar<'_> {
 		let thumb = Some(Some((self.thumb_symbol, self.thumb_style)));
 		let end = self.end_symbol.map(|s| Some((s, self.end_style)));
 
-		// `<`
 		iter::once(begin)
-			// `<═══`
 			.chain(iter::repeat_n(track, track_start_len))
-			// `<═══█████`
 			.chain(iter::repeat_n(thumb, thumb_len))
-			// `<═══█████═══════`
 			.chain(iter::repeat_n(track, track_end_len))
-			// `<═══█████═══════>`
 			.chain(iter::once(end))
 			.flatten()
 	}

@@ -88,7 +88,6 @@ mod tests {
 		let counter = Arc::new(AtomicUsize::new(0));
 		let mut runtime = HookRuntime::new();
 
-		// Schedule some async work
 		let c1 = counter.clone();
 		runtime.schedule(Box::pin(async move {
 			c1.fetch_add(1, Ordering::SeqCst);

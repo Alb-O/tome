@@ -19,14 +19,12 @@ use crate::grammar::runtime_dir;
 pub fn ensure_runtime() -> io::Result<()> {
 	let runtime = runtime_dir();
 
-	// Seed query files
 	let queries_dir = runtime.join("queries");
 	if !queries_dir.exists() {
 		info!(path = %queries_dir.display(), "Seeding runtime queries");
 		seed_queries(&queries_dir)?;
 	}
 
-	// Seed theme files
 	let themes_dir = runtime.join("themes");
 	if !themes_dir.exists() {
 		info!(path = %themes_dir.display(), "Seeding runtime themes");
@@ -66,7 +64,6 @@ fn extract_dir(dir: &Dir<'_>, target: &Path) -> io::Result<()> {
 pub fn reseed_runtime() -> io::Result<()> {
 	let runtime = runtime_dir();
 
-	// Re-seed queries
 	let queries_dir = runtime.join("queries");
 	if queries_dir.exists() {
 		fs::remove_dir_all(&queries_dir)?;
@@ -74,7 +71,6 @@ pub fn reseed_runtime() -> io::Result<()> {
 	info!(path = %queries_dir.display(), "Re-seeding runtime queries");
 	seed_queries(&queries_dir)?;
 
-	// Re-seed themes
 	let themes_dir = runtime.join("themes");
 	if themes_dir.exists() {
 		fs::remove_dir_all(&themes_dir)?;

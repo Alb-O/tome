@@ -33,9 +33,9 @@ use evildoer_keymap_parser::parse_seq;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 
-use crate::KeyMap;
 use crate::keymap::ToKeyMap;
 use crate::matcher::Matcher;
+use crate::KeyMap;
 
 /// A trait for providing a default mapping between keys and items.
 ///
@@ -519,7 +519,6 @@ where
 						// Override the default Item if the key matches
 						config.items[pos].1 = item;
 					} else {
-						// Append a new entry
 						config.items.push((t, item));
 					}
 				}

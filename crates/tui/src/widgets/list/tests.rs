@@ -128,11 +128,11 @@ fn style_inheritance() {
 	let bold = Modifier::BOLD;
 	let italic = Modifier::ITALIC;
 	let items = [
-		ListItem::new(Text::raw("Item 1")),               // no style
-		ListItem::new(Text::styled("Item 2", bold)),      // affects only the text
-		ListItem::new(Text::raw("Item 3")).style(italic), // affects the entire line
-		ListItem::new(Text::styled("Item 4", bold)).style(italic), // bold text, italic line
-		ListItem::new(Text::styled("Item 5", bold)).style(italic), // same but highlighted
+		ListItem::new(Text::raw("Item 1")),
+		ListItem::new(Text::styled("Item 2", bold)),
+		ListItem::new(Text::raw("Item 3")).style(italic),
+		ListItem::new(Text::styled("Item 4", bold)).style(italic),
+		ListItem::new(Text::styled("Item 5", bold)).style(italic),
 	];
 	let mut state = ListState::default().with_selected(Some(4));
 	let list = List::new(items)

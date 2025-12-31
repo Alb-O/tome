@@ -533,8 +533,7 @@ where
 	///
 	/// Shortcut to [`MainLoop::run`] that accept an `impl AsyncRead` and implicit wrap it in a
 	/// [`BufReader`].
-	// Documented in `Self::run`.
-	#[allow(clippy::missing_errors_doc)]
+	#[allow(clippy::missing_errors_doc, reason = "errors documented in Self::run")]
 	pub async fn run_buffered(self, input: impl AsyncRead, output: impl AsyncWrite) -> Result<()> {
 		self.run(BufReader::new(input), output).await
 	}
@@ -594,10 +593,6 @@ where
 			flush_fut = outgoing.flush().fuse();
 		};
 
-		// Flush the last message. It is enqueued before the event returning `ControlFlow::Break`.
-		// To preserve the order at best effort, we send it before exiting the main loop.
-		// But the more significant `ControlFlow::Break` error will override the flushing error,
-		// if there is any.
 		let flush_ret = outgoing.close().await;
 		ret.and(flush_ret)
 	}

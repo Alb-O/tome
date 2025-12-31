@@ -1,4 +1,4 @@
-use evildoer_keymap_parser::{Node, parse_seq};
+use evildoer_keymap_parser::{parse_seq, Node};
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
 use syn::{Attribute, LitStr, Token, Variant};
@@ -12,7 +12,7 @@ pub(crate) struct Item<'a> {
 	pub keys: Vec<String>,
 	pub ignore: bool,
 
-	#[allow(dead_code)]
+	#[allow(dead_code, reason = "parsed for future use in keymap expansion")]
 	pub nodes: Vec<Vec<Node>>,
 	pub description: String,
 }
@@ -90,9 +90,6 @@ fn parse_keys(variant: &Variant, ignore: bool) -> syn::Result<Vec<String>> {
 			continue;
 		}
 
-		// Collect arguments
-		//
-		// e.g. [["a"], ["g g"]]
 		for arg in parse_args(attr)? {
 			let val = arg.value();
 			parse_seq(&val)
@@ -113,9 +110,6 @@ fn parse_nodes(variant: &Variant, ignore: bool) -> syn::Result<Vec<Vec<Node>>> {
 			continue;
 		}
 
-		// Collect arguments
-		//
-		// e.g. [["a"], ["g g"]]
 		for arg in parse_args(attr)? {
 			let val = arg.value();
 			let keys = parse_seq(&val)

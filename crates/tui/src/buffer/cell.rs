@@ -274,24 +274,24 @@ mod tests {
 	#[test]
 	fn set_symbol() {
 		let mut cell = Cell::EMPTY;
-		cell.set_symbol("あ"); // Multi-byte character
+		cell.set_symbol("あ");
 		assert_eq!(cell.symbol(), "あ");
-		cell.set_symbol("👨‍👩‍👧‍👦"); // Multiple code units combined with ZWJ
+		cell.set_symbol("👨‍👩‍👧‍👦");
 		assert_eq!(cell.symbol(), "👨‍👩‍👧‍👦");
 	}
 
 	#[test]
 	fn append_symbol() {
 		let mut cell = Cell::EMPTY;
-		cell.set_symbol("あ"); // Multi-byte character
-		cell.append_symbol("\u{200B}"); // zero-width space
+		cell.set_symbol("あ");
+		cell.append_symbol("\u{200B}");
 		assert_eq!(cell.symbol(), "あ\u{200B}");
 	}
 
 	#[test]
 	fn set_char() {
 		let mut cell = Cell::EMPTY;
-		cell.set_char('あ'); // Multi-byte character
+		cell.set_char('あ');
 		assert_eq!(cell.symbol(), "あ");
 	}
 

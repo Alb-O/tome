@@ -2,14 +2,14 @@
 //!
 //! [`EditorCapabilities`]: evildoer_manifest::editor_ctx::EditorCapabilities
 
-use evildoer_base::Selection;
 use evildoer_base::range::CharIdx;
+use evildoer_base::Selection;
 use evildoer_manifest::editor_ctx::{
 	CommandQueueAccess, CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, FocusOps,
 	JumpAccess, MacroAccess, MessageAccess, ModeAccess, PanelOps, SearchAccess, SelectionAccess,
 	SplitOps, ThemeAccess, UndoAccess,
 };
-use evildoer_manifest::{EditAction, Mode, panel_kind_index};
+use evildoer_manifest::{panel_kind_index, EditAction, Mode};
 
 use crate::buffer::BufferView;
 use crate::editor::Editor;
@@ -240,7 +240,6 @@ impl JumpAccess for Editor {
 			if self.focused_buffer_id() != Some(buffer_id) {
 				self.focus_buffer(buffer_id);
 			}
-			// Set cursor position
 			self.buffer_mut().cursor = cursor;
 			true
 		} else {
@@ -249,7 +248,6 @@ impl JumpAccess for Editor {
 	}
 
 	fn jump_backward(&mut self) -> bool {
-		// Save current position before jumping back (if at end of list)
 		if let Some(buffer_id) = self.focused_buffer_id() {
 			let cursor = self.buffer().cursor;
 			// Only save if we're at the end of the jump list
@@ -260,11 +258,9 @@ impl JumpAccess for Editor {
 		if let Some(loc) = self.jump_list.jump_backward() {
 			let buffer_id = loc.buffer_id;
 			let cursor = loc.cursor;
-			// Focus the buffer if different
 			if self.focused_buffer_id() != Some(buffer_id) {
 				self.focus_buffer(buffer_id);
 			}
-			// Set cursor position
 			self.buffer_mut().cursor = cursor;
 			true
 		} else {
@@ -292,9 +288,7 @@ impl MacroAccess for Editor {
 	}
 
 	fn play(&mut self) {
-		// Play last recorded macro
-		// Actual playback would need to be handled by the input system
-		// This is a placeholder - full implementation requires event loop integration
+		// Actual playback requires event loop integration (placeholder).
 	}
 
 	fn is_recording(&self) -> bool {

@@ -148,9 +148,9 @@ impl Editor {
 		let chunks = Layout::default()
 			.direction(Direction::Vertical)
 			.constraints([
-				Constraint::Length(1), // Menu bar
-				Constraint::Min(1),    // Document area
-				Constraint::Length(1), // Status line
+				Constraint::Length(1),
+				Constraint::Min(1),
+				Constraint::Length(1),
 			])
 			.split(area);
 
@@ -175,7 +175,6 @@ impl Editor {
 		}
 		self.ui = ui;
 
-		// Render menu bar
 		let menu_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
 		frame.render_widget(menu_bg, menu_area);
 		Menu::new()
@@ -191,7 +190,6 @@ impl Editor {
 			)
 			.render(menu_area, frame.buffer_mut(), &mut self.menu);
 
-		// Render status line
 		let status_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
 		frame.render_widget(status_bg, status_area);
 		frame.render_widget(self.render_status_line(), status_area);

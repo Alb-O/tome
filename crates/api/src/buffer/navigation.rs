@@ -195,7 +195,7 @@ impl Buffer {
 				let segments = self.wrap_line(text.trim_end_matches('\n'), self.text_width);
 				(text, segments.len())
 			};
-			let _ = line_text; // suppress unused warning
+			let _ = line_text;
 			self.scroll_segment = num_segments.saturating_sub(1);
 		}
 	}

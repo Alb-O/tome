@@ -1,6 +1,6 @@
 //! Tests for serde serialization/deserialization of Color.
 
-use ::serde::de::{self, Deserialize, IntoDeserializer};
+use serde::de::{self, Deserialize, IntoDeserializer};
 
 use super::*;
 

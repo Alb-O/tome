@@ -1,6 +1,6 @@
 //! Tests for palette feature HSL/HSLuv conversions.
 
-use ::palette::{Hsl, Hsluv};
+use palette::{Hsl, Hsluv};
 use rstest::rstest;
 
 use super::*;

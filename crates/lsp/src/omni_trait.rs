@@ -88,8 +88,6 @@ macro_rules! define_server {
             /// Should always be defined to `ControlFlow<Result<()>>` for user implementations.
             type NotifyResult: NotifyResult;
 
-            // Requests.
-
             #[must_use]
             fn initialize(
                 &mut self,
@@ -114,8 +112,6 @@ macro_rules! define_server {
                 method_not_found::<$req, _>()
             }
             )*
-
-            // Notifications.
 
             #[must_use]
             fn initialized(
@@ -152,8 +148,6 @@ macro_rules! define_server {
                     type Error = crate::Error;
                     type NotifyResult = crate::Result<()>;
 
-                    // Requests.
-
                     fn initialize(
                         &mut self,
                         params: <request::Initialize as Request>::Params,
@@ -176,8 +170,6 @@ macro_rules! define_server {
                         Box::pin(self.0.request::<$req>(params))
                     }
                     )*
-
-                    // Notifications.
 
                     fn initialized(
                         &mut self,
@@ -252,7 +244,6 @@ macro_rules! define_client {
             /// Should always be defined to `ControlFlow<Result<()>>` for user implementations.
             type NotifyResult: NotifyResult;
 
-            // Requests.
             $(
             #[must_use]
             fn $req_snake(
@@ -264,7 +255,6 @@ macro_rules! define_client {
             }
             )*
 
-            // Notifications.
             $(
             #[must_use]
             fn $notif_snake(
@@ -283,7 +273,6 @@ macro_rules! define_client {
                     type Error = crate::Error;
                     type NotifyResult = crate::Result<()>;
 
-                    // Requests.
                     $(
                     fn $req_snake(
                         &mut self,
@@ -293,7 +282,6 @@ macro_rules! define_client {
                     }
                     )*
 
-                    // Notifications.
                     $(
                     fn $notif_snake(
                         &mut self,

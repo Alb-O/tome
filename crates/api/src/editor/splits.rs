@@ -140,7 +140,6 @@ impl Editor {
 	///
 	/// Returns true if the view was closed.
 	pub fn close_view(&mut self, view: BufferView) -> bool {
-		// Don't close the last view
 		if self.layout.count() <= 1 {
 			return false;
 		}

@@ -175,7 +175,7 @@ impl Default for Cursor {
 	fn default() -> Self {
 		Self {
 			show: true,
-			symbol: "\u{2588}".into(), // "█"
+			symbol: "\u{2588}".into(),
 			style: Style::default().fg(Color::Gray),
 			overlay_style: Style::default().add_modifier(Modifier::REVERSED),
 		}

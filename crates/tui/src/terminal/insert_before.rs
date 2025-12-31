@@ -155,20 +155,9 @@ where
 			buffer_height -= to_draw;
 		}
 
-		// There is now enough room on the screen for the remaining buffer plus the viewport,
-		// though we may still need to scroll up some of the existing text first. It's possible
-		// that by this point we've drained the buffer, but we may still need to scroll up to make
-		// room for the viewport.
-		//
-		// We want to scroll up the exact amount that will leave us completely filling the screen.
-		// However, it's possible that the viewport didn't start on the bottom of the screen and
-		// the added lines weren't enough to push it all the way to the bottom. We deal with this
-		// case by just ensuring that our scroll amount is non-negative.
-		//
-		// We want:
-		//   screen_height = drawn_height - scroll_up + buffer_height + viewport_height
-		// Or, equivalently:
+		// Scroll up the exact amount that will fill the screen. The formula is:
 		//   scroll_up = drawn_height + buffer_height + viewport_height - screen_height
+		// Clamped to non-negative in case viewport didn't start at screen bottom.
 		let scroll_up = 0.max(drawn_height + buffer_height + viewport_height - screen_height);
 		self.scroll_up(scroll_up as u16)?;
 		self.draw_lines(

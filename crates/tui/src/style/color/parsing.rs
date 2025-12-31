@@ -38,35 +38,28 @@ fn from_ansi_color() -> Result<(), Box<dyn Error>> {
 	assert_eq!(Color::from_str("lightcyan")?, Color::LightCyan);
 	assert_eq!(Color::from_str("white")?, Color::White);
 
-	// aliases
 	assert_eq!(Color::from_str("lightblack")?, Color::DarkGray);
 	assert_eq!(Color::from_str("lightwhite")?, Color::White);
 	assert_eq!(Color::from_str("lightgray")?, Color::White);
 
-	// silver = grey = gray
 	assert_eq!(Color::from_str("grey")?, Color::Gray);
 	assert_eq!(Color::from_str("silver")?, Color::Gray);
 
-	// spaces are ignored
 	assert_eq!(Color::from_str("light black")?, Color::DarkGray);
 	assert_eq!(Color::from_str("light white")?, Color::White);
 	assert_eq!(Color::from_str("light gray")?, Color::White);
 
-	// dashes are ignored
 	assert_eq!(Color::from_str("light-black")?, Color::DarkGray);
 	assert_eq!(Color::from_str("light-white")?, Color::White);
 	assert_eq!(Color::from_str("light-gray")?, Color::White);
 
-	// underscores are ignored
 	assert_eq!(Color::from_str("light_black")?, Color::DarkGray);
 	assert_eq!(Color::from_str("light_white")?, Color::White);
 	assert_eq!(Color::from_str("light_gray")?, Color::White);
 
-	// bright = light
 	assert_eq!(Color::from_str("bright-black")?, Color::DarkGray);
 	assert_eq!(Color::from_str("bright-white")?, Color::White);
 
-	// bright = light
 	assert_eq!(Color::from_str("brightblack")?, Color::DarkGray);
 	assert_eq!(Color::from_str("brightwhite")?, Color::White);
 
@@ -76,13 +69,13 @@ fn from_ansi_color() -> Result<(), Box<dyn Error>> {
 #[test]
 fn from_invalid_colors() {
 	let bad_colors = [
-		"invalid_color", // not a color string
-		"abcdef0",       // 7 chars is not a color
-		" bcdefa",       // doesn't start with a '#'
-		"#abcdef00",     // too many chars
-		"#1🦀2",         // len 7 but on char boundaries shouldn't panic
-		"resets",        // typo
-		"lightblackk",   // typo
+		"invalid_color",
+		"abcdef0",
+		" bcdefa",
+		"#abcdef00",
+		"#1🦀2",
+		"resets",
+		"lightblackk",
 	];
 
 	for bad_color in bad_colors {

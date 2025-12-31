@@ -159,7 +159,7 @@ mod tests {
 	#[test]
 	fn test_u8_lerp() {
 		assert_eq!(0u8.lerp(&255, 0.0), 0);
-		assert_eq!(0u8.lerp(&255, 0.5), 128); // rounds from 127.5
+		assert_eq!(0u8.lerp(&255, 0.5), 128);
 		assert_eq!(0u8.lerp(&255, 1.0), 255);
 	}
 

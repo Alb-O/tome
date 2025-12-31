@@ -185,7 +185,6 @@ impl Buffer {
 		if !area.contains(position) {
 			return None;
 		}
-		// remove offset
 		let y = (position.y - self.area.y) as usize;
 		let x = (position.x - self.area.x) as usize;
 		let width = self.area.width as usize;
@@ -359,7 +358,6 @@ impl Buffer {
 		let size = self.area.area() as usize;
 		for i in (0..size).rev() {
 			let (x, y) = self.pos_of(i);
-			// New index in content
 			let k = ((y - area.y) * area.width + x - area.x) as usize;
 			if i != k {
 				self.content[k] = self.content[i].clone();
@@ -367,12 +365,10 @@ impl Buffer {
 			}
 		}
 
-		// Push content of the other buffer into this one (may erase previous
-		// data)
+		// Push content of the other buffer into this one (may erase previous data).
 		let size = other.area.area() as usize;
 		for i in 0..size {
 			let (x, y) = other.pos_of(i);
-			// New index in content
 			let k = ((y - area.y) * area.width + x - area.x) as usize;
 			self.content[k] = other.content[i].clone();
 		}

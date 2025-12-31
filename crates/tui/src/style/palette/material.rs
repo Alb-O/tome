@@ -525,8 +525,6 @@ impl NonAccentedPalette {
 	}
 }
 
-// Accented palettes
-
 /// Red palette.
 pub const RED: AccentedPalette = AccentedPalette::from_variants(variants::RED);
 /// Pink palette.
@@ -560,16 +558,12 @@ pub const ORANGE: AccentedPalette = AccentedPalette::from_variants(variants::ORA
 /// Deep Orange palette.
 pub const DEEP_ORANGE: AccentedPalette = AccentedPalette::from_variants(variants::DEEP_ORANGE);
 
-// Non-accented palettes
-
 /// Brown palette.
 pub const BROWN: NonAccentedPalette = NonAccentedPalette::from_variants(variants::BROWN);
 /// Gray palette.
 pub const GRAY: NonAccentedPalette = NonAccentedPalette::from_variants(variants::GRAY);
 /// Blue Gray palette.
 pub const BLUE_GRAY: NonAccentedPalette = NonAccentedPalette::from_variants(variants::BLUE_GRAY);
-
-// Colors
 
 /// Black color.
 pub const BLACK: Color = Color::from_u32(0x000000);

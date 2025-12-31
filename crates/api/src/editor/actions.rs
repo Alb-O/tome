@@ -94,7 +94,6 @@ impl Editor {
 					self.save_undo_state();
 					let len = to - from;
 					let replacement = std::iter::repeat_n(ch, len).collect::<String>();
-					// Delete selection
 					let (tx, new_sel) = {
 						let buffer = self.buffer();
 						let doc = buffer.doc();
@@ -104,7 +103,6 @@ impl Editor {
 					};
 					self.buffer_mut().selection = new_sel;
 					self.apply_transaction(&tx);
-					// Insert replacement
 					let tx = {
 						let buffer = self.buffer();
 						let doc = buffer.doc();
@@ -175,7 +173,7 @@ impl Editor {
 					let spaces = line_text.chars().take_while(|c| *c == ' ').count().min(4);
 					(line, line_start, spaces)
 				};
-				let _ = line; // suppress unused warning
+				let _ = line;
 				if spaces > 0 {
 					self.save_undo_state();
 					self.buffer_mut().selection =

@@ -53,7 +53,7 @@ impl Editor {
 		let main_height = height.saturating_sub(2);
 		let main_area = evildoer_tui::layout::Rect {
 			x: 0,
-			y: 1, // Start below menu bar
+			y: 1,
 			width,
 			height: main_height,
 		};

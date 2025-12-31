@@ -28,7 +28,6 @@ impl Editor {
 			buffer.prepare_insert(text)
 		};
 
-		// Apply with syntax update
 		{
 			let buffer = self
 				.buffers
@@ -72,7 +71,6 @@ impl Editor {
 			return;
 		};
 
-		// Apply with syntax update
 		{
 			let buffer = self
 				.buffers
@@ -109,7 +107,6 @@ impl Editor {
 			return;
 		};
 
-		// Apply with syntax update
 		{
 			let buffer = self
 				.buffers
@@ -145,7 +142,6 @@ impl Editor {
 			return;
 		};
 
-		// Apply with syntax update
 		{
 			let buffer = self
 				.buffers

@@ -72,7 +72,10 @@ macro_rules! symmetric_text_object {
 
 /// Registers a bracket-pair text object with surround selection.
 #[macro_export]
-#[allow(clippy::crate_in_macro_def)]
+#[allow(
+	clippy::crate_in_macro_def,
+	reason = "macro is internal and always called from this crate"
+)]
 macro_rules! bracket_pair_object {
 	($name:ident, $open:expr, $close:expr, $trigger:expr, $alt_triggers:expr) => {
 		paste::paste! {

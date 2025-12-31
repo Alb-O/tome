@@ -37,7 +37,10 @@ pub struct MotionDef {
 impl MotionDef {
 	/// Creates a new motion definition.
 	#[doc(hidden)]
-	#[allow(clippy::too_many_arguments)]
+	#[allow(
+		clippy::too_many_arguments,
+		reason = "builder pattern is not const-compatible"
+	)]
 	pub const fn new(
 		id: &'static str,
 		name: &'static str,

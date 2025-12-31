@@ -324,8 +324,6 @@ impl Backend for TestBackend {
 		let lines_after_cursor = max_y.saturating_sub(cur_y);
 
 		if line_count > lines_after_cursor {
-			// We need to insert blank lines at the bottom and scroll the lines from the top into
-			// scrollback.
 			let scroll_by: usize = (line_count - lines_after_cursor).into();
 			let width: usize = self.buffer.area.width.into();
 			let cells_to_scrollback = self.buffer.content.len().min(width * scroll_by);

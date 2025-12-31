@@ -9,8 +9,8 @@ use crate::layout::Rect;
 use crate::style::{Style, Styled};
 use crate::symbols;
 use crate::text::{Line, Span};
-use crate::widgets::Widget;
 use crate::widgets::block::{Block, BlockExt};
+use crate::widgets::Widget;
 
 #[cfg(test)]
 mod tests;
@@ -398,7 +398,6 @@ impl Tabs<'_> {
 				break;
 			}
 
-			// Left Padding
 			let pos = buf.set_line(x, tabs_area.top(), &self.padding_left, remaining_width);
 			x = pos.0;
 			let remaining_width = tabs_area.right().saturating_sub(x);
@@ -406,7 +405,6 @@ impl Tabs<'_> {
 				break;
 			}
 
-			// Title
 			let pos = buf.set_line(x, tabs_area.top(), title, remaining_width);
 			if Some(i) == self.selected {
 				buf.set_style(
@@ -425,7 +423,6 @@ impl Tabs<'_> {
 				break;
 			}
 
-			// Right Padding
 			let pos = buf.set_line(x, tabs_area.top(), &self.padding_right, remaining_width);
 			x = pos.0;
 			let remaining_width = tabs_area.right().saturating_sub(x);

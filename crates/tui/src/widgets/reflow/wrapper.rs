@@ -12,10 +12,7 @@ use crate::text::StyledGrapheme;
 #[derive(Debug, Default, Clone)]
 pub struct WordWrapper<'a, O, I>
 where
-	// Outer iterator providing the individual lines
 	O: Iterator<Item = (I, HorizontalAlignment)>,
-	// Inner iterator providing the styled symbols of a line Each line consists of an alignment and
-	// a series of symbols
 	I: Iterator<Item = StyledGrapheme<'a>>,
 {
 	/// The given, unprocessed lines

@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use unicode_width::UnicodeWidthStr;
 
-use super::{LineComposer, WrappedLine, trim_offset};
+use super::{trim_offset, LineComposer, WrappedLine};
 use crate::layout::HorizontalAlignment;
 use crate::text::StyledGrapheme;
 
@@ -12,10 +12,7 @@ use crate::text::StyledGrapheme;
 #[derive(Debug, Default, Clone)]
 pub struct LineTruncator<'a, O, I>
 where
-	// Outer iterator providing the individual lines
 	O: Iterator<Item = (I, HorizontalAlignment)>,
-	// Inner iterator providing the styled symbols of a line Each line consists of an alignment and
-	// a series of symbols
 	I: Iterator<Item = StyledGrapheme<'a>>,
 {
 	/// The given, unprocessed lines
@@ -74,7 +71,6 @@ where
 				}
 
 				if current_line_width + symbol.width() as u16 > self.max_line_width {
-					// Truncate line
 					break;
 				}
 

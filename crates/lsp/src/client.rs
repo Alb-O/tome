@@ -247,7 +247,7 @@ impl ClientHandle {
 		enable_snippets: bool,
 		config: Option<Value>,
 	) -> Result<InitializeResult> {
-		#[allow(deprecated)]
+		#[allow(deprecated, reason = "root_path field deprecated but required by some servers")]
 		let params = InitializeParams {
 			process_id: Some(std::process::id()),
 			workspace_folders: Some(vec![workspace_folder_from_uri(
@@ -272,7 +272,6 @@ impl ClientHandle {
 			.request::<lsp_types::request::Initialize>(params)
 			.await?;
 
-		// Store capabilities
 		let _ = self.capabilities.set(result.capabilities.clone());
 		self.initialize_notify.notify_waiters();
 
@@ -588,7 +587,6 @@ pub fn start_server(
 	let capabilities = Arc::new(OnceCell::new());
 	let initialize_notify = Arc::new(Notify::new());
 
-	// Create the client state
 	let state = Arc::new(ClientState::new());
 
 	// Build the router for handling server->client messages
@@ -642,7 +640,6 @@ pub fn start_server(
 		router
 	});
 
-	// Create the client handle
 	let handle = ClientHandle {
 		id,
 		name,
@@ -653,7 +650,6 @@ pub fn start_server(
 		initialize_notify,
 	};
 
-	// Spawn the main loop task
 	let join_handle = tokio::spawn(async move {
 		// Convert tokio I/O to futures I/O
 		let stdin = tokio_util::compat::TokioAsyncWriteCompatExt::compat_write(stdin);
@@ -661,7 +657,6 @@ pub fn start_server(
 
 		main_loop.run_buffered(stdout, stdin).await?;
 
-		// Keep process handle alive
 		drop(process);
 		Ok(())
 	});

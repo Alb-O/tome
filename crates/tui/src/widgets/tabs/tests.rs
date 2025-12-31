@@ -90,7 +90,6 @@ fn test_case(tabs: Tabs, area: Rect, expected: &Buffer) {
 fn render_new() {
 	let tabs = Tabs::new(vec!["Tab1", "Tab2", "Tab3", "Tab4"]);
 	let mut expected = Buffer::with_lines([" Tab1 │ Tab2 │ Tab3 │ Tab4    "]);
-	// first tab selected
 	expected.set_style(Rect::new(1, 0, 4, 1), DEFAULT_HIGHLIGHT_STYLE);
 	test_case(tabs, Rect::new(0, 0, 30, 1), &expected);
 }
@@ -99,7 +98,6 @@ fn render_new() {
 fn render_no_padding() {
 	let tabs = Tabs::new(vec!["Tab1", "Tab2", "Tab3", "Tab4"]).padding("", "");
 	let mut expected = Buffer::with_lines(["Tab1│Tab2│Tab3│Tab4           "]);
-	// first tab selected
 	expected.set_style(Rect::new(0, 0, 4, 1), DEFAULT_HIGHLIGHT_STYLE);
 	test_case(tabs, Rect::new(0, 0, 30, 1), &expected);
 }
@@ -108,7 +106,6 @@ fn render_no_padding() {
 fn render_left_padding() {
 	let tabs = Tabs::new(vec!["Tab1", "Tab2", "Tab3", "Tab4"]).padding_left("---");
 	let mut expected = Buffer::with_lines(["---Tab1 │---Tab2 │---Tab3 │---Tab4      "]);
-	// first tab selected
 	expected.set_style(Rect::new(3, 0, 4, 1), DEFAULT_HIGHLIGHT_STYLE);
 	test_case(tabs, Rect::new(0, 0, 40, 1), &expected);
 }
@@ -117,7 +114,6 @@ fn render_left_padding() {
 fn render_right_padding() {
 	let tabs = Tabs::new(vec!["Tab1", "Tab2", "Tab3", "Tab4"]).padding_right("++");
 	let mut expected = Buffer::with_lines([" Tab1++│ Tab2++│ Tab3++│ Tab4++         "]);
-	// first tab selected
 	expected.set_style(Rect::new(1, 0, 4, 1), DEFAULT_HIGHLIGHT_STYLE);
 	test_case(tabs, Rect::new(0, 0, 40, 1), &expected);
 }
@@ -126,7 +122,6 @@ fn render_right_padding() {
 fn render_more_padding() {
 	let tabs = Tabs::new(vec!["Tab1", "Tab2", "Tab3", "Tab4"]).padding("---", "++");
 	let mut expected = Buffer::with_lines(["---Tab1++│---Tab2++│---Tab3++│"]);
-	// first tab selected
 	expected.set_style(Rect::new(3, 0, 4, 1), DEFAULT_HIGHLIGHT_STYLE);
 	test_case(tabs, Rect::new(0, 0, 30, 1), &expected);
 }
@@ -143,7 +138,6 @@ fn render_with_block() {
 		"│ Tab1 │ Tab2 │ Tab3 │ Tab4  │",
 		"└────────────────────────────┘",
 	]);
-	// first tab selected
 	expected.set_style(Rect::new(2, 1, 4, 1), DEFAULT_HIGHLIGHT_STYLE);
 	test_case(tabs, Rect::new(0, 0, 30, 3), &expected);
 }
@@ -161,7 +155,6 @@ fn render_style() {
 fn render_select() {
 	let tabs = Tabs::new(vec!["Tab1", "Tab2", "Tab3", "Tab4"]);
 
-	// first tab selected
 	let expected = Buffer::with_lines([Line::from(vec![
 		" ".into(),
 		"Tab1".reversed(),
@@ -169,7 +162,6 @@ fn render_select() {
 	])]);
 	test_case(tabs.clone().select(0), Rect::new(0, 0, 30, 1), &expected);
 
-	// second tab selected
 	let expected = Buffer::with_lines([Line::from(vec![
 		" Tab1 │ ".into(),
 		"Tab2".reversed(),
@@ -177,7 +169,6 @@ fn render_select() {
 	])]);
 	test_case(tabs.clone().select(1), Rect::new(0, 0, 30, 1), &expected);
 
-	// last tab selected
 	let expected = Buffer::with_lines([Line::from(vec![
 		" Tab1 │ Tab2 │ Tab3 │ ".into(),
 		"Tab4".reversed(),
@@ -185,11 +176,9 @@ fn render_select() {
 	])]);
 	test_case(tabs.clone().select(3), Rect::new(0, 0, 30, 1), &expected);
 
-	// out of bounds selects no tab
 	let expected = Buffer::with_lines([" Tab1 │ Tab2 │ Tab3 │ Tab4    "]);
 	test_case(tabs.clone().select(4), Rect::new(0, 0, 30, 1), &expected);
 
-	// deselect
 	let expected = Buffer::with_lines([" Tab1 │ Tab2 │ Tab3 │ Tab4    "]);
 	test_case(tabs.clone().select(None), Rect::new(0, 0, 30, 1), &expected);
 }
@@ -212,7 +201,6 @@ fn render_style_and_selected() {
 fn render_divider() {
 	let tabs = Tabs::new(vec!["Tab1", "Tab2", "Tab3", "Tab4"]).divider("--");
 	let mut expected = Buffer::with_lines([" Tab1 -- Tab2 -- Tab3 -- Tab4 "]);
-	// first tab selected
 	expected.set_style(Rect::new(1, 0, 4, 1), DEFAULT_HIGHLIGHT_STYLE);
 	test_case(tabs, Rect::new(0, 0, 30, 1), &expected);
 }

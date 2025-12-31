@@ -152,9 +152,6 @@ impl List<'_> {
 			last_visible_index += 1;
 		}
 
-		// Get the selected index and apply scroll_padding to it, but still honor the offset if
-		// nothing is selected. This allows for the list to stay at a position after select()ing
-		// None.
 		let index_to_display = self
 			.apply_scroll_padding_to_selected_index(
 				selected,

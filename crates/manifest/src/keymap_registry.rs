@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use evildoer_keymap::parser::{Node, parse_seq};
+use evildoer_keymap::parser::{parse_seq, Node};
 use evildoer_keymap::{MatchResult, Matcher};
 use tracing::warn;
 
@@ -138,7 +138,6 @@ impl From<&Mode> for BindingMode {
 	}
 }
 
-// Global registry instance
 static KEYMAP_REGISTRY: OnceLock<KeymapRegistry> = OnceLock::new();
 
 /// Returns the global keymap registry.

@@ -59,15 +59,12 @@ fn parse_grammar_configs(input: &str) -> super::Result<Vec<GrammarConfig>> {
 	for node in doc.nodes() {
 		let name = node.name().value();
 
-		// Get children block
 		let children = match node.children() {
 			Some(c) => c,
-			None => continue, // Skip nodes without children (e.g. comments)
+			None => continue,
 		};
 
-		// Check for local path source first
 		let source = if let Some(path_node) = children.get("path") {
-			// Local source
 			let path = path_node
 				.entry(0)
 				.and_then(|e| e.value().as_string())

@@ -664,7 +664,7 @@ mod tests {
 		state.select_first();
 		assert_eq!(state.selected, Some(0));
 
-		state.select_previous(); // should not go below 0
+		state.select_previous();
 		assert_eq!(state.selected, Some(0));
 
 		state.select_next();

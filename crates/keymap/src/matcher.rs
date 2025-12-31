@@ -151,7 +151,6 @@ fn search<'a, T>(node: &'a Trie<T>, nodes: &[Node], pos: usize) -> Option<&'a T>
 
 	let input_node = &nodes[pos];
 
-	// 1. Exact match
 	if let Some(result) = node
 		.exact
 		.get(input_node)
@@ -160,7 +159,6 @@ fn search<'a, T>(node: &'a Trie<T>, nodes: &[Node], pos: usize) -> Option<&'a T>
 		return Some(result);
 	}
 
-	// 2. Group match
 	if let Key::Char(ch) = input_node.key
 		&& let Some(result) = node.groups.iter().find_map(|(n, child)| match n.key {
 			Key::Group(group) if n.modifiers == input_node.modifiers && group.matches(ch) => {
@@ -171,7 +169,6 @@ fn search<'a, T>(node: &'a Trie<T>, nodes: &[Node], pos: usize) -> Option<&'a T>
 		return Some(result);
 	}
 
-	// 3. Any-char group match
 	node.groups.iter().find_map(|(n, child)| {
 		if matches!(n.key, Key::Group(CharGroup::Any)) {
 			search(child, nodes, pos + 1)
@@ -203,7 +200,6 @@ fn lookup_with_info<'a, T>(node: &'a Trie<T>, nodes: &[Node], pos: usize) -> Mat
 
 	let input_node = &nodes[pos];
 
-	// 1. Try exact match
 	if let Some(child) = node.exact.get(input_node) {
 		let result = lookup_with_info(child, nodes, pos + 1);
 		if !matches!(result, MatchResult::None) {
@@ -211,7 +207,6 @@ fn lookup_with_info<'a, T>(node: &'a Trie<T>, nodes: &[Node], pos: usize) -> Mat
 		}
 	}
 
-	// 2. Try group match
 	if let Key::Char(ch) = input_node.key {
 		for (n, child) in &node.groups {
 			if let Key::Group(group) = n.key
@@ -226,7 +221,6 @@ fn lookup_with_info<'a, T>(node: &'a Trie<T>, nodes: &[Node], pos: usize) -> Mat
 		}
 	}
 
-	// 3. Try @any group match
 	for (n, child) in &node.groups {
 		if matches!(n.key, Key::Group(CharGroup::Any)) {
 			let result = lookup_with_info(child, nodes, pos + 1);

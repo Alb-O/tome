@@ -92,7 +92,7 @@ struct ServerInstance {
 	/// Task running the main loop.
 	_task: JoinHandle<Result<()>>,
 	/// Root path this server was started with.
-	#[allow(dead_code)]
+	#[allow(dead_code, reason = "retained for future use in server restart logic")]
 	root_path: PathBuf,
 }
 
@@ -165,7 +165,6 @@ impl Registry {
 			}
 		}
 
-		// Start a new server
 		let id = LanguageServerId(self.next_id.fetch_add(1, Ordering::Relaxed));
 		let server_config = ServerConfig::new(&config.command, &root_path)
 			.args(config.args.iter().cloned())
@@ -174,7 +173,6 @@ impl Registry {
 
 		let (handle, task) = start_server(id, config.command.clone(), server_config)?;
 
-		// Initialize the server
 		handle
 			.initialize(config.enable_snippets, config.config.clone())
 			.await?;
@@ -268,10 +266,7 @@ mod tests {
 		let temp = tempfile::tempdir().unwrap();
 		let root = temp.path();
 
-		// Create marker file
 		std::fs::write(root.join("Cargo.toml"), "").unwrap();
-
-		// Create nested directory
 		let nested = root.join("src").join("nested");
 		std::fs::create_dir_all(&nested).unwrap();
 

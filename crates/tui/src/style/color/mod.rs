@@ -518,8 +518,7 @@ const fn indexed_to_rgb(idx: u8) -> (u8, u8, u8) {
 		13 => (255, 0, 255),
 		14 => (0, 255, 255),
 		15 => (255, 255, 255),
-		// 6x6x6 color cube (16-231)
-		// Each channel maps to: 0, 95, 135, 175, 215, 255
+		// 6x6x6 color cube (16-231). Each channel maps to: 0, 95, 135, 175, 215, 255.
 		16..=231 => {
 			let idx = idx - 16;
 			let ri = idx / 36;
@@ -530,7 +529,6 @@ const fn indexed_to_rgb(idx: u8) -> (u8, u8, u8) {
 			let b = if bi == 0 { 0 } else { 55 + bi * 40 };
 			(r, g, b)
 		}
-		// Grayscale (232-255)
 		232..=255 => {
 			let gray = 8 + (idx - 232) * 10;
 			(gray, gray, gray)

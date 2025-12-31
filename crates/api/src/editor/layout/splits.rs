@@ -82,7 +82,6 @@ impl LayoutManager {
 			self.layers[layer_idx] = Some(new_layout);
 			Some(self.layers[layer_idx].as_ref().unwrap().first_view())
 		} else {
-			// Layer is now empty
 			self.layers[layer_idx] = None;
 			// Return first view from next non-empty layer
 			Some(self.first_view())

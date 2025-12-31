@@ -39,7 +39,6 @@ const PRIMARY_FOCUS_NODES: &[&str] = &[
 	"lambda_expression",
 	"arrow_function",
 	"function",
-	// Classes/Types
 	"struct_item",
 	"struct_definition",
 	"enum_item",
@@ -51,7 +50,6 @@ const PRIMARY_FOCUS_NODES: &[&str] = &[
 	"class_declaration",
 	"class_body",
 	"interface_declaration",
-	// Modules/Namespaces
 	"mod_item",
 	"module",
 	"namespace_definition",
@@ -62,7 +60,6 @@ const PRIMARY_FOCUS_NODES: &[&str] = &[
 /// If we can't find a primary focus node, we look for these.
 /// These are typically top-level declarations or statement blocks.
 const SECONDARY_FOCUS_NODES: &[&str] = &[
-	// Top-level items
 	"const_item",
 	"static_item",
 	"type_alias",

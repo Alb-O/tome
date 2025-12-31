@@ -61,15 +61,12 @@ mod tests {
 
 	#[test]
 	fn text() {
-		// literal
 		let text = text!["hello", "world"];
 		assert_eq!(text, Text::from(vec!["hello".into(), "world".into()]));
 
-		// explicit use of span and line
 		let text = text![crate::line!("hello"), crate::span!["world"]];
 		assert_eq!(text, Text::from(vec!["hello".into(), "world".into()]));
 
-		// vec count syntax
 		let text = text!["hello"; 2];
 		assert_eq!(text, Text::from(vec!["hello".into(), "hello".into()]));
 	}

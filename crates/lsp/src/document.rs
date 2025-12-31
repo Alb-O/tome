@@ -329,21 +329,15 @@ mod tests {
 		let manager = DocumentStateManager::new();
 		let uri = Url::parse("file:///test.rs").unwrap();
 
-		// Register a document
 		let path = PathBuf::from("/test.rs");
 		manager.register(&path, Some("rust"));
-
-		// Check it exists
 		assert!(manager.contains(&uri));
 
-		// Update diagnostics
 		let diagnostics = vec![make_diagnostic(DiagnosticSeverity::ERROR, "test error")];
 		manager.update_diagnostics(&uri, diagnostics);
-
 		assert_eq!(manager.get_diagnostics(&uri).len(), 1);
 		assert_eq!(manager.total_error_count(), 1);
 
-		// Unregister
 		manager.unregister(&uri);
 		assert!(!manager.contains(&uri));
 	}

@@ -67,8 +67,7 @@ pub fn build_grammar(grammar: &GrammarConfig) -> Result<BuildStatus> {
 		return Ok(BuildStatus::AlreadyBuilt);
 	}
 
-	// Build using cc crate
-	// Set HOST and TARGET env vars if not present (needed outside cargo)
+	// Set HOST and TARGET env vars if not present (needed outside cargo).
 	let target = std::env::var("TARGET")
 		.unwrap_or_else(|_| std::env::consts::ARCH.to_string() + "-unknown-linux-gnu");
 	// SAFETY: We're setting env vars before any multi-threaded work happens in the cc crate
