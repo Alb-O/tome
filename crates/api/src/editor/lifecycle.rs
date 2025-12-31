@@ -4,7 +4,9 @@
 
 use std::path::PathBuf;
 
-use evildoer_manifest::{HookContext, HookEventData, emit_hook_sync_with};
+use evildoer_manifest::{
+	CommandContext, CommandOutcome, HookContext, HookEventData, emit_hook_sync_with, find_command,
+};
 
 use super::Editor;
 use super::extensions::{RENDER_EXTENSIONS, TICK_EXTENSIONS};
@@ -160,6 +162,40 @@ impl Editor {
 		}
 
 		self.insert_text(&content);
+	}
+
+	/// Drains and executes all queued commands.
+	///
+	/// Commands are queued when actions return [`ActionResult::Command`]. This
+	/// method should be called each tick after processing input events.
+	///
+	/// Returns `true` if any command requested quit.
+	pub async fn drain_command_queue(&mut self) -> bool {
+		let commands: Vec<_> = self.command_queue.drain().collect();
+		for cmd in commands {
+			let Some(command_def) = find_command(cmd.name) else {
+				self.notify("error", &format!("Unknown command: {}", cmd.name));
+				continue;
+			};
+
+			let args: Vec<&str> = cmd.args.iter().map(|s| s.as_str()).collect();
+			let mut ctx = CommandContext {
+				editor: self,
+				args: &args,
+				count: 1,
+				register: None,
+				user_data: command_def.user_data,
+			};
+
+			match (command_def.handler)(&mut ctx).await {
+				Ok(CommandOutcome::Ok) => {}
+				Ok(CommandOutcome::Quit | CommandOutcome::ForceQuit) => return true,
+				Err(e) => {
+					self.notify("error", &e.to_string());
+				}
+			}
+		}
+		false
 	}
 
 	/// Maps sibling buffer selections through a transaction.

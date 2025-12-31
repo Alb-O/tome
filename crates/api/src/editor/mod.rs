@@ -17,6 +17,7 @@ mod actions;
 mod actions_exec;
 mod buffer_manager;
 mod buffer_ops;
+mod command_queue;
 mod editing;
 pub mod extensions;
 mod file_ops;
@@ -39,6 +40,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 pub use buffer_manager::BufferManager;
+pub use command_queue::CommandQueue;
 use evildoer_language::LanguageLoader;
 use evildoer_manifest::{HookContext, HookEventData, Theme, emit_hook_sync_with};
 pub use hook_runtime::HookRuntime;
@@ -152,6 +154,9 @@ pub struct Editor {
 
 	/// Macro recording and playback state.
 	pub macro_state: MacroState,
+
+	/// Queue for deferred command execution from [`ActionResult::Command`].
+	pub command_queue: CommandQueue,
 }
 
 impl evildoer_manifest::EditorOps for Editor {}
@@ -230,6 +235,7 @@ impl Editor {
 			panels: crate::panels::PanelRegistry::new(),
 			jump_list: JumpList::default(),
 			macro_state: MacroState::default(),
+			command_queue: CommandQueue::new(),
 		}
 	}
 }

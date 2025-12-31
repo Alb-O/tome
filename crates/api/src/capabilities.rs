@@ -5,9 +5,9 @@
 use evildoer_base::Selection;
 use evildoer_base::range::CharIdx;
 use evildoer_manifest::editor_ctx::{
-	CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, FocusOps, JumpAccess,
-	MacroAccess, MessageAccess, ModeAccess, PanelOps, SearchAccess, SelectionAccess, SplitOps,
-	ThemeAccess, UndoAccess,
+	CommandQueueAccess, CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, FocusOps,
+	JumpAccess, MacroAccess, MessageAccess, ModeAccess, PanelOps, SearchAccess, SelectionAccess,
+	SplitOps, ThemeAccess, UndoAccess,
 };
 use evildoer_manifest::{EditAction, Mode, panel_kind_index};
 
@@ -300,6 +300,12 @@ impl MacroAccess for Editor {
 	}
 }
 
+impl CommandQueueAccess for Editor {
+	fn queue_command(&mut self, name: &'static str, args: Vec<String>) {
+		self.command_queue.push(name, args);
+	}
+}
+
 impl EditorCapabilities for Editor {
 	fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		Some(self)
@@ -334,6 +340,10 @@ impl EditorCapabilities for Editor {
 	}
 
 	fn macro_ops(&mut self) -> Option<&mut dyn MacroAccess> {
+		Some(self)
+	}
+
+	fn command_queue(&mut self) -> Option<&mut dyn CommandQueueAccess> {
 		Some(self)
 	}
 }

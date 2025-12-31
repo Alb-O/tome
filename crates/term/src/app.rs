@@ -58,6 +58,10 @@ pub async fn run_editor(mut editor: Editor) -> io::Result<()> {
 			editor.tick();
 			editor.hook_runtime.drain().await;
 
+			if editor.drain_command_queue().await {
+				break;
+			}
+
 			if editor.take_quit_request() {
 				break;
 			}

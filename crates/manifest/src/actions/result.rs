@@ -120,4 +120,15 @@ pub enum ActionResult {
 	/// Use current selection as search pattern.
 	#[handler(UseSelectionSearch)]
 	UseSelectionAsSearch,
+
+	/// Execute a command asynchronously.
+	///
+	/// The command will be queued and executed on the next tick. This allows
+	/// actions (which are synchronous) to trigger async operations like LSP
+	/// requests.
+	#[terminal_safe]
+	Command {
+		name: &'static str,
+		args: Vec<String>,
+	},
 }

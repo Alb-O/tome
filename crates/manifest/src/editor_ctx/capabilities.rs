@@ -273,5 +273,20 @@ pub trait FocusOps {
 	fn focus_down(&mut self);
 }
 
+/// Command queue operations (optional).
+///
+/// Allows actions to schedule commands for async execution. When an action
+/// returns [`ActionResult::Command`], the result handler uses this trait
+/// to queue the command for execution on the next tick.
+///
+/// [`ActionResult::Command`]: crate::ActionResult::Command
+pub trait CommandQueueAccess {
+	/// Queues a command for async execution.
+	///
+	/// The command will be executed by the main loop on the next tick,
+	/// with full async context and editor access.
+	fn queue_command(&mut self, name: &'static str, args: Vec<String>);
+}
+
 /// Convenience trait combining common capabilities for command handlers.
 pub trait EditorOps: MessageAccess + FileOpsAccess + ThemeAccess {}

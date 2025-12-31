@@ -154,6 +154,10 @@ impl<'a> EditorContext<'a> {
 		self.inner.macro_ops()
 	}
 
+	pub fn command_queue(&mut self) -> Option<&mut dyn CommandQueueAccess> {
+		self.inner.command_queue()
+	}
+
 	pub fn check_capability(&mut self, cap: Capability) -> bool {
 		use Capability::*;
 		match cap {
@@ -233,6 +237,11 @@ pub trait EditorCapabilities: CursorAccess + SelectionAccess + ModeAccess + Mess
 
 	/// Access to macro recording/playback operations (optional).
 	fn macro_ops(&mut self) -> Option<&mut dyn MacroAccess> {
+		None
+	}
+
+	/// Access to command queue operations (optional).
+	fn command_queue(&mut self) -> Option<&mut dyn CommandQueueAccess> {
 		None
 	}
 }

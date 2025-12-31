@@ -35,6 +35,7 @@ fn action_result_variant(result: &ActionResult) -> &'static str {
 		ActionResult::SearchNext { .. } => "SearchNext",
 		ActionResult::SearchPrev { .. } => "SearchPrev",
 		ActionResult::UseSelectionAsSearch => "UseSelectionAsSearch",
+		ActionResult::Command { .. } => "Command",
 	}
 }
 

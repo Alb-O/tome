@@ -113,3 +113,17 @@ result_handler!(
 	"force_redraw",
 	|_, _, _| HandleOutcome::Handled
 );
+
+result_handler!(
+	RESULT_COMMAND_HANDLERS,
+	HANDLE_COMMAND,
+	"command",
+	|r, ctx, _| {
+		if let ActionResult::Command { name, args } = r {
+			if let Some(queue) = ctx.command_queue() {
+				queue.queue_command(name, args.clone());
+			}
+		}
+		HandleOutcome::Handled
+	}
+);
