@@ -1,10 +1,10 @@
 //! Menu state management.
 
+use alloc::vec;
 use alloc::vec::Vec;
 
-use unicode_width::UnicodeWidthStr;
-
-use super::MenuItem;
+use super::{MenuItem, MenuLayout};
+use crate::layout::Position;
 
 /// Events emitted by menu interactions.
 #[derive(Debug)]
@@ -13,131 +13,158 @@ pub enum MenuEvent<T> {
 	Selected(T),
 }
 
+/// Result of hit-testing a mouse position against menu regions.
+enum HitResult {
+	/// Mouse is over a bar item.
+	Bar(usize),
+	/// Mouse is over a dropdown item. Path from bar item (e.g., `[2]` for third
+	/// item in first dropdown, `[1, 0]` for first item in nested submenu).
+	Dropdown(Vec<usize>),
+	/// Mouse is not over any menu region.
+	Miss,
+}
+
 /// Runtime state for a menu bar.
 ///
-/// Tracks the menu tree structure and current highlight/selection state.
+/// Tracks the menu tree structure and current selection path.
 pub struct MenuState<T> {
-	pub(crate) root: MenuItem<T>,
+	pub(crate) items: Vec<MenuItem<T>>,
+	/// Index path to currently selected item. Empty = inactive, `[0]` = first bar item.
+	pub(crate) path: Vec<usize>,
+	/// Whether dropdown is visible. Separate from path because a bar item can be
+	/// highlighted without its dropdown open (e.g., after pressing up from dropdown).
+	pub(crate) expanded: bool,
 	events: Vec<MenuEvent<T>>,
+	layout: Option<MenuLayout>,
 }
 
 impl<T: Clone> MenuState<T> {
 	/// Creates a new menu state with the given top-level items.
 	pub fn new(items: Vec<MenuItem<T>>) -> Self {
-		let mut root = MenuItem::group("root", items);
-		root.highlighted = true;
 		Self {
-			root,
+			items,
+			path: Vec::new(),
+			expanded: false,
 			events: Vec::new(),
+			layout: None,
 		}
 	}
 
 	/// Activates the menu by highlighting the first top-level item.
 	pub fn activate(&mut self) {
-		self.root.highlight_first_child();
+		if self.items.is_empty() {
+			return;
+		}
+		self.path.clear();
+		self.path.push(0);
+		self.expanded = self.items[0].is_group();
 	}
 
 	/// Returns true if any menu item is currently highlighted.
 	pub fn is_active(&self) -> bool {
-		self.root.highlighted_child().is_some()
+		!self.path.is_empty()
 	}
 
 	/// Clears all highlights, deactivating the menu.
 	pub fn reset(&mut self) {
-		for child in &mut self.root.children {
-			child.clear_highlight();
-		}
+		self.path.clear();
+		self.expanded = false;
 	}
 
 	/// Returns the currently highlighted item.
 	pub fn highlight(&self) -> Option<&MenuItem<T>> {
-		self.root.highlight()
+		self.selected_item()
 	}
 
-	fn depth(&self) -> usize {
-		let mut depth = 0;
-		let mut current = self.root.highlighted_child();
-		while let Some(item) = current {
-			depth += 1;
-			current = item.highlighted_child();
-		}
-		depth
+	/// Returns the currently selected item.
+	pub fn selected_item(&self) -> Option<&MenuItem<T>> {
+		self.item_at_path(&self.path)
 	}
 
 	/// Moves highlight up in current dropdown, or collapses if at top.
 	pub fn up(&mut self) {
-		match self.depth() {
-			0 | 1 => {
-				if let Some(item) = self.root.highlighted_child_mut() {
-					if item.is_expanded() {
-						item.collapse();
-					}
-				}
+		match self.path.len() {
+			0 => {}
+			1 if self.expanded => {
+				self.expanded = false;
 			}
-			2 => {
-				if self
-					.root
-					.highlighted_child()
-					.and_then(|c| c.highlighted_child_index())
-					== Some(0)
-				{
-					self.pop();
+			n if n >= 2 => {
+				let last = self.path.last_mut().expect("path length checked");
+				if *last == 0 {
+					self.path.pop();
 				} else {
-					self.prev();
+					*last -= 1;
 				}
 			}
-			_ => self.prev(),
+			_ => {}
 		}
 	}
 
 	/// Moves highlight down, or enters dropdown if on top bar.
 	pub fn down(&mut self) {
-		match self.depth() {
-			1 => {
-				if let Some(item) = self.root.highlighted_child_mut() {
-					item.expand();
-					item.highlight_first_child();
+		match self.path.len() {
+			0 => {}
+			1 if !self.expanded => {
+				if self.bar_item().map(|item| item.is_group()).unwrap_or(false) {
+					self.expanded = true;
 				}
 			}
-			_ => self.next(),
+			1 if self.expanded => {
+				if self.bar_item().map(|item| item.is_group()).unwrap_or(false) {
+					self.path.push(0);
+				}
+			}
+			n if n >= 2 => {
+				let len = self.sibling_len();
+				if len == 0 {
+					return;
+				}
+				let last = self.path.last_mut().expect("path length checked");
+				*last = (*last + 1).min(len.saturating_sub(1));
+			}
+			_ => {}
 		}
 	}
 
 	/// Moves highlight left (prev top-level item, or closes submenu).
 	pub fn left(&mut self) {
-		match self.depth() {
+		match self.path.len() {
 			0 => {}
-			1 => self.prev(),
+			1 => self.move_bar_prev(),
 			2 => {
-				self.pop();
-				self.prev();
+				self.path.truncate(1);
+				self.move_bar_prev();
 			}
-			_ => self.pop(),
+			_ => {
+				self.path.pop();
+			}
 		}
 	}
 
 	/// Moves highlight right (next top-level item, or enters submenu).
 	pub fn right(&mut self) {
-		match self.depth() {
+		match self.path.len() {
 			0 => {}
-			1 => self.next(),
+			1 => self.move_bar_next(),
 			2 => {
-				if let Some(item) = self.root.highlight_mut() {
-					if item.is_group() {
-						item.expand();
-						item.highlight_first_child();
-						return;
-					}
+				let enter_submenu = self
+					.selected_item()
+					.map(|item| item.is_group())
+					.unwrap_or(false);
+				if enter_submenu {
+					self.path.push(0);
+				} else {
+					self.path.truncate(1);
+					self.move_bar_next();
 				}
-				self.pop();
-				self.next();
 			}
 			_ => {
-				if let Some(item) = self.root.highlight_mut() {
-					if item.is_group() {
-						item.expand();
-						item.highlight_first_child();
-					}
+				if self
+					.selected_item()
+					.map(|item| item.is_group())
+					.unwrap_or(false)
+				{
+					self.path.push(0);
 				}
 			}
 		}
@@ -148,45 +175,19 @@ impl<T: Clone> MenuState<T> {
 	/// Groups are expanded with first child highlighted.
 	/// Leaf items emit [`MenuEvent::Selected`].
 	pub fn select(&mut self) {
-		if let Some(item) = self.root.highlight_mut() {
-			if !item.children.is_empty() {
-				item.expand();
-				item.highlight_first_child();
-			} else if let Some(ref data) = item.data {
-				self.events.push(MenuEvent::Selected(data.clone()));
-			}
-		}
-	}
+		let (is_group, data) = match self.selected_item() {
+			Some(item) => (item.is_group(), item.data.as_ref().cloned()),
+			None => return,
+		};
 
-	fn expand_current(&mut self) -> bool {
-		if let Some(item) = self.root.highlight_mut() {
-			if item.is_group() {
-				item.expand();
-				return true;
-			}
+		if is_group {
+			self.expanded = true;
+			self.path.push(0);
+			return;
 		}
-		false
-	}
 
-	fn pop(&mut self) {
-		if let Some(item) = self.root.highlight_mut() {
-			item.clear_highlight();
-		}
-	}
-
-	fn prev(&mut self) {
-		if let Some(parent) = self.root.highlight_parent_mut() {
-			parent.highlight_prev();
-		} else {
-			self.root.highlight_prev();
-		}
-	}
-
-	fn next(&mut self) {
-		if let Some(parent) = self.root.highlight_parent_mut() {
-			parent.highlight_next();
-		} else {
-			self.root.highlight_next();
+		if let Some(data) = data {
+			self.events.push(MenuEvent::Selected(data));
 		}
 	}
 
@@ -195,149 +196,149 @@ impl<T: Clone> MenuState<T> {
 		self.events.drain(..)
 	}
 
+	/// Returns the number of dropdown levels currently visible, used for
+	/// reserving horizontal space when positioning near screen edge.
 	pub(crate) fn dropdown_depth(&self) -> u16 {
-		let mut node = &self.root;
-		let mut count = 0;
-		while let Some(child) = node.highlighted_child() {
-			if child.is_group() || node.children.iter().any(|c| c.is_group()) {
-				count += 1;
-			}
-			node = child;
+		if !self.expanded || self.path.is_empty() {
+			return 0;
 		}
-		count
-	}
-
-	fn bar_item_x(&self, target_idx: usize) -> u16 {
-		let mut x = 1u16;
-		for (idx, item) in self.root.children.iter().enumerate() {
-			if idx == target_idx {
+		let mut depth = 0u16;
+		let mut items = self.items.as_slice();
+		for &idx in &self.path {
+			let Some(item) = items.get(idx) else {
 				break;
+			};
+			if item.is_group() {
+				depth += 1;
 			}
-			x = x.saturating_add(UnicodeWidthStr::width(item.name()) as u16 + 2);
+			items = &item.children;
 		}
-		x
+		depth
 	}
 
-	fn bar_item_at(&self, x: u16) -> Option<usize> {
-		let mut current_x = 1u16;
-		for (idx, item) in self.root.children.iter().enumerate() {
-			let width = UnicodeWidthStr::width(item.name()) as u16 + 2;
-			if x >= current_x && x < current_x.saturating_add(width) {
-				return Some(idx);
-			}
-			current_x = current_x.saturating_add(width);
-		}
-		None
+	pub(crate) fn set_layout(&mut self, layout: MenuLayout) {
+		self.layout = Some(layout);
 	}
 
 	/// Handles a mouse click. Returns true if handled.
 	pub fn handle_click(&mut self, x: u16, y: u16) -> bool {
-		if y == 0 {
-			if let Some(idx) = self.bar_item_at(x) {
-				for child in &mut self.root.children {
-					child.clear_highlight();
-				}
-				self.root.children[idx].highlighted = true;
-				self.expand_current();
-				return true;
+		match self.hit_test(x, y) {
+			HitResult::Bar(idx) => {
+				self.select_bar_item(idx);
+				self.expanded = self.bar_item().map(|i| i.is_group()).unwrap_or(false);
+				true
 			}
-			return false;
-		}
-
-		let Some(bar_idx) = self.root.children.iter().position(|c| c.highlighted) else {
-			return false;
-		};
-
-		let children = &self.root.children[bar_idx].children;
-		if children.is_empty() {
-			return false;
-		}
-
-		let bar_x = self.bar_item_x(bar_idx);
-		let max_width = children.iter().map(|i| i.name().len()).max().unwrap_or(0) as u16;
-		let content_width = max_width + 4;
-
-		let item_y_start = 2u16;
-		let item_x_start = bar_x + 1;
-
-		if y >= item_y_start
-			&& y < item_y_start + children.len() as u16
-			&& x >= item_x_start
-			&& x < item_x_start.saturating_add(content_width)
-		{
-			let item_idx = (y - item_y_start) as usize;
-
-			let bar_item = &mut self.root.children[bar_idx];
-			for child in &mut bar_item.children {
-				child.clear_highlight();
+			HitResult::Dropdown(path) => {
+				self.set_dropdown_path(path);
+				self.expanded = true;
+				self.select();
+				true
 			}
-			bar_item.children[item_idx].highlighted = true;
-
-			if bar_item.children[item_idx].is_group() {
-				bar_item.children[item_idx].highlight_first_child();
-			} else if let Some(ref data) = bar_item.children[item_idx].data {
-				self.events.push(MenuEvent::Selected(data.clone()));
-			}
-			return true;
+			HitResult::Miss => false,
 		}
-
-		false
 	}
 
 	/// Handles mouse hover. Returns true if over a menu item.
 	pub fn handle_hover(&mut self, x: u16, y: u16) -> bool {
-		if y == 0 {
-			if let Some(idx) = self.bar_item_at(x) {
-				if !self.root.children[idx].highlighted {
-					for child in &mut self.root.children {
-						child.clear_highlight();
-					}
-					self.root.children[idx].highlighted = true;
-					self.expand_current();
-				}
-				return true;
+		match self.hit_test(x, y) {
+			HitResult::Bar(idx) => {
+				self.select_bar_item(idx);
+				self.expanded = self.bar_item().map(|i| i.is_group()).unwrap_or(false);
+				true
 			}
-			return false;
+			HitResult::Dropdown(path) => {
+				self.set_dropdown_path(path);
+				self.expanded = true;
+				true
+			}
+			HitResult::Miss => false,
 		}
+	}
 
-		let Some(bar_idx) = self.root.children.iter().position(|c| c.highlighted) else {
-			return false;
+	fn hit_test(&self, x: u16, y: u16) -> HitResult {
+		let Some(layout) = &self.layout else {
+			return HitResult::Miss;
 		};
+		let pos = Position { x, y };
 
-		let items_len = self.root.children[bar_idx].children.len();
-		if items_len == 0 {
-			return false;
+		if let Some(idx) = layout.bar_regions.iter().position(|r| r.contains(pos)) {
+			return HitResult::Bar(idx);
 		}
-
-		let bar_x = self.bar_item_x(bar_idx);
-		let max_width = self.root.children[bar_idx]
-			.children
-			.iter()
-			.map(|i| i.name().len())
-			.max()
-			.unwrap_or(0) as u16;
-		let content_width = max_width + 4;
-
-		let item_y_start = 2u16;
-		let item_x_start = bar_x + 1;
-
-		if y >= item_y_start
-			&& y < item_y_start + items_len as u16
-			&& x >= item_x_start
-			&& x < item_x_start.saturating_add(content_width)
-		{
-			let item_idx = (y - item_y_start) as usize;
-
-			if !self.root.children[bar_idx].children[item_idx].highlighted {
-				let bar_item = &mut self.root.children[bar_idx];
-				for child in &mut bar_item.children {
-					child.clear_highlight();
-				}
-				bar_item.children[item_idx].highlighted = true;
+		if let Some(dropdown) = &layout.dropdown {
+			if let Some(path) = Self::hit_test_dropdown(dropdown, pos) {
+				return HitResult::Dropdown(path);
 			}
-			return true;
 		}
+		HitResult::Miss
+	}
 
-		false
+	fn hit_test_dropdown(dropdown: &super::DropdownLayout, pos: Position) -> Option<Vec<usize>> {
+		if let Some(submenu) = &dropdown.submenu {
+			if let Some(mut path) = Self::hit_test_dropdown(submenu, pos) {
+				let parent_idx = dropdown
+					.item_regions
+					.iter()
+					.position(|r| r.y == submenu.area.y)?;
+				path.insert(0, parent_idx);
+				return Some(path);
+			}
+		}
+		dropdown
+			.item_regions
+			.iter()
+			.position(|r| r.contains(pos))
+			.map(|idx| vec![idx])
+	}
+
+	fn item_at_path(&self, path: &[usize]) -> Option<&MenuItem<T>> {
+		let mut items = self.items.as_slice();
+		let mut current = None;
+		for &idx in path {
+			let item = items.get(idx)?;
+			current = Some(item);
+			items = &item.children;
+		}
+		current
+	}
+
+	fn bar_item(&self) -> Option<&MenuItem<T>> {
+		self.path.first().and_then(|&idx| self.items.get(idx))
+	}
+
+	fn sibling_len(&self) -> usize {
+		if self.path.len() < 2 {
+			return 0;
+		}
+		let parent_path = &self.path[..self.path.len().saturating_sub(1)];
+		let Some(parent) = self.item_at_path(parent_path) else {
+			return 0;
+		};
+		parent.children.len()
+	}
+
+	fn move_bar_prev(&mut self) {
+		let idx = self.path.first().copied().unwrap_or(0);
+		self.select_bar_item(idx.saturating_sub(1));
+	}
+
+	fn move_bar_next(&mut self) {
+		let idx = self.path.first().copied().unwrap_or(0);
+		let max = self.items.len().saturating_sub(1);
+		self.select_bar_item((idx + 1).min(max));
+	}
+
+	fn select_bar_item(&mut self, idx: usize) {
+		if idx >= self.items.len() {
+			return;
+		}
+		self.path.clear();
+		self.path.push(idx);
+	}
+
+	fn set_dropdown_path(&mut self, dropdown_path: Vec<usize>) {
+		let bar_idx = self.path.first().copied().unwrap_or(0);
+		self.path.clear();
+		self.path.push(bar_idx);
+		self.path.extend(dropdown_path);
 	}
 }
