@@ -1,6 +1,7 @@
 use proc_macro::TokenStream;
 
 mod dispatch;
+mod events;
 mod extension;
 mod keybindings;
 mod notification;
@@ -70,6 +71,43 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn parse_keybindings(input: TokenStream) -> TokenStream {
 	keybindings::parse_keybindings(input)
+}
+
+/// Generates hook event types and extractor macros from a single definition.
+///
+/// This proc macro is the single source of truth for hook events. It generates:
+/// - `HookEvent` enum for event discrimination
+/// - `HookEventData<'a>` enum with borrowed event payloads
+/// - `OwnedHookContext` enum with owned payloads for async
+/// - `__hook_extract!` macro for sync parameter extraction
+/// - `__async_hook_extract!` macro for async parameter extraction
+///
+/// # Example
+///
+/// ```ignore
+/// define_events! {
+///     /// Editor is starting up.
+///     EditorStart => "editor:start",
+///     
+///     /// A buffer was opened.
+///     BufferOpen => "buffer:open" {
+///         path: Path,
+///         text: RopeSlice,
+///         file_type: OptionStr,
+///     },
+/// }
+/// ```
+///
+/// # Field Types
+///
+/// Special type tokens are mapped to borrowed/owned forms:
+/// - `Path` → `&Path` / `PathBuf`
+/// - `RopeSlice` → `RopeSlice<'a>` / `String`
+/// - `OptionStr` → `Option<&str>` / `Option<String>`
+/// - Other types are used as-is (must implement `Clone`)
+#[proc_macro]
+pub fn define_events(input: TokenStream) -> TokenStream {
+	events::define_events(input)
 }
 
 /// Generates a [`ResultHandler`] registration for buffer-ops actions.

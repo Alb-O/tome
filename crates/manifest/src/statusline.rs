@@ -103,23 +103,7 @@ impl std::fmt::Debug for StatuslineSegmentDef {
 	}
 }
 
-impl crate::RegistryMetadata for StatuslineSegmentDef {
-	fn id(&self) -> &'static str {
-		self.id
-	}
-
-	fn name(&self) -> &'static str {
-		self.name
-	}
-
-	fn priority(&self) -> i16 {
-		self.priority
-	}
-
-	fn source(&self) -> RegistrySource {
-		self.source
-	}
-}
+crate::impl_registry_metadata!(StatuslineSegmentDef);
 
 /// Get all segments for a given position, sorted by priority.
 pub fn segments_for_position(

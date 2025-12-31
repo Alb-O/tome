@@ -53,7 +53,7 @@ macro_rules! command {
 	};
 }
 
-/// Registers a motion primitive in the [`MOTIONS`](crate::MOTIONS) slice.
+/// Registers a motion primitive in the [`MOTIONS`](crate::motions::MOTIONS) slice.
 #[macro_export]
 macro_rules! motion {
 	($name:ident, {
@@ -77,18 +77,18 @@ macro_rules! motion {
 			}
 
 			#[allow(non_upper_case_globals)]
-			#[linkme::distributed_slice($crate::MOTIONS)]
-			static [<MOTION_ $name>]: $crate::MotionDef = $crate::MotionDef {
-				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
-				name: stringify!($name),
-				aliases: $crate::__opt_slice!($({$aliases})?),
-				description: $desc,
-				handler: [<motion_handler_ $name>],
-				priority: $crate::__opt!($({$priority})?, 0),
-				source: $crate::__opt!($({$source})?, $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME"))),
-				required_caps: $crate::__opt_slice!($({$caps})?),
-				flags: $crate::__opt!($({$flags})?, $crate::flags::NONE),
-			};
+			#[linkme::distributed_slice($crate::motions::MOTIONS)]
+			static [<MOTION_ $name>]: $crate::motions::MotionDef = $crate::motions::MotionDef::new(
+				concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
+				stringify!($name),
+				$crate::__opt_slice!($({$aliases})?),
+				$desc,
+				$crate::__opt!($({$priority})?, 0),
+				$crate::__opt!($({$source})?, $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME"))),
+				$crate::__opt_slice!($({$caps})?),
+				$crate::__opt!($({$flags})?, $crate::flags::NONE),
+				[<motion_handler_ $name>],
+			);
 		}
 	};
 }

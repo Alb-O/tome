@@ -51,24 +51,10 @@ impl<'a> CommandContext<'a> {
 	}
 }
 
+/// Command flags for optional behavior hints.
 pub mod flags {
+	/// No special flags.
 	pub const NONE: u32 = 0;
-	pub const HIDDEN: u32 = 1 << 0;
-	pub const EXPERIMENTAL: u32 = 1 << 1;
-	pub const UNSAFE: u32 = 1 << 2;
 }
 
-impl crate::RegistryMetadata for CommandDef {
-	fn id(&self) -> &'static str {
-		self.id
-	}
-	fn name(&self) -> &'static str {
-		self.name
-	}
-	fn priority(&self) -> i16 {
-		self.priority
-	}
-	fn source(&self) -> crate::RegistrySource {
-		self.source
-	}
-}
+crate::impl_registry_metadata!(CommandDef);

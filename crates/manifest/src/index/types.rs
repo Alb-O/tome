@@ -3,7 +3,9 @@
 use std::collections::HashMap;
 
 use super::collision::Collision;
-use crate::{ActionDef, ActionId, CommandDef, MotionDef, TextObjectDef};
+use crate::motions::MotionDef;
+use crate::text_objects::TextObjectDef;
+use crate::{ActionDef, ActionId, CommandDef};
 
 /// Generic registry index with collision tracking.
 pub struct RegistryIndex<T: 'static> {

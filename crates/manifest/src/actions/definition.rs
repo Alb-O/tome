@@ -4,7 +4,7 @@
 //! and looked up by keybindings.
 
 use super::{ActionContext, ActionResult};
-use crate::{Capability, RegistryMetadata, RegistrySource};
+use crate::{Capability, RegistrySource};
 
 /// Definition of a registered action.
 ///
@@ -48,17 +48,4 @@ pub struct ActionDef {
 /// describing what the editor should do.
 pub type ActionHandler = fn(&ActionContext) -> ActionResult;
 
-impl RegistryMetadata for ActionDef {
-	fn id(&self) -> &'static str {
-		self.id
-	}
-	fn name(&self) -> &'static str {
-		self.name
-	}
-	fn priority(&self) -> i16 {
-		self.priority
-	}
-	fn source(&self) -> RegistrySource {
-		self.source
-	}
-}
+crate::impl_registry_metadata!(ActionDef);

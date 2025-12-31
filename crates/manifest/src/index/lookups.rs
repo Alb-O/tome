@@ -1,7 +1,9 @@
 //! Public lookup functions for registry queries.
 
 use super::get_registry;
-use crate::{ActionDef, ActionId, CommandDef, MotionDef, TextObjectDef};
+use crate::motions::MotionDef;
+use crate::text_objects::TextObjectDef;
+use crate::{ActionDef, ActionId, CommandDef};
 
 pub fn find_command(name: &str) -> Option<&'static CommandDef> {
 	let reg = get_registry();

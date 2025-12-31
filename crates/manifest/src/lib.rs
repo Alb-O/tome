@@ -33,7 +33,10 @@ pub use evildoer_base::range::CharIdx;
 pub use evildoer_base::{Range, Selection};
 use linkme::distributed_slice;
 
+pub mod motions;
+pub mod registry;
 pub mod syntax;
+pub mod text_objects;
 
 /// Represents where a registry item was defined.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -185,71 +188,7 @@ pub static ACTIONS: [actions::ActionDef];
 #[distributed_slice]
 pub static COMMANDS: [commands::CommandDef];
 
-/// Motion definition.
-pub struct MotionDef {
-	pub id: &'static str,
-	pub name: &'static str,
-	pub aliases: &'static [&'static str],
-	pub description: &'static str,
-	pub handler: fn(ropey::RopeSlice, Range, usize, bool) -> Range,
-	pub priority: i16,
-	pub source: RegistrySource,
-	pub required_caps: &'static [Capability],
-	pub flags: u32,
-}
-
-#[distributed_slice]
-pub static MOTIONS: [MotionDef];
-
-/// Text object definition.
-pub struct TextObjectDef {
-	pub id: &'static str,
-	pub name: &'static str,
-	pub aliases: &'static [&'static str],
-	pub trigger: char,
-	pub alt_triggers: &'static [char],
-	pub description: &'static str,
-	pub inner: fn(ropey::RopeSlice, usize) -> Option<Range>,
-	pub around: fn(ropey::RopeSlice, usize) -> Option<Range>,
-	pub priority: i16,
-	pub source: RegistrySource,
-	pub required_caps: &'static [Capability],
-	pub flags: u32,
-}
-
-#[distributed_slice]
-pub static TEXT_OBJECTS: [TextObjectDef];
-
-impl RegistryMetadata for MotionDef {
-	fn id(&self) -> &'static str {
-		self.id
-	}
-	fn name(&self) -> &'static str {
-		self.name
-	}
-	fn priority(&self) -> i16 {
-		self.priority
-	}
-	fn source(&self) -> RegistrySource {
-		self.source
-	}
-}
-
-impl RegistryMetadata for TextObjectDef {
-	fn id(&self) -> &'static str {
-		self.id
-	}
-	fn name(&self) -> &'static str {
-		self.name
-	}
-	fn priority(&self) -> i16 {
-		self.priority
-	}
-	fn source(&self) -> RegistrySource {
-		self.source
-	}
-}
-
+// Re-export motion and text object types at crate root for backward compatibility
 pub use actions::{
 	ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, EditAction,
 	ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount, ScrollDir, VisualDirection,
@@ -271,6 +210,7 @@ pub use index::{
 pub use keybindings::{BindingMode, KEYBINDINGS, KeyBindingDef};
 pub use keymap_registry::{BindingEntry, KeymapRegistry, LookupResult, get_keymap_registry};
 pub use mode::Mode;
+pub use motions::{MOTIONS, MotionDef};
 pub use notifications::{
 	Animation, AutoDismiss, Level, NOTIFICATION_TYPES, NotificationTypeDef, Timing,
 	find_notification_type,
@@ -292,6 +232,7 @@ pub use statusline::{
 	StatuslineSegmentDef, all_segments, find_segment, render_position, segments_for_position,
 };
 pub use terminal_config::{TerminalConfig, TerminalSequence};
+pub use text_objects::{TEXT_OBJECTS, TextObjectDef};
 pub use theme::{
 	DEFAULT_THEME, DEFAULT_THEME_ID, NotificationColors, OwnedTheme, PopupColors,
 	SemanticColorPair, StatusColors, THEMES, Theme, ThemeColors, ThemeSource, ThemeVariant,

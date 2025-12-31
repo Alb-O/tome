@@ -35,7 +35,10 @@ use tracing::warn;
 
 use crate::{Mode, RegistrySource};
 
-crate::events! {
+// Generate HookEvent, HookEventData, OwnedHookContext, and extractor macros
+// from this single source of truth. Adding a new event only requires adding
+// it here - all extraction machinery is auto-generated.
+evildoer_macro::define_events! {
 	/// Editor is starting up (before first render).
 	EditorStart => "editor:start",
 	/// Editor is shutting down.
@@ -230,23 +233,7 @@ impl std::fmt::Debug for HookDef {
 	}
 }
 
-impl crate::RegistryMetadata for HookDef {
-	fn id(&self) -> &'static str {
-		self.id
-	}
-
-	fn name(&self) -> &'static str {
-		self.name
-	}
-
-	fn priority(&self) -> i16 {
-		self.priority
-	}
-
-	fn source(&self) -> RegistrySource {
-		self.source
-	}
-}
+crate::impl_registry_metadata!(HookDef);
 
 /// Mutable context passed to mutable hook handlers.
 pub struct MutableHookContext<'a> {

@@ -7,10 +7,9 @@ use tracing::{debug, warn};
 use super::collision::{Collision, CollisionKind};
 use super::diagnostics::diagnostics_internal;
 use super::types::{ActionRegistryIndex, ExtensionRegistry, RegistryIndex};
-use crate::{
-	ACTIONS, ActionDef, ActionId, COMMANDS, CommandDef, MOTIONS, MotionDef, RegistryMetadata,
-	TEXT_OBJECTS, TextObjectDef,
-};
+use crate::motions::{MOTIONS, MotionDef};
+use crate::text_objects::{TEXT_OBJECTS, TextObjectDef};
+use crate::{ACTIONS, ActionDef, ActionId, COMMANDS, CommandDef, RegistryMetadata};
 
 /// Builds the complete extension registry from distributed slices.
 ///

@@ -77,20 +77,7 @@ pub struct PanelDef {
 	pub sticky: bool,
 }
 
-impl crate::RegistryMetadata for PanelDef {
-	fn id(&self) -> &'static str {
-		self.id
-	}
-	fn name(&self) -> &'static str {
-		self.name
-	}
-	fn priority(&self) -> i16 {
-		self.priority
-	}
-	fn source(&self) -> RegistrySource {
-		self.source
-	}
-}
+crate::impl_registry_metadata!(PanelDef);
 
 /// Registry of all panel definitions.
 #[distributed_slice]

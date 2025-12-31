@@ -2,7 +2,7 @@
 //!
 //! [`text_object!`], [`symmetric_text_object!`], and [`bracket_pair_object!`].
 
-/// Registers a text object in the [`TEXT_OBJECTS`](crate::TEXT_OBJECTS) slice.
+/// Registers a text object in the [`TEXT_OBJECTS`](crate::text_objects::TEXT_OBJECTS) slice.
 #[macro_export]
 macro_rules! text_object {
 	($name:ident, {
@@ -21,21 +21,21 @@ macro_rules! text_object {
 	}) => {
 		paste::paste! {
 			#[allow(non_upper_case_globals)]
-			#[linkme::distributed_slice($crate::TEXT_OBJECTS)]
-			static [<OBJ_ $name>]: $crate::TextObjectDef = $crate::TextObjectDef {
-				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
-				name: stringify!($name),
-				aliases: $crate::__opt_slice!($({$aliases})?),
-				trigger: $trigger,
-				alt_triggers: $crate::__opt_slice!($({$alt_triggers})?),
-				description: $desc,
-				inner: $inner,
-				around: $around,
-				priority: $crate::__opt!($({$priority})?, 0),
-				source: $crate::__opt!($({$source})?, $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME"))),
-				required_caps: $crate::__opt_slice!($({$caps})?),
-				flags: $crate::__opt!($({$flags})?, $crate::flags::NONE),
-			};
+			#[linkme::distributed_slice($crate::text_objects::TEXT_OBJECTS)]
+			static [<OBJ_ $name>]: $crate::text_objects::TextObjectDef = $crate::text_objects::TextObjectDef::new(
+				concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
+				stringify!($name),
+				$crate::__opt_slice!($({$aliases})?),
+				$desc,
+				$crate::__opt!($({$priority})?, 0),
+				$crate::__opt!($({$source})?, $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME"))),
+				$crate::__opt_slice!($({$caps})?),
+				$crate::__opt!($({$flags})?, $crate::flags::NONE),
+				$trigger,
+				$crate::__opt_slice!($({$alt_triggers})?),
+				$inner,
+				$around,
+			);
 		}
 	};
 }
