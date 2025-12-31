@@ -10,6 +10,7 @@
 //! [`ActionResult`]: crate::ActionResult
 //! [`dispatch_result`]: crate::dispatch_result
 
+use crate::Capability;
 use crate::actions::ActionResult;
 
 /// Outcome of handling an action result.
@@ -27,6 +28,10 @@ pub enum HandleOutcome {
 pub struct ResultHandler {
 	/// Name for debugging/logging.
 	pub name: &'static str,
+	/// Priority (lower runs first, default 0).
+	pub priority: i16,
+	/// Capabilities required for this handler.
+	pub required_caps: &'static [Capability],
 	/// Handle the result, returning the outcome.
 	pub handle: fn(&ActionResult, &mut super::EditorContext, bool) -> HandleOutcome,
 }
@@ -35,6 +40,8 @@ impl std::fmt::Debug for ResultHandler {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("ResultHandler")
 			.field("name", &self.name)
+			.field("priority", &self.priority)
+			.field("required_caps", &self.required_caps)
 			.finish()
 	}
 }

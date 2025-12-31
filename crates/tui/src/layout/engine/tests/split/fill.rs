@@ -14,10 +14,7 @@ use crate::layout::{Flex, Layout, Rect};
 #[rstest]
 #[case::fill_proportional(vec![Fill(1), Fill(2), Fill(1)], vec![0..25, 25..75, 75..100])]
 #[case::fill_with_fixed(vec![Length(10), Fill(1), Length(10)], vec![0..10, 10..90, 90..100])]
-fn fill_distribution(
-	#[case] constraints: Vec<Constraint>,
-	#[case] expected: Vec<Range<u16>>,
-) {
+fn fill_distribution(#[case] constraints: Vec<Constraint>, #[case] expected: Vec<Range<u16>>) {
 	let rect = Rect::new(0, 0, 100, 1);
 	let ranges = Layout::horizontal(constraints)
 		.flex(Flex::Start)

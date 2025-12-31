@@ -61,7 +61,11 @@ fn can_be_stylized() {
 
 #[test]
 fn title_content_style() {
-	for alignment in [HorizontalAlignment::Left, HorizontalAlignment::Center, HorizontalAlignment::Right] {
+	for alignment in [
+		HorizontalAlignment::Left,
+		HorizontalAlignment::Center,
+		HorizontalAlignment::Right,
+	] {
 		let mut buffer = Buffer::empty(Rect::new(0, 0, 4, 1));
 		Block::new()
 			.title_alignment(alignment)
@@ -73,7 +77,11 @@ fn title_content_style() {
 
 #[test]
 fn block_title_style() {
-	for alignment in [HorizontalAlignment::Left, HorizontalAlignment::Center, HorizontalAlignment::Right] {
+	for alignment in [
+		HorizontalAlignment::Left,
+		HorizontalAlignment::Center,
+		HorizontalAlignment::Right,
+	] {
 		let mut buffer = Buffer::empty(Rect::new(0, 0, 4, 1));
 		Block::new()
 			.title_alignment(alignment)
@@ -86,7 +94,11 @@ fn block_title_style() {
 
 #[test]
 fn title_style_overrides_block_title_style() {
-	for alignment in [HorizontalAlignment::Left, HorizontalAlignment::Center, HorizontalAlignment::Right] {
+	for alignment in [
+		HorizontalAlignment::Left,
+		HorizontalAlignment::Center,
+		HorizontalAlignment::Right,
+	] {
 		let mut buffer = Buffer::empty(Rect::new(0, 0, 4, 1));
 		Block::new()
 			.title_alignment(alignment)

@@ -2,7 +2,7 @@
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Data, DeriveInput, parse_macro_input};
+use syn::{Data, DeriveInput, Expr, Lit, Meta, parse_macro_input};
 
 pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);
@@ -17,21 +17,57 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 	let mut slice_names: Vec<syn::Ident> = Vec::new();
 	let mut match_arms = Vec::new();
 	let mut terminal_safe_variants = Vec::new();
+	let mut coverage_checks = Vec::new();
+
+	let mut coverage_error = false;
+	for attr in &input.attrs {
+		if attr.path().is_ident("handler_coverage") {
+			let Meta::NameValue(meta) = &attr.meta else {
+				return syn::Error::new_spanned(
+					attr,
+					"handler_coverage must be a name-value attribute",
+				)
+				.to_compile_error()
+				.into();
+			};
+			let Expr::Lit(expr) = &meta.value else {
+				return syn::Error::new_spanned(attr, "handler_coverage must be a string")
+					.to_compile_error()
+					.into();
+			};
+			let Lit::Str(lit) = &expr.lit else {
+				return syn::Error::new_spanned(attr, "handler_coverage must be a string")
+					.to_compile_error()
+					.into();
+			};
+			let value = lit.value();
+			if value == "error" {
+				coverage_error = true;
+			} else {
+				return syn::Error::new_spanned(attr, "handler_coverage must be \"error\"")
+					.to_compile_error()
+					.into();
+			}
+		}
+	}
 
 	for variant in &data.variants {
 		let variant_name = &variant.ident;
 
-		let handler_name = variant
-			.attrs
-			.iter()
-			.find_map(|attr| {
-				if attr.path().is_ident("handler") {
-					attr.parse_args::<syn::Ident>().ok()
+		let mut handler_name = None;
+		let mut coverage_ignore = false;
+		for attr in &variant.attrs {
+			if attr.path().is_ident("handler")
+				&& let Ok(ident) = attr.parse_args::<syn::Ident>()
+			{
+				if ident == "ignore" {
+					coverage_ignore = true;
 				} else {
-					None
+					handler_name = Some(ident);
 				}
-			})
-			.unwrap_or_else(|| variant_name.clone());
+			}
+		}
+		let handler_name = handler_name.unwrap_or_else(|| variant_name.clone());
 
 		let is_terminal_safe = variant
 			.attrs
@@ -54,6 +90,14 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 			slice_names.push(slice_ident.clone());
 		}
 
+		if coverage_error && !coverage_ignore {
+			coverage_checks.push(quote! {
+				if #slice_ident.is_empty() {
+					missing.push(stringify!(#variant_name));
+				}
+			});
+		}
+
 		let pattern = match &variant.fields {
 			syn::Fields::Unit => quote! { #enum_name::#variant_name },
 			syn::Fields::Unnamed(_) => quote! { #enum_name::#variant_name(..) },
@@ -64,6 +108,34 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 			#pattern => run_handlers(&#slice_ident, result, ctx, extend)
 		});
 	}
+
+	let coverage_test = if coverage_error {
+		let coverage_fn = format_ident!(
+			"handler_coverage_{}",
+			to_screaming_snake_case(&enum_name.to_string()).to_lowercase()
+		);
+		quote! {
+			#[cfg(test)]
+			#[test]
+			fn #coverage_fn() {
+				let mut total = 0usize;
+				#(total += #slice_names.len();)*
+				if total == 0 {
+					return;
+				}
+				let mut missing = ::std::vec::Vec::new();
+				#(#coverage_checks)*
+				assert!(
+					missing.is_empty(),
+					"Missing handlers for {} variants: {:?}",
+					stringify!(#enum_name),
+					missing
+				);
+			}
+		}
+	} else {
+		quote! {}
+	};
 
 	let expanded = quote! {
 		#[allow(non_upper_case_globals)]
@@ -104,6 +176,8 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 				ctx: &mut crate::editor_ctx::EditorContext,
 				extend: bool,
 			) -> bool {
+				let mut handlers = handlers.iter().collect::<Vec<_>>();
+				handlers.sort_by_key(|handler| handler.priority);
 				for handler in handlers {
 					match (handler.handle)(result, ctx, extend) {
 						HandleOutcome::Handled => return false,
@@ -125,6 +199,8 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 				#(#match_arms,)*
 			}
 		}
+
+		#coverage_test
 	};
 
 	expanded.into()

@@ -64,7 +64,8 @@ fn alignment_even_line_odd_area() {
 
 #[test]
 fn alignment_zero_line_width() {
-	let list = List::new([Line::from("This line has zero width").alignment(HorizontalAlignment::Center)]);
+	let list =
+		List::new([Line::from("This line has zero width").alignment(HorizontalAlignment::Center)]);
 	let buffer = widget(list, 0, 2);
 	assert_eq!(buffer, Buffer::with_lines([""; 2]));
 }

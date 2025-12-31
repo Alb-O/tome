@@ -24,9 +24,7 @@ fn find_separator_rows(clean: &str) -> Vec<usize> {
 	clean
 		.lines()
 		.enumerate()
-		.filter(|(_, line)| {
-			line.chars().all(|c| c == '─' || c == ' ') && line.contains('─')
-		})
+		.filter(|(_, line)| line.chars().all(|c| c == '─' || c == ' ') && line.contains('─'))
 		.map(|(i, _)| i)
 		.collect()
 }

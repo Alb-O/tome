@@ -186,7 +186,10 @@ mod tests {
 			},
 			None,
 		);
-		assert!(matches!(hook_handler_lsp_buffer_open(&ctx), HookAction::Done(_)));
+		assert!(matches!(
+			hook_handler_lsp_buffer_open(&ctx),
+			HookAction::Done(_)
+		));
 	}
 
 	#[test]
@@ -201,7 +204,10 @@ mod tests {
 			},
 			Some(&ext_map),
 		);
-		assert!(matches!(hook_handler_lsp_buffer_open(&ctx), HookAction::Done(_)));
+		assert!(matches!(
+			hook_handler_lsp_buffer_open(&ctx),
+			HookAction::Done(_)
+		));
 	}
 
 	#[test]

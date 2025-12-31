@@ -21,6 +21,7 @@ use crate::{Capability, RegistrySource, find_motion};
 /// [`dispatch_result`]: crate::dispatch_result
 /// [`is_terminal_safe`]: Self::is_terminal_safe
 #[derive(Debug, Clone, DispatchResult)]
+#[handler_coverage = "error"]
 pub enum ActionResult {
 	/// No-op success.
 	#[terminal_safe]

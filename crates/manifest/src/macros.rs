@@ -7,7 +7,6 @@
 //! # Primary Macros
 //!
 //! - [`action!`] - Register actions with optional keybindings and handlers
-//! - [`bind!`] - Additional keybindings for existing actions
 //! - [`motion!`] - Cursor/selection movement primitives
 //! - [`hook!`] - Event lifecycle observers
 //! - [`command!`] - Ex-mode commands (`:write`, `:quit`)
@@ -59,6 +58,157 @@ macro_rules! __hook_param_expr {
 	};
 	($ty:ty, $value:ident) => {
 		$value
+	};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __hook_borrowed_ty {
+	(Path) => {
+		&'a ::std::path::Path
+	};
+	(RopeSlice) => {
+		::ropey::RopeSlice<'a>
+	};
+	(OptionStr) => {
+		::core::option::Option<&'a str>
+	};
+	($ty:ty) => {
+		$ty
+	};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __hook_owned_ty {
+	(Path) => {
+		::std::path::PathBuf
+	};
+	(RopeSlice) => {
+		::std::string::String
+	};
+	(OptionStr) => {
+		::core::option::Option<::std::string::String>
+	};
+	($ty:ty) => {
+		$ty
+	};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __hook_owned_value {
+	(Path, $value:ident) => {
+		$value.to_path_buf()
+	};
+	(RopeSlice, $value:ident) => {
+		$value.to_string()
+	};
+	(OptionStr, $value:ident) => {
+		$value.map(::std::string::String::from)
+	};
+	($ty:ty, $value:ident) => {
+		$value.clone()
+	};
+}
+
+#[macro_export]
+macro_rules! events {
+	(
+		$(
+			$(#[$meta:meta])*
+			$event:ident => $event_str:literal
+			$( { $( $field:ident : $ty:tt ),* $(,)? } )?
+		),* $(,)?
+	) => {
+		#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+		pub enum HookEvent {
+			$(
+				$(#[$meta])*
+				$event,
+			)*
+		}
+
+		impl HookEvent {
+			pub fn as_str(&self) -> &'static str {
+				match self {
+					$(HookEvent::$event => $event_str,)*
+				}
+			}
+		}
+
+		/// Event-specific data for hooks.
+		///
+		/// Contains the payload for each hook event type.
+		pub enum HookEventData<'a> {
+			$(
+				$(#[$meta])*
+				$event $( { $( $field: $crate::__hook_borrowed_ty!($ty) ),* } )?,
+			)*
+		}
+
+		impl<'a> HookEventData<'a> {
+			/// Returns the event type for this data.
+			pub fn event(&self) -> HookEvent {
+				match self {
+					$(HookEventData::$event $( { $( $field: _ ),* } )? => HookEvent::$event,)*
+				}
+			}
+
+			/// Creates an owned version of this event data for use in async hooks.
+			///
+			/// Copies all data so it can be moved into a future.
+			pub fn to_owned(&self) -> OwnedHookContext {
+				OwnedHookContext::from(self)
+			}
+		}
+
+		impl<'a> From<&HookEventData<'a>> for OwnedHookContext {
+			fn from(data: &HookEventData<'a>) -> Self {
+				match data {
+					$(
+						HookEventData::$event $( { $( $field ),* } )? => {
+							OwnedHookContext::$event $( { $( $field: $crate::__hook_owned_value!($ty, $field) ),* } )?
+						}
+					),*
+				}
+			}
+		}
+
+		/// Owned version of [`HookContext`] for async hook handlers.
+		///
+		/// Unlike `HookContext` which borrows data, this owns all its data and can be
+		/// moved into async futures. Use [`HookContext::to_owned()`] to create one.
+		///
+		/// # Example
+		///
+		/// ```ignore
+		/// hook!(lsp_open, BufferOpen, 100, "Notify LSP", |ctx| {
+		///     let owned = ctx.to_owned();
+		///     HookAction::Async(Box::pin(async move {
+		///         if let OwnedHookContext::BufferOpen { path, text, file_type } = owned {
+		///             lsp.did_open(&path, &text, file_type.as_deref()).await;
+		///         }
+		///         HookResult::Continue
+		///     }))
+		/// });
+		/// ```
+		#[derive(Debug, Clone)]
+		pub enum OwnedHookContext {
+			$(
+				$(#[$meta])*
+				$event $( { $( $field: $crate::__hook_owned_ty!($ty) ),* } )?,
+			)*
+		}
+
+		impl OwnedHookContext {
+			/// Returns the event type for this context.
+			pub fn event(&self) -> HookEvent {
+				match self {
+					$(OwnedHookContext::$event $( { $( $field: _ ),* } )? => HookEvent::$event,)*
+				}
+			}
+		}
 	};
 }
 
@@ -435,20 +585,6 @@ macro_rules! action {
 	};
 }
 
-/// Register additional keybindings for an existing action.
-///
-/// # Example
-///
-/// ```ignore
-/// bind!(scroll_down, r#"normal "z j""#);
-/// ```
-#[macro_export]
-macro_rules! bind {
-	($action:ident, $kdl:literal) => {
-		evildoer_macro::parse_keybindings!($action, $kdl);
-	};
-}
-
 /// Define a hook and register it in the [`HOOKS`](crate::hooks::HOOKS) slice.
 ///
 /// # Example
@@ -730,10 +866,32 @@ macro_rules! statusline_segment {
 #[macro_export]
 macro_rules! result_handler {
 	($slice:ident, $static_name:ident, $name:literal, $body:expr) => {
+		$crate::result_handler!(
+			$slice,
+			$static_name,
+			{
+				name: $name
+			},
+			$body
+		);
+	};
+	(
+		$slice:ident,
+		$static_name:ident,
+		{
+			name: $name:literal
+			$(, priority: $priority:expr)?
+			$(, caps: $caps:expr)?
+			$(,)?
+		},
+		$body:expr
+	) => {
 		#[::linkme::distributed_slice($crate::actions::$slice)]
 		static $static_name: $crate::editor_ctx::ResultHandler =
 			$crate::editor_ctx::ResultHandler {
 				name: $name,
+				priority: $crate::__opt!($({$priority})?, 0),
+				required_caps: $crate::__opt_slice!($({$caps})?),
 				handle: $body,
 			};
 	};
@@ -838,6 +996,6 @@ macro_rules! panel {
 }
 
 pub use crate::{
-	__opt, __opt_slice, action, bind, command, hook, motion, option, panel, result_handler,
+	__opt, __opt_slice, action, command, hook, motion, option, panel, result_handler,
 	statusline_segment, text_object,
 };

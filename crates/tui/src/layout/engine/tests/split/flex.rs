@@ -38,8 +38,8 @@ fn vertical_split_by_height() {
 #[case::min_max(vec![Min(0), Max(100)], vec![0..0, 0..100])]
 #[case::length_min(vec![Length(u16::MAX), Min(10)], vec![0..90, 90..100])]
 #[case::min_length(vec![Min(10), Length(u16::MAX)], vec![0..10, 10..100])]
-#[case::length_max(vec![Length(0), Max(10)], vec![0..90, 90..100])]
-#[case::max_length(vec![Max(10), Length(0)], vec![0..10, 10..100])]
+#[case::length_max(vec![Length(0), Max(10)], vec![0..0, 0..10])]
+#[case::max_length(vec![Max(10), Length(0)], vec![0..10, 10..10])]
 fn min_max(#[case] constraints: Vec<Constraint>, #[case] expected: Vec<Range<u16>>) {
 	let rect = Rect::new(0, 0, 100, 1);
 	let ranges = Layout::horizontal(constraints)

@@ -1,7 +1,7 @@
 //! Editing actions (delete, yank, paste, undo, redo, etc.).
 
-use evildoer_manifest::actions::{ActionResult, EditAction, PendingAction, PendingKind};
 use evildoer_manifest::action;
+use evildoer_manifest::actions::{ActionResult, EditAction, PendingAction, PendingKind};
 
 action!(delete, { description: "Delete selection", bindings: r#"normal "d""# },
 	|_ctx| ActionResult::Edit(EditAction::Delete { yank: true }));

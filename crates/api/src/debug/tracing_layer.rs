@@ -12,8 +12,6 @@ use tracing_subscriber::registry::LookupSpan;
 
 use super::ring_buffer::{ActionSpanContext, LOG_BUFFER, LogEntry, LogLevel};
 
-
-
 /// Data stored per-span for action context extraction.
 #[derive(Debug, Default)]
 pub struct ActionSpanData {

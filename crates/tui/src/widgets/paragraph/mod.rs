@@ -466,7 +466,11 @@ fn render_line(wrapped: &WrappedLine<'_, '_>, area: Rect, buf: &mut Buffer, y: u
 	}
 }
 
-const fn get_line_offset(line_width: u16, text_area_width: u16, alignment: HorizontalAlignment) -> u16 {
+const fn get_line_offset(
+	line_width: u16,
+	text_area_width: u16,
+	alignment: HorizontalAlignment,
+) -> u16 {
 	match alignment {
 		HorizontalAlignment::Center => (text_area_width / 2).saturating_sub(line_width / 2),
 		HorizontalAlignment::Right => text_area_width.saturating_sub(line_width),

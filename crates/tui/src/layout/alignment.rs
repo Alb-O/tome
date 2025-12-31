@@ -54,10 +54,22 @@ mod tests {
 
 	#[test]
 	fn horizontal_alignment_from_str() {
-		assert_eq!("Left".parse::<HorizontalAlignment>(), Ok(HorizontalAlignment::Left));
-		assert_eq!("Center".parse::<HorizontalAlignment>(), Ok(HorizontalAlignment::Center));
-		assert_eq!("Right".parse::<HorizontalAlignment>(), Ok(HorizontalAlignment::Right));
-		assert_eq!("".parse::<HorizontalAlignment>(), Err(ParseError::VariantNotFound));
+		assert_eq!(
+			"Left".parse::<HorizontalAlignment>(),
+			Ok(HorizontalAlignment::Left)
+		);
+		assert_eq!(
+			"Center".parse::<HorizontalAlignment>(),
+			Ok(HorizontalAlignment::Center)
+		);
+		assert_eq!(
+			"Right".parse::<HorizontalAlignment>(),
+			Ok(HorizontalAlignment::Right)
+		);
+		assert_eq!(
+			"".parse::<HorizontalAlignment>(),
+			Err(ParseError::VariantNotFound)
+		);
 	}
 
 	#[test]

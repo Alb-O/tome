@@ -356,7 +356,6 @@ impl<'a> Span<'a> {
 	pub fn into_right_aligned_line(self) -> Line<'a> {
 		Line::from(self).right_aligned()
 	}
-
 }
 
 impl UnicodeWidthStr for Span<'_> {

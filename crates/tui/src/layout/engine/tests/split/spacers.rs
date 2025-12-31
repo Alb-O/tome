@@ -130,4 +130,3 @@ fn split_with_spacers_and_too_much_spacing(
 		.collect::<Vec<(u16, u16)>>();
 	assert_eq!(result, expected);
 }
-

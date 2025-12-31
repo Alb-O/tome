@@ -9,6 +9,27 @@ use termina::event::{Event, KeyEventKind};
 use termina::{PlatformTerminal, Terminal as _};
 
 use crate::backend::TerminaBackend;
+
+#[derive(Debug, Clone, Copy)]
+pub struct RenderTiming {
+	pub fast: Duration,
+	pub slow: Duration,
+}
+
+impl RenderTiming {
+	pub fn detect() -> Self {
+		Self::default()
+	}
+}
+
+impl Default for RenderTiming {
+	fn default() -> Self {
+		Self {
+			fast: Duration::from_millis(16),
+			slow: Duration::from_millis(50),
+		}
+	}
+}
 use crate::terminal::{
 	coalesce_resize_events, cursor_style_for_mode, disable_terminal_features,
 	enable_terminal_features, install_panic_hook, split_cursor_to_termina,
@@ -19,6 +40,7 @@ pub async fn run_editor(mut editor: Editor) -> io::Result<()> {
 	install_panic_hook(&mut terminal);
 	enable_terminal_features(&mut terminal)?;
 	let events = terminal.event_reader();
+	let timing = RenderTiming::detect();
 
 	let backend = TerminaBackend::new(terminal);
 	let mut terminal = Terminal::new(backend)?;
@@ -68,9 +90,9 @@ pub async fn run_editor(mut editor: Editor) -> io::Result<()> {
 				|| editor.any_panel_open()
 				|| needs_fast_redraw
 			{
-				Some(Duration::from_millis(16))
+				Some(timing.fast)
 			} else {
-				Some(Duration::from_millis(50))
+				Some(timing.slow)
 			};
 
 			let has_event = match timeout {

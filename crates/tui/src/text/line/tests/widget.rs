@@ -1,6 +1,5 @@
 use std::dbg;
 
-
 use rstest::{fixture, rstest};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;

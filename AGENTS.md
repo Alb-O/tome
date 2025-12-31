@@ -1,38 +1,140 @@
 # Evildoer
 
-Kakoune-inspired modal text editor in Rust.
+The next evolution of agentic text editors & harnesses.
 
 ## Design Goals
 
-- **Orthogonal**: No tight coupling between modules, no dependency tangling. Event emitter/receiver pattern; emitters don't know what receivers may exist. Heavily utilize `linkme`'s `distributed_slices` for hierarchically inferred compile-time imports.
-- **Suckless extension system**: Extensions are written in Rust, the same language as the editor's source code. A two-tier system (Core Builtins + Host Extensions) ensures the editor remains agnostic of specific features while allowing deep integration via TypeMaps.
-- **Heavy proc macro usage**: Keeps repetitive data-oriented patterns lean and composable.
+- **Orthogonal**: No tight coupling between modules. Event emitter/receiver pattern via `linkme` distributed slices for compile-time registration.
+- **Suckless extension system**: Extensions written in Rust. Two-tier system: Core Builtins (stdlib) + Host Extensions (extensions/).
+- **Data-driven macros**: Declarative and proc macros keep registration patterns lean and composable.
+
+## Crate Architecture
+
+```
+evildoer-base          Core types: Range, Selection, Transaction, Rope wrappers
+evildoer-manifest      Registry DEFINITIONS (ActionDef, CommandDef, etc.) - no implementations
+evildoer-stdlib        Registry IMPLEMENTATIONS (actions, commands, motions, etc.)
+evildoer-macro         Proc macros (DispatchResult, extension, parse_keybindings, etc.)
+evildoer-api           Editor engine: Buffer, Editor, rendering, terminals
+evildoer-extensions    Host extensions discovered at build-time (LSP, Zenmode)
+evildoer-acp           AI completion protocol integration (experimental)
+evildoer-term          Main binary and terminal UI
+```
+
+**Supporting crates**: `keymap` (key parsing), `input` (input state machine), `config` (KDL parsing), `language` (tree-sitter), `lsp` (LSP client framework), `tui` (Ratatui fork).
 
 ## Registry System
 
-Uses `linkme` for compile-time registration. The registry system is split between **evildoer-manifest** (definitions and indexing) and **evildoer-stdlib** (actual implementations).
+Uses `linkme` distributed slices for compile-time registration. Definitions live in **evildoer-manifest**, implementations in **evildoer-stdlib**.
 
-| Module           | Location                           | Purpose                                              |
-| ---------------- | ---------------------------------- | ---------------------------------------------------- |
-| `actions/`       | `crates/stdlib/src/actions/`       | Unified keybinding handlers returning `ActionResult` |
-| `keybindings/`   | `crates/manifest/src/keybindings/` | Key → action mappings per mode                       |
-| `commands/`      | `crates/stdlib/src/commands/`      | Ex-mode commands (`:write`, `:quit`)                 |
-| `hooks/`         | `crates/stdlib/src/hooks/`         | Event lifecycle observers                            |
-| `options/`       | `crates/stdlib/src/options/`       | Typed config settings                                |
-| `statusline/`    | `crates/stdlib/src/statusline/`    | Modular status bar segments                          |
-| `filetypes/`     | `crates/stdlib/src/filetypes/`     | File type detection                                  |
-| `motions/`       | `crates/stdlib/src/motions/`       | Cursor movement                                      |
-| `objects/`       | `crates/stdlib/src/objects/`       | Text object selection                                |
-| `notifications/` | `crates/stdlib/src/notifications/` | UI notification system                               |
+| Registry      | Slice                       | Implementations                        | Macro                    |
+| ------------- | --------------------------- | -------------------------------------- | ------------------------ |
+| Actions       | `ACTIONS`                   | `stdlib/src/actions/` (87 items)       | `action!`                |
+| Commands      | `COMMANDS`                  | `stdlib/src/commands/` (19 items)      | `command!`               |
+| Motions       | `MOTIONS`                   | `stdlib/src/motions/` (19 items)       | `motion!`                |
+| Text Objects  | `TEXT_OBJECTS`              | `stdlib/src/objects/` (9 items)        | `text_object!`           |
+| Options       | `OPTIONS`                   | `stdlib/src/options/` (26 items)       | `option!`                |
+| Hooks         | `HOOKS`                     | `stdlib/src/hooks/`                    | `hook!`, `async_hook!`   |
+| Statusline    | `STATUSLINE_SEGMENTS`       | `stdlib/src/statusline/` (6 items)     | `statusline_segment!`    |
+| Notifications | `NOTIFICATION_TYPES`        | `stdlib/src/notifications/` (5 types)  | `register_notification!` |
+| Panels        | `PANELS`, `PANEL_FACTORIES` | `api/src/panels/` (2 items)            | `panel!`                 |
+| Keybindings   | `KEYBINDINGS`               | Colocated with actions via `bindings:` | (inline in `action!`)    |
 
-## Extension System (`crates/extensions/`)
+### Action Result Dispatch
 
-Host-side extensions that manage stateful services (like ACP/AI) and UI panels. These are located in `crates/extensions/extensions/` and are automatically discovered at build-time via `build.rs`. They depend on `evildoer-api`.
+Actions return `ActionResult` variants which are dispatched to handlers via `#[derive(DispatchResult)]`:
 
-Running cargo: `nix develop -c cargo {build/test/etc}`. Kitty GUI tests: `KITTY_TESTS=1 DISPLAY=:0 nix develop -c cargo test -p evildoer-term --test kitty_multiselect -- --nocapture --test-threads=1`.
+```rust
+action!(move_left, {
+    description: "Move cursor left",
+    bindings: r#"normal "h" "left""#,
+}, |ctx| cursor_motion(ctx, "char_prev"));
+```
 
-## Integration & GUI-Driven Testing
+Handler slices (`RESULT_*_HANDLERS`) are auto-generated. Buffer-ops actions use the `result:` form for colocated handlers:
 
-- Approach: keep tight red/green loops with assertions in both unit tests and kitty GUI integration tests. Write failing assertions first, then iterate fixes until GUI captures go green.
-- Harness: `kitty-test-harness` (git dependency, own flake) drives the real terminal, sending key sequences and capturing screens. Defaults favor WSL/kitty (X11, software GL). Current GUI suite lives in `crates/term/tests/kitty_multiselect.rs`; keep tests serial and isolated per file to avoid socket/file contention.
-- Why it matters: core selection ops can pass unit tests, but the live GUI harness exposes cursor/selection drift and per-cursor insert bugs. Running against the real terminal ensures fixes match user-facing behavior.
+```rust
+action!(split_horizontal, {
+    description: "Split horizontally",
+    bindings: r#"window "s""#,
+    result: SplitHorizontal,
+}, |ops| ops.split_horizontal());
+```
+
+## Extension System
+
+Extensions in `crates/extensions/extensions/` are discovered at build-time via `build.rs`.
+
+**Current extensions**:
+
+- **LSP** (`extensions/lsp/`): Language server integration via `async_hook!` macros
+- **Zenmode** (`extensions/zenmode/`): Focus mode with style overlays, uses `#[extension]` macro
+
+**Extension macro** supports `#[init]`, `#[render]`, `#[command]` attributes:
+
+```rust
+#[extension(id = "zenmode", priority = 100)]
+impl ZenmodeState {
+    #[init]
+    pub fn new() -> Self { ... }
+
+    #[render(priority = 100)]
+    fn update(&mut self, editor: &mut Editor) { ... }
+
+    #[command("zenmode", aliases = ["zen", "focus"])]
+    fn toggle(&mut self, ctx: &mut CommandContext) -> CommandResult { ... }
+}
+```
+
+**ACP** (`crates/acp/`): Separate crate for AI completion, loaded via `use evildoer_acp as _` in main.
+
+## Capability System
+
+Fine-grained traits in `manifest/src/editor_ctx/capabilities.rs`:
+
+| Trait             | Required | Purpose                 |
+| ----------------- | -------- | ----------------------- |
+| `CursorAccess`    | Yes      | Get/set cursor position |
+| `SelectionAccess` | Yes      | Get/set selections      |
+| `ModeAccess`      | Yes      | Get/set editor mode     |
+| `MessageAccess`   | Yes      | Display notifications   |
+| `EditAccess`      | Optional | Text modifications      |
+| `SearchAccess`    | Optional | Pattern search          |
+| `UndoAccess`      | Optional | Undo/redo history       |
+| `BufferOpsAccess` | Optional | Buffer/split management |
+| `FileOpsAccess`   | Optional | Save/load operations    |
+
+**Pending traits** (documented as "not yet wired"): `JumpAccess`, `MacroAccess`, `TextAccess`.
+
+## Key Files
+
+| Purpose             | Location                                        |
+| ------------------- | ----------------------------------------------- |
+| Main entry          | `crates/term/src/main.rs`                       |
+| Editor core         | `crates/api/src/editor/mod.rs`                  |
+| Action definitions  | `crates/manifest/src/actions.rs`                |
+| Declarative macros  | `crates/manifest/src/macros.rs`                 |
+| Proc macros         | `crates/macro/src/lib.rs`                       |
+| Result handlers     | `crates/stdlib/src/editor_ctx/result_handlers/` |
+| Keymap registry     | `crates/manifest/src/keymap_registry.rs`        |
+| Extension discovery | `crates/extensions/build.rs`                    |
+
+## Development
+
+```bash
+# Build
+nix develop -c cargo build
+
+# Test
+nix develop -c cargo test --workspace
+
+# Kitty GUI tests
+KITTY_TESTS=1 DISPLAY=:0 nix develop -c cargo test -p evildoer-term --test kitty_multiselect -- --nocapture --test-threads=1
+```
+
+### Testing Philosophy
+
+- Unit tests for core logic (selections, motions, text objects)
+- Integration tests via `kitty-test-harness` for GUI behavior
+- Write failing assertions first, iterate until green
+- GUI harness catches cursor/selection drift that unit tests miss

@@ -362,7 +362,11 @@ fn line_composer_preserves_line_alignment() {
 	);
 	assert_eq!(
 		truncated_alignments,
-		vec![HorizontalAlignment::Left, HorizontalAlignment::Right, HorizontalAlignment::Center]
+		vec![
+			HorizontalAlignment::Left,
+			HorizontalAlignment::Right,
+			HorizontalAlignment::Center
+		]
 	);
 }
 

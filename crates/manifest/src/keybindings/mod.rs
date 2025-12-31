@@ -83,18 +83,3 @@ impl From<Mode> for BindingMode {
 		}
 	}
 }
-
-/// Returns all registered keybindings.
-pub fn all_bindings() -> impl Iterator<Item = &'static KeyBindingDef> {
-	KEYBINDINGS.iter()
-}
-
-/// Returns all keybindings for a specific mode.
-pub fn bindings_for_mode(mode: BindingMode) -> impl Iterator<Item = &'static KeyBindingDef> {
-	KEYBINDINGS.iter().filter(move |kb| kb.mode == mode)
-}
-
-/// Returns all keybindings that trigger a specific action.
-pub fn bindings_for_action(action: &str) -> impl Iterator<Item = &'static KeyBindingDef> {
-	KEYBINDINGS.iter().filter(move |kb| kb.action == action)
-}

@@ -11,4 +11,3 @@ mod registry_diag;
 mod test_notify;
 mod theme;
 mod write;
-

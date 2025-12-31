@@ -54,15 +54,6 @@ pub fn find_motion(name: &str) -> Option<&'static MotionDef> {
 		.copied()
 }
 
-pub fn find_text_object_by_name(name: &str) -> Option<&'static TextObjectDef> {
-	let reg = get_registry();
-	reg.text_objects
-		.by_name
-		.get(name)
-		.or_else(|| reg.text_objects.by_alias.get(name))
-		.copied()
-}
-
 pub fn find_text_object_by_trigger(trigger: char) -> Option<&'static TextObjectDef> {
 	let reg = get_registry();
 	reg.text_objects.by_trigger.get(&trigger).copied()

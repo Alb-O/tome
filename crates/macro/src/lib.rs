@@ -1,28 +1,9 @@
 use proc_macro::TokenStream;
 
-mod api;
 mod dispatch;
 mod extension;
 mod keybindings;
 mod notification;
-
-/// Generates WASM host/guest bridge code for extension APIs.
-///
-/// When applied to a trait, generates:
-/// - Guest-side methods that call into the host via WASM imports
-/// - Host-side functions that dispatch to the trait implementation
-///
-/// ```ignore
-/// #[evildoer_api(ExtensionHostContext)]
-/// pub trait ExtensionApi {
-///     fn notify(&mut self, message: &str);
-///     fn get_buffer_content(&self) -> String;
-/// }
-/// ```
-#[proc_macro_attribute]
-pub fn evildoer_api(attr: TokenStream, item: TokenStream) -> TokenStream {
-	api::evildoer_api(attr, item)
-}
 
 /// Generates extension registrations from an `impl` block.
 ///
@@ -64,7 +45,7 @@ pub fn register_notification(input: TokenStream) -> TokenStream {
 ///     Motion(Selection),
 /// }
 /// ```
-#[proc_macro_derive(DispatchResult, attributes(handler, terminal_safe))]
+#[proc_macro_derive(DispatchResult, attributes(handler, terminal_safe, handler_coverage))]
 pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 	dispatch::derive_dispatch_result(input)
 }
@@ -177,6 +158,8 @@ pub fn buffer_ops_handler(input: TokenStream) -> TokenStream {
 		static #handler_name: evildoer_manifest::editor_ctx::ResultHandler =
 			evildoer_manifest::editor_ctx::ResultHandler {
 				name: stringify!(#name),
+				priority: 0,
+				required_caps: &[],
 				handle: |r, ctx, _| {
 					use evildoer_manifest::editor_ctx::MessageAccess;
 					if matches!(r, evildoer_manifest::actions::ActionResult::#result) {

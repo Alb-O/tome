@@ -35,12 +35,10 @@ fn deserialize() -> Result<(), de::value::Error> {
 
 #[test]
 fn deserialize_error() {
-	let color: Result<_, de::value::Error> =
-		Color::deserialize("invalid".into_deserializer());
+	let color: Result<_, de::value::Error> = Color::deserialize("invalid".into_deserializer());
 	assert!(color.is_err());
 
-	let color: Result<_, de::value::Error> =
-		Color::deserialize("#00000000".into_deserializer());
+	let color: Result<_, de::value::Error> = Color::deserialize("#00000000".into_deserializer());
 	assert!(color.is_err());
 
 	let color: Result<Color, _> = serde_json::from_str(r#"{"Rgb":[255,0,255]}"#);
@@ -68,4 +66,3 @@ fn serialize_then_deserialize() -> Result<(), serde_json::Error> {
 
 	Ok(())
 }
-

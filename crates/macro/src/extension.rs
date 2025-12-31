@@ -1,7 +1,9 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream};
-use syn::{parse_macro_input, Attribute, ImplItem, ImplItemFn, ItemImpl, LitInt, LitStr, Token, Type};
+use syn::{
+	Attribute, ImplItem, ImplItemFn, ItemImpl, LitInt, LitStr, Token, Type, parse_macro_input,
+};
 
 use crate::dispatch;
 
@@ -241,10 +243,7 @@ fn takes_extension_map(method: &ImplItemFn) -> syn::Result<bool> {
 	}
 	let arg = method.sig.inputs.first().unwrap();
 	let syn::FnArg::Typed(typed) = arg else {
-		return Err(syn::Error::new_spanned(
-			arg,
-			"#[init] must not take self",
-		));
+		return Err(syn::Error::new_spanned(arg, "#[init] must not take self"));
 	};
 	let syn::Type::Reference(ty_ref) = &*typed.ty else {
 		return Err(syn::Error::new_spanned(
@@ -264,9 +263,11 @@ fn takes_extension_map(method: &ImplItemFn) -> syn::Result<bool> {
 			"#[init] must take &mut ExtensionMap",
 		));
 	};
-	let last = path.path.segments.last().ok_or_else(|| {
-		syn::Error::new_spanned(path, "invalid ExtensionMap type")
-	})?;
+	let last = path
+		.path
+		.segments
+		.last()
+		.ok_or_else(|| syn::Error::new_spanned(path, "invalid ExtensionMap type"))?;
 	if last.ident != "ExtensionMap" {
 		return Err(syn::Error::new_spanned(
 			last,
@@ -301,7 +302,6 @@ fn returns_command_result(method: &ImplItemFn) -> bool {
 	};
 	last.ident == "CommandResult"
 }
-
 
 pub fn extension(attr: TokenStream, item: TokenStream) -> TokenStream {
 	let extension_args = parse_macro_input!(attr as ExtensionArgs);
@@ -477,16 +477,20 @@ pub fn extension(attr: TokenStream, item: TokenStream) -> TokenStream {
 				.into();
 			}
 		};
-		let await_call = if is_async { quote! { .await } } else { quote! {} };
+		let await_call = if is_async {
+			quote! { .await }
+		} else {
+			quote! {}
+		};
 		let call = quote! { state.#ident(ctx)#await_call };
 		let result_expr = if returns_command_result {
 			quote! { #call.map(|_| evildoer_manifest::CommandOutcome::Ok) }
 		} else {
 			quote! { #call }
 		};
-		let description = command_args.description.unwrap_or_else(|| {
-			LitStr::new(&format!("{} command", ident), ident.span())
-		});
+		let description = command_args
+			.description
+			.unwrap_or_else(|| LitStr::new(&format!("{} command", ident), ident.span()));
 		let aliases = command_args.aliases;
 		let aliases_tokens = if aliases.is_empty() {
 			quote! {}

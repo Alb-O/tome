@@ -176,6 +176,7 @@ pub mod options;
 pub mod panels;
 pub mod split_buffer;
 pub mod statusline;
+pub mod terminal_config;
 pub mod theme;
 
 #[distributed_slice]
@@ -265,12 +266,9 @@ pub use hooks::{
 };
 pub use index::{
 	all_actions, all_commands, all_motions, all_text_objects, find_action, find_action_by_id,
-	find_command, find_motion, find_text_object_by_name, find_text_object_by_trigger,
-	resolve_action_id,
+	find_command, find_motion, find_text_object_by_trigger, resolve_action_id,
 };
-pub use keybindings::{
-	BindingMode, KEYBINDINGS, KeyBindingDef, all_bindings, bindings_for_action, bindings_for_mode,
-};
+pub use keybindings::{BindingMode, KEYBINDINGS, KeyBindingDef};
 pub use keymap_registry::{BindingEntry, KeymapRegistry, LookupResult, get_keymap_registry};
 pub use mode::Mode;
 pub use notifications::{
@@ -293,6 +291,7 @@ pub use statusline::{
 	RenderedSegment, STATUSLINE_SEGMENTS, SegmentPosition, SegmentStyle, StatuslineContext,
 	StatuslineSegmentDef, all_segments, find_segment, render_position, segments_for_position,
 };
+pub use terminal_config::{TerminalConfig, TerminalSequence};
 pub use theme::{
 	DEFAULT_THEME, DEFAULT_THEME_ID, NotificationColors, OwnedTheme, PopupColors,
 	SemanticColorPair, StatusColors, THEMES, Theme, ThemeColors, ThemeSource, ThemeVariant,

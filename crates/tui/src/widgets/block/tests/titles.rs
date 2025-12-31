@@ -43,9 +43,21 @@ fn title_alignment() {
 #[test]
 fn title_alignment_overrides_block_title_alignment() {
 	let tests = vec![
-		(HorizontalAlignment::Right, HorizontalAlignment::Left, "test    "),
-		(HorizontalAlignment::Left, HorizontalAlignment::Center, "  test  "),
-		(HorizontalAlignment::Center, HorizontalAlignment::Right, "    test"),
+		(
+			HorizontalAlignment::Right,
+			HorizontalAlignment::Left,
+			"test    ",
+		),
+		(
+			HorizontalAlignment::Left,
+			HorizontalAlignment::Center,
+			"  test  ",
+		),
+		(
+			HorizontalAlignment::Center,
+			HorizontalAlignment::Right,
+			"    test",
+		),
 	];
 	for (block_title_alignment, alignment, expected) in tests {
 		let mut buffer = Buffer::empty(Rect::new(0, 0, 8, 1));

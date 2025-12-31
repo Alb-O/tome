@@ -500,4 +500,3 @@ fn update_zenmode_state(editor: &mut Editor, state: &mut ZenmodeState) {
 		editor.needs_redraw = true;
 	}
 }
-

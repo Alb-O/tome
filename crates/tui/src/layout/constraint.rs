@@ -461,5 +461,4 @@ mod tests {
 		assert_eq!(Constraint::from_fills([1, 2, 3]), expected);
 		assert_eq!(Constraint::from_fills(vec![1, 2, 3]), expected);
 	}
-
 }

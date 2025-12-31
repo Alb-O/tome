@@ -72,7 +72,6 @@ impl Buffer {
 		&self.area
 	}
 
-
 	/// Returns a reference to the [`Cell`] at the given position or [`None`] if the position is
 	/// outside the `Buffer`'s area.
 	///

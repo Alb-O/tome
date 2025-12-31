@@ -402,7 +402,8 @@ impl LayoutManager {
 	/// Returns the effective side dock width, clamped to available space.
 	fn effective_side_dock_width(&self, total_width: u16) -> u16 {
 		let max_dock = total_width.saturating_sub(Self::MIN_SIDE_DOCK_WIDTH);
-		self.side_dock_width.clamp(Self::MIN_SIDE_DOCK_WIDTH, max_dock)
+		self.side_dock_width
+			.clamp(Self::MIN_SIDE_DOCK_WIDTH, max_dock)
 	}
 
 	/// Returns the separator rect between layer 0 and layer 1 (the bottom dock boundary).
@@ -413,7 +414,9 @@ impl LayoutManager {
 		let layer0_area = self.layer_area(0, doc_area);
 		// Adjust width if side dock is visible
 		let width = if self.layer(2).is_some() {
-			doc_area.width.saturating_sub(self.effective_side_dock_width(doc_area.width))
+			doc_area
+				.width
+				.saturating_sub(self.effective_side_dock_width(doc_area.width))
 		} else {
 			doc_area.width
 		};
