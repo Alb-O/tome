@@ -7,7 +7,8 @@ use evildoer_tui::animation::Animatable;
 use evildoer_tui::layout::{Constraint, Direction, Layout, Rect};
 use evildoer_tui::style::{Color, Modifier, Style};
 use evildoer_tui::text::{Line, Span};
-use evildoer_tui::widgets::{Block, Clear, Paragraph};
+use evildoer_tui::widgets::menu::Menu;
+use evildoer_tui::widgets::{Block, Clear, Paragraph, StatefulWidget};
 
 use super::buffer::{BufferRenderContext, ensure_buffer_cursor_visible};
 use crate::Editor;
@@ -146,11 +147,19 @@ impl Editor {
 
 		let chunks = Layout::default()
 			.direction(Direction::Vertical)
-			.constraints([Constraint::Min(1), Constraint::Length(1)])
+			.constraints([
+				Constraint::Length(1), // Menu bar
+				Constraint::Min(1),    // Document area
+				Constraint::Length(1), // Status line
+			])
 			.split(area);
 
+		let menu_area = chunks[0];
+		let main_area = chunks[1];
+		let status_area = chunks[2];
+
 		let mut ui = std::mem::take(&mut self.ui);
-		let dock_layout = ui.compute_layout(chunks[0]);
+		let dock_layout = ui.compute_layout(main_area);
 		let doc_area = dock_layout.doc_area;
 
 		let doc_focused = ui.focus.focused().is_editor();
@@ -166,9 +175,22 @@ impl Editor {
 		}
 		self.ui = ui;
 
+		// Render menu bar
+		let menu_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
+		frame.render_widget(menu_bg, menu_area);
+		Menu::new()
+			.style(Style::default().fg(self.theme.colors.popup.fg).bg(self.theme.colors.popup.bg))
+			.highlight_style(
+				Style::default()
+					.fg(self.theme.colors.ui.cursor_fg)
+					.bg(self.theme.colors.ui.selection_bg),
+			)
+			.render(menu_area, frame.buffer_mut(), &mut self.menu);
+
+		// Render status line
 		let status_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
-		frame.render_widget(status_bg, chunks[1]);
-		frame.render_widget(self.render_status_line(), chunks[1]);
+		frame.render_widget(status_bg, status_area);
+		frame.render_widget(self.render_status_line(), status_area);
 
 		let mut notifications_area = doc_area;
 		notifications_area.height = notifications_area.height.saturating_sub(1);

@@ -14,11 +14,36 @@ impl Editor {
 	pub async fn handle_mouse(&mut self, mouse: termina::event::MouseEvent) -> bool {
 		let width = self.window_width.unwrap_or(80);
 		let height = self.window_height.unwrap_or(24);
-		// Main area excludes status line (1 row)
-		let main_height = height.saturating_sub(1);
+
+		// Handle menu bar clicks (row 0) or when menu is active
+		if mouse.row == 0 || self.menu.is_active() {
+			if let MouseEventKind::Down(_) = mouse.kind {
+				// Translate to menu-relative coordinates
+				let menu_x = mouse.column;
+				let menu_y = mouse.row;
+				if self.menu.handle_click(menu_x, menu_y) {
+					crate::menu::process_menu_events(&mut self.menu, &mut self.command_queue);
+					self.needs_redraw = true;
+					return false;
+				}
+				// Click outside menu when active - close it
+				if self.menu.is_active() {
+					self.menu.reset();
+					self.needs_redraw = true;
+					return false;
+				}
+			}
+			if self.menu.is_active() {
+				// Consume all mouse events when menu is active
+				return false;
+			}
+		}
+
+		// Main area excludes menu bar (1 row) and status line (1 row)
+		let main_height = height.saturating_sub(2);
 		let main_area = evildoer_tui::layout::Rect {
 			x: 0,
-			y: 0,
+			y: 1, // Start below menu bar
 			width,
 			height: main_height,
 		};
@@ -260,10 +285,11 @@ impl Editor {
 	pub fn doc_area(&self) -> evildoer_tui::layout::Rect {
 		let width = self.window_width.unwrap_or(80);
 		let height = self.window_height.unwrap_or(24);
-		let main_height = height.saturating_sub(1);
+		// Exclude menu bar (1 row) and status line (1 row)
+		let main_height = height.saturating_sub(2);
 		let main_area = evildoer_tui::layout::Rect {
 			x: 0,
-			y: 0,
+			y: 1,
 			width,
 			height: main_height,
 		};

@@ -32,6 +32,7 @@ pub mod debug;
 pub mod editor;
 #[cfg(feature = "lsp")]
 pub mod lsp;
+pub mod menu;
 pub mod panels;
 pub mod paths;
 pub mod render;

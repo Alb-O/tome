@@ -61,6 +61,21 @@ impl Editor {
 	}
 
 	pub async fn handle_key(&mut self, key: termina::event::KeyEvent) -> bool {
+		// Handle menu bar when active
+		if self.menu.is_active() {
+			self.handle_menu_key(&key);
+			return false;
+		}
+
+		// Alt+m activates menu bar
+		if key.code == KeyCode::Char('m')
+			&& key.modifiers.contains(termina::event::Modifiers::ALT)
+		{
+			self.menu.activate();
+			self.needs_redraw = true;
+			return false;
+		}
+
 		// UI global bindings (panels, focus, etc.)
 		if self.ui.handle_global_key(&key) {
 			if self.ui.take_wants_redraw() {
@@ -267,5 +282,22 @@ impl Editor {
 			buffer.selection = Selection::single(anchor, doc_pos);
 			buffer.cursor = buffer.selection.primary().head;
 		}
+	}
+
+	/// Handles key input when the menu bar is active.
+	fn handle_menu_key(&mut self, key: &termina::event::KeyEvent) {
+		match key.code {
+			KeyCode::Escape => self.menu.reset(),
+			KeyCode::Enter => {
+				self.menu.select();
+				crate::menu::process_menu_events(&mut self.menu, &mut self.command_queue);
+			}
+			KeyCode::Left | KeyCode::Char('h') => self.menu.left(),
+			KeyCode::Right | KeyCode::Char('l') => self.menu.right(),
+			KeyCode::Up | KeyCode::Char('k') => self.menu.up(),
+			KeyCode::Down | KeyCode::Char('j') => self.menu.down(),
+			_ => {}
+		}
+		self.needs_redraw = true;
 	}
 }

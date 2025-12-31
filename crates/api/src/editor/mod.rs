@@ -51,7 +51,9 @@ pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimati
 use crate::buffer::{BufferId, BufferView};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
+use crate::menu::{MenuAction, create_menu};
 use crate::ui::UiManager;
+use evildoer_tui::widgets::menu::MenuState;
 
 /// The main editor/workspace structure.
 ///
@@ -157,6 +159,9 @@ pub struct Editor {
 
 	/// Queue for deferred command execution from [`ActionResult::Command`].
 	pub command_queue: CommandQueue,
+
+	/// Application menu bar state.
+	pub menu: MenuState<MenuAction>,
 }
 
 impl evildoer_manifest::EditorOps for Editor {}
@@ -236,6 +241,7 @@ impl Editor {
 			jump_list: JumpList::default(),
 			macro_state: MacroState::default(),
 			command_queue: CommandQueue::new(),
+			menu: create_menu(),
 		}
 	}
 }
