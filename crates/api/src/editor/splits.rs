@@ -11,6 +11,13 @@ use evildoer_manifest::{
 use super::Editor;
 use crate::buffer::{BufferId, BufferView, Layout};
 
+fn hook_view_id(view: BufferView) -> evildoer_manifest::hooks::ViewId {
+	match view {
+		BufferView::Text(id) => evildoer_manifest::hooks::ViewId::Text(id.0),
+		BufferView::Panel(id) => evildoer_manifest::hooks::ViewId::Panel(id),
+	}
+}
+
 impl Editor {
 	/// Layer index for the docked terminal panel.
 	pub(super) const DOCK_LAYER: usize = 1;
@@ -24,6 +31,16 @@ impl Editor {
 		self.layout
 			.split_horizontal(current_view, new_buffer_id, doc_area);
 		self.focus_buffer(new_buffer_id);
+		emit_hook_sync_with(
+			&HookContext::new(
+				HookEventData::SplitCreated {
+					view_id: hook_view_id(BufferView::Text(new_buffer_id)),
+					direction: evildoer_manifest::hooks::SplitDirection::Horizontal,
+				},
+				Some(&self.extensions),
+			),
+			&mut self.hook_runtime,
+		);
 	}
 
 	/// Creates a vertical split with the current view and a new buffer to the right.
@@ -35,6 +52,16 @@ impl Editor {
 		self.layout
 			.split_vertical(current_view, new_buffer_id, doc_area);
 		self.focus_buffer(new_buffer_id);
+		emit_hook_sync_with(
+			&HookContext::new(
+				HookEventData::SplitCreated {
+					view_id: hook_view_id(BufferView::Text(new_buffer_id)),
+					direction: evildoer_manifest::hooks::SplitDirection::Vertical,
+				},
+				Some(&self.extensions),
+			),
+			&mut self.hook_runtime,
+		);
 	}
 
 	/// Toggles a panel by name.
@@ -56,6 +83,16 @@ impl Editor {
 				self.layout.set_layer(def.layer, None);
 				self.buffers.set_focused_view(self.layout.first_view());
 				self.needs_redraw = true;
+				emit_hook_sync_with(
+					&HookContext::new(
+						HookEventData::PanelToggled {
+							panel_id: def.id,
+							visible: false,
+						},
+						Some(&self.extensions),
+					),
+					&mut self.hook_runtime,
+				);
 				return true;
 			}
 		}
@@ -73,6 +110,16 @@ impl Editor {
 			.set_layer(def.layer, Some(Layout::single(panel_view)));
 		self.buffers.set_focused_view(panel_view);
 		self.needs_redraw = true;
+		emit_hook_sync_with(
+			&HookContext::new(
+				HookEventData::PanelToggled {
+					panel_id: def.id,
+					visible: true,
+				},
+				Some(&self.extensions),
+			),
+			&mut self.hook_runtime,
+		);
 		true
 	}
 
@@ -115,6 +162,16 @@ impl Editor {
 				&mut self.hook_runtime,
 			);
 		}
+
+		emit_hook_sync_with(
+			&HookContext::new(
+				HookEventData::SplitClosed {
+					view_id: hook_view_id(view),
+				},
+				Some(&self.extensions),
+			),
+			&mut self.hook_runtime,
+		);
 
 		// Remove from layout - returns the new focus target if successful
 		let new_focus = self.layout.remove_view(view);

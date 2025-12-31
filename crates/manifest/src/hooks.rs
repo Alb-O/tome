@@ -33,7 +33,34 @@ use futures::future::Future;
 use linkme::distributed_slice;
 use tracing::warn;
 
-use crate::{Mode, RegistrySource};
+use crate::{Mode, PanelId, RegistrySource};
+
+/// Identifier for a focused view in hook payloads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ViewId {
+	/// A text buffer view, identified by its buffer ID.
+	Text(u64),
+	/// A panel view, identified by its panel ID.
+	Panel(PanelId),
+}
+
+/// Optional view identifier for hook payloads.
+pub type OptionViewId = Option<ViewId>;
+
+/// Static string payload for hook events.
+pub type Str = &'static str;
+
+/// Boolean payload for hook events.
+pub type Bool = bool;
+
+/// Split direction for layout-related events.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SplitDirection {
+	/// Horizontal split (side-by-side).
+	Horizontal,
+	/// Vertical split (stacked).
+	Vertical,
+}
 
 // Generate HookEvent, HookEventData, OwnedHookContext, and extractor macros
 // from this single source of truth. Adding a new event only requires adding
@@ -96,6 +123,25 @@ evildoer_macro::define_events! {
 	FocusGained => "focus:gained",
 	/// Window lost focus.
 	FocusLost => "focus:lost",
+	/// Focused view changed.
+	ViewFocusChanged => "view:focus_changed" {
+		view_id: ViewId,
+		prev_view_id: OptionViewId,
+	},
+	/// Split view created.
+	SplitCreated => "split:created" {
+		view_id: ViewId,
+		direction: SplitDirection,
+	},
+	/// Split view closed.
+	SplitClosed => "split:closed" {
+		view_id: ViewId,
+	},
+	/// Panel visibility toggled.
+	PanelToggled => "panel:toggled" {
+		panel_id: Str,
+		visible: Bool,
+	},
 }
 
 /// Context passed to hook handlers.

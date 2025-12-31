@@ -2,10 +2,17 @@
 //!
 //! Focusing buffers, panels, and navigating between views.
 
-use evildoer_manifest::Mode;
+use evildoer_manifest::{HookContext, HookEventData, Mode, emit_hook_sync_with};
 
 use super::Editor;
 use crate::buffer::{BufferId, BufferView};
+
+fn hook_view_id(view: BufferView) -> evildoer_manifest::hooks::ViewId {
+	match view {
+		BufferView::Text(id) => evildoer_manifest::hooks::ViewId::Text(id.0),
+		BufferView::Panel(id) => evildoer_manifest::hooks::ViewId::Panel(id),
+	}
+}
 
 impl Editor {
 	/// Focuses a specific view explicitly (user action like click or keybinding).
@@ -42,6 +49,19 @@ impl Editor {
 			&& self.layout.layer_of_view(old_view) == Some(Self::DOCK_LAYER)
 		{
 			self.layout.set_layer(Self::DOCK_LAYER, None);
+		}
+
+		if view != old_view {
+			emit_hook_sync_with(
+				&HookContext::new(
+					HookEventData::ViewFocusChanged {
+						view_id: hook_view_id(view),
+						prev_view_id: Some(hook_view_id(old_view)),
+					},
+					Some(&self.extensions),
+				),
+				&mut self.hook_runtime,
+			);
 		}
 
 		true
