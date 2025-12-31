@@ -277,4 +277,84 @@ impl<T: Clone> MenuState<T> {
 
 		false
 	}
+
+	/// Handles mouse hover at the given position relative to menu area origin.
+	///
+	/// Updates highlights to follow the mouse. Returns true if hover was over a menu item.
+	pub fn handle_hover(&mut self, x: u16, y: u16) -> bool {
+		// Check menu bar (y == 0)
+		if y == 0 {
+			let mut current_x = 1u16;
+			for (idx, item) in self.root.children.iter().enumerate() {
+				let label_width = Self::bar_label_width(item.name());
+				if x >= current_x && x < current_x.saturating_add(label_width) {
+					// Only update if hovering a different top-level item
+					if !self.root.children[idx].highlighted {
+						for child in &mut self.root.children {
+							child.clear_highlight();
+						}
+						self.root.children[idx].highlighted = true;
+						self.push();
+					}
+					return true;
+				}
+				current_x = current_x.saturating_add(label_width);
+			}
+			return false;
+		}
+
+		// Check first-level dropdown (y >= 1)
+		let bar_idx = match self.root.children.iter().position(|c| c.highlighted) {
+			Some(idx) => idx,
+			None => return false,
+		};
+
+		let items_len = self.root.children[bar_idx].children.len();
+		if items_len == 0 {
+			return false;
+		}
+
+		let mut current_x = 1u16;
+		let mut bar_start_x = current_x;
+		for (idx, item) in self.root.children.iter().enumerate() {
+			let label_width = Self::bar_label_width(item.name());
+			if idx == bar_idx {
+				bar_start_x = current_x;
+				break;
+			}
+			current_x = current_x.saturating_add(label_width);
+		}
+
+		let max_name_width = self.root.children[bar_idx]
+			.children
+			.iter()
+			.map(|i| i.name().len())
+			.max()
+			.unwrap_or(0) as u16;
+		let content_width = max_name_width + 4;
+
+		let item_y_start = 2u16;
+		let item_y_end = item_y_start + items_len as u16;
+		let item_x_start = bar_start_x + 1;
+
+		if y >= item_y_start
+			&& y < item_y_end
+			&& x >= item_x_start
+			&& x < item_x_start.saturating_add(content_width)
+		{
+			let item_idx = (y - item_y_start) as usize;
+
+			// Only update if hovering a different item
+			if !self.root.children[bar_idx].children[item_idx].highlighted {
+				let bar_item = &mut self.root.children[bar_idx];
+				for child in &mut bar_item.children {
+					child.clear_highlight();
+				}
+				bar_item.children[item_idx].highlighted = true;
+			}
+			return true;
+		}
+
+		false
+	}
 }

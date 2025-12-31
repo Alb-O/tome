@@ -17,22 +17,32 @@ impl Editor {
 
 		// Handle menu bar clicks (row 0) or when menu is active
 		if mouse.row == 0 || self.menu.is_active() {
-			if let MouseEventKind::Down(_) = mouse.kind {
-				// Translate to menu-relative coordinates
-				let menu_x = mouse.column;
-				let menu_y = mouse.row;
-				if self.menu.handle_click(menu_x, menu_y) {
-					crate::menu::process_menu_events(&mut self.menu, &mut self.command_queue);
-					self.needs_redraw = true;
-					return false;
+			let menu_x = mouse.column;
+			let menu_y = mouse.row;
+
+			match mouse.kind {
+				MouseEventKind::Down(_) => {
+					if self.menu.handle_click(menu_x, menu_y) {
+						crate::menu::process_menu_events(&mut self.menu, &mut self.command_queue);
+						self.needs_redraw = true;
+						return false;
+					}
+					// Click outside menu when active - close it
+					if self.menu.is_active() {
+						self.menu.reset();
+						self.needs_redraw = true;
+						return false;
+					}
 				}
-				// Click outside menu when active - close it
-				if self.menu.is_active() {
-					self.menu.reset();
-					self.needs_redraw = true;
-					return false;
+				MouseEventKind::Moved | MouseEventKind::Drag(_) => {
+					if self.menu.is_active() && self.menu.handle_hover(menu_x, menu_y) {
+						self.needs_redraw = true;
+						return false;
+					}
 				}
+				_ => {}
 			}
+
 			if self.menu.is_active() {
 				// Consume all mouse events when menu is active
 				return false;
