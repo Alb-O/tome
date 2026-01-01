@@ -57,28 +57,25 @@ run_custom_rules() {
           pushd "$PROJECT_ROOT" >/dev/null
           # Run clippy and parse its JSON output
           # Schema: { reason, message: { level, message, code, spans, children, rendered } }
-          eval "$run_cmd" 2>&1 | while IFS= read -r line; do
-            # Only process compiler-message lines with actual diagnostics (not notes)
-            if echo "$line" | jq -e '.reason == "compiler-message" and .message.level != "note"' >/dev/null 2>&1; then
-              echo "$line" | jq -c '
-                .message as $msg |
-                ($msg.spans // [])[] |
-                select(.is_primary == true) |
-                {
-                  ruleId: ($msg.code.code // "clippy"),
-                  severity: $msg.level,
-                  message: $msg.message,
-                  note: "",
-                  file: .file_name,
-                  range: {
-                    start: { line: (.line_start - 1), column: (.column_start - 1) },
-                    end: { line: (.line_end - 1), column: (.column_end - 1) }
-                  },
-                  text: ((.text // [{}])[0].text // "")
-                }
-              ' 2>/dev/null || true
-            fi
-          done
+          # Use grep to filter JSON lines only, then jq to transform
+          eval "$run_cmd" 2>&1 | grep '^{' | jq -c '
+            select(.reason == "compiler-message" and .message.level != "note") |
+            .message as $msg |
+            ($msg.spans // [])[] |
+            select(.is_primary == true) |
+            {
+              ruleId: ($msg.code.code // "clippy"),
+              severity: $msg.level,
+              message: $msg.message,
+              note: "",
+              file: .file_name,
+              range: {
+                start: { line: (.line_start - 1), column: (.column_start - 1) },
+                end: { line: (.line_end - 1), column: (.column_end - 1) }
+              },
+              text: ((.text // [{}])[0].text // "")
+            }
+          ' 2>/dev/null || true
           popd >/dev/null
         fi
         ;;

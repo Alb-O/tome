@@ -11,55 +11,41 @@
       rust-overlay,
       rootSrc,
       self',
+      imp,
       ...
     }:
     let
       rustToolchain = pkgs.rust-bin.fromRustupToolchainFile (rootSrc + "/rust-toolchain.toml");
-    in
-    let
-      lint-summary = pkgs.writeShellScriptBin "lint" ''
-        ${pkgs.ast-grep}/bin/ast-grep scan --json=stream 2>/dev/null | ${pkgs.jq}/bin/jq -s -r '
-          sort_by(.ruleId, .message, .note // "", .severity)
-          | group_by([.ruleId, .message, .note // "", .severity])
-          | .[]
-          | "\(.[0].severity | ascii_upcase): \(.[0].ruleId) - \(.[0].message)\n"
-            + (if (.[0].note? and .[0].note != "") then "NOTE: \(.[0].note)\n" else "" end)
-            + (map("  - \(.file):\(.range.start.line+1):\(.range.start.column+1) - \(.text)") | join("\n"))
-            + "\n"
-        '
-      '';
+
+      # Collect fragments from .d directories (injected by gitbits)
+      shellHookFragments = imp.fragments ./shellHook.d;
+      packageFragments = imp.fragmentsWith { inherit pkgs self'; } ./packages.d;
     in
     {
       default = pkgs.mkShell {
-        packages = [
-          rustToolchain
-          pkgs.cargo-watch
-          pkgs.cargo-edit
-          pkgs.cargo-insta
-          pkgs.rust-analyzer
-          pkgs.pkg-config
-          pkgs.openssl
-          pkgs.ast-grep
-          pkgs.yq-go
-          pkgs.mold
-          pkgs.clang
-          lint-summary
-          self'.formatter
-        ];
+        packages =
+          [
+            rustToolchain
+            pkgs.cargo-watch
+            pkgs.cargo-edit
+            pkgs.cargo-insta
+            pkgs.rust-analyzer
+            pkgs.pkg-config
+            pkgs.openssl
+            pkgs.mold
+            pkgs.clang
+            self'.formatter
+          ]
+          ++ packageFragments.asList;
 
         shellHook = ''
-          if [ -t 0 ]; then
-            if [ -d .git ]; then
-              cp ${rootSrc}/nix/scripts/pre-commit .git/hooks/pre-commit
-              chmod +x .git/hooks/pre-commit
-            fi
+          ${shellHookFragments.asString}
 
+          if [ -t 0 ]; then
+            echo ""
             echo "Rust dev shell"
             echo "  Rust: $(rustc --version)"
             echo "  Cargo: $(cargo --version)"
-            echo ""
-            echo "Available commands:"
-            echo "  lint          - Run consolidated lint summary"
           fi
         '';
       };
