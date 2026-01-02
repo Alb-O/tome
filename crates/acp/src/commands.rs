@@ -8,7 +8,7 @@
 
 use std::path::PathBuf;
 
-use evildoer_registry::commands::{command, CommandContext, CommandError, CommandOutcome};
+use evildoer_registry::commands::{CommandContext, CommandError, CommandOutcome, command};
 use futures::future::LocalBoxFuture;
 
 use crate::AcpManager;

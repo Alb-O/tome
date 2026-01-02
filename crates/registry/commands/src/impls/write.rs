@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use futures::future::LocalBoxFuture;
 
-use crate::{command, CommandContext, CommandError, CommandOutcome};
+use crate::{CommandContext, CommandError, CommandOutcome, command};
 
 command!(write, { aliases: &["w"], description: "Write buffer to file" }, handler: cmd_write);
 

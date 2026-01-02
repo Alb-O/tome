@@ -17,7 +17,7 @@ mod impls;
 mod macros;
 
 // Re-export shared types from motions registry for consistency
-pub use evildoer_registry_motions::{flags, movement, Capability, RegistrySource};
+pub use evildoer_registry_motions::{Capability, RegistrySource, flags, movement};
 
 /// Handler signature for text object selection.
 ///

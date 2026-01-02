@@ -140,7 +140,7 @@ impl ThemeColors {
 
 		let bg = override_pair.and_then(|p| p.bg).unwrap_or(self.popup.bg);
 
-		let fg = override_pair.and_then(|p| p.fg).unwrap_or_else(|| {
+		let fg = override_pair.and_then(|p| p.fg).unwrap_or({
 			match semantic {
 				SEMANTIC_WARNING => self.status.warning_fg,
 				SEMANTIC_ERROR => self.status.error_fg,
@@ -344,9 +344,5 @@ pub fn suggest_theme(name: &str) -> Option<&'static str> {
 		}
 	}
 
-	if best_score > 0.8 {
-		best_match
-	} else {
-		None
-	}
+	if best_score > 0.8 { best_match } else { None }
 }

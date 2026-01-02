@@ -1,6 +1,6 @@
-use crate::index::collision::CollisionKind;
-use crate::index::ExtensionRegistry;
 use crate::RegistryMetadata;
+use crate::index::ExtensionRegistry;
+use crate::index::collision::CollisionKind;
 
 pub struct DiagnosticReport {
 	pub collisions: Vec<CollisionReport>,

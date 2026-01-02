@@ -5,32 +5,34 @@
 Complete the registry-first architecture migration for Evildoer editor. Move all remaining distributed slice registries from `manifest/` and `stdlib/` to self-contained crates under `crates/registry/`. Each registry crate owns its types, macros, distributed slice, and standard implementations.
 
 **Already migrated:**
+
 - `menus` - Menu groups and items
-- `motions` - Cursor movement primitives  
+- `motions` - Cursor movement primitives
 - `options` - Configuration options
 - `statusline` - Statusline segments
 - `text_objects` - Text object selection
 
 **Remaining registries to migrate:**
-1. `notifications` - Notification types (5 types, proc macro)
-2. `commands` - Ex-mode commands (19 commands)
-3. `hooks` - Event lifecycle observers (complex, proc macro)
-4. `actions` - Editor actions (87 actions, result dispatch)
-5. `panels` - Panel definitions (2 slices)
 
----
+1. `notifications` - Notification types (5 types, proc macro)
+1. `commands` - Ex-mode commands (19 commands)
+1. `hooks` - Event lifecycle observers (complex, proc macro)
+1. `actions` - Editor actions (87 actions, result dispatch)
+1. `panels` - Panel definitions (2 slices)
+
+______________________________________________________________________
 
 ## Implementation Expectations
 
-<mandatory_execution_requirements>
+\<mandatory_execution_requirements>
 
 This is not a review task. When given implementation requests:
 
 1. Edit files using tools to modify actual source files
-2. Debug and fix by running builds, reading errors, iterating until it compiles
-3. Run `cargo check --workspace` after each registry migration
-4. Run `cargo test --workspace` after completing all migrations
-5. Complete the full implementation; do not stop at partial solutions
+1. Debug and fix by running builds, reading errors, iterating until it compiles
+1. Run `cargo check --workspace` after each registry migration
+1. Run `cargo test --workspace` after completing all migrations
+1. Complete the full implementation; do not stop at partial solutions
 
 Unacceptable responses:
 
@@ -39,13 +41,13 @@ Unacceptable responses:
 - Stopping after encountering the first error
 - Leaving any registry partially migrated
 
-</mandatory_execution_requirements>
+\</mandatory_execution_requirements>
 
----
+______________________________________________________________________
 
 ## Behavioral Constraints
 
-<verbosity_and_scope_constraints>
+\<verbosity_and_scope_constraints>
 
 - Match existing registry crate patterns exactly (see `crates/registry/motions/`, `crates/registry/statusline/`)
 - No inline comments narrating obvious control flow
@@ -54,17 +56,17 @@ Unacceptable responses:
 - Update callsites directly - no re-export wrapper layers in manifest
 - Remove old code from manifest/stdlib after migration - no dead code
 
-</verbosity_and_scope_constraints>
+\</verbosity_and_scope_constraints>
 
-<design_freedom>
+\<design_freedom>
 
 - Proc macros (`register_notification!`, `define_events!`) remain in `evildoer-macro` but update their references to point to new registry crate paths
 - Runtime constructs (Notification builder, Editor impl) stay in their current locations
 - RegistryMetadata impls remain in manifest (bridge between registry types and manifest trait)
 
-</design_freedom>
+\</design_freedom>
 
----
+______________________________________________________________________
 
 ## Implementation Roadmap
 
@@ -75,6 +77,7 @@ Objective: Migrate notification type definitions and registrations.
 **1.1 Create `crates/registry/notifications/`**
 
 Files to create:
+
 - `Cargo.toml` - Dependencies: `evildoer-registry-motions`, `linkme`, `thiserror`
 - `src/lib.rs` - Types: `Level`, `Anchor`, `Animation`, `AutoDismiss`, `Timing`, `NotificationError`, `AnimationPhase`, `Overflow`, `SizeConstraint`, `SlideDirection`, `NotificationTypeDef`, `NOTIFICATION_TYPES` slice, `find_notification_type()`
 - `src/impls/mod.rs` - Module declarations
@@ -106,7 +109,7 @@ Change all `evildoer_manifest::notifications::` paths to `evildoer_registry::not
 
 Done: `cargo check --workspace` passes
 
----
+______________________________________________________________________
 
 ### Phase 2: Commands Registry
 
@@ -115,6 +118,7 @@ Objective: Migrate command definitions and implementations.
 **2.1 Create `crates/registry/commands/`**
 
 Files to create:
+
 - `Cargo.toml` - Dependencies: `evildoer-registry-motions`, `linkme`, `paste`
 - `src/lib.rs` - Types: `CommandDef`, `CommandHandler`, `COMMANDS` slice, `flags` module, lookup functions
 - `src/macros.rs` - `command!` macro (move from `manifest/src/macros/registry.rs`)
@@ -138,7 +142,7 @@ Same pattern as notifications.
 
 Done: `cargo check --workspace` passes
 
----
+______________________________________________________________________
 
 ### Phase 3: Panels Registry
 
@@ -147,6 +151,7 @@ Objective: Migrate panel definitions.
 **3.1 Create `crates/registry/panels/`**
 
 Files to create:
+
 - `Cargo.toml`
 - `src/lib.rs` - Types: `PanelDef`, `PanelId`, `PanelFactory`, `PanelFactoryDef`, `PANELS` slice, `PANEL_FACTORIES` slice, lookup functions
 - `src/macros.rs` - `panel!` macro (move from `manifest/src/macros/panels.rs`)
@@ -165,7 +170,7 @@ Same pattern.
 
 Done: `cargo check --workspace` passes
 
----
+______________________________________________________________________
 
 ### Phase 4: Hooks Registry
 
@@ -174,10 +179,11 @@ Objective: Migrate hook event definitions and registrations. Most complex due to
 **4.1 Create `crates/registry/hooks/`**
 
 Files to create:
+
 - `Cargo.toml` - Dependencies: `evildoer-registry-motions`, `linkme`, `paste`, `tracing`
 - `src/lib.rs` - Types: `HookDef`, `HookEvent`, `HookEventData`, `OwnedHookContext`, `HookContext`, `MutableHookContext`, `HookHandler`, `HookMutability`, `HookResult`, `HookAction`, `HookScheduler`, `BoxFuture`, `HOOKS` slice, emit functions
 - `src/macros.rs` - `hook!`, `async_hook!` macros (move from `manifest/src/macros/hooks.rs`)
-- `src/impls/mod.rs` - Module declarations  
+- `src/impls/mod.rs` - Module declarations
 - `src/impls/*.rs` - Hook implementations from `stdlib/src/hooks/`
 
 **4.2 Update `crates/macro/src/events.rs`**
@@ -203,7 +209,7 @@ Same pattern.
 
 Done: `cargo check --workspace` passes
 
----
+______________________________________________________________________
 
 ### Phase 5: Actions Registry
 
@@ -212,6 +218,7 @@ Objective: Migrate action definitions. Most complex - 87 actions with result dis
 **5.1 Create `crates/registry/actions/`**
 
 Files to create:
+
 - `Cargo.toml` - Dependencies: `evildoer-registry-motions`, `evildoer-macro`, `linkme`, `paste`
 - `src/lib.rs` - Types: `ActionDef`, `ActionHandler`, `ActionContext`, `ActionArgs`, `ActionMode`, `ActionResult` (with `#[derive(DispatchResult)]`), `PendingAction`, `PendingKind`, `EditAction`, `ObjectSelectionKind`, `ScrollAmount`, `ScrollDir`, `VisualDirection`, `ACTIONS` slice, `KEYBINDINGS` slice, result handler slices, dispatch infrastructure
 - `src/macros.rs` - `action!` macro (move from `manifest/src/macros/actions.rs`)
@@ -237,7 +244,7 @@ Same pattern.
 
 Done: `cargo check --workspace` passes
 
----
+______________________________________________________________________
 
 ### Phase 6: Final Cleanup
 
@@ -262,7 +269,7 @@ Objective: Remove dead code, verify build, run tests.
 
 Done: All checks pass, no warnings
 
----
+______________________________________________________________________
 
 ## Architecture
 
@@ -326,34 +333,34 @@ Proc macros in `evildoer-macro` that generate registry registrations must be upd
 
 Declarative macros move entirely to their registry crates.
 
----
+______________________________________________________________________
 
 ## Anti-Patterns
 
 1. **Re-export wrapper layers**: Don't create intermediate re-export modules. Update callsites directly to import from registry.
 
-2. **Duplicate type definitions**: Each type exists in exactly one place. Re-export `RegistrySource` and `Capability` from motions registry.
+1. **Duplicate type definitions**: Each type exists in exactly one place. Re-export `RegistrySource` and `Capability` from motions registry.
 
-3. **Partial migrations**: Each registry must be fully migrated before moving to the next. No half-complete states.
+1. **Partial migrations**: Each registry must be fully migrated before moving to the next. No half-complete states.
 
-4. **Dead code**: Remove old definitions immediately after migration. Don't leave commented-out code.
+1. **Dead code**: Remove old definitions immediately after migration. Don't leave commented-out code.
 
-5. **Verbose comments**: No inline comments explaining obvious code. Docstrings for public API only.
+1. **Verbose comments**: No inline comments explaining obvious code. Docstrings for public API only.
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
 1. All 5 remaining registries migrated to `crates/registry/`
-2. `cargo check --workspace` passes
-3. `cargo test --workspace` passes  
-4. `cargo clippy --workspace` has no warnings
-5. No duplicate type definitions across crates
-6. manifest contains only RegistryMetadata impls for migrated types
-7. stdlib contains only runtime constructs (Notification builder, EditorCapabilities)
-8. All imports updated to use registry paths directly
+1. `cargo check --workspace` passes
+1. `cargo test --workspace` passes
+1. `cargo clippy --workspace` has no warnings
+1. No duplicate type definitions across crates
+1. manifest contains only RegistryMetadata impls for migrated types
+1. stdlib contains only runtime constructs (Notification builder, EditorCapabilities)
+1. All imports updated to use registry paths directly
 
----
+______________________________________________________________________
 
 ## Reference Files
 

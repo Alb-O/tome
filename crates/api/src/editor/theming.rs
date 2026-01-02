@@ -5,8 +5,8 @@
 use evildoer_registry::commands::CommandError;
 use evildoer_registry::themes::SyntaxStyles;
 
-use super::extensions::StyleMod;
 use super::Editor;
+use super::extensions::StyleMod;
 
 impl Editor {
 	pub fn set_theme(&mut self, theme_name: &str) -> Result<(), CommandError> {

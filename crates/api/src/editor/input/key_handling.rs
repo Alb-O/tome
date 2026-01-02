@@ -161,7 +161,7 @@ impl Editor {
 	}
 
 	pub(crate) async fn handle_key_active(&mut self, key: termina::event::KeyEvent) -> bool {
-		use evildoer_registry::{emit as emit_hook, HookContext, HookEventData};
+		use evildoer_registry::{HookContext, HookEventData, emit as emit_hook};
 
 		let old_mode = self.mode();
 		let key: Key = key.into();

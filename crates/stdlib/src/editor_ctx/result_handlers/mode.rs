@@ -1,6 +1,6 @@
 //! Mode change result handler.
 
-use evildoer_registry::{result_handler, ActionMode, ActionResult, HandleOutcome, Mode};
+use evildoer_registry::{ActionMode, ActionResult, HandleOutcome, Mode, result_handler};
 
 result_handler!(
 	RESULT_MODE_CHANGE_HANDLERS,

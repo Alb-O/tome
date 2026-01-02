@@ -3,7 +3,7 @@
 //! Provides convenient methods for accessing the focused view and navigating
 //! between buffers and panels. These delegate to [`BufferManager`] and [`PanelRegistry`].
 
-use evildoer_registry::panels::{PanelDef, PanelId, SplitCursorStyle, PANELS};
+use evildoer_registry::panels::{PANELS, PanelDef, PanelId, SplitCursorStyle};
 
 use super::Editor;
 use crate::buffer::{Buffer, BufferId, BufferView};

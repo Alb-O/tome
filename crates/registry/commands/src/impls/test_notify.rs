@@ -1,6 +1,6 @@
 use futures::future::LocalBoxFuture;
 
-use crate::{command, CommandContext, CommandError, CommandOutcome};
+use crate::{CommandContext, CommandError, CommandOutcome, command};
 
 command!(
 	test_notify,
@@ -12,8 +12,10 @@ pub fn test_notify<'a>(
 	ctx: &'a mut CommandContext<'a>,
 ) -> LocalBoxFuture<'a, Result<CommandOutcome, CommandError>> {
 	Box::pin(async move {
-		ctx.editor
-			.notify("warn", "This is a test notification via distributed slices!");
+		ctx.editor.notify(
+			"warn",
+			"This is a test notification via distributed slices!",
+		);
 		Ok(CommandOutcome::Ok)
 	})
 }

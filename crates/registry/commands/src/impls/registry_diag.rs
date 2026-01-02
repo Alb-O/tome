@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 
 use futures::future::LocalBoxFuture;
+use {evildoer_registry_motions as motions, evildoer_registry_text_objects as text_objects};
 
-use evildoer_registry_motions as motions;
-use evildoer_registry_text_objects as text_objects;
-
-use crate::{command, CommandContext, CommandDef, CommandError, CommandOutcome, COMMANDS};
+use crate::{COMMANDS, CommandContext, CommandDef, CommandError, CommandOutcome, command};
 
 command!(
 	registry_diag,

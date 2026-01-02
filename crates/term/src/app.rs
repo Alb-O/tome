@@ -2,7 +2,9 @@ use std::io::{self, Write};
 use std::time::Duration;
 
 use evildoer_api::Editor;
-use evildoer_registry::{emit as emit_hook, emit_sync_with as emit_hook_sync_with, HookContext, HookEventData};
+use evildoer_registry::{
+	HookContext, HookEventData, emit as emit_hook, emit_sync_with as emit_hook_sync_with,
+};
 use evildoer_tui::Terminal;
 use termina::escape::csi::{Csi, Cursor};
 use termina::event::{Event, KeyEventKind};

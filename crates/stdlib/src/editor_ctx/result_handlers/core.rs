@@ -1,8 +1,8 @@
 //! Core result handlers: Ok, CursorMove, Motion, Edit, Quit, Error.
 
 use evildoer_registry::{
-	emit_sync as emit_hook_sync, result_handler, ActionResult, HandleOutcome, HookContext,
-	HookEventData, Mode,
+	ActionResult, HandleOutcome, HookContext, HookEventData, Mode, emit_sync as emit_hook_sync,
+	result_handler,
 };
 
 use crate::{NotifyERRORExt, NotifyINFOExt};

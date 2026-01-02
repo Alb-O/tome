@@ -4,7 +4,7 @@
 //! - `split_vertical` (Ctrl+w v): vertical divider → windows side-by-side left/right
 
 use crate::editor_ctx::HandleOutcome;
-use crate::{action, result_handler, ActionResult};
+use crate::{ActionResult, action, result_handler};
 
 action!(split_horizontal, {
 	description: "Split horizontally (new buffer below)",

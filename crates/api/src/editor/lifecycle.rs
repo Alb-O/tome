@@ -4,8 +4,8 @@
 
 use std::path::PathBuf;
 
-use evildoer_registry::{emit_sync_with as emit_hook_sync_with, HookContext, HookEventData};
 use evildoer_registry::commands::{CommandContext, CommandOutcome, find_command};
+use evildoer_registry::{HookContext, HookEventData, emit_sync_with as emit_hook_sync_with};
 
 use super::Editor;
 use super::extensions::{RENDER_EXTENSIONS, TICK_EXTENSIONS};

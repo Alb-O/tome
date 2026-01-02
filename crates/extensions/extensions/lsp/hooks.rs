@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use evildoer_api::editor::extensions::ExtensionMap;
-use evildoer_registry::{async_hook, HookAction, HookContext, HookResult};
+use evildoer_registry::{HookAction, HookContext, HookResult, async_hook};
 
 use super::LspManager;
 

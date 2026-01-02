@@ -8,30 +8,31 @@ Complete the registry-first architecture migration by moving the **actions** reg
 
 **Scope**: Actions only. The hooks in `stdlib/src/hooks/` stay where they are (they were already migrated in task-02A).
 
----
+______________________________________________________________________
 
 ## Implementation Expectations
 
-<mandatory_execution_requirements>
+\<mandatory_execution_requirements>
 
 1. Edit files using tools to modify actual source files
-2. Debug and fix by running builds, reading errors, iterating until it compiles
-3. Run `cargo check --workspace` after major changes
-4. Run `cargo test --workspace` after completing migration
-5. Complete the full implementation; do not stop at partial solutions
+1. Debug and fix by running builds, reading errors, iterating until it compiles
+1. Run `cargo check --workspace` after major changes
+1. Run `cargo test --workspace` after completing migration
+1. Complete the full implementation; do not stop at partial solutions
 
 Unacceptable:
+
 - Providing code blocks without writing them to files
 - Stopping after the first error
 - Leaving the registry partially migrated
 
-</mandatory_execution_requirements>
+\</mandatory_execution_requirements>
 
----
+______________________________________________________________________
 
 ## Behavioral Constraints
 
-<verbosity_and_scope_constraints>
+\<verbosity_and_scope_constraints>
 
 - Match existing registry crate patterns (see `crates/registry/commands/`, `crates/registry/hooks/`)
 - No inline comments narrating obvious control flow
@@ -40,22 +41,23 @@ Unacceptable:
 - Update callsites directly - no re-export wrapper layers
 - Remove old code after migration - no dead code
 
-</verbosity_and_scope_constraints>
+\</verbosity_and_scope_constraints>
 
-<design_freedom>
+\<design_freedom>
 
 - The `DispatchResult` proc macro stays in `evildoer-macro` but references must point to registry
 - `parse_keybindings!` proc macro stays in `evildoer-macro`
 - Result handlers can move to the actions registry or stay with `editor_ctx` - use judgment based on dependencies
 - `ActionContext` requires capabilities from `editor_ctx` - may need to stay in manifest or have careful dependency ordering
 
-</design_freedom>
+\</design_freedom>
 
----
+______________________________________________________________________
 
 ## Current Architecture
 
 ### Files in manifest/src/actions/
+
 - `mod.rs` - Module exports
 - `context.rs` - `ActionContext`, `ActionArgs` (requires EditorCapabilities trait)
 - `definition.rs` - `ActionDef`, `ActionHandler`
@@ -65,6 +67,7 @@ Unacceptable:
 - `result.rs` - `ActionResult` with `#[derive(DispatchResult)]`, `ActionMode`, handler slices
 
 ### Files in stdlib/src/actions/
+
 - `mod.rs` - Module organization, `execute_action()` helper
 - `editing.rs` - 21 editing actions (delete, change, yank, etc.)
 - `find.rs` - 4 find/search actions
@@ -78,6 +81,7 @@ Unacceptable:
 - `window.rs` - 12 window/split actions
 
 ### Files in stdlib/src/editor_ctx/result_handlers/
+
 - `mod.rs` - Module organization
 - `core.rs` - Core result handlers (Ok, Error, Quit, etc.)
 - `edit.rs` - Edit result handlers
@@ -85,12 +89,13 @@ Unacceptable:
 - `search.rs` - Search handlers
 
 ### Key Dependencies
+
 - `ActionContext` uses `EditorCapabilities` trait from `manifest/src/editor_ctx/`
 - `DispatchResult` proc macro generates handler slices referencing manifest types
 - `parse_keybindings!` generates `KEYBINDINGS` slice entries
 - Result handlers need `EditorContext` trait access
 
----
+______________________________________________________________________
 
 ## Implementation Roadmap
 
@@ -117,6 +122,7 @@ paste.workspace = true
 **1.2 Create `crates/registry/actions/src/lib.rs`**
 
 Move from `manifest/src/actions/`:
+
 - `ActionDef`, `ActionHandler` (from definition.rs)
 - `ActionMode` (from result.rs)
 - `EditAction`, `ScrollAmount`, `ScrollDir`, `VisualDirection` (from edit.rs)
@@ -135,13 +141,13 @@ Update all `$crate::` references to point to registry types.
 
 Move `cursor_motion`, `selection_motion`, `insert_with_motion` from `manifest/src/actions/motion.rs`.
 
----
+______________________________________________________________________
 
 ### Phase 2: Handle ActionResult and Dispatch
 
 **2.1 Decide on ActionResult location**
 
-`ActionResult` uses `#[derive(DispatchResult)]` which generates handler slices. The proc macro references types via `evildoer_manifest::`. 
+`ActionResult` uses `#[derive(DispatchResult)]` which generates handler slices. The proc macro references types via `evildoer_manifest::`.
 
 Options:
 a) Move ActionResult to registry, update proc macro to reference `evildoer_registry::actions::`
@@ -156,19 +162,21 @@ Change generated code to reference `evildoer_registry::actions::` instead of `ev
 **2.3 Create `crates/registry/actions/src/result.rs`**
 
 Move from `manifest/src/actions/result.rs`:
+
 - `ActionMode` enum
 - `ActionResult` enum with `#[derive(DispatchResult)]`
 - `RESULT_EXTENSION_HANDLERS` slice
 
 The `DispatchResult` derive will generate all `RESULT_*_HANDLERS` slices.
 
----
+______________________________________________________________________
 
 ### Phase 3: Handle ActionContext
 
 **3.1 Analyze ActionContext dependencies**
 
 `ActionContext` in `manifest/src/actions/context.rs` uses:
+
 - `EditorCapabilities` trait (from `manifest/src/editor_ctx/capabilities.rs`)
 - Various capability traits
 
@@ -177,19 +185,21 @@ This creates a circular dependency if we move it to registry (registry can't dep
 **Solution**: Keep `ActionContext` in manifest. The registry defines `ActionDef` with handler signature `fn(&ActionContext) -> ActionResult`, but `ActionContext` is defined in manifest.
 
 Update `ActionHandler` type alias to reference manifest's `ActionContext`:
+
 ```rust
 pub type ActionHandler = fn(&evildoer_manifest::ActionContext) -> ActionResult;
 ```
 
 Or re-export `ActionContext` through the registry for ergonomics.
 
----
+______________________________________________________________________
 
 ### Phase 4: Move Action Implementations
 
 **4.1 Create `crates/registry/actions/src/impls/`**
 
 Move all files from `stdlib/src/actions/`:
+
 - `editing.rs` → `impls/editing.rs`
 - `find.rs` → `impls/find.rs`
 - `insert.rs` → `impls/insert.rs`
@@ -207,13 +217,14 @@ Update imports in each file to use registry types.
 
 Module declarations for all implementation files.
 
----
+______________________________________________________________________
 
 ### Phase 5: Handle Result Handlers
 
 **5.1 Analyze result handler dependencies**
 
 Result handlers in `stdlib/src/editor_ctx/result_handlers/` use:
+
 - `EditorContext` trait for operations
 - `HandleOutcome` enum
 - Capability trait access
@@ -225,21 +236,24 @@ These have heavy dependencies on `manifest/src/editor_ctx/`.
 **5.2 Update result handler imports**
 
 Update `stdlib/src/editor_ctx/result_handlers/*.rs` to import:
+
 - `ActionResult` from `evildoer_registry::actions::`
 - Handler slices from `evildoer_registry::actions::`
 
----
+______________________________________________________________________
 
 ### Phase 6: Wire Up Workspace
 
 **6.1 Update root `Cargo.toml`**
 
 Add to members:
+
 ```toml
 "crates/registry/actions"
 ```
 
 Add to workspace.dependencies:
+
 ```toml
 evildoer-registry-actions = { path = "crates/registry/actions" }
 ```
@@ -247,6 +261,7 @@ evildoer-registry-actions = { path = "crates/registry/actions" }
 **6.2 Update `crates/registry/Cargo.toml`**
 
 Add dependency:
+
 ```toml
 evildoer-registry-actions.workspace = true
 ```
@@ -254,6 +269,7 @@ evildoer-registry-actions.workspace = true
 **6.3 Update `crates/registry/src/lib.rs`**
 
 Add re-exports:
+
 ```rust
 pub use actions::{
     action, ActionDef, ActionHandler, ActionMode, ActionResult,
@@ -264,17 +280,19 @@ pub use actions::{
 pub use evildoer_registry_actions as actions;
 ```
 
----
+______________________________________________________________________
 
 ### Phase 7: Update Manifest
 
 **7.1 Slim down `crates/manifest/src/actions/`**
 
 Keep only:
+
 - `context.rs` - `ActionContext`, `ActionArgs` (depends on EditorCapabilities)
 - `mod.rs` - Re-exports from registry + local context types
 
 Remove:
+
 - `definition.rs` (moved to registry)
 - `edit.rs` (moved to registry)
 - `motion.rs` (moved to registry)
@@ -284,6 +302,7 @@ Remove:
 **7.2 Update `crates/manifest/src/lib.rs`**
 
 Change re-exports to use registry:
+
 ```rust
 pub use evildoer_registry::actions::{
     action, ActionDef, ActionHandler, ActionMode, ActionResult,
@@ -297,13 +316,14 @@ pub use actions::{ActionArgs, ActionContext}; // local types
 **7.3 Add RegistryMetadata impl**
 
 Create bridge impl for `ActionDef`:
+
 ```rust
 impl crate::RegistryMetadata for evildoer_registry::actions::ActionDef {
     // ... standard impl
 }
 ```
 
----
+______________________________________________________________________
 
 ### Phase 8: Update Stdlib
 
@@ -319,13 +339,14 @@ Remove `pub mod actions;`
 
 Update imports in `stdlib/src/editor_ctx/result_handlers/` to use registry paths.
 
----
+______________________________________________________________________
 
 ### Phase 9: Update Proc Macro
 
 **9.1 Update `crates/macro/src/dispatch.rs`**
 
 Change all `evildoer_manifest::` references to `evildoer_registry::actions::`:
+
 - Handler slice paths
 - Type references (ActionResult, etc.)
 
@@ -334,7 +355,7 @@ Change all `evildoer_manifest::` references to `evildoer_registry::actions::`:
 `parse_keybindings!` in `crates/macro/src/keybindings.rs` generates entries for `KEYBINDINGS` slice.
 Verify it still works with registry layout.
 
----
+______________________________________________________________________
 
 ### Phase 10: Final Cleanup and Verification
 
@@ -361,7 +382,7 @@ cargo test --workspace
 cargo clippy --workspace
 ```
 
----
+______________________________________________________________________
 
 ## Dependency Graph After Migration
 
@@ -379,13 +400,14 @@ evildoer-manifest (ActionContext, EditorCapabilities, RegistryMetadata impls)
 evildoer-stdlib (result_handlers in editor_ctx)
 ```
 
----
+______________________________________________________________________
 
 ## Critical Considerations
 
 ### Circular Dependency Prevention
 
 `ActionContext` requires `EditorCapabilities` which is defined in manifest. If we try to move `ActionContext` to registry, we create a cycle:
+
 - Registry depends on base
 - Manifest depends on registry
 - Registry would need manifest for ActionContext
@@ -395,9 +417,10 @@ evildoer-stdlib (result_handlers in editor_ctx)
 ### Proc Macro Updates
 
 The `DispatchResult` derive macro generates:
+
 1. Handler slices (`RESULT_*_HANDLERS`)
-2. `dispatch_result()` function
-3. `is_terminal_safe()` method
+1. `dispatch_result()` function
+1. `is_terminal_safe()` method
 
 All generated code references must be updated to `evildoer_registry::actions::`.
 
@@ -405,29 +428,31 @@ All generated code references must be updated to `evildoer_registry::actions::`.
 
 The `action!` macro with `bindings:` field calls `parse_keybindings!` which generates `KEYBINDINGS` slice entries. This must continue to work after migration.
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
 1. All 87 actions migrated to `crates/registry/actions/`
-2. `cargo check --workspace` passes
-3. `cargo test --workspace` passes
-4. Action tests in `stdlib/src/actions/mod.rs` pass (or are moved)
-5. Keybindings work correctly
-6. Result dispatch works correctly
-7. No duplicate type definitions
-8. manifest/src/actions/ contains only `ActionContext` and re-exports
+1. `cargo check --workspace` passes
+1. `cargo test --workspace` passes
+1. Action tests in `stdlib/src/actions/mod.rs` pass (or are moved)
+1. Keybindings work correctly
+1. Result dispatch works correctly
+1. No duplicate type definitions
+1. manifest/src/actions/ contains only `ActionContext` and re-exports
 
----
+______________________________________________________________________
 
 ## Reference Files
 
 Completed registry migrations to follow:
+
 - `crates/registry/commands/src/lib.rs`
 - `crates/registry/hooks/src/lib.rs`
 - `crates/manifest/src/commands.rs` (RegistryMetadata impl pattern)
 
 Files to migrate:
+
 - `crates/manifest/src/actions/*.rs`
 - `crates/manifest/src/macros/actions.rs`
 - `crates/stdlib/src/actions/*.rs`

@@ -1,6 +1,6 @@
 //! Search result handlers.
 
-use evildoer_registry::{result_handler, ActionResult, HandleOutcome};
+use evildoer_registry::{ActionResult, HandleOutcome, result_handler};
 
 result_handler!(
 	RESULT_SEARCH_NEXT_HANDLERS,

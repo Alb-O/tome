@@ -1,6 +1,6 @@
 use futures::future::LocalBoxFuture;
 
-use crate::{all_commands, command, find_command, CommandContext, CommandError, CommandOutcome};
+use crate::{CommandContext, CommandError, CommandOutcome, all_commands, command, find_command};
 
 command!(help, { aliases: &["h"], description: "Show help for commands" }, handler: cmd_help);
 
@@ -19,11 +19,8 @@ fn cmd_help<'a>(
 				out.push(format!("Source: {}", cmd.source));
 				out.push(format!("Priority: {}", cmd.priority));
 				if !cmd.required_caps.is_empty() {
-					let caps: Vec<String> = cmd
-						.required_caps
-						.iter()
-						.map(|c| format!("{c:?}"))
-						.collect();
+					let caps: Vec<String> =
+						cmd.required_caps.iter().map(|c| format!("{c:?}")).collect();
 					out.push(format!("Required Capabilities: {}", caps.join(", ")));
 				}
 				ctx.info(&out.join("\n"));

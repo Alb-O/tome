@@ -4,8 +4,10 @@
 
 use std::path::PathBuf;
 
-use evildoer_registry::{emit_sync_with as emit_hook_sync_with, HookContext, HookEventData, SplitDirection, ViewId};
-use evildoer_registry::panels::{find_panel, panel_kind_index, PanelId};
+use evildoer_registry::panels::{PanelId, find_panel, panel_kind_index};
+use evildoer_registry::{
+	HookContext, HookEventData, SplitDirection, ViewId, emit_sync_with as emit_hook_sync_with,
+};
 
 use super::Editor;
 use crate::buffer::{BufferId, BufferView, Layout};

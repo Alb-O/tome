@@ -2,7 +2,7 @@
 
 use futures::future::LocalBoxFuture;
 
-use crate::{command, CommandContext, CommandError, CommandOutcome, RegistrySource};
+use crate::{CommandContext, CommandError, CommandOutcome, RegistrySource, command};
 
 command!(
 	theme,

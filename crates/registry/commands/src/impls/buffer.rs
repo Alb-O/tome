@@ -1,6 +1,6 @@
 use futures::future::LocalBoxFuture;
 
-use crate::{command, CommandContext, CommandError, CommandOutcome};
+use crate::{CommandContext, CommandError, CommandOutcome, command};
 
 command!(buffer, { aliases: &["b"], description: "Switch to buffer" }, handler: cmd_buffer);
 

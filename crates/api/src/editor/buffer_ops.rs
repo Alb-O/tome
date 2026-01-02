@@ -4,7 +4,9 @@
 
 use std::path::PathBuf;
 
-use evildoer_registry::{emit as emit_hook, emit_sync_with as emit_hook_sync_with, HookContext, HookEventData};
+use evildoer_registry::{
+	HookContext, HookEventData, emit as emit_hook, emit_sync_with as emit_hook_sync_with,
+};
 
 use super::Editor;
 use crate::buffer::BufferId;

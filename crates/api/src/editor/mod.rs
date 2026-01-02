@@ -43,7 +43,7 @@ pub use buffer_manager::BufferManager;
 pub use command_queue::CommandQueue;
 use evildoer_language::LanguageLoader;
 use evildoer_registry::themes::Theme;
-use evildoer_registry::{emit_sync_with as emit_hook_sync_with, HookContext, HookEventData};
+use evildoer_registry::{HookContext, HookEventData, emit_sync_with as emit_hook_sync_with};
 use evildoer_tui::widgets::menu::MenuState;
 pub use hook_runtime::HookRuntime;
 pub use layout::{LayoutManager, SeparatorHit, SeparatorId};
@@ -215,8 +215,10 @@ impl Editor {
 			buffers: buffer_manager,
 			layout: LayoutManager::new(buffer_id),
 			registers: Registers::default(),
-			theme: evildoer_registry::themes::get_theme(evildoer_registry::themes::DEFAULT_THEME_ID)
-				.unwrap_or(&evildoer_registry::themes::DEFAULT_THEME),
+			theme: evildoer_registry::themes::get_theme(
+				evildoer_registry::themes::DEFAULT_THEME_ID,
+			)
+			.unwrap_or(&evildoer_registry::themes::DEFAULT_THEME),
 			window_width: None,
 			window_height: None,
 			ui: UiManager::new(),

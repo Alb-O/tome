@@ -14,8 +14,8 @@ pub use evildoer_base::{Range, Selection};
 mod registry_impls;
 
 pub use evildoer_registry::{
-	bracket_pair_object, motion, option, statusline_segment, symmetric_text_object, text_object,
-	Capability, RegistrySource,
+	Capability, RegistrySource, bracket_pair_object, motion, option, statusline_segment,
+	symmetric_text_object, text_object,
 };
 
 pub mod actions;
@@ -28,7 +28,7 @@ pub mod terminal_config;
 
 /// Theme completion source.
 pub mod theme {
-	use evildoer_registry::themes::{runtime_themes, ThemeVariant, THEMES};
+	use evildoer_registry::themes::{THEMES, ThemeVariant, runtime_themes};
 
 	use super::completion::{
 		CompletionContext, CompletionItem, CompletionKind, CompletionResult, CompletionSource,
@@ -124,45 +124,45 @@ pub trait RegistryMetadata {
 }
 
 pub use actions::{
-	cursor_motion, dispatch_result, insert_with_motion, selection_motion, ActionArgs,
-	ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, EditAction,
+	ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, EditAction,
 	ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount, ScrollDir, VisualDirection,
+	cursor_motion, dispatch_result, insert_with_motion, selection_motion,
 };
 pub use completion::{CompletionContext, CompletionItem, CompletionKind, CompletionSource};
 pub use editor_ctx::{EditorCapabilities, EditorContext, EditorOps, HandleOutcome};
 pub use evildoer_base::Mode;
 pub use evildoer_registry::actions::ACTIONS;
 pub use evildoer_registry::commands::{
-	flags, CommandContext, CommandDef, CommandError, CommandOutcome, CommandResult, COMMANDS,
+	COMMANDS, CommandContext, CommandDef, CommandError, CommandOutcome, CommandResult, flags,
 };
 pub use evildoer_registry::hooks::{
+	BoxFuture as HookBoxFuture, HOOKS, HookAction, HookContext, HookDef, HookEvent, HookEventData,
+	HookHandler, HookMutability, HookResult, HookScheduler, MutableHookContext, OwnedHookContext,
 	all_hooks, emit as emit_hook, emit_mutable as emit_mutable_hook, emit_sync as emit_hook_sync,
-	emit_sync_with as emit_hook_sync_with, find_hooks, BoxFuture as HookBoxFuture, HookAction,
-	HookContext, HookDef, HookEvent, HookEventData, HookHandler, HookMutability, HookResult,
-	HookScheduler, MutableHookContext, OwnedHookContext, HOOKS,
+	emit_sync_with as emit_hook_sync_with, find_hooks,
 };
 pub use evildoer_registry::notifications::{
-	find_notification_type, Animation, AutoDismiss, Level, NotificationTypeDef, Timing,
-	NOTIFICATION_TYPES,
+	Animation, AutoDismiss, Level, NOTIFICATION_TYPES, NotificationTypeDef, Timing,
+	find_notification_type,
 };
-pub use evildoer_registry::options::{OptionDef, OptionScope, OptionType, OptionValue, OPTIONS};
+pub use evildoer_registry::options::{OPTIONS, OptionDef, OptionScope, OptionType, OptionValue};
 pub use evildoer_registry::panels::{
-	all_panels, find_factory, find_panel, find_panel_by_id, panel_kind_index, PanelDef,
-	PanelFactory, PanelFactoryDef, PanelId, SplitAttrs, SplitBuffer, SplitCell, SplitColor,
-	SplitCursor, SplitCursorStyle, SplitDockPreference, SplitEventResult, SplitKey, SplitKeyCode,
-	SplitModifiers, SplitMouse, SplitMouseAction, SplitMouseButton, SplitSize, PANELS,
-	PANEL_FACTORIES,
+	PANEL_FACTORIES, PANELS, PanelDef, PanelFactory, PanelFactoryDef, PanelId, SplitAttrs,
+	SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle, SplitDockPreference,
+	SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction,
+	SplitMouseButton, SplitSize, all_panels, find_factory, find_panel, find_panel_by_id,
+	panel_kind_index,
 };
 pub use evildoer_registry::statusline::{
-	all_segments, find_segment, render_position, segments_for_position, RenderedSegment,
-	SegmentPosition, SegmentStyle, StatuslineContext, StatuslineSegmentDef, STATUSLINE_SEGMENTS,
+	RenderedSegment, STATUSLINE_SEGMENTS, SegmentPosition, SegmentStyle, StatuslineContext,
+	StatuslineSegmentDef, all_segments, find_segment, render_position, segments_for_position,
 };
-pub use evildoer_registry::text_objects::{TextObjectDef, TextObjectHandler, TEXT_OBJECTS};
-pub use evildoer_registry::{BindingMode, KeyBindingDef, MotionDef, KEYBINDINGS, MOTIONS};
+pub use evildoer_registry::text_objects::{TEXT_OBJECTS, TextObjectDef, TextObjectHandler};
+pub use evildoer_registry::{BindingMode, KEYBINDINGS, KeyBindingDef, MOTIONS, MotionDef};
 pub use index::{
 	all_actions, all_commands, all_motions, all_text_objects, find_action, find_action_by_id,
 	find_command, find_motion, find_text_object_by_trigger, resolve_action_id,
 };
-pub use keymap_registry::{get_keymap_registry, BindingEntry, KeymapRegistry, LookupResult};
+pub use keymap_registry::{BindingEntry, KeymapRegistry, LookupResult, get_keymap_registry};
 pub use terminal_config::{TerminalConfig, TerminalSequence};
 pub use theme::ThemeSource;

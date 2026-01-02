@@ -1,6 +1,6 @@
 use futures::future::LocalBoxFuture;
 
-use crate::{command, CommandContext, CommandError, CommandOutcome};
+use crate::{CommandContext, CommandError, CommandOutcome, command};
 
 command!(edit, { aliases: &["e"], description: "Edit a file" }, handler: cmd_edit);
 

@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use evildoer_keymap::parser::{parse_seq, Node};
+use evildoer_keymap::parser::{Node, parse_seq};
 use evildoer_keymap::{MatchResult, Matcher};
 use evildoer_registry::actions::{BindingMode, KEYBINDINGS};
 use tracing::warn;

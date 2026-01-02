@@ -247,7 +247,10 @@ impl ClientHandle {
 		enable_snippets: bool,
 		config: Option<Value>,
 	) -> Result<InitializeResult> {
-		#[allow(deprecated, reason = "root_path field deprecated but required by some servers")]
+		#[allow(
+			deprecated,
+			reason = "root_path field deprecated but required by some servers"
+		)]
 		let params = InitializeParams {
 			process_id: Some(std::process::id()),
 			workspace_folders: Some(vec![workspace_folder_from_uri(
