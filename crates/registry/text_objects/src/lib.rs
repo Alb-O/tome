@@ -16,10 +16,9 @@ use ropey::RopeSlice;
 mod impls;
 mod macros;
 
-// Re-export shared types from motions registry for consistency
-pub use evildoer_registry_motions::{
-	flags, impl_registry_metadata, movement, Capability, RegistryMetadata, RegistrySource,
-};
+// Re-export shared types from core registry for consistency
+pub use evildoer_registry_core::{impl_registry_metadata, RegistryMetadata, RegistrySource};
+pub use evildoer_registry_motions::{flags, movement, Capability};
 
 /// Handler signature for text object selection.
 ///

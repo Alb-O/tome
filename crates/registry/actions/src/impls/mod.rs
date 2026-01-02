@@ -1,20 +1,20 @@
 /// Text editing actions (delete, change, yank).
-mod editing;
+pub(crate) mod editing;
 /// Search and find actions.
-mod find;
+pub(crate) mod find;
 /// Insert mode text entry actions.
-mod insert;
+pub(crate) mod insert;
 /// Miscellaneous utility actions.
-mod misc;
+pub(crate) mod misc;
 /// Mode switching actions.
-mod modes;
+pub(crate) mod modes;
 /// Motion-based actions.
-mod motions;
+pub(crate) mod motions;
 /// Viewport scrolling actions.
-mod scroll;
+pub(crate) mod scroll;
 /// Selection manipulation actions.
-mod selection_ops;
+pub(crate) mod selection_ops;
 /// Text object actions.
-mod text_objects;
+pub(crate) mod text_objects;
 /// Window and split management actions.
-mod window;
+pub(crate) mod window;

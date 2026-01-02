@@ -13,6 +13,7 @@ The next evolution of agentic text editors & harnesses.
 ```
 evildoer-base          Core types: Range, Selection, Transaction, Rope wrappers
 evildoer-registry      Registry definitions organized by type (actions/, commands/, etc.)
+evildoer-registry-core Shared registry primitives (Key, RegistryMetadata)
 evildoer-core          Glue layer: ActionId, KeymapRegistry, movement, notifications
 evildoer-macro         Proc macros (DispatchResult, define_events!, parse_keybindings, etc.)
 evildoer-api           Editor engine: Buffer, Editor, rendering, terminals
@@ -48,6 +49,7 @@ Typed handles provide compile-time safety for internal registry references:
 
 - Motions: `evildoer_registry_motions::keys::*` used with `cursor_motion` helpers
 - Panels: `evildoer_registry_panels::keys::*` used with `ActionResult::TogglePanel`
+- Actions: `evildoer_registry_actions::keys::*` used for hardcoded action IDs
 - Strings remain at boundaries (user input, config, runtime lookup)
 
 ### Action Result Dispatch

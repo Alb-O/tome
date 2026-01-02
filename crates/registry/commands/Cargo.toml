@@ -6,6 +6,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+evildoer-registry-core.workspace = true
 evildoer-registry-motions.workspace = true
 evildoer-registry-text-objects.workspace = true
 futures.workspace = true

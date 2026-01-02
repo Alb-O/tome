@@ -8,7 +8,7 @@ license.workspace = true
 [dependencies]
 evildoer-base.workspace = true
 evildoer-macro.workspace = true
-evildoer-registry-motions.workspace = true
+evildoer-registry-core.workspace = true
 evildoer-registry-panels.workspace = true
 linkme.workspace = true
 paste.workspace = true

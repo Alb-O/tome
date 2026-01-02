@@ -9,7 +9,7 @@ mod context;
 mod definition;
 mod edit;
 /// Built-in action implementations.
-mod impls;
+pub(crate) mod impls;
 mod keybindings;
 mod macros;
 mod motion_helpers;
@@ -20,12 +20,15 @@ pub mod editor_ctx;
 
 pub use context::{ActionArgs, ActionContext};
 pub use definition::{ActionDef, ActionHandler};
+pub use evildoer_registry_core::Key;
+
+/// Typed handle to an action definition.
+pub type ActionKey = Key<ActionDef>;
 pub use edit::{EditAction, ScrollAmount, ScrollDir, VisualDirection};
 pub use evildoer_base::{Mode, ObjectSelectionKind, PendingKind};
 pub use evildoer_registry_commands::CommandError;
-pub use evildoer_registry_motions::{
-	flags, impl_registry_metadata, Capability, RegistryMetadata, RegistrySource,
-};
+pub use evildoer_registry_core::{impl_registry_metadata, RegistryMetadata, RegistrySource};
+pub use evildoer_registry_motions::{flags, Capability};
 pub use keybindings::{BindingMode, KeyBindingDef, KEYBINDINGS};
 use linkme::distributed_slice;
 pub use motion_helpers::{cursor_motion, insert_with_motion, selection_motion};
@@ -42,6 +45,20 @@ pub use result::{
 	RESULT_SPLIT_HORIZONTAL_HANDLERS, RESULT_SPLIT_VERTICAL_HANDLERS, RESULT_TOGGLE_PANEL_HANDLERS,
 	RESULT_USE_SELECTION_SEARCH_HANDLERS,
 };
+
+/// Typed handles for built-in actions.
+pub mod keys {
+	pub use crate::impls::editing::*;
+	pub use crate::impls::find::*;
+	pub use crate::impls::insert::*;
+	pub use crate::impls::misc::*;
+	pub use crate::impls::modes::*;
+	pub use crate::impls::motions::*;
+	pub use crate::impls::scroll::*;
+	pub use crate::impls::selection_ops::*;
+	pub use crate::impls::text_objects::*;
+	pub use crate::impls::window::*;
+}
 
 /// Registry of all action definitions.
 #[distributed_slice]

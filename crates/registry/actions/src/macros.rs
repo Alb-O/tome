@@ -134,6 +134,10 @@ macro_rules! action {
 				required_caps: $crate::__opt_slice!($({$caps})?),
 				flags: $crate::__opt!($({$flags})?, $crate::flags::NONE),
 			};
+
+			#[allow(non_upper_case_globals)]
+			#[allow(dead_code)]
+			pub const $name: $crate::ActionKey = $crate::ActionKey::new(&[<ACTION_ $name>]);
 		}
 	};
 

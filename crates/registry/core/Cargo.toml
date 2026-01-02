@@ -1,0 +1,8 @@
+[package]
+name = "evildoer-registry-core"
+description = "Shared registry infrastructure"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]

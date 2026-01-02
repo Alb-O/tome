@@ -6,6 +6,7 @@ members = [
     "crates/keymap/parser",
     "crates/registry/actions",
     "crates/registry/commands",
+    "crates/registry/core",
     "crates/registry/hooks",
     "crates/registry/menus",
     "crates/registry/motions",
@@ -46,6 +47,7 @@ evildoer-macro = { path = "crates/macro" }
 evildoer-registry = { path = "crates/registry" }
 evildoer-registry-actions = { path = "crates/registry/actions" }
 evildoer-registry-commands = { path = "crates/registry/commands" }
+evildoer-registry-core = { path = "crates/registry/core" }
 evildoer-registry-hooks = { path = "crates/registry/hooks" }
 evildoer-registry-menus = { path = "crates/registry/menus" }
 evildoer-registry-motions = { path = "crates/registry/motions" }

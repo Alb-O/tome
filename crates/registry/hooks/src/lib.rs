@@ -39,7 +39,7 @@ mod macros;
 
 pub use evildoer_base::Mode;
 use evildoer_base::Rope;
-pub use evildoer_registry_motions::{RegistryMetadata, RegistrySource, impl_registry_metadata};
+pub use evildoer_registry_core::{impl_registry_metadata, RegistryMetadata, RegistrySource};
 pub use evildoer_registry_panels::PanelId;
 
 /// Identifier for a focused view in hook payloads.

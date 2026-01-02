@@ -14,7 +14,7 @@ mod macros;
 mod split_buffer;
 mod builtins;
 
-pub use evildoer_registry_motions::{Key, RegistryMetadata, RegistrySource, impl_registry_metadata};
+pub use evildoer_registry_core::{Key, RegistryMetadata, RegistrySource, impl_registry_metadata};
 pub use split_buffer::{
 	SplitAttrs, SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle,
 	SplitDockPreference, SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse,

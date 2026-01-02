@@ -1,6 +1,6 @@
 //! Public lookup functions for registry queries.
 
-use evildoer_registry::actions::ActionDef;
+use evildoer_registry::actions::{ActionDef, ActionKey};
 use evildoer_registry::commands::CommandDef;
 use evildoer_registry::motions::{MotionDef, MotionKey};
 use evildoer_registry::text_objects::TextObjectDef;
@@ -50,6 +50,11 @@ pub fn resolve_action_id(name: &str) -> Option<ActionId> {
 		.get(name)
 		.or_else(|| reg.actions.alias_to_id.get(name))
 		.copied()
+}
+
+/// Resolve an action key to its ActionId.
+pub fn resolve_action_key(key: ActionKey) -> Option<ActionId> {
+	resolve_action_id(key.name())
 }
 
 /// Finds a motion definition by name or alias.

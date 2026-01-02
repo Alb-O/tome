@@ -910,6 +910,7 @@ version = "0.3.0"
 dependencies = [
  "evildoer-registry-actions",
  "evildoer-registry-commands",
+ "evildoer-registry-core",
  "evildoer-registry-hooks",
  "evildoer-registry-menus",
  "evildoer-registry-motions",
@@ -928,6 +929,7 @@ dependencies = [
  "evildoer-base",
  "evildoer-macro",
  "evildoer-registry-commands",
+ "evildoer-registry-core",
  "evildoer-registry-motions",
  "evildoer-registry-panels",
  "evildoer-registry-text-objects",
@@ -941,6 +943,7 @@ dependencies = [
 name = "evildoer-registry-commands"
 version = "0.3.0"
 dependencies = [
+ "evildoer-registry-core",
  "evildoer-registry-motions",
  "evildoer-registry-text-objects",
  "futures",
@@ -950,12 +953,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "evildoer-registry-core"
+version = "0.3.0"
+
+[[package]]
 name = "evildoer-registry-hooks"
 version = "0.3.0"
 dependencies = [
  "evildoer-base",
  "evildoer-macro",
- "evildoer-registry-motions",
+ "evildoer-registry-core",
  "evildoer-registry-panels",
  "linkme",
  "paste",
@@ -966,7 +973,7 @@ dependencies = [
 name = "evildoer-registry-menus"
 version = "0.3.0"
 dependencies = [
- "evildoer-registry-motions",
+ "evildoer-registry-core",
  "linkme",
  "paste",
 ]
@@ -976,6 +983,7 @@ name = "evildoer-registry-motions"
 version = "0.3.0"
 dependencies = [
  "evildoer-base",
+ "evildoer-registry-core",
  "linkme",
  "paste",
  "regex",
@@ -987,7 +995,7 @@ dependencies = [
 name = "evildoer-registry-notifications"
 version = "0.3.0"
 dependencies = [
- "evildoer-registry-motions",
+ "evildoer-registry-core",
  "linkme",
  "thiserror 2.0.17",
 ]
@@ -996,7 +1004,7 @@ dependencies = [
 name = "evildoer-registry-options"
 version = "0.3.0"
 dependencies = [
- "evildoer-registry-motions",
+ "evildoer-registry-core",
  "linkme",
  "paste",
 ]
@@ -1005,7 +1013,7 @@ dependencies = [
 name = "evildoer-registry-panels"
 version = "0.3.0"
 dependencies = [
- "evildoer-registry-motions",
+ "evildoer-registry-core",
  "linkme",
  "paste",
 ]
@@ -1014,7 +1022,7 @@ dependencies = [
 name = "evildoer-registry-statusline"
 version = "0.3.0"
 dependencies = [
- "evildoer-registry-motions",
+ "evildoer-registry-core",
  "linkme",
  "paste",
 ]
@@ -1024,6 +1032,7 @@ name = "evildoer-registry-text-objects"
 version = "0.3.0"
 dependencies = [
  "evildoer-base",
+ "evildoer-registry-core",
  "evildoer-registry-motions",
  "linkme",
  "paste",
@@ -1035,7 +1044,7 @@ name = "evildoer-registry-themes"
 version = "0.3.0"
 dependencies = [
  "evildoer-base",
- "evildoer-registry-motions",
+ "evildoer-registry-core",
  "linkme",
  "strsim",
 ]
