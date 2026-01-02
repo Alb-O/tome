@@ -52,8 +52,11 @@
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TableState {
+	/// Index of the first visible row (scroll offset).
 	pub(crate) offset: usize,
+	/// Index of the currently selected row, if any.
 	pub(crate) selected: Option<usize>,
+	/// Index of the currently selected column, if any.
 	pub(crate) selected_column: Option<usize>,
 }
 

@@ -17,7 +17,9 @@ where
 {
 	/// The given, unprocessed lines
 	input_lines: O,
+	/// Maximum width before truncation occurs.
 	max_line_width: u16,
+	/// Buffer for the current line being processed.
 	current_line: Vec<StyledGrapheme<'a>>,
 	/// Record the offset to skip render
 	horizontal_offset: u16,

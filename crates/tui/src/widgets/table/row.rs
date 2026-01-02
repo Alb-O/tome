@@ -72,10 +72,15 @@ use crate::style::{Style, Styled};
 /// [`Stylize`]: crate::style::Stylize
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
 pub struct Row<'a> {
+	/// The cells contained in this row.
 	pub(crate) cells: Vec<Cell<'a>>,
+	/// Height of the row in lines.
 	pub(crate) height: u16,
+	/// Space above the row content.
 	pub(crate) top_margin: u16,
+	/// Space below the row content.
 	pub(crate) bottom_margin: u16,
+	/// Style applied to the entire row.
 	pub(crate) style: Style,
 }
 

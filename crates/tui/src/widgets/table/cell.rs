@@ -49,7 +49,9 @@ use crate::widgets::Widget;
 /// [`Stylize`]: crate::style::Stylize
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
 pub struct Cell<'a> {
+	/// The text content of this cell.
 	content: Text<'a>,
+	/// Style applied to the cell.
 	style: Style,
 }
 
