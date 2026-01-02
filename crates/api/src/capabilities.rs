@@ -6,15 +6,15 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
 
-use evildoer_base::Selection;
 use evildoer_base::range::CharIdx;
+use evildoer_base::{Mode, Selection};
 use evildoer_core::editor_ctx::{
 	CommandQueueAccess, CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, FocusOps,
 	JumpAccess, MacroAccess, MessageAccess, ModeAccess, PanelOps, SearchAccess, SelectionAccess,
 	SplitOps, ThemeAccess, UndoAccess,
 };
-use evildoer_core::{EditAction, Mode, panel_kind_index};
 use evildoer_registry::commands::{CommandEditorOps, CommandError};
+use evildoer_registry::{EditAction, panel_kind_index};
 
 use crate::buffer::BufferView;
 use crate::editor::Editor;

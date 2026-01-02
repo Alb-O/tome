@@ -9,7 +9,7 @@ mod extensions;
 mod types;
 
 pub use evildoer_registry::notifications::{
-	find_notification_type, NotificationTypeDef, NOTIFICATION_TYPES,
+	NOTIFICATION_TYPES, NotificationTypeDef, find_notification_type,
 };
 pub use extensions::{
 	NotifyDEBUGExt, NotifyERRORExt, NotifyINFOExt, NotifySUCCESSExt, NotifyWARNExt,

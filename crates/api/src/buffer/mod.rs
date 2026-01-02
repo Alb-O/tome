@@ -16,9 +16,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 pub use document::{Document, DocumentId};
-use evildoer_base::Selection;
 use evildoer_base::range::CharIdx;
-use evildoer_core::Mode;
+use evildoer_base::{Mode, Selection};
 use evildoer_input::InputHandler;
 use evildoer_language::LanguageLoader;
 pub use history::HistoryResult;

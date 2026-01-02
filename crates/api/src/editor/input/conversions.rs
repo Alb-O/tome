@@ -2,7 +2,7 @@
 //!
 //! Converts terminal library events to split buffer events.
 
-use evildoer_core::{
+use evildoer_registry::{
 	SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction, SplitMouseButton,
 	SplitPosition,
 };

@@ -65,8 +65,8 @@ pub use panels::{
 	PANEL_FACTORIES, PANELS, PanelDef, PanelFactory, PanelFactoryDef, PanelId, SplitAttrs,
 	SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle, SplitDockPreference,
 	SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction,
-	SplitMouseButton, SplitSize, all_panels, find_factory, find_panel, find_panel_by_id, panel,
-	panel_kind_index,
+	SplitMouseButton, SplitPosition, SplitSize, all_panels, find_factory, find_panel,
+	find_panel_by_id, panel, panel_kind_index,
 };
 pub use statusline::{
 	RenderedSegment, STATUSLINE_SEGMENTS, SegmentPosition, SegmentStyle, StatuslineContext,

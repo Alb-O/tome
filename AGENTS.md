@@ -27,20 +27,20 @@ evildoer-term          Main binary and terminal UI
 
 Uses `linkme` distributed slices for compile-time registration. Each registry is a self-contained crate under `crates/registry/`.
 
-| Registry      | Crate                           | Slice                       | Macro                    |
-| ------------- | ------------------------------- | --------------------------- | ------------------------ |
-| Actions       | `evildoer-registry-actions`     | `ACTIONS`                   | `action!`                |
-| Commands      | `evildoer-registry-commands`    | `COMMANDS`                  | `command!`               |
-| Motions       | `evildoer-registry-motions`     | `MOTIONS`                   | `motion!`                |
-| Text Objects  | `evildoer-registry-text-objects`| `TEXT_OBJECTS`              | `text_object!`           |
-| Options       | `evildoer-registry-options`     | `OPTIONS`                   | `option!`                |
-| Hooks         | `evildoer-registry-hooks`       | `HOOKS`                     | `hook!`, `async_hook!`   |
-| Statusline    | `evildoer-registry-statusline`  | `STATUSLINE_SEGMENTS`       | `statusline_segment!`    |
-| Notifications | `evildoer-registry-notifications`| `NOTIFICATION_TYPES`       | `register_notification!` |
-| Themes        | `evildoer-registry-themes`      | `THEMES`                    | -                        |
-| Panels        | `evildoer-registry-panels`      | `PANELS`, `PANEL_FACTORIES` | `panel!`                 |
-| Menus         | `evildoer-registry-menus`       | `MENUS`                     | -                        |
-| Keybindings   | (in evildoer-registry)          | `KEYBINDINGS`               | (inline in `action!`)    |
+| Registry      | Crate                             | Slice                       | Macro                    |
+| ------------- | --------------------------------- | --------------------------- | ------------------------ |
+| Actions       | `evildoer-registry-actions`       | `ACTIONS`                   | `action!`                |
+| Commands      | `evildoer-registry-commands`      | `COMMANDS`                  | `command!`               |
+| Motions       | `evildoer-registry-motions`       | `MOTIONS`                   | `motion!`                |
+| Text Objects  | `evildoer-registry-text-objects`  | `TEXT_OBJECTS`              | `text_object!`           |
+| Options       | `evildoer-registry-options`       | `OPTIONS`                   | `option!`                |
+| Hooks         | `evildoer-registry-hooks`         | `HOOKS`                     | `hook!`, `async_hook!`   |
+| Statusline    | `evildoer-registry-statusline`    | `STATUSLINE_SEGMENTS`       | `statusline_segment!`    |
+| Notifications | `evildoer-registry-notifications` | `NOTIFICATION_TYPES`        | `register_notification!` |
+| Themes        | `evildoer-registry-themes`        | `THEMES`                    | -                        |
+| Panels        | `evildoer-registry-panels`        | `PANELS`, `PANEL_FACTORIES` | `panel!`                 |
+| Menus         | `evildoer-registry-menus`         | `MENUS`                     | -                        |
+| Keybindings   | (in evildoer-registry)            | `KEYBINDINGS`               | (inline in `action!`)    |
 
 ### Action Result Dispatch
 
@@ -152,20 +152,20 @@ Fine-grained traits in `registry/actions/src/editor_ctx/capabilities.rs`:
 
 ## Key Files
 
-| Purpose             | Location                                     |
-| ------------------- | -------------------------------------------- |
-| Main entry          | `crates/term/src/main.rs`                    |
-| Editor core         | `crates/api/src/editor/mod.rs`               |
-| Action definitions  | `crates/registry/actions/src/`               |
-| Motion definitions  | `crates/registry/motions/src/`               |
-| Text objects        | `crates/registry/text_objects/src/`          |
-| Hook events         | `crates/registry/hooks/src/events.rs`        |
-| Proc macros         | `crates/macro/src/lib.rs`                    |
-| Event proc macro    | `crates/macro/src/events.rs`                 |
-| Result handlers     | `crates/core/src/editor_ctx/result_handlers/`|
-| Keymap registry     | `crates/core/src/keymap_registry.rs`         |
-| Movement functions  | `crates/core/src/movement/`                  |
-| Extension discovery | `crates/extensions/build.rs`                 |
+| Purpose             | Location                                      |
+| ------------------- | --------------------------------------------- |
+| Main entry          | `crates/term/src/main.rs`                     |
+| Editor core         | `crates/api/src/editor/mod.rs`                |
+| Action definitions  | `crates/registry/actions/src/`                |
+| Motion definitions  | `crates/registry/motions/src/`                |
+| Text objects        | `crates/registry/text_objects/src/`           |
+| Hook events         | `crates/registry/hooks/src/events.rs`         |
+| Proc macros         | `crates/macro/src/lib.rs`                     |
+| Event proc macro    | `crates/macro/src/events.rs`                  |
+| Result handlers     | `crates/core/src/editor_ctx/result_handlers/` |
+| Keymap registry     | `crates/core/src/keymap_registry.rs`          |
+| Movement functions  | `crates/core/src/movement/`                   |
+| Extension discovery | `crates/extensions/build.rs`                  |
 
 ## Development
 

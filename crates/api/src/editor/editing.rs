@@ -13,7 +13,7 @@ impl Editor {
 			return;
 		};
 
-		if self.buffer().mode() == evildoer_core::Mode::Insert {
+		if self.buffer().mode() == evildoer_base::Mode::Insert {
 			self.save_insert_undo_state();
 		} else {
 			self.save_undo_state();

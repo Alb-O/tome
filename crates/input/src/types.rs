@@ -1,7 +1,6 @@
+pub use evildoer_base::Mode;
 use evildoer_base::key::ScrollDirection;
 use evildoer_core::ActionId;
-// Re-export Mode from evildoer-manifest
-pub use evildoer_core::Mode;
 
 /// Result of processing a key.
 #[derive(Debug, Clone)]

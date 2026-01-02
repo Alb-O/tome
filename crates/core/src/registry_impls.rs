@@ -1,5 +1,6 @@
 //! [`RegistryMetadata`] implementations for registry definition types.
 
+use evildoer_registry::RegistrySource;
 use evildoer_registry::actions::ActionDef;
 use evildoer_registry::commands::CommandDef;
 use evildoer_registry::hooks::HookDef;
@@ -23,7 +24,7 @@ macro_rules! impl_registry_metadata {
 			fn priority(&self) -> i16 {
 				self.priority
 			}
-			fn source(&self) -> crate::RegistrySource {
+			fn source(&self) -> RegistrySource {
 				self.source
 			}
 		}

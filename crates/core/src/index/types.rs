@@ -2,11 +2,13 @@
 
 use std::collections::HashMap;
 
+use evildoer_registry::actions::ActionDef;
+use evildoer_registry::commands::CommandDef;
 use evildoer_registry::motions::MotionDef;
 use evildoer_registry::text_objects::TextObjectDef;
 
 use super::collision::Collision;
-use crate::{ActionDef, ActionId, CommandDef};
+use crate::ActionId;
 
 /// Generic registry index with collision tracking.
 pub struct RegistryIndex<T: 'static> {

@@ -2,8 +2,7 @@
 //!
 //! Processing keyboard input and dispatching actions.
 
-use evildoer_base::{Key, Selection};
-use evildoer_core::Mode;
+use evildoer_base::{Key, Mode, Selection};
 use evildoer_input::KeyResult;
 use termina::event::KeyCode;
 

@@ -2,7 +2,7 @@
 //!
 //! Focusing buffers, panels, and navigating between views.
 
-use evildoer_core::Mode;
+use evildoer_base::Mode;
 use evildoer_registry::panels::PanelId;
 use evildoer_registry::{
 	HookContext, HookEventData, ViewId, emit_sync_with as emit_hook_sync_with,

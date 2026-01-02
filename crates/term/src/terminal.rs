@@ -103,9 +103,9 @@ pub fn coalesce_resize_events(events: &EventReader, first: WindowSize) -> io::Re
 	Ok(latest)
 }
 
-pub fn cursor_style_for_mode(mode: evildoer_core::Mode) -> CursorStyle {
+pub fn cursor_style_for_mode(mode: evildoer_base::Mode) -> CursorStyle {
 	match mode {
-		evildoer_core::Mode::Insert => CursorStyle::BlinkingBar,
+		evildoer_base::Mode::Insert => CursorStyle::BlinkingBar,
 		_ => CursorStyle::SteadyBlock,
 	}
 }

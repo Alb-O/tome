@@ -4,10 +4,10 @@
 //! including action ID resolution, result handlers, and keymap lookups.
 
 use evildoer_core::{
-	find_action, find_action_by_id, get_keymap_registry, resolve_action_id, BindingMode,
-	LookupResult,
+	LookupResult, find_action, find_action_by_id, get_keymap_registry, resolve_action_id,
 };
 use evildoer_keymap::parser::parse_seq;
+use evildoer_registry::BindingMode;
 use evildoer_registry::actions::{
 	RESULT_CURSOR_MOVE_HANDLERS, RESULT_EDIT_HANDLERS, RESULT_ERROR_HANDLERS,
 	RESULT_INSERT_WITH_MOTION_HANDLERS, RESULT_MODE_CHANGE_HANDLERS, RESULT_MOTION_HANDLERS,
