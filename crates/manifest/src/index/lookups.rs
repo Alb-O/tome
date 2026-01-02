@@ -1,9 +1,9 @@
 //! Public lookup functions for registry queries.
 
 use evildoer_registry::motions::MotionDef;
+use evildoer_registry::text_objects::TextObjectDef;
 
 use super::get_registry;
-use crate::text_objects::TextObjectDef;
 use crate::{ActionDef, ActionId, CommandDef};
 
 pub fn find_command(name: &str) -> Option<&'static CommandDef> {

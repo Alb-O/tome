@@ -1,7 +1,9 @@
 //! Paragraph text object.
 
-use evildoer_base::range::Range;
+use evildoer_base::Range;
 use ropey::RopeSlice;
+
+use crate::text_object;
 
 fn is_blank_line(text: RopeSlice, line_idx: usize) -> bool {
 	let line = text.line(line_idx);
@@ -16,7 +18,6 @@ fn paragraph_inner(text: RopeSlice, pos: usize) -> Option<Range> {
 	let line = text.char_to_line(pos);
 	let total_lines = text.len_lines();
 
-	// If we're on a blank line, select consecutive blank lines
 	if is_blank_line(text, line) {
 		let mut start_line = line;
 		let mut end_line = line;
@@ -38,7 +39,6 @@ fn paragraph_inner(text: RopeSlice, pos: usize) -> Option<Range> {
 		return Some(Range::new(start, end));
 	}
 
-	// Find paragraph boundaries (blank lines)
 	let mut start_line = line;
 	while start_line > 0 && !is_blank_line(text, start_line - 1) {
 		start_line -= 1;
@@ -63,7 +63,6 @@ fn paragraph_around(text: RopeSlice, pos: usize) -> Option<Range> {
 	let inner = paragraph_inner(text, pos)?;
 	let total_lines = text.len_lines();
 
-	// "Around" includes trailing blank lines
 	let end_line = text.char_to_line(inner.head.saturating_sub(1));
 	let mut new_end_line = end_line;
 
@@ -79,8 +78,6 @@ fn paragraph_around(text: RopeSlice, pos: usize) -> Option<Range> {
 
 	Some(Range::new(inner.anchor, end))
 }
-
-use crate::text_object;
 
 text_object!(
 	paragraph,

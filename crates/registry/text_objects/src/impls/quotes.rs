@@ -1,4 +1,6 @@
-use evildoer_base::range::Range;
+//! Quote text objects.
+
+use evildoer_base::Range;
 use ropey::RopeSlice;
 
 use crate::movement::select_surround_object;

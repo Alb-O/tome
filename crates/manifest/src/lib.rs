@@ -35,7 +35,9 @@ use linkme::distributed_slice;
 
 pub mod motions;
 
-pub use evildoer_registry::{motion, option};
+pub use evildoer_registry::{
+	bracket_pair_object, motion, option, symmetric_text_object, text_object,
+};
 pub mod registry;
 pub mod syntax;
 pub mod text_objects;
@@ -234,7 +236,7 @@ pub use statusline::{
 	StatuslineSegmentDef, all_segments, find_segment, render_position, segments_for_position,
 };
 pub use terminal_config::{TerminalConfig, TerminalSequence};
-pub use text_objects::{TEXT_OBJECTS, TextObjectDef};
+pub use evildoer_registry::text_objects::{TEXT_OBJECTS, TextObjectDef, TextObjectHandler};
 pub use theme::{
 	DEFAULT_THEME, DEFAULT_THEME_ID, NotificationColors, OwnedTheme, PopupColors,
 	SemanticColorPair, StatusColors, THEMES, Theme, ThemeColors, ThemeSource, ThemeVariant,

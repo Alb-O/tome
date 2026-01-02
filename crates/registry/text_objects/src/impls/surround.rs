@@ -1,3 +1,5 @@
+//! Bracket/surround text objects.
+
 use crate::bracket_pair_object;
 
 bracket_pair_object!(parentheses, '(', ')', 'b', &['(', ')']);

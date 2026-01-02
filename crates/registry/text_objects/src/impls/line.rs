@@ -1,7 +1,9 @@
 //! Line text object.
 
-use evildoer_base::range::Range;
+use evildoer_base::Range;
 use ropey::RopeSlice;
+
+use crate::text_object;
 
 fn line_inner(text: RopeSlice, pos: usize) -> Option<Range> {
 	if text.len_chars() == 0 {
@@ -40,8 +42,6 @@ fn line_around(text: RopeSlice, pos: usize) -> Option<Range> {
 
 	Some(Range::new(start, end))
 }
-
-use crate::text_object;
 
 text_object!(
 	line,

@@ -1,20 +1,10 @@
 //! Argument/parameter text object.
 
-use evildoer_base::range::Range;
+use evildoer_base::Range;
 use ropey::RopeSlice;
 
-/// Find argument boundaries, handling nested delimiters and whitespace.
-///
-/// Returns: (start, content_start, content_end, end)
-/// - `start`: Position including leading whitespace/comma
-/// - `content_start`: Position after trimming leading whitespace
-/// - `content_end`: Position before trailing whitespace
-/// - `end`: Position including trailing comma (for "around" selection)
-///
-/// The function properly handles:
-/// - Nested parentheses, brackets, and braces
-/// - Leading/trailing whitespace trimming for "inner" selection
-/// - Comma inclusion for "around" selection
+use crate::text_object;
+
 fn find_arg_boundaries(text: RopeSlice, pos: usize) -> Option<(usize, usize, usize, usize)> {
 	let len = text.len_chars();
 	if len == 0 {
@@ -25,7 +15,6 @@ fn find_arg_boundaries(text: RopeSlice, pos: usize) -> Option<(usize, usize, usi
 	let mut start = pos;
 	let mut content_start = pos;
 
-	// Search backward for argument start
 	for i in (0..pos).rev() {
 		let ch = text.char(i);
 		match ch {
@@ -40,7 +29,6 @@ fn find_arg_boundaries(text: RopeSlice, pos: usize) -> Option<(usize, usize, usi
 			}
 			',' if depth == 0 => {
 				start = i + 1;
-				// Skip whitespace after comma
 				content_start = i + 1;
 				while content_start < pos && text.char(content_start).is_whitespace() {
 					content_start += 1;
@@ -55,7 +43,6 @@ fn find_arg_boundaries(text: RopeSlice, pos: usize) -> Option<(usize, usize, usi
 	let mut end = pos;
 	let mut content_end = pos;
 
-	// Search forward for argument end
 	for i in pos..len {
 		let ch = text.char(i);
 		match ch {
@@ -98,8 +85,6 @@ fn arg_around(text: RopeSlice, pos: usize) -> Option<Range> {
 	let (start, _, _, end) = find_arg_boundaries(text, pos)?;
 	Some(Range::new(start, end))
 }
-
-use crate::text_object;
 
 text_object!(
 	argument,

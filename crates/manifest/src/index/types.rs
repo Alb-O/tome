@@ -3,9 +3,9 @@
 use std::collections::HashMap;
 
 use evildoer_registry::motions::MotionDef;
+use evildoer_registry::text_objects::TextObjectDef;
 
 use super::collision::Collision;
-use crate::text_objects::TextObjectDef;
 use crate::{ActionDef, ActionId, CommandDef};
 
 /// Generic registry index with collision tracking.

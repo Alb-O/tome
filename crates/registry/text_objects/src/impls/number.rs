@@ -1,21 +1,14 @@
 //! Number text object.
 
-use evildoer_base::range::Range;
+use evildoer_base::Range;
 use ropey::RopeSlice;
+
+use crate::symmetric_text_object;
 
 fn is_digit_or_separator(ch: char) -> bool {
 	ch.is_ascii_digit() || ch == '_' || ch == '.'
 }
 
-/// Check if a character is part of a number literal.
-///
-/// Supports various number formats:
-/// - Decimal: `123`, `3.14`, `1_000_000`
-/// - Hexadecimal: `0xFF`, `0xDEADBEEF`
-/// - Binary: `0b1010`, `0B11110000`
-/// - Octal: `0o755`, `0O644`
-/// - Scientific notation: `1.23e10`, `4.56E-8`
-/// - Signed numbers: `-42`, `+3.14`
 fn is_number_char(ch: char, allow_prefix: bool) -> bool {
 	ch.is_ascii_digit()
 		|| ch == '_'
@@ -39,7 +32,6 @@ fn number_inner(text: RopeSlice, pos: usize) -> Option<Range> {
 		return None;
 	}
 
-	// Check if we're on/near a digit
 	let current = text.char(pos);
 	if !current.is_ascii_digit() && current != '.' && current != '-' && current != '+' {
 		return None;
@@ -85,8 +77,6 @@ fn number_inner(text: RopeSlice, pos: usize) -> Option<Range> {
 
 	Some(Range::new(start, end))
 }
-
-use crate::symmetric_text_object;
 
 symmetric_text_object!(
 	number,

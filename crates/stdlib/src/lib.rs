@@ -16,7 +16,6 @@ pub mod hooks;
 #[cfg(feature = "host")]
 pub mod movement;
 pub mod notifications;
-pub mod objects;
 pub mod statusline;
 
 pub use evildoer_base::range::CharIdx;
