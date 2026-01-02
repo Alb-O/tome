@@ -4,5 +4,6 @@
 //! Each registry is a separate crate under `crates/registry/`:
 //!
 //! - [`menus`] - Menu bar groups and items
+//! - [`motions`] - Cursor movement primitives
 
-pub use evildoer_registry_menus as menus;
+pub use {evildoer_registry_menus as menus, evildoer_registry_motions as motions};

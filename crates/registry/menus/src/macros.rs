@@ -1,5 +1,3 @@
-//! Menu registration macros.
-
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __menu_opt {

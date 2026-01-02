@@ -1,5 +1,3 @@
-//! Built-in menu definitions.
-
 use crate::{menu_group, menu_item};
 
 menu_group!(file, { label: "File", priority: 0 });

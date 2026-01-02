@@ -1,5 +1,3 @@
-//! Menu type definitions and distributed slices.
-
 use linkme::distributed_slice;
 
 use crate::RegistrySource;
