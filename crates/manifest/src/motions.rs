@@ -1,10 +1,8 @@
-//! Motion primitive definitions.
+//! RegistryMetadata implementation for MotionDef.
 //!
-//! Re-exports from [`evildoer_registry::motions`] for backward compatibility.
+//! This bridges the registry's MotionDef type to manifest's RegistryMetadata trait.
 
-pub use evildoer_registry::motions::{
-	all, find, flags, movement, MotionDef, MotionHandler, MOTIONS,
-};
+use evildoer_registry::motions::MotionDef;
 
 impl crate::RegistryMetadata for MotionDef {
 	fn id(&self) -> &'static str {

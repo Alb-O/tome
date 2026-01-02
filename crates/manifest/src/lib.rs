@@ -180,7 +180,6 @@ pub mod keymap_registry;
 pub mod macros;
 pub mod mode;
 pub mod notifications;
-pub mod options;
 pub mod panels;
 pub mod split_buffer;
 pub mod statusline;
@@ -220,9 +219,7 @@ pub use notifications::{
 	Animation, AutoDismiss, Level, NOTIFICATION_TYPES, NotificationTypeDef, Timing,
 	find_notification_type,
 };
-pub use options::{
-	OPTIONS, OptionDef, OptionScope, OptionType, OptionValue, all_options, find_option,
-};
+pub use evildoer_registry::options::{OPTIONS, OptionDef, OptionScope, OptionType, OptionValue};
 pub use panels::{
 	PANEL_FACTORIES, PANELS, PanelDef, PanelFactory, PanelFactoryDef, PanelId, all_panels,
 	find_factory, find_panel, find_panel_by_id, panel_kind_index,
