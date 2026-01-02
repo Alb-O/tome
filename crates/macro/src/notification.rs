@@ -47,7 +47,7 @@ pub fn register_notification(input: TokenStream) -> TokenStream {
 	} = parse_macro_input!(input as NotificationInput);
 
 	let mut level = quote! { evildoer_registry::notifications::Level::Info };
-	let mut semantic = quote! { evildoer_manifest::SEMANTIC_INFO };
+	let mut semantic = quote! { evildoer_registry::themes::SEMANTIC_INFO };
 	let mut dismiss = quote! { evildoer_registry::notifications::AutoDismiss::default() };
 	let mut icon = quote! { None };
 	let mut animation = quote! { evildoer_registry::notifications::Animation::Fade };

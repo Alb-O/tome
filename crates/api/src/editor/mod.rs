@@ -42,7 +42,7 @@ use std::path::PathBuf;
 pub use buffer_manager::BufferManager;
 pub use command_queue::CommandQueue;
 use evildoer_language::LanguageLoader;
-use evildoer_manifest::Theme;
+use evildoer_registry::themes::Theme;
 use evildoer_registry::{emit_sync_with as emit_hook_sync_with, HookContext, HookEventData};
 use evildoer_tui::widgets::menu::MenuState;
 pub use hook_runtime::HookRuntime;
@@ -215,8 +215,8 @@ impl Editor {
 			buffers: buffer_manager,
 			layout: LayoutManager::new(buffer_id),
 			registers: Registers::default(),
-			theme: evildoer_manifest::get_theme(evildoer_manifest::DEFAULT_THEME_ID)
-				.unwrap_or(&evildoer_manifest::DEFAULT_THEME),
+			theme: evildoer_registry::themes::get_theme(evildoer_registry::themes::DEFAULT_THEME_ID)
+				.unwrap_or(&evildoer_registry::themes::DEFAULT_THEME),
 			window_width: None,
 			window_height: None,
 			ui: UiManager::new(),

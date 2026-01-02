@@ -223,6 +223,6 @@ pub fn load_themes_from_directory(dir: impl AsRef<Path>) -> Result<Vec<ParsedThe
 pub fn load_and_register_themes(dir: impl AsRef<Path>) -> Result<()> {
 	let themes = load_themes_from_directory(dir)?;
 	let owned: Vec<_> = themes.into_iter().map(|t| t.into_owned_theme()).collect();
-	evildoer_manifest::register_runtime_themes(owned);
+	evildoer_registry::themes::register_runtime_themes(owned);
 	Ok(())
 }

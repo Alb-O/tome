@@ -1,7 +1,7 @@
-use evildoer_manifest::{
+use evildoer_registry::notifications::{self as registry, find_notification_type};
+use evildoer_registry::themes::{
 	SEMANTIC_DIM, SEMANTIC_ERROR, SEMANTIC_INFO, SEMANTIC_SUCCESS, SEMANTIC_WARNING,
 };
-use evildoer_registry::notifications::{self as registry, find_notification_type};
 use evildoer_tui::style::Style;
 use evildoer_tui::widgets::icon::presets as icon_presets;
 use evildoer_tui::widgets::notifications::{self as notif, Toast, ToastIcon};

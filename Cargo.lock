@@ -754,6 +754,7 @@ version = "0.3.0"
 dependencies = [
  "evildoer-base",
  "evildoer-manifest",
+ "evildoer-registry",
  "evildoer-runtime",
  "kdl",
  "notify",

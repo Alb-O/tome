@@ -2,20 +2,20 @@
 //!
 //! Theme management and highlight span collection.
 
-use evildoer_manifest::syntax::SyntaxStyles;
 use evildoer_registry::commands::CommandError;
+use evildoer_registry::themes::SyntaxStyles;
 
 use super::extensions::StyleMod;
 use super::Editor;
 
 impl Editor {
 	pub fn set_theme(&mut self, theme_name: &str) -> Result<(), CommandError> {
-		if let Some(theme) = evildoer_manifest::get_theme(theme_name) {
+		if let Some(theme) = evildoer_registry::themes::get_theme(theme_name) {
 			self.theme = theme;
 			Ok(())
 		} else {
 			let mut err = format!("Theme not found: {}", theme_name);
-			if let Some(suggestion) = evildoer_manifest::suggest_theme(theme_name) {
+			if let Some(suggestion) = evildoer_registry::themes::suggest_theme(theme_name) {
 				err.push_str(&format!(". Did you mean '{}'?", suggestion));
 			}
 			Err(CommandError::Failed(err))

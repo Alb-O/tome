@@ -4,10 +4,10 @@ use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use evildoer_base::range::CharIdx;
-use evildoer_language::LanguageLoader;
+use evildoer_base::Mode;
 use evildoer_language::highlight::{HighlightSpan, HighlightStyles};
-use evildoer_manifest::syntax::SyntaxStyles;
-use evildoer_manifest::{Mode, Theme, ThemeVariant};
+use evildoer_language::LanguageLoader;
+use evildoer_registry::themes::{SyntaxStyles, Theme, ThemeVariant};
 use evildoer_tui::layout::Rect;
 use evildoer_tui::style::{Modifier, Style};
 use evildoer_tui::text::{Line, Span};
@@ -15,7 +15,7 @@ use evildoer_tui::widgets::Paragraph;
 
 use crate::buffer::Buffer;
 use crate::editor::extensions::StyleOverlays;
-use crate::render::types::{RenderResult, wrap_line};
+use crate::render::types::{wrap_line, RenderResult};
 
 /// Context for rendering a buffer.
 ///

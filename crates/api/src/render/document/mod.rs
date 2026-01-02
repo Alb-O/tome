@@ -498,7 +498,7 @@ fn render_split_buffer(
 	buffer: &dyn SplitBuffer,
 	area: Rect,
 	is_focused: bool,
-	colors: &evildoer_manifest::PopupColors,
+	colors: &evildoer_registry::themes::PopupColors,
 ) {
 	let base_style = Style::default().bg(colors.bg).fg(colors.fg);
 

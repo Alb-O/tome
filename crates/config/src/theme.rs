@@ -4,14 +4,14 @@
 
 use std::path::PathBuf;
 
-use evildoer_manifest::syntax::{SyntaxStyle, SyntaxStyles};
-pub use evildoer_manifest::theme::{
+pub use evildoer_registry::themes::{
 	NotificationColors, PopupColors, StatusColors, ThemeColors, ThemeVariant, UiColors,
 };
+use evildoer_registry::themes::{SyntaxStyle, SyntaxStyles};
 use kdl::{KdlDocument, KdlNode};
 
 use crate::error::{ConfigError, Result};
-use crate::kdl_util::{ParseContext, get_color_field, parse_modifier, parse_palette};
+use crate::kdl_util::{get_color_field, parse_modifier, parse_palette, ParseContext};
 
 /// A parsed theme with owned data suitable for runtime use.
 #[derive(Debug, Clone)]
@@ -25,15 +25,17 @@ pub struct ParsedTheme {
 
 impl ParsedTheme {
 	/// Convert to an OwnedTheme for registration in the runtime theme registry.
-	pub fn into_owned_theme(self) -> evildoer_manifest::OwnedTheme {
-		evildoer_manifest::OwnedTheme {
+	pub fn into_owned_theme(self) -> evildoer_registry::themes::OwnedTheme {
+		use evildoer_registry::motions::RegistrySource;
+
+		evildoer_registry::themes::OwnedTheme {
 			id: self.name.clone(),
 			name: self.name,
 			aliases: self.aliases,
 			variant: self.variant,
 			colors: self.colors,
 			priority: 0,
-			source: evildoer_manifest::RegistrySource::Runtime,
+			source: RegistrySource::Runtime,
 		}
 	}
 }

@@ -26,14 +26,11 @@ pub mod keymap_registry;
 pub mod macros;
 pub mod terminal_config;
 
-// Re-export theme and syntax types from registry
-pub mod syntax {
-	pub use evildoer_registry::themes::{SyntaxStyle, SyntaxStyles};
-}
+/// Theme completion source.
 pub mod theme {
-	pub use evildoer_registry::themes::*;
+	use evildoer_registry::themes::{runtime_themes, ThemeVariant, THEMES};
 
-	pub use super::completion::{
+	use super::completion::{
 		CompletionContext, CompletionItem, CompletionKind, CompletionResult, CompletionSource,
 		PROMPT_COMMAND,
 	};
@@ -118,12 +115,6 @@ impl std::fmt::Display for ActionId {
 	}
 }
 
-// Re-export semantic color identifiers from themes
-pub use evildoer_registry::themes::{
-	SEMANTIC_DIM, SEMANTIC_ERROR, SEMANTIC_INFO, SEMANTIC_NORMAL, SEMANTIC_SUCCESS,
-	SEMANTIC_WARNING,
-};
-
 /// Common metadata for all registry item types.
 pub trait RegistryMetadata {
 	fn id(&self) -> &'static str;
@@ -174,8 +165,4 @@ pub use index::{
 };
 pub use keymap_registry::{get_keymap_registry, BindingEntry, KeymapRegistry, LookupResult};
 pub use terminal_config::{TerminalConfig, TerminalSequence};
-pub use theme::{
-	blend_colors, get_theme, register_runtime_themes, runtime_themes, suggest_theme,
-	NotificationColors, OwnedTheme, PopupColors, SemanticColorPair, StatusColors, Theme,
-	ThemeColors, ThemeSource, ThemeVariant, UiColors, DEFAULT_THEME, DEFAULT_THEME_ID, THEMES,
-};
+pub use theme::ThemeSource;
