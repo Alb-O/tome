@@ -74,8 +74,8 @@ mod tests {
 	fn test_motion_actions_registered() {
 		assert!(find_action("move_left").is_some());
 		assert!(find_action("move_right").is_some());
-		assert!(find_action("move_up").is_some());
-		assert!(find_action("move_down").is_some());
+		assert!(find_action("move_up_visual").is_some());
+		assert!(find_action("move_down_visual").is_some());
 		assert!(find_action("move_line_start").is_some());
 		assert!(find_action("move_line_end").is_some());
 		assert!(find_action("next_word_start").is_some());

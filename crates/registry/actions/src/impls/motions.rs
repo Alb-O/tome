@@ -1,11 +1,6 @@
-use evildoer_registry_motions::{find as find_motion, keys as motions, MotionKey};
+use evildoer_registry_motions::keys as motions;
 
 use crate::{action, cursor_motion, selection_motion, ActionResult};
-
-/// Lookup motions that are defined at runtime (no static keys yet).
-fn runtime_motion(name: &str) -> Option<MotionKey> {
-	find_motion(name)
-}
 
 action!(move_left, {
 	description: "Move cursor left",
@@ -18,14 +13,6 @@ action!(move_right, {
 	bindings: r#"normal "l" "right"
 insert "right""#,
 }, |ctx| cursor_motion(ctx, motions::right));
-
-action!(move_up, { description: "Move cursor up" }, |ctx| {
-	cursor_motion(ctx, motions::up)
-});
-
-action!(move_down, { description: "Move cursor down" }, |ctx| {
-	cursor_motion(ctx, motions::down)
-});
 
 action!(move_line_start, { description: "Move to start of line", bindings: r#"normal "0" "home""# },
 	|ctx| cursor_motion(ctx, motions::line_start));
@@ -66,23 +53,15 @@ action!(document_start, { description: "Move to document start", bindings: r#"no
 action!(document_end, { description: "Move to document end", bindings: r#"normal "G""# },
 	|ctx| cursor_motion(ctx, motions::document_end));
 
-action!(move_top_screen, { description: "Move to top of screen", bindings: r#"normal "H""# }, |ctx| {
-	let Some(motion) = runtime_motion("screen_top") else {
-		return ActionResult::Error("Unknown motion: screen_top".to_string());
-	};
-	cursor_motion(ctx, motion)
+// TODO: Screen-relative motions need viewport context not available here.
+action!(move_top_screen, { description: "Move to top of screen", bindings: r#"normal "H""# }, |_ctx| {
+	ActionResult::Error("screen_top motion requires viewport context".to_string())
 });
 
-action!(move_middle_screen, { description: "Move to middle of screen", bindings: r#"normal "M""# }, |ctx| {
-	let Some(motion) = runtime_motion("screen_middle") else {
-		return ActionResult::Error("Unknown motion: screen_middle".to_string());
-	};
-	cursor_motion(ctx, motion)
+action!(move_middle_screen, { description: "Move to middle of screen", bindings: r#"normal "M""# }, |_ctx| {
+	ActionResult::Error("screen_middle motion requires viewport context".to_string())
 });
 
-action!(move_bottom_screen, { description: "Move to bottom of screen" }, |ctx| {
-	let Some(motion) = runtime_motion("screen_bottom") else {
-		return ActionResult::Error("Unknown motion: screen_bottom".to_string());
-	};
-	cursor_motion(ctx, motion)
+action!(move_bottom_screen, { description: "Move to bottom of screen" }, |_ctx| {
+	ActionResult::Error("screen_bottom motion requires viewport context".to_string())
 });

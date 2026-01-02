@@ -135,6 +135,7 @@ pub enum ActionResult {
 	/// The command will be queued and executed on the next tick. This allows
 	/// actions (which are synchronous) to trigger async operations like LSP
 	/// requests.
+	// TODO: Commands are name-driven at boundaries; typed keys deferred.
 	#[terminal_safe]
 	Command {
 		/// Name of the command to execute.

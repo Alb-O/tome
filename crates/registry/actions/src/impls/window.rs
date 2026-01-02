@@ -48,6 +48,7 @@ result_handler!(
 	}
 );
 
+// TODO: Panel toggles remain string-based until PanelKey exists.
 action!(toggle_terminal, {
 	description: "Toggle terminal split",
 	bindings: r#"normal ":""#,
