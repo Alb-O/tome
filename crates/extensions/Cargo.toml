@@ -8,16 +8,14 @@ license.workspace = true
 [dependencies]
 anyhow.workspace = true
 evildoer-api.workspace = true
+evildoer-core.workspace = true
 evildoer-language.workspace = true
 evildoer-lsp = { workspace = true, features = ["client", "position"] }
 evildoer-macro.workspace = true
-evildoer-manifest.workspace = true
 evildoer-registry.workspace = true
-evildoer-stdlib.workspace = true
 futures.workspace = true
 linkme.workspace = true
 paste.workspace = true
 tracing.workspace = true
-
 [dev-dependencies]
 ropey.workspace = true

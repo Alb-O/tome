@@ -1,6 +1,6 @@
 [package]
-name = "evildoer-stdlib"
-description = "Standard library of built-in features for Evildoer editor"
+name = "evildoer-core"
+description = "Core infrastructure for Evildoer editor"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,34 +8,30 @@ license.workspace = true
 [features]
 default = ["host"]
 host = [
-    "dep:linkme",
-    "dep:ropey",
     "dep:regex",
     "dep:termina",
     "dep:unicode-segmentation",
     "dep:unicode-width",
     "dep:smallvec",
-    "dep:paste",
-    "dep:tracing",
 ]
 
 [dependencies]
 async-trait.workspace = true
 evildoer-base.workspace = true
-evildoer-input.workspace = true
+evildoer-keymap.workspace = true
 evildoer-macro.workspace = true
-evildoer-manifest.workspace = true
 evildoer-registry.workspace = true
 futures.workspace = true
-linkme = { workspace = true, optional = true }
-paste = { workspace = true, optional = true }
+linkme.workspace = true
+paste.workspace = true
 regex = { workspace = true, optional = true }
-ropey = { workspace = true, optional = true }
+ropey.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 smallvec = { workspace = true, optional = true }
+strsim.workspace = true
 termina = { workspace = true, optional = true }
 thiserror.workspace = true
-tracing = { workspace = true, optional = true }
+tracing.workspace = true
 unicode-segmentation = { workspace = true, optional = true }
 unicode-width = { workspace = true, optional = true }

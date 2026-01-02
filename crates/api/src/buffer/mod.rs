@@ -18,9 +18,9 @@ use std::sync::{Arc, RwLock};
 pub use document::{Document, DocumentId};
 use evildoer_base::Selection;
 use evildoer_base::range::CharIdx;
+use evildoer_core::Mode;
 use evildoer_input::InputHandler;
 use evildoer_language::LanguageLoader;
-use evildoer_manifest::Mode;
 pub use history::HistoryResult;
 pub use layout::{BufferView, Layout, SplitDirection, SplitPath};
 

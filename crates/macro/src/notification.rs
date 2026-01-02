@@ -95,13 +95,13 @@ pub fn register_notification(input: TokenStream) -> TokenStream {
 				source: evildoer_registry::RegistrySource::Crate(env!("CARGO_PKG_NAME")),
 			};
 
-		pub trait #trait_name: evildoer_manifest::editor_ctx::MessageAccess {
+		pub trait #trait_name: evildoer_core::editor_ctx::MessageAccess {
 			fn #helper_name(&mut self, msg: &str) {
 				self.notify(#id, msg);
 			}
 		}
 
-		impl<T: evildoer_manifest::editor_ctx::MessageAccess + ?Sized> #trait_name for T {}
+		impl<T: evildoer_core::editor_ctx::MessageAccess + ?Sized> #trait_name for T {}
 	};
 
 	expanded.into()

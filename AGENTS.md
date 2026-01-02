@@ -5,15 +5,15 @@ The next evolution of agentic text editors & harnesses.
 ## Design Goals
 
 - **Orthogonal**: No tight coupling between modules. Event emitter/receiver pattern via `linkme` distributed slices for compile-time registration.
-- **Suckless extension system**: Extensions written in Rust. Two-tier system: Core Builtins (stdlib) + Host Extensions (extensions/).
+- **Suckless extension system**: Extensions written in Rust. Two-tier system: Core Builtins + Host Extensions (extensions/).
 - **Data-driven macros**: Declarative and proc macros keep registration patterns lean and composable.
 
 ## Crate Architecture
 
 ```
 evildoer-base          Core types: Range, Selection, Transaction, Rope wrappers
-evildoer-manifest      Registry DEFINITIONS (ActionDef, CommandDef, etc.) - no implementations
-evildoer-stdlib        Registry IMPLEMENTATIONS (actions, commands, motions, etc.)
+evildoer-registry      Registry definitions organized by type (actions/, commands/, etc.)
+evildoer-core          Glue layer: ActionId, KeymapRegistry, movement, notifications
 evildoer-macro         Proc macros (DispatchResult, define_events!, parse_keybindings, etc.)
 evildoer-api           Editor engine: Buffer, Editor, rendering, terminals
 evildoer-extensions    Host extensions discovered at build-time (LSP, Zenmode)
@@ -25,21 +25,22 @@ evildoer-term          Main binary and terminal UI
 
 ## Registry System
 
-Uses `linkme` distributed slices for compile-time registration. Definitions live in **evildoer-manifest**, implementations in **evildoer-stdlib**.
+Uses `linkme` distributed slices for compile-time registration. Each registry is a self-contained crate under `crates/registry/`.
 
-| Registry      | Slice                       | Implementations                        | Macro                    |
-| ------------- | --------------------------- | -------------------------------------- | ------------------------ |
-| Actions       | `ACTIONS`                   | `stdlib/src/actions/` (87 items)       | `action!`                |
-| Commands      | `COMMANDS`                  | `stdlib/src/commands/` (19 items)      | `command!`               |
-| Motions       | `MOTIONS`                   | `stdlib/src/motions/` (19 items)       | `motion!`                |
-| Text Objects  | `TEXT_OBJECTS`              | `stdlib/src/objects/` (9 items)        | `text_object!`           |
-| Options       | `OPTIONS`                   | `stdlib/src/options/` (26 items)       | `option!`                |
-| Hooks         | `HOOKS`                     | `stdlib/src/hooks/`                    | `hook!`, `async_hook!`   |
-| Events        | (generated enums)           | `manifest/src/hooks.rs`                | `define_events!`         |
-| Statusline    | `STATUSLINE_SEGMENTS`       | `stdlib/src/statusline/` (6 items)     | `statusline_segment!`    |
-| Notifications | `NOTIFICATION_TYPES`        | `stdlib/src/notifications/` (5 types)  | `register_notification!` |
-| Panels        | `PANELS`, `PANEL_FACTORIES` | `api/src/panels/` (2 items)            | `panel!`                 |
-| Keybindings   | `KEYBINDINGS`               | Colocated with actions via `bindings:` | (inline in `action!`)    |
+| Registry      | Crate                           | Slice                       | Macro                    |
+| ------------- | ------------------------------- | --------------------------- | ------------------------ |
+| Actions       | `evildoer-registry-actions`     | `ACTIONS`                   | `action!`                |
+| Commands      | `evildoer-registry-commands`    | `COMMANDS`                  | `command!`               |
+| Motions       | `evildoer-registry-motions`     | `MOTIONS`                   | `motion!`                |
+| Text Objects  | `evildoer-registry-text-objects`| `TEXT_OBJECTS`              | `text_object!`           |
+| Options       | `evildoer-registry-options`     | `OPTIONS`                   | `option!`                |
+| Hooks         | `evildoer-registry-hooks`       | `HOOKS`                     | `hook!`, `async_hook!`   |
+| Statusline    | `evildoer-registry-statusline`  | `STATUSLINE_SEGMENTS`       | `statusline_segment!`    |
+| Notifications | `evildoer-registry-notifications`| `NOTIFICATION_TYPES`       | `register_notification!` |
+| Themes        | `evildoer-registry-themes`      | `THEMES`                    | -                        |
+| Panels        | `evildoer-registry-panels`      | `PANELS`, `PANEL_FACTORIES` | `panel!`                 |
+| Menus         | `evildoer-registry-menus`       | `MENUS`                     | -                        |
+| Keybindings   | (in evildoer-registry)          | `KEYBINDINGS`               | (inline in `action!`)    |
 
 ### Action Result Dispatch
 
@@ -62,7 +63,7 @@ result_extension_handler!(my_handler, |result, ctx| {
 
 ### Event System
 
-Hook events are defined via the `define_events!` proc macro in `manifest/src/hooks.rs`. This is a **single source of truth** that generates:
+Hook events are defined via the `define_events!` proc macro in `registry/hooks/src/events.rs`. This is a **single source of truth** that generates:
 
 - `HookEvent` enum for event discrimination
 - `HookEventData<'a>` with borrowed payloads for sync hooks
@@ -129,7 +130,7 @@ impl ZenmodeState {
 
 ## Capability System
 
-Fine-grained traits in `manifest/src/editor_ctx/capabilities.rs`:
+Fine-grained traits in `registry/actions/src/editor_ctx/capabilities.rs`:
 
 | Trait             | Required | Purpose                  |
 | ----------------- | -------- | ------------------------ |
@@ -151,21 +152,20 @@ Fine-grained traits in `manifest/src/editor_ctx/capabilities.rs`:
 
 ## Key Files
 
-| Purpose             | Location                                        |
-| ------------------- | ----------------------------------------------- |
-| Main entry          | `crates/term/src/main.rs`                       |
-| Editor core         | `crates/api/src/editor/mod.rs`                  |
-| Action definitions  | `crates/manifest/src/actions/`                  |
-| Motion definitions  | `crates/manifest/src/motions.rs`                |
-| Text objects        | `crates/manifest/src/text_objects.rs`           |
-| Hook events         | `crates/manifest/src/hooks.rs`                  |
-| Declarative macros  | `crates/manifest/src/macros/`                   |
-| Proc macros         | `crates/macro/src/lib.rs`                       |
-| Event proc macro    | `crates/macro/src/events.rs`                    |
-| Registry infra      | `crates/manifest/src/registry/`                 |
-| Result handlers     | `crates/stdlib/src/editor_ctx/result_handlers/` |
-| Keymap registry     | `crates/manifest/src/keymap_registry.rs`        |
-| Extension discovery | `crates/extensions/build.rs`                    |
+| Purpose             | Location                                     |
+| ------------------- | -------------------------------------------- |
+| Main entry          | `crates/term/src/main.rs`                    |
+| Editor core         | `crates/api/src/editor/mod.rs`               |
+| Action definitions  | `crates/registry/actions/src/`               |
+| Motion definitions  | `crates/registry/motions/src/`               |
+| Text objects        | `crates/registry/text_objects/src/`          |
+| Hook events         | `crates/registry/hooks/src/events.rs`        |
+| Proc macros         | `crates/macro/src/lib.rs`                    |
+| Event proc macro    | `crates/macro/src/events.rs`                 |
+| Result handlers     | `crates/core/src/editor_ctx/result_handlers/`|
+| Keymap registry     | `crates/core/src/keymap_registry.rs`         |
+| Movement functions  | `crates/core/src/movement/`                  |
+| Extension discovery | `crates/extensions/build.rs`                 |
 
 ## Development
 

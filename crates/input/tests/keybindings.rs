@@ -6,11 +6,11 @@
 // Force linkage of evildoer-stdlib to ensure all actions are registered.
 // This is necessary because linkme distributed slices only include statics
 // that are actually linked into the binary.
-extern crate evildoer_stdlib;
+extern crate evildoer_core;
 
 use evildoer_base::key::{Key, KeyCode, Modifiers};
+use evildoer_core::find_action_by_id;
 use evildoer_input::{InputHandler, KeyResult};
-use evildoer_manifest::find_action_by_id;
 
 fn extract_action(result: KeyResult) -> Option<(String, bool)> {
 	match result {

@@ -1,9 +1,9 @@
 //! Insert mode key handling.
 
 use evildoer_base::key::{Key, KeyCode, Modifiers};
+use evildoer_core::keymap_registry::LookupResult;
+use evildoer_core::{BindingMode, get_keymap_registry, resolve_action_id};
 use evildoer_keymap::ToKeyMap;
-use evildoer_manifest::keymap_registry::LookupResult;
-use evildoer_manifest::{BindingMode, get_keymap_registry, resolve_action_id};
 
 use crate::InputHandler;
 use crate::types::{KeyResult, Mode};

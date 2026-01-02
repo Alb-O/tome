@@ -3,8 +3,8 @@
 //! Processing keyboard input and dispatching actions.
 
 use evildoer_base::{Key, Selection};
+use evildoer_core::Mode;
 use evildoer_input::KeyResult;
-use evildoer_manifest::Mode;
 use termina::event::KeyCode;
 
 use super::conversions::convert_termina_key;
@@ -18,7 +18,7 @@ pub(crate) enum ActionDispatch {
 
 impl Editor {
 	pub(crate) fn dispatch_action(&mut self, result: &KeyResult) -> ActionDispatch {
-		use evildoer_manifest::find_action_by_id;
+		use evildoer_core::find_action_by_id;
 
 		match result {
 			KeyResult::ActionById {

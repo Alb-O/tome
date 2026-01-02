@@ -1,4 +1,4 @@
-use evildoer_manifest::CompletionKind;
+use evildoer_core::CompletionKind;
 use evildoer_tui::layout::Rect;
 use evildoer_tui::style::{Modifier, Style};
 use evildoer_tui::text::{Line, Span};

@@ -1,7 +1,7 @@
 use std::io::{self, Write};
 use std::time::Duration;
 
-use evildoer_manifest::{TerminalConfig, TerminalSequence};
+use evildoer_core::{TerminalConfig, TerminalSequence};
 use evildoer_registry::panels::SplitCursorStyle;
 use termina::escape::csi::{
 	Csi, Cursor, DecPrivateMode, DecPrivateModeCode, Keyboard, KittyKeyboardFlags, Mode,
@@ -103,9 +103,9 @@ pub fn coalesce_resize_events(events: &EventReader, first: WindowSize) -> io::Re
 	Ok(latest)
 }
 
-pub fn cursor_style_for_mode(mode: evildoer_manifest::Mode) -> CursorStyle {
+pub fn cursor_style_for_mode(mode: evildoer_core::Mode) -> CursorStyle {
 	match mode {
-		evildoer_manifest::Mode::Insert => CursorStyle::BlinkingBar,
+		evildoer_core::Mode::Insert => CursorStyle::BlinkingBar,
 		_ => CursorStyle::SteadyBlock,
 	}
 }

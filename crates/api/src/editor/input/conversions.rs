@@ -3,7 +3,7 @@
 //! Converts terminal library events to split buffer events.
 
 use evildoer_base::Position;
-use evildoer_manifest::{
+use evildoer_core::{
 	SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction, SplitMouseButton,
 };
 use termina::event::{KeyCode, Modifiers};

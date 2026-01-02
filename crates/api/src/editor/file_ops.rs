@@ -9,7 +9,7 @@ use evildoer_registry::{HookContext, HookEventData, emit as emit_hook};
 
 use super::Editor;
 
-impl evildoer_manifest::editor_ctx::FileOpsAccess for Editor {
+impl evildoer_core::editor_ctx::FileOpsAccess for Editor {
 	fn is_modified(&self) -> bool {
 		// Panels are never considered "modified" for save purposes
 		if self.is_panel_focused() {

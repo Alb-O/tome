@@ -20,7 +20,7 @@
 //! # Usage
 //!
 //! ```ignore
-//! use evildoer_stdlib::notifications::{Notification, NotificationBuilder};
+//! use evildoer_core::notifications::{Notification, NotificationBuilder};
 //!
 //! let notif = NotificationBuilder::from_registry("info", "Hello!")
 //!     .title("Greeting")

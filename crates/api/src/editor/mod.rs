@@ -11,7 +11,7 @@
 //! - [`splits`] - Split view management
 //! - [`theming`] - Theme and syntax highlighting
 //!
-//! [`FileOpsAccess`]: evildoer_manifest::editor_ctx::FileOpsAccess
+//! [`FileOpsAccess`]: evildoer_core::editor_ctx::FileOpsAccess
 
 mod actions;
 mod actions_exec;
@@ -165,7 +165,7 @@ pub struct Editor {
 	pub menu: MenuState<MenuAction>,
 }
 
-impl evildoer_manifest::EditorOps for Editor {}
+impl evildoer_core::EditorOps for Editor {}
 
 impl Editor {
 	/// Creates a new editor by loading content from the given file path.

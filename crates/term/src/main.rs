@@ -12,7 +12,7 @@ use evildoer_api::{DebugPanelLayer, Editor};
 use tracing_subscriber::prelude::*;
 // Force-link crates to ensure their distributed_slice registrations are included.
 #[allow(unused_imports, reason = "linkme distributed_slice registration")]
-use {evildoer_acp as _, evildoer_extensions as _, evildoer_stdlib as _};
+use {evildoer_acp as _, evildoer_core as _, evildoer_extensions as _};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

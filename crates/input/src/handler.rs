@@ -1,10 +1,10 @@
 //! Input handler managing key processing and mode state.
 
 use evildoer_base::key::{Key, KeyCode, MouseButton, MouseEvent};
+use evildoer_core::keymap_registry::{KeymapRegistry, LookupResult};
+use evildoer_core::{BindingMode, get_keymap_registry};
 use evildoer_keymap::ToKeyMap;
 use evildoer_keymap::parser::Node;
-use evildoer_manifest::keymap_registry::{KeymapRegistry, LookupResult};
-use evildoer_manifest::{BindingMode, get_keymap_registry};
 use tracing::debug;
 
 use crate::types::{KeyResult, Mode};
@@ -46,7 +46,7 @@ impl InputHandler {
 	}
 
 	pub fn mode_name(&self) -> &'static str {
-		use evildoer_manifest::PendingKind;
+		use evildoer_core::PendingKind;
 		match &self.mode {
 			Mode::Normal => "NORMAL",
 			Mode::Insert => "INSERT",

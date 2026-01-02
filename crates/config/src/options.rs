@@ -6,7 +6,7 @@ use kdl::KdlNode;
 
 use crate::error::Result;
 
-/// Option value types matching [`evildoer_manifest::OptionValue`].
+/// Option value types matching [`evildoer_core::OptionValue`].
 #[derive(Debug, Clone, PartialEq)]
 pub enum OptionValue {
 	Bool(bool),

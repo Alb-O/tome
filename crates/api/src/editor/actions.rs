@@ -1,7 +1,6 @@
 use evildoer_base::range::{Direction as MoveDir, Range};
 use evildoer_base::{Selection, Transaction};
-use evildoer_manifest::{EditAction, Mode, ScrollAmount, ScrollDir, VisualDirection};
-use evildoer_stdlib::movement;
+use evildoer_core::{EditAction, Mode, ScrollAmount, ScrollDir, VisualDirection, movement};
 use tracing::debug;
 
 use super::Editor;

@@ -34,6 +34,7 @@ evildoer-acp = { path = "crates/acp" }
 evildoer-api = { path = "crates/api" }
 evildoer-base = { path = "crates/base" }
 evildoer-config = { path = "crates/config" }
+evildoer-core = { path = "crates/core" }
 evildoer-extensions = { path = "crates/extensions" }
 evildoer-input = { path = "crates/input" }
 evildoer-keymap = { path = "crates/keymap" }
@@ -42,7 +43,6 @@ evildoer-keymap-parser = { path = "crates/keymap/parser" }
 evildoer-language = { path = "crates/language" }
 evildoer-lsp = { path = "crates/lsp" }
 evildoer-macro = { path = "crates/macro" }
-evildoer-manifest = { path = "crates/manifest" }
 evildoer-registry = { path = "crates/registry" }
 evildoer-registry-actions = { path = "crates/registry/actions" }
 evildoer-registry-commands = { path = "crates/registry/commands" }
@@ -56,7 +56,6 @@ evildoer-registry-statusline = { path = "crates/registry/statusline" }
 evildoer-registry-text-objects = { path = "crates/registry/text_objects" }
 evildoer-registry-themes = { path = "crates/registry/themes" }
 evildoer-runtime = { path = "crates/runtime" }
-evildoer-stdlib = { path = "crates/stdlib" }
 evildoer-tui = { path = "crates/tui" }
 futures = "0.3"
 globset = "0.4"

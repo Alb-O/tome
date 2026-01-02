@@ -1,8 +1,8 @@
 //! Text editing operations for buffers.
 
 use evildoer_base::Transaction;
+use evildoer_core::movement;
 use evildoer_language::LanguageLoader;
-use evildoer_stdlib::movement;
 
 use super::Buffer;
 

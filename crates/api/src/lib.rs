@@ -1,8 +1,8 @@
 //! Editor engine and terminal UI infrastructure.
 //!
 //! This crate provides the core editor implementation, buffer management,
-//! and terminal rendering. It ties together [`evildoer_manifest`] (registry definitions)
-//! and [`evildoer_stdlib`] (implementations) into a working editor.
+//! and terminal rendering. It ties together [`evildoer_core`] (registry definitions)
+//! and [`evildoer_core`] (implementations) into a working editor.
 //!
 //! # Main Types
 //!

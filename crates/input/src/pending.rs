@@ -1,5 +1,5 @@
 use evildoer_base::key::{Key, KeyCode};
-use evildoer_manifest::{ObjectSelectionKind, PendingKind, resolve_action_id};
+use evildoer_core::{ObjectSelectionKind, PendingKind, resolve_action_id};
 
 use crate::InputHandler;
 use crate::types::{KeyResult, Mode};

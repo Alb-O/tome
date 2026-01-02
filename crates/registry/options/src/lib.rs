@@ -88,7 +88,7 @@ pub enum OptionScope {
 
 /// Definition of a configurable option.
 pub struct OptionDef {
-	/// Unique identifier (e.g., "evildoer_stdlib::tab_width").
+	/// Unique identifier (e.g., "evildoer_core::tab_width").
 	pub id: &'static str,
 	/// Option name (e.g., "tab_width").
 	pub name: &'static str,

@@ -8,18 +8,16 @@ license.workspace = true
 [features]
 default = []
 lsp = ["dep:evildoer-lsp"]
-
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
 clap.workspace = true
 evildoer-base.workspace = true
+evildoer-core.workspace = true
 evildoer-input.workspace = true
 evildoer-language.workspace = true
 evildoer-lsp = { workspace = true, features = ["position"], optional = true }
-evildoer-manifest.workspace = true
 evildoer-registry.workspace = true
-evildoer-stdlib.workspace = true
 evildoer-tui.workspace = true
 futures.workspace = true
 home.workspace = true
@@ -43,6 +41,5 @@ tree-house.workspace = true
 unicode-segmentation.workspace = true
 unicode-width.workspace = true
 vt100 = "0.15"
-
 [dev-dependencies]
 insta.workspace = true

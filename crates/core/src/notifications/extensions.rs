@@ -1,4 +1,4 @@
-use evildoer_manifest::editor_ctx::MessageAccess;
+use crate::editor_ctx::MessageAccess;
 
 pub trait NotifyINFOExt: MessageAccess {
 	fn info(&mut self, msg: &str) {

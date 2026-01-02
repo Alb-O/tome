@@ -1,12 +1,14 @@
-//! Registry infrastructure using compile-time distributed slices.
+//! Core infrastructure for Evildoer editor.
 //!
-//! This crate bridges `evildoer-registry` types to the editor's infrastructure,
-//! providing [`RegistryMetadata`] trait implementations, [`ActionId`] for dispatch,
-//! and [`KeymapRegistry`] for trie-based keybinding lookup.
+//! This crate provides the glue layer between `evildoer-registry` types and the
+//! editor's infrastructure, including:
 //!
-//! Registry definitions live in `evildoer-registry`. This crate provides the glue
-//! layer: re-exports for backward compatibility, `RegistryMetadata` impls, and
-//! `ActionId` resolution infrastructure.
+//! - [`ActionId`] for action dispatch
+//! - [`KeymapRegistry`] for trie-based keybinding lookup
+//! - [`RegistryMetadata`] trait implementations
+//! - Movement functions for cursor/selection manipulation
+//! - Notification system infrastructure
+//! - Result handlers for action dispatch
 
 pub use evildoer_base::range::CharIdx;
 pub use evildoer_base::{Range, Selection};
@@ -18,12 +20,14 @@ pub use evildoer_registry::{
 	symmetric_text_object, text_object,
 };
 
-pub mod actions;
 pub mod completion;
 pub mod editor_ctx;
 pub mod index;
 pub mod keymap_registry;
 pub mod macros;
+#[cfg(feature = "host")]
+pub mod movement;
+pub mod notifications;
 pub mod terminal_config;
 
 /// Theme completion source.
@@ -123,15 +127,21 @@ pub trait RegistryMetadata {
 	fn source(&self) -> RegistrySource;
 }
 
-pub use actions::{
-	ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, EditAction,
-	ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount, ScrollDir, VisualDirection,
-	cursor_motion, dispatch_result, insert_with_motion, selection_motion,
-};
 pub use completion::{CompletionContext, CompletionItem, CompletionKind, CompletionSource};
 pub use editor_ctx::{EditorCapabilities, EditorContext, EditorOps, HandleOutcome};
 pub use evildoer_base::Mode;
-pub use evildoer_registry::actions::ACTIONS;
+// Re-exports from evildoer-base for convenience
+pub use evildoer_base::{
+	ChangeSet, Key, KeyCode, Modifiers, MouseButton, MouseEvent, Rope, RopeSlice, ScrollDirection,
+	Transaction,
+};
+// Re-exports from evildoer-registry for convenience
+pub use evildoer_registry as registry;
+pub use evildoer_registry::actions::{
+	ACTIONS, ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult,
+	EditAction, ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount, ScrollDir,
+	VisualDirection, cursor_motion, dispatch_result, insert_with_motion, selection_motion,
+};
 pub use evildoer_registry::commands::{
 	COMMANDS, CommandContext, CommandDef, CommandError, CommandOutcome, CommandResult, flags,
 };
@@ -158,11 +168,21 @@ pub use evildoer_registry::statusline::{
 	StatuslineSegmentDef, all_segments, find_segment, render_position, segments_for_position,
 };
 pub use evildoer_registry::text_objects::{TEXT_OBJECTS, TextObjectDef, TextObjectHandler};
-pub use evildoer_registry::{BindingMode, KEYBINDINGS, KeyBindingDef, MOTIONS, MotionDef};
+pub use evildoer_registry::{
+	BindingMode, KEYBINDINGS, KeyBindingDef, MOTIONS, MotionDef, action, async_hook, hook,
+	result_extension_handler, result_handler,
+};
 pub use index::{
 	all_actions, all_commands, all_motions, all_text_objects, find_action, find_action_by_id,
 	find_command, find_motion, find_text_object_by_trigger, resolve_action_id,
 };
 pub use keymap_registry::{BindingEntry, KeymapRegistry, LookupResult, get_keymap_registry};
+// Movement module exports
+#[cfg(feature = "host")]
+pub use movement::WordType;
+// Notification extension traits
+pub use notifications::{
+	NotifyDEBUGExt, NotifyERRORExt, NotifyINFOExt, NotifySUCCESSExt, NotifyWARNExt,
+};
 pub use terminal_config::{TerminalConfig, TerminalSequence};
 pub use theme::ThemeSource;

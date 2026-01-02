@@ -1,21 +1,17 @@
-//! Integration tests for the manifest registry system.
+//! Integration tests for the core registry system.
 //!
-//! These tests verify that the registry is correctly populated when
-//! evildoer-stdlib is linked. They test the integration between manifest
-//! (which defines slices) and stdlib (which populates them).
+//! These tests verify that the registry infrastructure is correctly wired up,
+//! including action ID resolution, result handlers, and keymap lookups.
 
-// Force linkage of evildoer-stdlib to ensure all registrations occur.
-extern crate evildoer_stdlib;
-
+use evildoer_core::{
+	find_action, find_action_by_id, get_keymap_registry, resolve_action_id, BindingMode,
+	LookupResult,
+};
 use evildoer_keymap::parser::parse_seq;
-use evildoer_manifest::actions::{
+use evildoer_registry::actions::{
 	RESULT_CURSOR_MOVE_HANDLERS, RESULT_EDIT_HANDLERS, RESULT_ERROR_HANDLERS,
 	RESULT_INSERT_WITH_MOTION_HANDLERS, RESULT_MODE_CHANGE_HANDLERS, RESULT_MOTION_HANDLERS,
 	RESULT_OK_HANDLERS, RESULT_QUIT_HANDLERS,
-};
-use evildoer_manifest::keymap_registry::LookupResult;
-use evildoer_manifest::{
-	BindingMode, find_action, find_action_by_id, get_keymap_registry, resolve_action_id,
 };
 
 #[test]
@@ -32,7 +28,7 @@ fn test_action_id_resolution() {
 	assert!(action.is_some(), "should find action by ActionId");
 	assert_eq!(action.unwrap().name, "move_left");
 
-	let invalid = find_action_by_id(evildoer_manifest::ActionId::INVALID);
+	let invalid = find_action_by_id(evildoer_core::ActionId::INVALID);
 	assert!(invalid.is_none(), "INVALID ActionId should return None");
 
 	let by_name = find_action("move_left").unwrap();

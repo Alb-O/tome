@@ -1,4 +1,4 @@
-use evildoer_manifest::{
+use evildoer_core::{
 	RenderedSegment, SegmentPosition, SegmentStyle, StatuslineContext, render_position,
 };
 use evildoer_tui::style::{Modifier, Style};

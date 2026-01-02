@@ -679,9 +679,8 @@ dependencies = [
  "async-trait",
  "evildoer-api",
  "evildoer-base",
- "evildoer-manifest",
+ "evildoer-core",
  "evildoer-registry",
- "evildoer-stdlib",
  "evildoer-tui",
  "futures",
  "linkme",
@@ -700,12 +699,11 @@ dependencies = [
  "async-trait",
  "clap",
  "evildoer-base",
+ "evildoer-core",
  "evildoer-input",
  "evildoer-language",
  "evildoer-lsp",
- "evildoer-manifest",
  "evildoer-registry",
- "evildoer-stdlib",
  "evildoer-tui",
  "futures",
  "home",
@@ -753,7 +751,7 @@ name = "evildoer-config"
 version = "0.3.0"
 dependencies = [
  "evildoer-base",
- "evildoer-manifest",
+ "evildoer-core",
  "evildoer-registry",
  "evildoer-runtime",
  "kdl",
@@ -763,17 +761,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "evildoer-core"
+version = "0.3.0"
+dependencies = [
+ "async-trait",
+ "evildoer-base",
+ "evildoer-keymap",
+ "evildoer-macro",
+ "evildoer-registry",
+ "futures",
+ "linkme",
+ "paste",
+ "regex",
+ "ropey",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "strsim",
+ "termina",
+ "thiserror 2.0.17",
+ "tracing",
+ "unicode-segmentation",
+ "unicode-width 0.2.2",
+]
+
+[[package]]
 name = "evildoer-extensions"
 version = "0.3.0"
 dependencies = [
  "anyhow",
  "evildoer-api",
+ "evildoer-core",
  "evildoer-language",
  "evildoer-lsp",
  "evildoer-macro",
- "evildoer-manifest",
  "evildoer-registry",
- "evildoer-stdlib",
  "futures",
  "linkme",
  "paste",
@@ -786,9 +808,8 @@ name = "evildoer-input"
 version = "0.3.0"
 dependencies = [
  "evildoer-base",
+ "evildoer-core",
  "evildoer-keymap",
- "evildoer-manifest",
- "evildoer-stdlib",
  "serde",
  "tracing",
 ]
@@ -835,7 +856,7 @@ version = "0.3.0"
 dependencies = [
  "cc",
  "evildoer-base",
- "evildoer-manifest",
+ "evildoer-core",
  "evildoer-runtime",
  "kdl",
  "libloading",
@@ -882,26 +903,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.111",
-]
-
-[[package]]
-name = "evildoer-manifest"
-version = "0.3.0"
-dependencies = [
- "async-trait",
- "evildoer-base",
- "evildoer-keymap",
- "evildoer-macro",
- "evildoer-registry",
- "evildoer-stdlib",
- "futures",
- "linkme",
- "paste",
- "ropey",
- "serde",
- "strsim",
- "thiserror 2.0.17",
- "tracing",
 ]
 
 [[package]]
@@ -1047,31 +1048,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "evildoer-stdlib"
-version = "0.3.0"
-dependencies = [
- "async-trait",
- "evildoer-base",
- "evildoer-input",
- "evildoer-macro",
- "evildoer-manifest",
- "evildoer-registry",
- "futures",
- "linkme",
- "paste",
- "regex",
- "ropey",
- "serde",
- "serde_json",
- "smallvec",
- "termina",
- "thiserror 2.0.17",
- "tracing",
- "unicode-segmentation",
- "unicode-width 0.2.2",
-]
-
-[[package]]
 name = "evildoer-term"
 version = "0.3.0"
 dependencies = [
@@ -1082,11 +1058,10 @@ dependencies = [
  "evildoer-api",
  "evildoer-base",
  "evildoer-config",
+ "evildoer-core",
  "evildoer-extensions",
  "evildoer-language",
- "evildoer-manifest",
  "evildoer-registry",
- "evildoer-stdlib",
  "evildoer-tui",
  "futures",
  "home",

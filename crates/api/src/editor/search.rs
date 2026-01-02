@@ -1,5 +1,5 @@
 use evildoer_base::Selection;
-use evildoer_stdlib::movement;
+use evildoer_core::movement;
 
 use super::Editor;
 
