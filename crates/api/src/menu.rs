@@ -10,40 +10,30 @@ pub enum MenuAction {
 
 /// Creates the default application menu bar.
 pub fn create_menu() -> MenuState<MenuAction> {
-	MenuState::new(vec![
-		MenuItem::group(
-			"File",
-			vec![
-				MenuItem::item("New", MenuAction::Command("new")),
-				MenuItem::item("Open...", MenuAction::Command("open")),
-				MenuItem::item("Save", MenuAction::Command("write")),
-				MenuItem::item("Save As...", MenuAction::Command("write-to")),
-				MenuItem::item("Quit", MenuAction::Command("quit")),
-			],
-		),
-		MenuItem::group(
-			"Edit",
-			vec![
-				MenuItem::item("Undo", MenuAction::Command("undo")),
-				MenuItem::item("Redo", MenuAction::Command("redo")),
-				MenuItem::item("Cut", MenuAction::Command("cut")),
-				MenuItem::item("Copy", MenuAction::Command("copy")),
-				MenuItem::item("Paste", MenuAction::Command("paste")),
-			],
-		),
-		MenuItem::group(
-			"View",
-			vec![
-				MenuItem::item("Split Horizontal", MenuAction::Command("hsplit")),
-				MenuItem::item("Split Vertical", MenuAction::Command("vsplit")),
-				MenuItem::item("Close Split", MenuAction::Command("close")),
-			],
-		),
-		MenuItem::group(
-			"Help",
-			vec![MenuItem::item("About", MenuAction::Command("about"))],
-		),
-	])
+	use evildoer_manifest::menu::{MENU_GROUPS, MENU_ITEMS};
+
+	let mut groups: Vec<_> = MENU_GROUPS.iter().collect();
+	groups.sort_by_key(|group| group.priority);
+
+	let menu_items: Vec<MenuItem<MenuAction>> = groups
+		.into_iter()
+		.map(|group| {
+			let mut items: Vec<_> = MENU_ITEMS
+				.iter()
+				.filter(|item| item.group == group.name)
+				.collect();
+			items.sort_by_key(|item| item.priority);
+
+			let children = items
+				.into_iter()
+				.map(|item| MenuItem::item(item.label, MenuAction::Command(item.command)))
+				.collect();
+
+			MenuItem::group(group.label, children)
+		})
+		.collect();
+
+	MenuState::new(menu_items)
 }
 
 /// Processes menu events and queues corresponding commands.
