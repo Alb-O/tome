@@ -12,10 +12,10 @@ use std::sync::OnceLock;
 
 use evildoer_keymap::parser::{parse_seq, Node};
 use evildoer_keymap::{MatchResult, Matcher};
+use evildoer_registry::actions::{BindingMode, KEYBINDINGS};
 use tracing::warn;
 
-use crate::keybindings::{BindingMode, KEYBINDINGS};
-use crate::{ActionId, Mode};
+use crate::ActionId;
 
 /// Binding entry storing action info and the key sequence.
 #[derive(Debug, Clone)]
@@ -123,18 +123,6 @@ impl KeymapRegistry {
 	pub fn bindings_for_mode(&self, _mode: BindingMode) -> Vec<&BindingEntry> {
 		// TODO: Implement iteration over matcher entries
 		Vec::new()
-	}
-}
-
-/// Convert editor Mode to BindingMode for registry lookup.
-impl From<&Mode> for BindingMode {
-	fn from(mode: &Mode) -> Self {
-		match mode {
-			Mode::Normal => BindingMode::Normal,
-			Mode::Insert => BindingMode::Insert,
-			Mode::Window => BindingMode::Window,
-			Mode::PendingAction(_) => BindingMode::Normal,
-		}
 	}
 }
 

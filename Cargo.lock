@@ -907,6 +907,7 @@ dependencies = [
 name = "evildoer-registry"
 version = "0.3.0"
 dependencies = [
+ "evildoer-registry-actions",
  "evildoer-registry-commands",
  "evildoer-registry-hooks",
  "evildoer-registry-menus",
@@ -916,6 +917,21 @@ dependencies = [
  "evildoer-registry-panels",
  "evildoer-registry-statusline",
  "evildoer-registry-text-objects",
+]
+
+[[package]]
+name = "evildoer-registry-actions"
+version = "0.3.0"
+dependencies = [
+ "evildoer-base",
+ "evildoer-macro",
+ "evildoer-registry-commands",
+ "evildoer-registry-motions",
+ "evildoer-registry-text-objects",
+ "linkme",
+ "paste",
+ "ropey",
+ "tracing",
 ]
 
 [[package]]

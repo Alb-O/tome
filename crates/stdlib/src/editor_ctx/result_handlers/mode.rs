@@ -1,8 +1,6 @@
 //! Mode change result handler.
 
-use evildoer_manifest::actions::{ActionMode, ActionResult};
-use evildoer_manifest::editor_ctx::HandleOutcome;
-use evildoer_manifest::{Mode, result_handler};
+use evildoer_registry::{result_handler, ActionMode, ActionResult, HandleOutcome, Mode};
 
 result_handler!(
 	RESULT_MODE_CHANGE_HANDLERS,

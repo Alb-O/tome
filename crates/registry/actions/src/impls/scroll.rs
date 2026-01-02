@@ -1,9 +1,6 @@
 //! Scroll/view actions.
 
-use evildoer_manifest::action;
-use evildoer_manifest::actions::{
-	ActionResult, EditAction, ScrollAmount, ScrollDir, VisualDirection,
-};
+use crate::{action, ActionResult, EditAction, ScrollAmount, ScrollDir, VisualDirection};
 
 action!(scroll_up, { description: "Scroll view up", bindings: r#"normal "z k""# }, |ctx| {
 	ActionResult::Edit(EditAction::Scroll {

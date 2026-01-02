@@ -10,7 +10,6 @@
 pub use evildoer_registry as registry;
 pub use evildoer_registry::{async_hook, hook};
 
-pub mod actions;
 pub mod editor_ctx;
 #[cfg(feature = "host")]
 pub mod movement;
@@ -30,10 +29,10 @@ pub use evildoer_manifest::{
 	MutableHookContext, OPTIONS, ObjectSelectionKind, OptionDef, OptionScope, OptionType,
 	OptionValue, PendingAction, PendingKind, RegistryMetadata, RegistrySource, RenderedSegment,
 	STATUSLINE_SEGMENTS, ScrollAmount, ScrollDir, SegmentPosition, SegmentStyle, StatuslineContext,
-	StatuslineSegmentDef, TEXT_OBJECTS, TextObjectDef, VisualDirection, action,
-	bracket_pair_object, dispatch_result, motion, option, result_handler,
-	symmetric_text_object, text_object,
+	StatuslineSegmentDef, TEXT_OBJECTS, TextObjectDef, VisualDirection,
+	bracket_pair_object, dispatch_result, motion, option, symmetric_text_object, text_object,
 };
+pub use evildoer_registry::{action, result_extension_handler, result_handler};
 #[cfg(feature = "host")]
 pub use movement::WordType;
 pub use notifications::{

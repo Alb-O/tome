@@ -31,7 +31,6 @@
 
 pub use evildoer_base::range::CharIdx;
 pub use evildoer_base::{Range, Selection};
-use linkme::distributed_slice;
 
 pub mod motions;
 
@@ -96,7 +95,6 @@ pub mod completion;
 pub mod editor_ctx;
 pub mod hooks;
 pub mod index;
-pub mod keybindings;
 pub mod keymap_registry;
 pub mod macros;
 pub mod mode;
@@ -107,9 +105,7 @@ pub mod statusline;
 pub mod terminal_config;
 pub mod theme;
 
-#[distributed_slice]
-pub static ACTIONS: [actions::ActionDef];
-
+pub use evildoer_registry::actions::ACTIONS;
 pub use evildoer_registry::commands::COMMANDS;
 
 // Re-export motion and text object types at crate root for backward compatibility
@@ -131,7 +127,7 @@ pub use index::{
 	all_actions, all_commands, all_motions, all_text_objects, find_action, find_action_by_id,
 	find_command, find_motion, find_text_object_by_trigger, resolve_action_id,
 };
-pub use keybindings::{BindingMode, KEYBINDINGS, KeyBindingDef};
+pub use evildoer_registry::{BindingMode, KEYBINDINGS, KeyBindingDef};
 pub use keymap_registry::{BindingEntry, KeymapRegistry, LookupResult, get_keymap_registry};
 pub use mode::Mode;
 pub use evildoer_registry::{MOTIONS, MotionDef};

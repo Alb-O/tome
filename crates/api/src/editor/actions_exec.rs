@@ -1,7 +1,8 @@
 use evildoer_base::Selection;
-use evildoer_manifest::{
-	ActionArgs, ActionContext, ActionResult, HookContext, HookEventData, emit_hook_sync_with,
-	find_action,
+use evildoer_registry::actions::find_action;
+use evildoer_registry::{
+	dispatch_result, emit_sync_with as emit_hook_sync_with, ActionArgs, ActionContext,
+	ActionResult, EditorContext, HookContext, HookEventData,
 };
 use ropey::Rope;
 use tracing::{debug, info_span};
@@ -57,7 +58,6 @@ impl Editor {
 
 		// Check required capabilities
 		{
-			use evildoer_manifest::EditorContext;
 			let mut e_ctx = EditorContext::new(self);
 			if let Err(e) = e_ctx.check_all_capabilities(action.required_caps) {
 				self.notify("error", e.to_string());
@@ -150,7 +150,6 @@ impl Editor {
 
 		// Check required capabilities
 		{
-			use evildoer_manifest::EditorContext;
 			let mut e_ctx = EditorContext::new(self);
 			if let Err(e) = e_ctx.check_all_capabilities(action.required_caps) {
 				self.notify("error", e.to_string());
@@ -237,7 +236,6 @@ impl Editor {
 		result: ActionResult,
 		extend: bool,
 	) -> bool {
-		use evildoer_manifest::{EditorContext, dispatch_result};
 		let mut ctx = EditorContext::new(self);
 		let result_variant = action_result_variant(&result);
 		let should_quit = dispatch_result(&result, &mut ctx, extend);

@@ -11,6 +11,7 @@ evildoer-registry-motions.workspace = true
 evildoer-registry-options.workspace = true
 evildoer-registry-notifications.workspace = true
 evildoer-registry-commands.workspace = true
+evildoer-registry-actions.workspace = true
 evildoer-registry-panels.workspace = true
 evildoer-registry-hooks.workspace = true
 evildoer-registry-statusline.workspace = true

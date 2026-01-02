@@ -1,12 +1,10 @@
-//! Window mode actions with colocated keybindings and handlers.
 //!
 //! Split names follow Vim/Helix conventions based on the divider line orientation:
 //! - `split_horizontal` (Ctrl+w s): horizontal divider → windows stacked top/bottom
 //! - `split_vertical` (Ctrl+w v): vertical divider → windows side-by-side left/right
 
-use evildoer_manifest::actions::ActionResult;
-use evildoer_manifest::editor_ctx::HandleOutcome;
-use evildoer_manifest::{action, result_handler};
+use crate::editor_ctx::HandleOutcome;
+use crate::{action, result_handler, ActionResult};
 
 action!(split_horizontal, {
 	description: "Split horizontally (new buffer below)",

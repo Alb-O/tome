@@ -1,9 +1,6 @@
 //! Miscellaneous actions.
 
-use evildoer_manifest::action;
-use evildoer_manifest::actions::ActionResult;
-
-use super::EditAction;
+use crate::{action, ActionResult, EditAction};
 
 action!(add_line_below, { description: "Add empty line below cursor" },
 	|_ctx| ActionResult::Edit(EditAction::AddLineBelow));

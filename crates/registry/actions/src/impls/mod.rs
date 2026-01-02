@@ -1,0 +1,10 @@
+mod editing;
+mod find;
+mod insert;
+mod misc;
+mod modes;
+mod motions;
+mod scroll;
+mod selection_ops;
+mod text_objects;
+mod window;

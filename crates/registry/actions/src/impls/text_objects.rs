@@ -1,11 +1,10 @@
-//! Text object selection actions.
-
 use evildoer_base::range::Range;
-use evildoer_manifest::actions::{ActionResult, ObjectSelectionKind, PendingAction, PendingKind};
-use evildoer_manifest::{TextObjectDef, action, find_text_object_by_trigger};
+use evildoer_registry_text_objects::{find_by_trigger, TextObjectDef};
+
+use crate::{action, ActionContext, ActionResult, ObjectSelectionKind, PendingAction, PendingKind};
 
 fn select_object_with_trigger(
-	ctx: &evildoer_manifest::actions::ActionContext,
+	ctx: &ActionContext,
 	selection_kind: ObjectSelectionKind,
 ) -> ActionResult {
 	let Some(trigger) = ctx.args.char else {
@@ -20,7 +19,7 @@ fn select_object_with_trigger(
 		});
 	};
 
-	let Some(obj) = find_text_object_by_trigger(trigger) else {
+	let Some(obj) = find_by_trigger(trigger) else {
 		return ActionResult::Error(format!("Unknown text object: {}", trigger));
 	};
 
@@ -42,7 +41,7 @@ fn select_object_with_trigger(
 }
 
 fn select_to_boundary(
-	ctx: &evildoer_manifest::actions::ActionContext,
+	ctx: &ActionContext,
 	obj: &TextObjectDef,
 	pos: usize,
 	to_start: bool,

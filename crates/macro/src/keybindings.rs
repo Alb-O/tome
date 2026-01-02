@@ -6,7 +6,7 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream};
-use syn::{Token, parse_macro_input};
+use syn::{parse_macro_input, Token};
 
 use crate::dispatch::to_screaming_snake_case;
 
@@ -84,10 +84,10 @@ fn generate_keybindings(
 
 			statics.push(quote! {
 				#[allow(non_upper_case_globals)]
-				#[::linkme::distributed_slice(evildoer_manifest::keybindings::KEYBINDINGS)]
-				static #static_ident: evildoer_manifest::keybindings::KeyBindingDef =
-					evildoer_manifest::keybindings::KeyBindingDef {
-						mode: evildoer_manifest::keybindings::BindingMode::#mode_variant,
+				#[::linkme::distributed_slice(evildoer_registry_actions::keybindings::KEYBINDINGS)]
+				static #static_ident: evildoer_registry_actions::keybindings::KeyBindingDef =
+					evildoer_registry_actions::keybindings::KeyBindingDef {
+						mode: evildoer_registry_actions::keybindings::BindingMode::#mode_variant,
 						keys: #key_str,
 						action: #action_name,
 						priority: 100,

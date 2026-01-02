@@ -1,9 +1,6 @@
-//! Find character actions (f/t/F/T commands).
+use evildoer_registry_motions::movement;
 
-use evildoer_manifest::action;
-use evildoer_manifest::actions::{ActionResult, PendingAction, PendingKind};
-
-use crate::movement;
+use crate::{action, ActionResult, PendingAction, PendingKind};
 
 action!(find_char, {
 	description: "Select to next occurrence of character (inclusive)",

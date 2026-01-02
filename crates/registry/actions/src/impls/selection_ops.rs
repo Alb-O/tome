@@ -1,8 +1,6 @@
-//! Selection manipulation actions (collapse, flip, select all, etc.).
-
 use evildoer_base::selection::Selection;
-use evildoer_manifest::action;
-use evildoer_manifest::actions::{ActionContext, ActionResult};
+
+use crate::{action, ActionContext, ActionResult};
 
 action!(collapse_selection, {
 	description: "Collapse selection to cursor",
@@ -268,10 +266,10 @@ action!(merge_selections, {
 
 #[cfg(test)]
 mod tests {
-	use evildoer_manifest::actions::ActionArgs;
+	use evildoer_base::{Rope, Selection};
 
 	use super::*;
-	use crate::{Rope, Selection};
+	use crate::ActionArgs;
 
 	#[test]
 	fn test_select_line_extend() {
