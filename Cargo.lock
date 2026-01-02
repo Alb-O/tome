@@ -904,6 +904,13 @@ dependencies = [
 name = "evildoer-registry"
 version = "0.3.0"
 dependencies = [
+ "evildoer-registry-menus",
+]
+
+[[package]]
+name = "evildoer-registry-menus"
+version = "0.3.0"
+dependencies = [
  "linkme",
  "paste",
 ]

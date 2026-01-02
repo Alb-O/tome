@@ -1,6 +1,5 @@
 //! Menu registration macros.
 
-/// Helper macro for optional values with defaults.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __menu_opt {
@@ -12,27 +11,14 @@ macro_rules! __menu_opt {
 	};
 }
 
-/// Registers a menu group in the [`MENU_GROUPS`](crate::menus::MENU_GROUPS) slice.
-///
-/// # Example
-///
-/// ```ignore
-/// menu_group!(file, {
-///     label: "File",
-///     priority: 0,
-/// });
-/// ```
+/// Registers a menu group in [`MENU_GROUPS`].
 #[macro_export]
 macro_rules! menu_group {
-	($name:ident, {
-		label: $label:expr
-		$(, priority: $priority:expr)?
-		$(,)?
-	}) => {
+	($name:ident, { label: $label:expr $(, priority: $priority:expr)? $(,)? }) => {
 		paste::paste! {
 			#[allow(non_upper_case_globals)]
-			#[linkme::distributed_slice($crate::menus::MENU_GROUPS)]
-			static [<MENU_GROUP_ $name>]: $crate::menus::MenuGroupDef = $crate::menus::MenuGroupDef {
+			#[linkme::distributed_slice($crate::MENU_GROUPS)]
+			static [<MENU_GROUP_ $name>]: $crate::MenuGroupDef = $crate::MenuGroupDef {
 				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
 				name: stringify!($name),
 				label: $label,
@@ -43,19 +29,7 @@ macro_rules! menu_group {
 	};
 }
 
-/// Registers a menu item in the [`MENU_ITEMS`](crate::menus::MENU_ITEMS) slice.
-///
-/// # Example
-///
-/// ```ignore
-/// menu_item!(file_save, {
-///     group: "file",
-///     label: "Save",
-///     command: "write",
-///     shortcut: "Ctrl+S",  // optional
-///     priority: 20,
-/// });
-/// ```
+/// Registers a menu item in [`MENU_ITEMS`].
 #[macro_export]
 macro_rules! menu_item {
 	($name:ident, {
@@ -68,8 +42,8 @@ macro_rules! menu_item {
 	}) => {
 		paste::paste! {
 			#[allow(non_upper_case_globals)]
-			#[linkme::distributed_slice($crate::menus::MENU_ITEMS)]
-			static [<MENU_ITEM_ $name>]: $crate::menus::MenuItemDef = $crate::menus::MenuItemDef {
+			#[linkme::distributed_slice($crate::MENU_ITEMS)]
+			static [<MENU_ITEM_ $name>]: $crate::MenuItemDef = $crate::MenuItemDef {
 				id: concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
 				name: stringify!($name),
 				group: $group,
