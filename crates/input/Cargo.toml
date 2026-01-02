@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-input"
-description = "Input handling and state machine for Evildoer editor"
+description = "Input handling and state machine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

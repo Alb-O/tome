@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-registry-actions"
-description = "Actions registry for Evildoer editor"
+description = "Actions registry"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-term"
-description = "Terminal frontend for Evildoer editor"
+description = "Terminal frontend"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

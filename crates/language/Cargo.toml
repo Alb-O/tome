@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-language"
-description = "Language configuration and metadata for Evildoer editor"
+description = "Language configuration and metadata"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

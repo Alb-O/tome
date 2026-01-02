@@ -1,4 +1,4 @@
-//! Tree-sitter syntax integration for Evildoer editor.
+//! Tree-sitter syntax integration
 //!
 //! This crate provides Tree-sitter parsing, syntax highlighting, and structural
 //! queries using the `tree-house` abstraction library.

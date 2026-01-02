@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-registry-hooks"
-description = "Hook registry for Evildoer editor"
+description = "Hook registry"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

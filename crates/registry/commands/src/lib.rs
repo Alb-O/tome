@@ -1,4 +1,4 @@
-//! Command registry for Evildoer editor.
+//! Command registry
 //!
 //! Defines command types and compile-time registrations.
 

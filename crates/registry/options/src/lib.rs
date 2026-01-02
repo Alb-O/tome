@@ -1,4 +1,4 @@
-//! Options registry for Evildoer editor.
+//! Options registry
 //!
 //! Options are named settings that can be configured globally or per-buffer.
 //! This crate provides:

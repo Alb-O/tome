@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-config"
-description = "Configuration system for Evildoer editor - KDL parsing, runtime config loading"
+description = "Configuration system - KDL parsing, runtime config loading"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

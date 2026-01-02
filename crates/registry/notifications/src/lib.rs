@@ -1,4 +1,4 @@
-//! Notification registry for Evildoer editor.
+//! Notification registry
 //!
 //! Defines notification types and compile-time registrations.
 

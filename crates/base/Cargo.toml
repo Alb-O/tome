@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-base"
-description = "Basic editing primitives for Evildoer editor"
+description = "Basic editing primitives"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

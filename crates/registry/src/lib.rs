@@ -1,4 +1,4 @@
-//! Registry-first organization for Evildoer editor extensions.
+//! Registry-first organization extensions.
 //!
 //! This crate aggregates all registry sub-crates. Depend on this crate to get
 //! access to all registries, rather than depending on individual registry crates.

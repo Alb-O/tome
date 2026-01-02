@@ -1,4 +1,4 @@
-//! Motion registry for Evildoer editor.
+//! Motion registry
 //!
 //! Motions are the fundamental cursor movement operations (char, word, line, etc.).
 //! They're composed by actions to implement editor commands.

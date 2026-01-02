@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-registry-motions"
-description = "Motion registry for Evildoer editor"
+description = "Motion registry"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

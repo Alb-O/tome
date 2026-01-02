@@ -4,7 +4,7 @@ version = "0.30.0-evildoer"
 authors = ["The Ratatui Developers", "Albert O'Shea"]
 edition = "2024"
 rust-version = "1.86.0"
-description = "TUI library for Evildoer editor"
+description = "TUI library"
 license = "MIT"
 
 [lib]

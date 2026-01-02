@@ -1,4 +1,4 @@
-//! Text objects registry for Evildoer editor.
+//! Text objects registry
 //!
 //! Text objects define selections around semantic units (words, paragraphs,
 //! brackets, etc.) with `inner` and `around` variants.

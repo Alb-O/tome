@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-registry-commands"
-description = "Command registry for Evildoer editor"
+description = "Command registry"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

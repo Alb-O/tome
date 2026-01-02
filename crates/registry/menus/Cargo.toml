@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-registry-menus"
-description = "Menu registry for Evildoer editor"
+description = "Menu registry"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

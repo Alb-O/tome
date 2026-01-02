@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-registry-panels"
-description = "Panel registry for Evildoer editor"
+description = "Panel registry"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

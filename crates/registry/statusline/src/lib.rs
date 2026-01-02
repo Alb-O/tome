@@ -1,4 +1,4 @@
-//! Statusline segment registry for Evildoer editor.
+//! Statusline segment registry
 //!
 //! Segments are registered at compile-time using [`linkme`] and rendered
 //! in order based on their position and priority.

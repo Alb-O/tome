@@ -1,6 +1,6 @@
 [package]
 name = "evildoer-core"
-description = "Core infrastructure for Evildoer editor"
+description = "Core infrastructure"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

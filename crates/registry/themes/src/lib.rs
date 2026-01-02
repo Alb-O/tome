@@ -1,4 +1,4 @@
-//! Theme and syntax highlighting registry for Evildoer editor.
+//! Theme and syntax highlighting registry
 //!
 //! This crate provides:
 //! - [`Theme`] and [`ThemeColors`] for complete theme definitions

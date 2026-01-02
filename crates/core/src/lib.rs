@@ -1,4 +1,4 @@
-//! Core infrastructure for Evildoer editor.
+//! Core infrastructure
 //!
 //! This crate provides the glue layer between `evildoer-registry` types and the
 //! editor's infrastructure, including:
