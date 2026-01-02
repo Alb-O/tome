@@ -43,15 +43,19 @@
 use std::io::{self, Error, IoSlice, Read, Result, StdinLock, StdoutLock, Write};
 use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, RawFd};
 
-use rustix::fs::{FileType, OFlags, fcntl_getfl, fcntl_setfl, fstat};
+use rustix::fs::{fcntl_getfl, fcntl_setfl, fstat, FileType, OFlags};
 
+/// Wrapper that sets a file descriptor to non-blocking mode and restores it on drop.
 #[derive(Debug)]
 struct NonBlocking<T: AsFd> {
+	/// The wrapped file descriptor.
 	inner: T,
+	/// Original flags to restore on drop.
 	prev_flags: OFlags,
 }
 
 impl<T: AsFd> NonBlocking<T> {
+	/// Creates a new non-blocking wrapper, setting O_NONBLOCK on the file descriptor.
 	fn new(inner: T) -> Result<Self> {
 		let ft = FileType::from_raw_mode(fstat(&inner)?.st_mode);
 		if !matches!(
@@ -76,6 +80,7 @@ impl<T: AsFd> Drop for NonBlocking<T> {
 /// Locked stdin for asynchronous read.
 #[derive(Debug)]
 pub struct PipeStdin {
+	/// The non-blocking stdin wrapper.
 	inner: NonBlocking<StdinLock<'static>>,
 }
 
@@ -129,6 +134,7 @@ impl Read for PipeStdin {
 /// Locked stdout for asynchronous read.
 #[derive(Debug)]
 pub struct PipeStdout {
+	/// The non-blocking stdout wrapper.
 	inner: NonBlocking<StdoutLock<'static>>,
 }
 
@@ -186,9 +192,10 @@ impl Write for PipeStdout {
 
 #[cfg(feature = "tokio")]
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
+/// Tokio async I/O implementations for pipe stdin/stdout.
 mod tokio_impl {
 	use std::pin::Pin;
-	use std::task::{Context, Poll, ready};
+	use std::task::{ready, Context, Poll};
 
 	use tokio::io::unix::AsyncFd;
 	use tokio::io::{Interest, ReadBuf};
@@ -197,6 +204,7 @@ mod tokio_impl {
 
 	/// Tokio-compatible async stdin wrapper.
 	pub struct TokioPipeStdin {
+		/// The async file descriptor wrapper for stdin.
 		inner: AsyncFd<PipeStdin>,
 	}
 
@@ -275,6 +283,7 @@ mod tokio_impl {
 
 	/// Tokio-compatible async stdout wrapper.
 	pub struct TokioPipeStdout {
+		/// The async file descriptor wrapper for stdout.
 		inner: AsyncFd<PipeStdout>,
 	}
 

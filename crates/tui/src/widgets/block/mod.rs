@@ -17,9 +17,10 @@ use crate::style::{Style, Styled};
 use crate::symbols::border;
 use crate::symbols::merge::MergeStrategy;
 use crate::text::Line;
-use crate::widgets::Widget;
 use crate::widgets::borders::{BorderType, Borders};
+use crate::widgets::Widget;
 
+/// Padding configuration for block content inset.
 mod padding;
 
 /// Visual container with borders, titles, and padding for wrapping other widgets.
@@ -234,6 +235,7 @@ impl<'a> Block<'a> {
 		inner
 	}
 
+	/// Returns true if any title is positioned at the given position (top or bottom).
 	fn has_title_at_position(&self, position: TitlePosition) -> bool {
 		self.titles
 			.iter()
@@ -260,11 +262,13 @@ impl Widget for &Block<'_> {
 }
 
 impl Block<'_> {
+	/// Renders all border sides and corners according to the configured border flags.
 	fn render_borders(&self, area: Rect, buf: &mut Buffer) {
 		self.render_sides(area, buf);
 		self.render_corners(area, buf);
 	}
 
+	/// Renders the four border sides (left, top, right, bottom) with proper insets for corners.
 	fn render_sides(&self, area: Rect, buf: &mut Buffer) {
 		let left = area.left();
 		let top = area.top();
@@ -321,6 +325,7 @@ impl Block<'_> {
 		}
 	}
 
+	/// Renders the four corner symbols at the intersection of adjacent borders.
 	fn render_corners(&self, area: Rect, buf: &mut Buffer) {
 		let corners = [
 			(
@@ -357,11 +362,13 @@ impl Block<'_> {
 			}
 		}
 	}
+	/// Renders all titles at both top and bottom positions.
 	fn render_titles(&self, area: Rect, buf: &mut Buffer) {
 		self.render_title_position(TitlePosition::Top, area, buf);
 		self.render_title_position(TitlePosition::Bottom, area, buf);
 	}
 
+	/// Renders titles at a specific position, handling left/center/right alignment ordering.
 	fn render_title_position(&self, position: TitlePosition, area: Rect, buf: &mut Buffer) {
 		// NOTE: the order in which these functions are called defines the overlapping behavior
 		self.render_left_titles(position, area, buf);
@@ -425,6 +432,7 @@ impl Block<'_> {
 		}
 	}
 
+	/// Renders center-aligned titles when they fit within the available width.
 	fn render_centered_titles_without_truncation(
 		&self,
 		titles: Vec<&Line<'_>>,
@@ -446,6 +454,7 @@ impl Block<'_> {
 		}
 	}
 
+	/// Renders center-aligned titles with truncation when they exceed available width.
 	fn render_centered_titles_with_truncation(
 		&self,
 		titles: Vec<&Line<'_>>,

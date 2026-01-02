@@ -41,16 +41,23 @@ pub enum MatchResult<'a, T> {
 	/// Complete match - the sequence matches a binding exactly.
 	Complete(&'a T),
 	/// Partial match - the sequence is a prefix of one or more bindings.
-	/// Contains whether this prefix also has a value (for "sticky" behavior).
-	Partial { has_value: Option<&'a T> },
+	/// Contains whether this prefix also has a value (for "sticky" behavior, e.g. "g" alone).
+	Partial {
+		/// Optional intermediate value if this prefix is itself a complete binding.
+		has_value: Option<&'a T>,
+	},
 	/// No match - the sequence doesn't match any binding.
 	None,
 }
 
+/// A prefix tree node for storing key bindings.
 #[derive(Debug)]
 struct Trie<T> {
+	/// Value stored at this node if the sequence ending here is a complete binding.
 	value: Option<T>,
+	/// Children keyed by exact input nodes (specific keys like 'a', F1, etc.).
 	exact: HashMap<Node, Trie<T>>,
+	/// Children for group patterns (@digit, @upper, @any, etc.) checked in order.
 	groups: Vec<(Node, Trie<T>)>,
 }
 
@@ -70,6 +77,7 @@ impl<T> Trie<T> {
 /// Supports both exact matches and grouped matches (e.g. `CharGroup::Upper`).
 #[derive(Debug)]
 pub struct Matcher<T> {
+	/// Root node of the trie structure.
 	root: Trie<T>,
 }
 

@@ -15,15 +15,23 @@ pub struct Terminal<B>
 where
 	B: Backend,
 {
+	/// The backend used to communicate with the terminal.
 	pub(super) backend: B,
 	/// Double buffer: current and previous. Diffed at flush time.
 	pub(super) buffers: [Buffer; 2],
+	/// Index of the current buffer (0 or 1).
 	pub(super) current: usize,
+	/// Whether the cursor is currently hidden.
 	hidden_cursor: bool,
+	/// Viewport configuration determining which portion of terminal to use.
 	pub(super) viewport: Viewport,
+	/// The area of the viewport after accounting for inline offset.
 	pub(super) viewport_area: Rect,
+	/// Last known terminal size from backend query.
 	pub(super) last_known_area: Rect,
+	/// Last known cursor position after rendering.
 	pub(super) last_known_cursor_pos: Position,
+	/// Number of frames rendered (wraps on overflow).
 	frame_count: usize,
 }
 
@@ -161,6 +169,7 @@ where
 		Ok(())
 	}
 
+	/// Updates the viewport area and resizes both buffers to match.
 	pub(super) fn set_viewport_area(&mut self, area: Rect) {
 		self.buffers[self.current].resize(area);
 		self.buffers[1 - self.current].resize(area);

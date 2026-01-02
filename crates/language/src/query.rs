@@ -6,9 +6,9 @@
 use std::iter;
 
 use ropey::RopeSlice;
-use tree_house::TREE_SITTER_MATCH_LIMIT;
 use tree_house::tree_sitter::query::{InvalidPredicateError, UserPredicate};
 use tree_house::tree_sitter::{Grammar, InactiveQueryCursor, Node, Query, RopeInput};
+use tree_house::TREE_SITTER_MATCH_LIMIT;
 
 use crate::grammar::query_search_paths;
 
@@ -35,9 +35,13 @@ pub fn read_query(lang: &str, filename: &str) -> String {
 #[derive(Debug)]
 #[allow(dead_code, reason = "captures reserved for future indentation feature")]
 pub struct IndentQuery {
+	/// The compiled tree-sitter query.
 	query: Query,
+	/// Capture for nodes that increase indentation.
 	indent_capture: Option<tree_house::tree_sitter::Capture>,
+	/// Capture for nodes that decrease indentation.
 	dedent_capture: Option<tree_house::tree_sitter::Capture>,
+	/// Capture for nodes that extend the current indentation scope.
 	extend_capture: Option<tree_house::tree_sitter::Capture>,
 }
 
@@ -77,6 +81,7 @@ impl IndentQuery {
 /// Query for text object selection.
 #[derive(Debug)]
 pub struct TextObjectQuery {
+	/// The compiled tree-sitter query for text objects.
 	query: Query,
 }
 
@@ -184,6 +189,7 @@ impl CapturedNode<'_> {
 /// Query for symbol tags (used for symbol navigation).
 #[derive(Debug)]
 pub struct TagQuery {
+	/// The compiled tree-sitter query for symbol tags.
 	pub query: Query,
 }
 
@@ -212,8 +218,11 @@ impl TagQuery {
 /// Query for rainbow bracket highlighting.
 #[derive(Debug)]
 pub struct RainbowQuery {
+	/// The compiled tree-sitter query for rainbow brackets.
 	pub query: Query,
+	/// Capture for nodes that define a nesting scope for bracket coloring.
 	pub scope_capture: Option<tree_house::tree_sitter::Capture>,
+	/// Capture for bracket characters to be colorized.
 	pub bracket_capture: Option<tree_house::tree_sitter::Capture>,
 }
 

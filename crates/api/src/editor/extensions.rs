@@ -123,11 +123,14 @@ impl AnimatedOverlay {
 /// Overlays are cleared each frame and must be re-added if they should persist.
 #[derive(Default)]
 pub struct StyleOverlays {
+	/// Static overlays that apply for a single frame.
 	overlays: Vec<StyleOverlay>,
+	/// Animated overlays that transition over time and persist until complete.
 	animated: Vec<AnimatedOverlay>,
 }
 
 impl StyleOverlays {
+	/// Creates a new empty overlay collection.
 	pub fn new() -> Self {
 		Self::default()
 	}
@@ -277,10 +280,12 @@ impl StyleOverlays {
 /// A type-safe map for storing extension state.
 #[derive(Default)]
 pub struct ExtensionMap {
+	/// Map from type ID to boxed extension state.
 	inner: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
 }
 
 impl ExtensionMap {
+	/// Creates a new empty extension map.
 	pub fn new() -> Self {
 		Self::default()
 	}
@@ -298,10 +303,12 @@ impl ExtensionMap {
 		self.inner.insert(type_id, Box::new(val));
 	}
 
+	/// Returns a reference to extension state of type T, if present.
 	pub fn get<T: Any + Send + Sync>(&self) -> Option<&T> {
 		self.inner.get(&TypeId::of::<T>())?.downcast_ref()
 	}
 
+	/// Returns a mutable reference to extension state of type T, if present.
 	pub fn get_mut<T: Any + Send + Sync>(&mut self) -> Option<&mut T> {
 		self.inner.get_mut(&TypeId::of::<T>())?.downcast_mut()
 	}
@@ -352,9 +359,11 @@ pub struct ExtensionInitDef {
 #[distributed_slice]
 pub static EXTENSIONS: [ExtensionInitDef];
 
+/// Definition for an extension that runs on every editor tick.
 pub struct ExtensionTickDef {
 	/// Priority (lower runs first).
 	pub priority: i16,
+	/// Tick function called each frame.
 	pub tick: fn(&mut crate::editor::Editor),
 }
 

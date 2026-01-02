@@ -12,14 +12,16 @@ use lru::LruCache;
 
 use super::solver::strengths::ALL_SEGMENT_GROW;
 use super::solver::{
-	Element, FLOAT_PRECISION_MULTIPLIER, Rects, changes_to_rects, configure_area,
-	configure_constraints, configure_fill_constraints, configure_flex_constraints,
-	configure_variable_constraints, configure_variable_in_area_constraints,
+	changes_to_rects, configure_area, configure_constraints, configure_fill_constraints,
+	configure_flex_constraints, configure_variable_constraints,
+	configure_variable_in_area_constraints, Element, Rects, FLOAT_PRECISION_MULTIPLIER,
 };
 pub use super::spacing::Spacing;
 use crate::layout::{Constraint, Direction, Flex, Margin, Rect};
 
+/// Rectangles for layout segments corresponding to user-provided constraints.
 type Segments = super::solver::Rects;
+/// Rectangles for spacers between layout segments.
 type Spacers = super::solver::Rects;
 // The solution to a Layout solve contains two `Rects`, where `Rects` is effectively a `[Rect]`.
 //
@@ -32,6 +34,7 @@ type Spacers = super::solver::Rects;
 // └   ┘└──────────────────┘└   ┘└──────────────────┘└   ┘└──────────────────┘└   ┘
 //
 // Number of spacers will always be one more than number of segments.
+/// LRU cache for layout results, keyed by area and layout configuration.
 #[cfg(feature = "layout-cache")]
 type Cache = LruCache<(Rect, Layout), (Segments, Spacers)>;
 
@@ -61,10 +64,15 @@ std::thread_local! {
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Layout {
+	/// Layout direction (horizontal or vertical).
 	direction: Direction,
+	/// Size constraints for each segment.
 	constraints: Vec<Constraint>,
+	/// Margin around the layout area.
 	margin: Margin,
+	/// Flex behavior for distributing extra space.
 	flex: Flex,
+	/// Spacing or overlap between segments.
 	spacing: Spacing,
 }
 
@@ -226,6 +234,7 @@ impl Layout {
 		split()
 	}
 
+	/// Attempts to split the area using the constraint solver, returning an error on failure.
 	fn try_split(&self, area: Rect) -> Result<(Segments, Spacers), AddConstraintError> {
 		// To take advantage of all of [`kasuari`] features, we would want to store the `Solver` in
 		// one of the fields of the Layout struct. And we would want to set it up such that we could
@@ -261,24 +270,14 @@ impl Layout {
 			),
 		};
 
-		// ```plain
-		// <───────────────────────────────────area_size──────────────────────────────────>
-		// ┌─area_start                                                          area_end─┐
-		// V                                                                              V
-		// ┌────┬───────────────────┬────┬─────variables─────┬────┬───────────────────┬────┐
-		// │    │                   │    │                   │    │                   │    │
-		// V    V                   V    V                   V    V                   V    V
-		// ┌   ┐┌──────────────────┐┌   ┐┌──────────────────┐┌   ┐┌──────────────────┐┌   ┐
-		//      │     Max(20)      │     │      Max(20)     │     │      Max(20)     │
-		// └   ┘└──────────────────┘└   ┘└──────────────────┘└   ┘└──────────────────┘└   ┘
-		// ^    ^                   ^    ^                   ^    ^                   ^    ^
-		// │    │                   │    │                   │    │                   │    │
-		// └─┬──┶━━━━━━━━━┳━━━━━━━━━┵─┬──┶━━━━━━━━━┳━━━━━━━━━┵─┬──┶━━━━━━━━━┳━━━━━━━━━┵─┬──┘
-		//   │            ┃           │            ┃           │            ┃           │
-		//   └────────────╂───────────┴────────────╂───────────┴────────────╂──Spacers──┘
-		//                ┃                        ┃                        ┃
-		//                ┗━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━Segments━━━━━━━━┛
-		// ```
+		// The layout solver uses alternating variables to represent segment boundaries and
+		// spacer regions. Given N constraints, there are N segments and N+1 spacers. The
+		// diagram below shows how variables map to segments (bold) and spacers (thin):
+		//
+		// area_size spans from area_start to area_end. Variables are interleaved such that
+		// odd-indexed pairs form segments (user content areas) and even-indexed pairs form
+		// spacers (gaps between segments). This allows the constraint solver to distribute
+		// space according to the flex mode while respecting segment size constraints.
 
 		let variable_count = self.constraints.len() * 2 + 2;
 		let variables = iter::repeat_with(Variable::new)

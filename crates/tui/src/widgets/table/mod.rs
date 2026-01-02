@@ -17,9 +17,13 @@ use crate::text::Text;
 use crate::widgets::block::{Block, BlockExt};
 use crate::widgets::{StatefulWidget, Widget};
 
+/// Table cell widget for individual data items.
 mod cell;
+/// Controls when highlight symbol spacing is allocated.
 mod highlight_spacing;
+/// Table row widget containing cells.
 mod row;
+/// Selection state for stateful table rendering.
 mod state;
 
 /// A widget to display data in formatted columns.
@@ -348,6 +352,7 @@ impl Table<'_> {
 		(header_area, rows_area, footer_area)
 	}
 
+	/// Renders the header row if present, applying header style and positioning cells.
 	fn render_header(&self, area: Rect, buf: &mut Buffer, column_widths: &[(u16, u16)]) {
 		if let Some(ref header) = self.header {
 			buf.set_style(area, header.style);
@@ -357,6 +362,7 @@ impl Table<'_> {
 		}
 	}
 
+	/// Renders the footer row if present, applying footer style and positioning cells.
 	fn render_footer(&self, area: Rect, buf: &mut Buffer, column_widths: &[(u16, u16)]) {
 		if let Some(ref footer) = self.footer {
 			buf.set_style(area, footer.style);
@@ -366,6 +372,7 @@ impl Table<'_> {
 		}
 	}
 
+	/// Renders visible rows with selection highlighting, scrolling, and column styling.
 	fn render_rows(
 		&self,
 		area: Rect,
@@ -520,6 +527,7 @@ impl Table<'_> {
 		rects.iter().map(|c| (c.x, c.width)).collect()
 	}
 
+	/// Returns the maximum column count across all rows, header, and footer.
 	fn column_count(&self) -> usize {
 		self.rows
 			.iter()
@@ -542,6 +550,7 @@ impl Table<'_> {
 	}
 }
 
+/// Validates that all percentage constraints are within 0-100 range, panicking otherwise.
 fn ensure_percentages_less_than_100(widths: &[Constraint]) {
 	for w in widths {
 		if let Constraint::Percentage(p) = w {

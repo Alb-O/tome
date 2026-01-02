@@ -12,6 +12,7 @@ use super::extensions::{RENDER_EXTENSIONS, TICK_EXTENSIONS};
 use crate::buffer::BufferView;
 
 impl Editor {
+	/// Initializes the UI layer at editor startup.
 	pub fn ui_startup(&mut self) {
 		let mut ui = std::mem::take(&mut self.ui);
 		ui.startup();
@@ -19,6 +20,7 @@ impl Editor {
 		self.needs_redraw = true;
 	}
 
+	/// Ticks the UI layer, allowing it to update and request redraws.
 	pub fn ui_tick(&mut self) {
 		let mut ui = std::mem::take(&mut self.ui);
 		ui.tick(self);
@@ -28,6 +30,7 @@ impl Editor {
 		self.ui = ui;
 	}
 
+	/// Runs the main editor tick: panels, extensions, dirty buffer hooks, and animations.
 	pub fn tick(&mut self) {
 		use std::time::Duration;
 
@@ -88,6 +91,7 @@ impl Editor {
 		);
 	}
 
+	/// Updates style overlays from render extensions (called before each render frame).
 	pub fn update_style_overlays(&mut self) {
 		self.style_overlays.clear();
 
@@ -102,10 +106,12 @@ impl Editor {
 		}
 	}
 
+	/// Returns true if any UI panel is currently open.
 	pub fn any_panel_open(&self) -> bool {
 		self.ui.any_panel_open()
 	}
 
+	/// Handles terminal window resize events, updating buffer text widths and emitting hooks.
 	pub fn handle_window_resize(&mut self, width: u16, height: u16) {
 		self.window_width = Some(width);
 		self.window_height = Some(height);
@@ -131,6 +137,7 @@ impl Editor {
 		);
 	}
 
+	/// Handles terminal focus gained events, emitting the FocusGained hook.
 	pub fn handle_focus_in(&mut self) {
 		self.needs_redraw = true;
 		emit_hook_sync_with(
@@ -139,6 +146,7 @@ impl Editor {
 		);
 	}
 
+	/// Handles terminal focus lost events, emitting the FocusLost hook.
 	pub fn handle_focus_out(&mut self) {
 		self.needs_redraw = true;
 		emit_hook_sync_with(
@@ -147,6 +155,7 @@ impl Editor {
 		);
 	}
 
+	/// Handles paste events, delegating to UI or inserting text directly.
 	pub fn handle_paste(&mut self, content: String) {
 		let mut ui = std::mem::take(&mut self.ui);
 		let handled = ui.handle_paste(self, content.clone());

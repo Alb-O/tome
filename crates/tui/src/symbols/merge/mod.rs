@@ -320,9 +320,13 @@ impl MergeStrategy {
 /// At some point in the future, we might make a similar type public to represent the
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 struct BorderSymbol {
+	/// Line style extending to the right.
 	right: LineStyle,
+	/// Line style extending upward.
 	up: LineStyle,
+	/// Line style extending to the left.
 	left: LineStyle,
+	/// Line style extending downward.
 	down: LineStyle,
 }
 
@@ -436,10 +440,13 @@ impl BorderSymbol {
 	}
 }
 
+/// Errors that can occur when parsing or converting border symbols.
 #[derive(thiserror::Error, Debug, PartialEq, Eq)]
 enum BorderSymbolError {
+	/// The input string is not a recognized box drawing character.
 	#[error("cannot parse &str `{0}` to BorderSymbol")]
 	CannotParse(alloc::string::String),
+	/// The border symbol combination has no corresponding unicode character.
 	#[error("cannot convert BorderSymbol `{0:#?}` to &str: no such symbol exists")]
 	Unrepresentable(BorderSymbol),
 }
@@ -492,11 +499,18 @@ impl LineStyle {
 	/// Merges line styles.
 	#[must_use]
 	pub fn merge(self, other: Self) -> Self {
-		if other == Self::Nothing { self } else { other }
+		if other == Self::Nothing {
+			self
+		} else {
+			other
+		}
 	}
 }
 
-// Defines a translation between `BorderSymbol` and the corresponding character.
+/// Defines bidirectional translation between `BorderSymbol` and unicode box drawing characters.
+///
+/// This macro generates `FromStr` and `TryFrom<BorderSymbol>` implementations that map between
+/// the internal `BorderSymbol` representation and the corresponding unicode character.
 macro_rules! define_symbols {
     (
         $( $symbol:expr => ($right:ident, $up:ident, $left:ident, $down:ident) ),* $(,)?

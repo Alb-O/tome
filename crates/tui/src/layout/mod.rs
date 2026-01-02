@@ -285,17 +285,29 @@
 //! enabled, layout results are cached based on the area and layout configuration.
 //!
 
+/// Horizontal and vertical alignment types for positioning content within areas.
 mod alignment;
+/// Size constraints for layout calculations (length, percentage, ratio, fill, min, max).
 mod constraint;
+/// Layout direction (horizontal or vertical).
 mod direction;
+/// Core layout engine that divides space using constraints.
 mod engine;
+/// Flex behavior for distributing extra space in layouts.
 mod flex;
+/// Margin definitions for spacing around rectangular areas.
 mod margin;
+/// Offset type for relative positioning.
 mod offset;
+/// Position type representing a point in the terminal coordinate system.
 mod position;
+/// Rectangular area with position and dimensions.
 mod rect;
+/// Size type representing width and height dimensions.
 mod size;
+/// Constraint solver internals using the Cassowary algorithm.
 mod solver;
+/// Spacing configuration between layout segments.
 mod spacing;
 
 pub use alignment::{HorizontalAlignment, VerticalAlignment};

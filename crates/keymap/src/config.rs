@@ -33,9 +33,9 @@ use evildoer_keymap_parser::parse_seq;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 
-use crate::KeyMap;
 use crate::keymap::ToKeyMap;
 use crate::matcher::Matcher;
+use crate::KeyMap;
 
 /// A trait for providing a default mapping between keys and items.
 ///
@@ -248,6 +248,7 @@ pub struct Item {
 }
 
 impl<T> Config<T> {
+	/// Creates a new config from a list of (key, item) pairs, building the reverse lookup.
 	pub fn new(items: Vec<(T, Item)>) -> Self {
 		let mut matcher = Matcher::new();
 
@@ -294,10 +295,12 @@ impl<T> Config<T> {
 		self.get_by_keymap(&key.to_keymap().ok()?)
 	}
 
+	/// Retrieves both the key type and item for a single key event.
 	pub fn get_item<K: ToKeyMap>(&self, key: &K) -> Option<(&T, &Item)> {
 		self.get_item_by_keymap(&key.to_keymap().ok()?)
 	}
 
+	/// Retrieves the key type for a sequence of key events.
 	pub fn get_seq<K: ToKeyMap>(&self, keys: &[K]) -> Option<&T> {
 		let nodes = keys
 			.iter()

@@ -10,15 +10,20 @@ use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::layer::Context;
 use tracing_subscriber::registry::LookupSpan;
 
-use super::ring_buffer::{ActionSpanContext, LOG_BUFFER, LogEntry, LogLevel};
+use super::ring_buffer::{ActionSpanContext, LogEntry, LogLevel, LOG_BUFFER};
 
 /// Data stored per-span for action context extraction.
 #[derive(Debug, Default)]
 pub struct ActionSpanData {
+	/// Name of the action (e.g., "move_left", "insert_char").
 	pub action_name: Option<String>,
+	/// Unique identifier for the action definition.
 	pub action_id: Option<String>,
+	/// Repeat count for the action.
 	pub count: Option<usize>,
+	/// Whether the action extends the current selection.
 	pub extend: Option<bool>,
+	/// Optional character argument for the action.
 	pub char_arg: Option<char>,
 }
 
@@ -30,6 +35,7 @@ pub struct ActionSpanData {
 pub struct DebugPanelLayer;
 
 impl DebugPanelLayer {
+	/// Creates a new debug panel tracing layer.
 	pub fn new() -> Self {
 		Self
 	}
@@ -43,11 +49,14 @@ impl Default for DebugPanelLayer {
 
 /// Visitor for extracting the message field from events.
 struct MessageVisitor {
+	/// The extracted message string.
 	message: String,
+	/// Additional key-value fields from the event.
 	fields: Vec<(String, String)>,
 }
 
 impl MessageVisitor {
+	/// Creates a new message visitor with empty fields.
 	fn new() -> Self {
 		Self {
 			message: String::new(),
