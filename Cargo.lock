@@ -929,6 +929,7 @@ dependencies = [
  "evildoer-macro",
  "evildoer-registry-commands",
  "evildoer-registry-motions",
+ "evildoer-registry-panels",
  "evildoer-registry-text-objects",
  "linkme",
  "paste",

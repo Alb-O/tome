@@ -62,11 +62,12 @@ pub use notifications::{
 	NotificationTypeDef, Overflow, SizeConstraint, SlideDirection, Timing, find_notification_type,
 };
 pub use panels::{
-	PANEL_FACTORIES, PANELS, PanelDef, PanelFactory, PanelFactoryDef, PanelId, SplitAttrs,
-	SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle, SplitDockPreference,
-	SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse, SplitMouseAction,
-	SplitMouseButton, SplitPosition, SplitSize, all_panels, find_factory, find_panel,
-	find_panel_by_id, panel, panel_kind_index,
+	PANEL_FACTORIES, PANEL_IDS, PANELS, PanelDef, PanelFactory, PanelFactoryDef, PanelId,
+	PanelIdDef, PanelKey, SplitAttrs, SplitBuffer, SplitCell, SplitColor, SplitCursor,
+	SplitCursorStyle, SplitDockPreference, SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers,
+	SplitMouse, SplitMouseAction, SplitMouseButton, SplitPosition, SplitSize, all_panels,
+	find_factory, find_panel, find_panel_by_id, find_panel_id, panel, panel_id, panel_kind_index,
+	register_panel_factory,
 };
 pub use statusline::{
 	RenderedSegment, STATUSLINE_SEGMENTS, SegmentPosition, SegmentStyle, StatuslineContext,

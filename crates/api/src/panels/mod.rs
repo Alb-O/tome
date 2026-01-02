@@ -1,11 +1,12 @@
 //! Panel definitions and runtime management.
 //!
 //! This module defines the built-in panels (terminal, debug) using the [`panel!`] macro
-//! with inline factories, and provides [`PanelRegistry`] for runtime instance management.
+//! and registers factories separately, and provides [`PanelRegistry`] for runtime instance management.
 
 mod registry;
 
-use evildoer_registry::panel;
+use evildoer_registry::{panel, register_panel_factory};
+use evildoer_registry::panels::keys as panel_ids;
 pub use registry::PanelRegistry;
 
 use crate::debug::DebugPanel;
@@ -18,7 +19,6 @@ panel!(terminal, {
 	sticky: true,
 	captures_input: true,
 	supports_window_mode: true,
-	factory: || Box::new(TerminalBuffer::new()),
 });
 
 panel!(debug, {
@@ -26,5 +26,7 @@ panel!(debug, {
 	mode_name: "DEBUG",
 	layer: 2,
 	sticky: true,
-	factory: || Box::new(DebugPanel::new()),
 });
+
+register_panel_factory!(terminal, panel_ids::terminal, || Box::new(TerminalBuffer::new()));
+register_panel_factory!(debug, panel_ids::debug, || Box::new(DebugPanel::new()));

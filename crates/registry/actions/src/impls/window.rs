@@ -3,6 +3,8 @@
 //! - `split_horizontal` (Ctrl+w s): horizontal divider → windows stacked top/bottom
 //! - `split_vertical` (Ctrl+w v): vertical divider → windows side-by-side left/right
 
+use evildoer_registry_panels::keys as panels;
+
 use crate::editor_ctx::HandleOutcome;
 use crate::{action, result_handler, ActionResult};
 
@@ -48,28 +50,27 @@ result_handler!(
 	}
 );
 
-// TODO: Panel toggles remain string-based until PanelKey exists.
 action!(toggle_terminal, {
 	description: "Toggle terminal split",
 	bindings: r#"normal ":""#,
-}, |_ctx| ActionResult::TogglePanel("terminal"));
+}, |_ctx| ActionResult::TogglePanel(panels::terminal));
 
 action!(toggle_debug_panel, {
 	description: "Toggle debug panel",
 	bindings: r#"normal "D""#,
-}, |_ctx| ActionResult::TogglePanel("debug"));
+}, |_ctx| ActionResult::TogglePanel(panels::debug));
 
 result_handler!(
 	RESULT_TOGGLE_PANEL_HANDLERS,
 	TOGGLE_PANEL_HANDLER,
 	"toggle_panel",
 	|result, ctx, _extend| {
-		let ActionResult::TogglePanel(name) = result else {
+		let ActionResult::TogglePanel(panel) = result else {
 			return HandleOutcome::NotHandled;
 		};
 
 		if let Some(ops) = ctx.panel_ops() {
-			ops.toggle_panel(name);
+			ops.toggle_panel(panel.name());
 		}
 		HandleOutcome::Handled
 	}

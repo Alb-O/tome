@@ -38,19 +38,29 @@ Uses `linkme` distributed slices for compile-time registration. Each registry is
 | Statusline    | `evildoer-registry-statusline`    | `STATUSLINE_SEGMENTS`       | `statusline_segment!`    |
 | Notifications | `evildoer-registry-notifications` | `NOTIFICATION_TYPES`        | `register_notification!` |
 | Themes        | `evildoer-registry-themes`        | `THEMES`                    | -                        |
-| Panels        | `evildoer-registry-panels`        | `PANELS`, `PANEL_FACTORIES` | `panel!`                 |
+| Panels        | `evildoer-registry-panels`        | `PANELS`, `PANEL_IDS`, `PANEL_FACTORIES` | `panel!`, `panel_id!`, `register_panel_factory!` |
 | Menus         | `evildoer-registry-menus`         | `MENUS`                     | -                        |
 | Keybindings   | (in evildoer-registry)            | `KEYBINDINGS`               | (inline in `action!`)    |
+
+### Typed Handles
+
+Typed handles provide compile-time safety for internal registry references:
+
+- Motions: `evildoer_registry_motions::keys::*` used with `cursor_motion` helpers
+- Panels: `evildoer_registry_panels::keys::*` used with `ActionResult::TogglePanel`
+- Strings remain at boundaries (user input, config, runtime lookup)
 
 ### Action Result Dispatch
 
 Actions return `ActionResult` variants which are dispatched to handlers via `#[derive(DispatchResult)]`:
 
 ```rust
+use evildoer_registry_motions::keys as motions;
+
 action!(move_left, {
     description: "Move cursor left",
     bindings: r#"normal "h" "left""#,
-}, |ctx| cursor_motion(ctx, "char_prev"));
+}, |ctx| cursor_motion(ctx, motions::left));
 ```
 
 Handler slices (`RESULT_*_HANDLERS`) are auto-generated. Extensions can add handlers for existing result types via the `RESULT_EXTENSION_HANDLERS` distributed slice:
@@ -144,6 +154,7 @@ Fine-grained traits in `registry/actions/src/editor_ctx/capabilities.rs`:
 | `SplitOps`        | Optional | Split management         |
 | `PanelOps`        | Optional | Panel management         |
 | `FocusOps`        | Optional | Focus/buffer navigation  |
+| `ViewportAccess`  | Optional | Viewport queries         |
 | `FileOpsAccess`   | Optional | Save/load operations     |
 | `JumpAccess`      | Optional | Jump list navigation     |
 | `MacroAccess`     | Optional | Macro recording/playback |

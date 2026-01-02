@@ -6,14 +6,15 @@
 //! management lives in `evildoer-api`.
 //!
 //! Define panels with the [`panel!`](crate::panel) macro, which registers a
-//! [`PanelDef`] and optionally a [`PanelFactoryDef`] for creating instances.
+//! [`PanelDef`]. Factories are registered separately with [`register_panel_factory!`].
 
 use linkme::distributed_slice;
 
 mod macros;
 mod split_buffer;
+mod builtins;
 
-pub use evildoer_registry_motions::{RegistryMetadata, RegistrySource, impl_registry_metadata};
+pub use evildoer_registry_motions::{Key, RegistryMetadata, RegistrySource, impl_registry_metadata};
 pub use split_buffer::{
 	SplitAttrs, SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle,
 	SplitDockPreference, SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse,
@@ -59,6 +60,58 @@ impl std::fmt::Display for PanelId {
 	}
 }
 
+/// Definition of a panel identity for typed handles.
+pub struct PanelIdDef {
+	/// Unique identifier (e.g., "evildoer-registry-panels::terminal").
+	pub id: &'static str,
+	/// Short name for lookup.
+	pub name: &'static str,
+	/// Human-readable description.
+	pub description: &'static str,
+	/// Priority for collision resolution.
+	pub priority: i16,
+	/// Where this panel ID was defined.
+	pub source: RegistrySource,
+}
+
+impl PanelIdDef {
+	#[doc(hidden)]
+	pub const fn new(
+		id: &'static str,
+		name: &'static str,
+		description: &'static str,
+		priority: i16,
+		source: RegistrySource,
+	) -> Self {
+		Self {
+			id,
+			name,
+			description,
+			priority,
+			source,
+		}
+	}
+}
+
+impl_registry_metadata!(PanelIdDef);
+
+/// Typed handle to a panel ID definition.
+pub type PanelKey = Key<PanelIdDef>;
+
+/// Registry of all panel identity definitions.
+#[distributed_slice]
+pub static PANEL_IDS: [PanelIdDef];
+
+/// Finds a panel ID by name.
+pub fn find_panel_id(name: &str) -> Option<PanelKey> {
+	PANEL_IDS.iter().find(|p| p.name == name).map(PanelKey::new)
+}
+
+/// Typed handles for built-in panels.
+pub mod keys {
+	pub use crate::builtins::*;
+}
+
 /// Compile-time definition of a panel type.
 ///
 /// Registered via the [`panel!`] macro into the [`PANELS`] distributed slice.
@@ -101,7 +154,7 @@ pub type PanelFactory = fn() -> Box<dyn SplitBuffer>;
 /// Registration for a panel factory.
 ///
 /// Links a panel type name to its factory function. Registered via the
-/// [`panel!`] macro when a `factory:` parameter is provided.
+/// [`register_panel_factory!`] macro.
 pub struct PanelFactoryDef {
 	/// Panel type name (must match a [`PanelDef`] name).
 	pub name: &'static str,

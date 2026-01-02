@@ -8,6 +8,8 @@ use evildoer_base::Selection;
 use evildoer_macro::DispatchResult;
 use linkme::distributed_slice;
 
+use evildoer_registry_panels::PanelKey;
+
 use crate::editor_ctx::ResultHandler;
 use crate::{EditAction, PendingAction};
 
@@ -89,7 +91,7 @@ pub enum ActionResult {
 	SplitVertical,
 	/// Toggle a named panel.
 	#[terminal_safe]
-	TogglePanel(&'static str),
+	TogglePanel(PanelKey),
 	/// Switch to next buffer.
 	#[terminal_safe]
 	BufferNext,
