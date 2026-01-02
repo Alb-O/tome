@@ -3,9 +3,9 @@
 use evildoer_base::key::{Key, KeyCode, MouseButton, MouseEvent};
 use evildoer_core::get_keymap_registry;
 use evildoer_core::keymap_registry::{KeymapRegistry, LookupResult};
-use evildoer_core::registry::BindingMode;
 use evildoer_keymap::ToKeyMap;
 use evildoer_keymap::parser::Node;
+use evildoer_registry::BindingMode;
 use tracing::debug;
 
 use crate::types::{KeyResult, Mode};

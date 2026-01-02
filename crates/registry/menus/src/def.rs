@@ -1,6 +1,6 @@
 use linkme::distributed_slice;
 
-use crate::RegistrySource;
+use crate::{RegistrySource, impl_registry_metadata};
 
 /// A top-level menu group (e.g., "File", "Edit").
 pub struct MenuGroupDef {
@@ -22,6 +22,9 @@ pub struct MenuItemDef {
 	pub priority: i16,
 	pub source: RegistrySource,
 }
+
+impl_registry_metadata!(MenuGroupDef);
+impl_registry_metadata!(MenuItemDef);
 
 #[distributed_slice]
 pub static MENU_GROUPS: [MenuGroupDef];

@@ -19,7 +19,6 @@ pub mod completion;
 pub mod editor_ctx;
 pub mod index;
 pub mod keymap_registry;
-pub mod macros;
 #[cfg(feature = "host")]
 pub mod movement;
 pub mod notifications;
@@ -117,8 +116,6 @@ impl std::fmt::Display for ActionId {
 // Core's own types
 pub use completion::{CompletionContext, CompletionItem, CompletionKind, CompletionSource};
 pub use editor_ctx::{EditorCapabilities, EditorContext, EditorOps, HandleOutcome};
-// Convenience namespace for registry access
-pub use evildoer_registry as registry;
 pub use index::{
 	all_actions, all_commands, all_motions, all_text_objects, find_action, find_action_by_id,
 	find_command, find_motion, find_text_object_by_trigger, resolve_action_id,

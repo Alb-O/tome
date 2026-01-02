@@ -7,6 +7,8 @@ pub mod range;
 pub mod selection;
 pub mod transaction;
 
+// Shared style types are re-exported to avoid duplicating evildoer-tui deps
+// across multiple crates that parse themes and syntax styles.
 #[cfg(feature = "evildoer-tui")]
 pub use evildoer_tui::style::{Color, Modifier, Style};
 pub use key::{Key, KeyCode, Modifiers, MouseButton, MouseEvent, ScrollDirection};

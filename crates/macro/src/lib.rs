@@ -1,3 +1,10 @@
+//! Procedural macros for Evildoer editor.
+//!
+//! Provides derive macros and attribute macros:
+//! - `#[derive(DispatchResult)]` - generates result handler slices
+//! - `#[extension]` - extension registration
+//! - `define_events!` - hook event generation
+
 use proc_macro::TokenStream;
 
 mod dispatch;

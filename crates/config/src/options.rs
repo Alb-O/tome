@@ -2,43 +2,10 @@
 
 use std::collections::HashMap;
 
+use evildoer_registry::options::OptionValue;
 use kdl::KdlNode;
 
 use crate::error::Result;
-
-/// Option value types matching [`evildoer_core::OptionValue`].
-#[derive(Debug, Clone, PartialEq)]
-pub enum OptionValue {
-	Bool(bool),
-	Int(i64),
-	String(String),
-}
-
-impl OptionValue {
-	pub fn as_bool(&self) -> Option<bool> {
-		if let Self::Bool(v) = self {
-			Some(*v)
-		} else {
-			None
-		}
-	}
-
-	pub fn as_int(&self) -> Option<i64> {
-		if let Self::Int(v) = self {
-			Some(*v)
-		} else {
-			None
-		}
-	}
-
-	pub fn as_str(&self) -> Option<&str> {
-		if let Self::String(v) = self {
-			Some(v)
-		} else {
-			None
-		}
-	}
-}
 
 /// Options configuration mapping option names to values.
 #[derive(Debug, Clone, Default)]

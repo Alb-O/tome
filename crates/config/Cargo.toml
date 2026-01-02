@@ -11,7 +11,6 @@ watch = ["notify"]
 
 [dependencies]
 evildoer-base.workspace = true
-evildoer-core.workspace = true
 evildoer-registry.workspace = true
 kdl.workspace = true
 notify = { workspace = true, optional = true }

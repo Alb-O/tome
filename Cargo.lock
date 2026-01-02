@@ -734,7 +734,6 @@ dependencies = [
 name = "evildoer-base"
 version = "0.3.0"
 dependencies = [
- "crossterm",
  "evildoer-keymap-parser",
  "evildoer-tui",
  "ropey",
@@ -751,7 +750,6 @@ name = "evildoer-config"
 version = "0.3.0"
 dependencies = [
  "evildoer-base",
- "evildoer-core",
  "evildoer-registry",
  "evildoer-runtime",
  "kdl",
@@ -810,6 +808,7 @@ dependencies = [
  "evildoer-base",
  "evildoer-core",
  "evildoer-keymap",
+ "evildoer-registry",
  "serde",
  "tracing",
 ]
@@ -966,6 +965,7 @@ dependencies = [
 name = "evildoer-registry-menus"
 version = "0.3.0"
 dependencies = [
+ "evildoer-registry-motions",
  "linkme",
  "paste",
 ]
