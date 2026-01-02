@@ -53,46 +53,6 @@ macro_rules! command {
 	};
 }
 
-/// Registers a motion primitive in the [`MOTIONS`](crate::motions::MOTIONS) slice.
-#[macro_export]
-macro_rules! motion {
-	($name:ident, {
-		$(aliases: $aliases:expr,)?
-		description: $desc:expr
-		$(, priority: $priority:expr)?
-		$(, caps: $caps:expr)?
-		$(, flags: $flags:expr)?
-		$(, source: $source:expr)?
-		$(,)?
-	}, |$text:ident, $range:ident, $count:ident, $extend:ident| $body:expr) => {
-		paste::paste! {
-			#[allow(unused_variables, non_snake_case)]
-			fn [<motion_handler_ $name>](
-				$text: ropey::RopeSlice,
-				$range: $crate::Range,
-				$count: usize,
-				$extend: bool,
-			) -> $crate::Range {
-				$body
-			}
-
-			#[allow(non_upper_case_globals)]
-			#[linkme::distributed_slice($crate::motions::MOTIONS)]
-			static [<MOTION_ $name>]: $crate::motions::MotionDef = $crate::motions::MotionDef::new(
-				concat!(env!("CARGO_PKG_NAME"), "::", stringify!($name)),
-				stringify!($name),
-				$crate::__opt_slice!($({$aliases})?),
-				$desc,
-				$crate::__opt!($({$priority})?, 0),
-				$crate::__opt!($({$source})?, $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME"))),
-				$crate::__opt_slice!($({$caps})?),
-				$crate::__opt!($({$flags})?, $crate::flags::NONE),
-				[<motion_handler_ $name>],
-			);
-		}
-	};
-}
-
 /// Registers a statusline segment in the [`STATUSLINE_SEGMENTS`](crate::STATUSLINE_SEGMENTS) slice.
 #[macro_export]
 macro_rules! statusline_segment {

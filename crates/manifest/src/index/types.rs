@@ -2,8 +2,9 @@
 
 use std::collections::HashMap;
 
+use evildoer_registry_motions::MotionDef;
+
 use super::collision::Collision;
-use crate::motions::MotionDef;
 use crate::text_objects::TextObjectDef;
 use crate::{ActionDef, ActionId, CommandDef};
 

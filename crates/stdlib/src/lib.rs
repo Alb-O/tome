@@ -6,11 +6,13 @@
 //! Note: Language/filetype definitions are loaded at runtime from `languages.kdl`
 //! via the `evildoer-language` crate.
 
+// Ensure registry motion implementations are linked
+pub use evildoer_registry_motions as registry_motions;
+
 pub mod actions;
 pub mod commands;
 pub mod editor_ctx;
 pub mod hooks;
-pub mod motions;
 #[cfg(feature = "host")]
 pub mod movement;
 pub mod notifications;
