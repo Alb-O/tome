@@ -85,4 +85,5 @@ pub use {
 	evildoer_registry_motions as motions, evildoer_registry_notifications as notifications,
 	evildoer_registry_options as options, evildoer_registry_panels as panels,
 	evildoer_registry_statusline as statusline, evildoer_registry_text_objects as text_objects,
+	evildoer_registry_themes as themes,
 };

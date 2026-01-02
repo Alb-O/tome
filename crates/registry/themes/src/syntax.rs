@@ -11,14 +11,6 @@
 //! When resolving styles, more specific scopes take precedence. If a specific
 //! scope isn't defined, it falls back to its parent (e.g., `keyword.control`
 //! then `keyword`).
-//!
-//! # Example
-//!
-//! ```ignore
-//! let syntax = SyntaxStyles::gruvbox();
-//! let style = syntax.resolve("keyword.control.import");
-//! // Returns keyword.control.import style, or falls back to keyword.control, then keyword
-//! ```
 
 pub use evildoer_base::{Color, Modifier, Style};
 
@@ -262,7 +254,6 @@ impl SyntaxStyles {
 	/// 3. keyword
 	/// 4. Default style
 	pub fn resolve(&self, scope: &str) -> Style {
-		// Try exact match first, then progressively shorter prefixes
 		let mut current = scope;
 		loop {
 			if let Some(style) = self.get_by_scope(current)
@@ -282,7 +273,6 @@ impl SyntaxStyles {
 
 	/// Get style by exact scope name (with dots converted to underscores).
 	fn get_by_scope(&self, scope: &str) -> Option<SyntaxStyle> {
-		// Convert dots to underscores for matching
 		Some(match scope {
 			"attribute" => self.attribute,
 			"tag" => self.tag,
@@ -475,7 +465,6 @@ mod tests {
 	fn test_resolve_hierarchical_fallback() {
 		let mut styles = SyntaxStyles::minimal();
 		styles.keyword = SyntaxStyle::fg(Color::Red);
-		// keyword.control.import is not set, should fall back to keyword
 
 		let resolved = styles.resolve("keyword.control.import");
 		assert_eq!(resolved.fg, Some(Color::Red));
@@ -486,7 +475,6 @@ mod tests {
 		let mut styles = SyntaxStyles::minimal();
 		styles.keyword = SyntaxStyle::fg(Color::Red);
 		styles.keyword_control = SyntaxStyle::fg(Color::Blue);
-		// keyword.control.import not set, should fall back to keyword.control
 
 		let resolved = styles.resolve("keyword.control.import");
 		assert_eq!(resolved.fg, Some(Color::Blue));

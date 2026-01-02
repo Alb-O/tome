@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*", "crates/keymap/derive", "crates/keymap/parser", "crates/registry/menus", "crates/registry/motions", "crates/registry/options", "crates/registry/notifications", "crates/registry/commands", "crates/registry/panels", "crates/registry/hooks", "crates/registry/statusline", "crates/registry/text_objects", "crates/registry/actions"]
+members = ["crates/*", "crates/keymap/derive", "crates/keymap/parser", "crates/registry/menus", "crates/registry/motions", "crates/registry/options", "crates/registry/notifications", "crates/registry/commands", "crates/registry/panels", "crates/registry/hooks", "crates/registry/statusline", "crates/registry/text_objects", "crates/registry/actions", "crates/registry/themes"]
 
 [workspace.package]
 version = "0.3.0"
@@ -39,6 +39,7 @@ evildoer-registry-panels = { path = "crates/registry/panels" }
 evildoer-registry-hooks = { path = "crates/registry/hooks" }
 evildoer-registry-statusline = { path = "crates/registry/statusline" }
 evildoer-registry-text-objects = { path = "crates/registry/text_objects" }
+evildoer-registry-themes = { path = "crates/registry/themes" }
 evildoer-runtime = { path = "crates/runtime" }
 evildoer-stdlib = { path = "crates/stdlib" }
 evildoer-tui = { path = "crates/tui" }

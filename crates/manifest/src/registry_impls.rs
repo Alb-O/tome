@@ -9,6 +9,7 @@ use evildoer_registry::options::OptionDef;
 use evildoer_registry::panels::PanelDef;
 use evildoer_registry::statusline::StatuslineSegmentDef;
 use evildoer_registry::text_objects::TextObjectDef;
+use evildoer_registry::themes::Theme;
 
 macro_rules! impl_registry_metadata {
 	($type:ty) => {
@@ -38,3 +39,4 @@ impl_registry_metadata!(OptionDef);
 impl_registry_metadata!(PanelDef);
 impl_registry_metadata!(StatuslineSegmentDef);
 impl_registry_metadata!(TextObjectDef);
+impl_registry_metadata!(Theme);

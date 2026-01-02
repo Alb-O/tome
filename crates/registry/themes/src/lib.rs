@@ -1,18 +1,22 @@
-//! Theme schema types and registry.
+//! Theme and syntax highlighting registry for Evildoer editor.
 //!
-//! This module defines the type schema for editor themes. Theme definitions
-//! come from KDL files in `runtime/themes/`. A fallback default theme exists
-//! only for cases where no themes are loaded.
+//! This crate provides:
+//! - [`Theme`] and [`ThemeColors`] for complete theme definitions
+//! - [`SyntaxStyles`] for tree-sitter syntax highlighting
+//! - [`THEMES`] distributed slice for compile-time registration
+//! - Runtime theme loading via [`register_runtime_themes`]
 
 use std::sync::OnceLock;
 
-pub use evildoer_base::{Color, Modifier, Style};
+pub use evildoer_base::{Color, Mode, Modifier, Style};
+use evildoer_registry_motions::RegistrySource;
 use linkme::distributed_slice;
 
-pub use crate::syntax::{SyntaxStyle, SyntaxStyles};
+mod syntax;
+
+pub use syntax::{SyntaxStyle, SyntaxStyles};
 
 /// Runtime theme registry for dynamically loaded themes.
-/// Themes are leaked to obtain 'static lifetime for consistency with the rest of the codebase.
 static RUNTIME_THEMES: OnceLock<Vec<&'static Theme>> = OnceLock::new();
 
 /// Whether a theme uses a light or dark background.
@@ -70,7 +74,6 @@ pub struct PopupColors {
 }
 
 /// Per-semantic-style color pair for notifications.
-/// If None, inherits from the base theme colors.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SemanticColorPair {
 	pub bg: Option<Color>,
@@ -78,28 +81,30 @@ pub struct SemanticColorPair {
 }
 
 impl SemanticColorPair {
-	/// Const default with no overrides (inherit all).
 	pub const NONE: Self = Self { bg: None, fg: None };
 }
 
 /// Notification-specific color overrides.
-/// Uses a flat list of semantic identifiers mapped to color pairs.
 #[derive(Clone, Copy, Debug)]
 pub struct NotificationColors {
-	/// Border color override (inherits from popup.border if None)
 	pub border: Option<Color>,
-	/// Map of semantic identifiers to color pairs.
-	/// In static contexts, we use a fixed-size array for simplicity.
 	pub overrides: &'static [(&'static str, SemanticColorPair)],
 }
 
 impl NotificationColors {
-	/// Const default with no overrides (inherit all colors from popup/status).
 	pub const INHERITED: Self = Self {
 		border: None,
 		overrides: &[],
 	};
 }
+
+/// Common semantic color identifiers.
+pub const SEMANTIC_INFO: &str = "info";
+pub const SEMANTIC_WARNING: &str = "warning";
+pub const SEMANTIC_ERROR: &str = "error";
+pub const SEMANTIC_SUCCESS: &str = "success";
+pub const SEMANTIC_DIM: &str = "dim";
+pub const SEMANTIC_NORMAL: &str = "normal";
 
 /// Complete theme color palette.
 #[derive(Clone, Copy, Debug)]
@@ -107,27 +112,24 @@ pub struct ThemeColors {
 	pub ui: UiColors,
 	pub status: StatusColors,
 	pub popup: PopupColors,
-	/// Notification-specific color overrides (optional, inherits from popup/status)
 	pub notification: NotificationColors,
-	/// Syntax highlighting styles for tree-sitter captures
 	pub syntax: SyntaxStyles,
 }
 
 impl ThemeColors {
 	/// Get the style for a given editor mode (for status line mode indicator).
 	#[inline]
-	pub fn mode_style(&self, mode: &crate::Mode) -> Style {
+	pub fn mode_style(&self, mode: &Mode) -> Style {
 		let s = &self.status;
 		match mode {
-			crate::Mode::Normal => Style::new().bg(s.normal_bg).fg(s.normal_fg),
-			crate::Mode::Insert => Style::new().bg(s.insert_bg).fg(s.insert_fg),
-			crate::Mode::Window => Style::new().bg(s.prefix_mode_bg).fg(s.prefix_mode_fg),
-			crate::Mode::PendingAction(_) => Style::new().bg(s.command_bg).fg(s.command_fg),
+			Mode::Normal => Style::new().bg(s.normal_bg).fg(s.normal_fg),
+			Mode::Insert => Style::new().bg(s.insert_bg).fg(s.insert_fg),
+			Mode::Window => Style::new().bg(s.prefix_mode_bg).fg(s.prefix_mode_fg),
+			Mode::PendingAction(_) => Style::new().bg(s.command_bg).fg(s.command_fg),
 		}
 	}
 
 	/// Resolve notification style for a given semantic identifier.
-	/// Uses notification-specific overrides if set, otherwise inherits from popup/status colors.
 	pub fn notification_style(&self, semantic: &str) -> Style {
 		let override_pair = self
 			.notification
@@ -139,7 +141,6 @@ impl ThemeColors {
 		let bg = override_pair.and_then(|p| p.bg).unwrap_or(self.popup.bg);
 
 		let fg = override_pair.and_then(|p| p.fg).unwrap_or_else(|| {
-			use crate::*;
 			match semantic {
 				SEMANTIC_WARNING => self.status.warning_fg,
 				SEMANTIC_ERROR => self.status.error_fg,
@@ -167,11 +168,10 @@ pub struct Theme {
 	pub variant: ThemeVariant,
 	pub colors: ThemeColors,
 	pub priority: i16,
-	pub source: crate::RegistrySource,
+	pub source: RegistrySource,
 }
 
 /// Owned theme data for runtime-loaded themes.
-/// This is converted to a leaked `Theme` for 'static lifetime.
 #[derive(Clone, Debug)]
 pub struct OwnedTheme {
 	pub id: String,
@@ -180,12 +180,11 @@ pub struct OwnedTheme {
 	pub variant: ThemeVariant,
 	pub colors: ThemeColors,
 	pub priority: i16,
-	pub source: crate::RegistrySource,
+	pub source: RegistrySource,
 }
 
 impl OwnedTheme {
 	/// Leaks this owned theme to produce a 'static Theme reference.
-	/// The memory is intentionally leaked to provide stable 'static references.
 	pub fn leak(self) -> &'static Theme {
 		let id: &'static str = Box::leak(self.id.into_boxed_str());
 		let name: &'static str = Box::leak(self.name.into_boxed_str());
@@ -209,8 +208,7 @@ impl OwnedTheme {
 	}
 }
 
-/// Register runtime themes. This should be called once at startup with all
-/// themes loaded from KDL files. Subsequent calls will be ignored.
+/// Register runtime themes. Call once at startup with themes from KDL files.
 pub fn register_runtime_themes(themes: Vec<OwnedTheme>) {
 	let leaked: Vec<&'static Theme> = themes.into_iter().map(OwnedTheme::leak).collect();
 	let _ = RUNTIME_THEMES.set(leaked);
@@ -221,9 +219,11 @@ pub fn runtime_themes() -> &'static [&'static Theme] {
 	RUNTIME_THEMES.get().map(|v| v.as_slice()).unwrap_or(&[])
 }
 
+/// Distributed slice for compile-time theme registration.
 #[distributed_slice]
 pub static THEMES: [Theme] = [..];
 
+/// Default fallback theme (minimal terminal colors).
 #[distributed_slice(THEMES)]
 pub static DEFAULT_THEME: Theme = Theme {
 	id: "default",
@@ -254,7 +254,6 @@ pub static DEFAULT_THEME: Theme = Theme {
 			accent_fg: Color::Black,
 			command_bg: Color::Yellow,
 			command_fg: Color::Black,
-
 			dim_fg: Color::DarkGray,
 			warning_fg: Color::Yellow,
 			error_fg: Color::Red,
@@ -270,9 +269,13 @@ pub static DEFAULT_THEME: Theme = Theme {
 		syntax: SyntaxStyles::minimal(),
 	},
 	priority: 0,
-	source: crate::RegistrySource::Builtin,
+	source: RegistrySource::Builtin,
 };
 
+/// Default theme ID to use when no theme is specified.
+pub const DEFAULT_THEME_ID: &str = "gruvbox";
+
+/// Find a theme by name or alias.
 pub fn get_theme(name: &str) -> Option<&'static Theme> {
 	let normalize = |s: &str| -> String {
 		s.chars()
@@ -291,7 +294,7 @@ pub fn get_theme(name: &str) -> Option<&'static Theme> {
 		return Some(theme);
 	}
 
-	// Fall back to compile-time themes (just the default fallback)
+	// Fall back to compile-time themes
 	THEMES
 		.iter()
 		.find(|t| normalize(t.name) == search || t.aliases.iter().any(|a| normalize(a) == search))
@@ -303,12 +306,12 @@ pub fn blend_colors(fg: Color, bg: Color, alpha: f32) -> Color {
 	fg.blend(bg, alpha)
 }
 
+/// Suggest a similar theme name using fuzzy matching.
 pub fn suggest_theme(name: &str) -> Option<&'static str> {
 	let name = name.to_lowercase();
 	let mut best_match = None;
 	let mut best_score = 0.0;
 
-	// Check runtime themes first
 	for theme in runtime_themes() {
 		let score = strsim::jaro_winkler(&name, theme.name);
 		if score > best_score {
@@ -325,7 +328,6 @@ pub fn suggest_theme(name: &str) -> Option<&'static str> {
 		}
 	}
 
-	// Then check compile-time themes
 	for theme in THEMES {
 		let score = strsim::jaro_winkler(&name, theme.name);
 		if score > best_score {
@@ -342,69 +344,9 @@ pub fn suggest_theme(name: &str) -> Option<&'static str> {
 		}
 	}
 
-	if best_score > 0.8 { best_match } else { None }
-}
-
-pub const DEFAULT_THEME_ID: &str = "gruvbox";
-
-use crate::completion::{
-	CompletionContext, CompletionItem, CompletionKind, CompletionResult, CompletionSource,
-	PROMPT_COMMAND,
-};
-
-/// Completion source for theme names.
-/// Provides completions when typing `:theme <arg>` or `:colorscheme <arg>`.
-pub struct ThemeSource;
-
-impl CompletionSource for ThemeSource {
-	fn complete(&self, ctx: &CompletionContext) -> CompletionResult {
-		if ctx.prompt != PROMPT_COMMAND {
-			return CompletionResult::empty();
-		}
-
-		let parts: Vec<&str> = ctx.input.split_whitespace().collect();
-		let is_theme_cmd = matches!(parts.first(), Some(&"theme") | Some(&"colorscheme"));
-
-		if !is_theme_cmd {
-			return CompletionResult::empty();
-		}
-
-		let prefix = parts.get(1).copied().unwrap_or("");
-
-		if parts.len() == 1 && !ctx.input.ends_with(' ') {
-			return CompletionResult::empty();
-		}
-
-		let cmd_name = parts.first().unwrap();
-		let arg_start = cmd_name.len() + 1;
-
-		// Collect from both runtime and compile-time themes
-		let mut items: Vec<_> = runtime_themes()
-			.iter()
-			.copied()
-			.chain(THEMES.iter())
-			.filter(|theme| {
-				theme.name.starts_with(prefix)
-					|| theme.aliases.iter().any(|a| a.starts_with(prefix))
-			})
-			.map(|theme| {
-				let variant_str = match theme.variant {
-					ThemeVariant::Dark => "dark",
-					ThemeVariant::Light => "light",
-				};
-				CompletionItem {
-					label: theme.name.to_string(),
-					insert_text: theme.name.to_string(),
-					detail: Some(format!("{} theme", variant_str)),
-					filter_text: None,
-					kind: CompletionKind::Theme,
-				}
-			})
-			.collect();
-
-		// Deduplicate by label (runtime themes take precedence)
-		items.dedup_by(|a, b| a.label == b.label);
-
-		CompletionResult::new(arg_start, items)
+	if best_score > 0.8 {
+		best_match
+	} else {
+		None
 	}
 }

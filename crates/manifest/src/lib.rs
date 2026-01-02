@@ -14,8 +14,8 @@ pub use evildoer_base::{Range, Selection};
 mod registry_impls;
 
 pub use evildoer_registry::{
-	Capability, RegistrySource, bracket_pair_object, motion, option, statusline_segment,
-	symmetric_text_object, text_object,
+	bracket_pair_object, motion, option, statusline_segment, symmetric_text_object, text_object,
+	Capability, RegistrySource,
 };
 
 pub mod actions;
@@ -24,11 +24,69 @@ pub mod editor_ctx;
 pub mod index;
 pub mod keymap_registry;
 pub mod macros;
-pub mod mode;
-pub mod split_buffer;
-pub mod syntax;
 pub mod terminal_config;
-pub mod theme;
+
+// Re-export theme and syntax types from registry
+pub mod syntax {
+	pub use evildoer_registry::themes::{SyntaxStyle, SyntaxStyles};
+}
+pub mod theme {
+	pub use evildoer_registry::themes::*;
+
+	pub use super::completion::{
+		CompletionContext, CompletionItem, CompletionKind, CompletionResult, CompletionSource,
+		PROMPT_COMMAND,
+	};
+
+	/// Completion source for theme names.
+	pub struct ThemeSource;
+
+	impl CompletionSource for ThemeSource {
+		fn complete(&self, ctx: &CompletionContext) -> CompletionResult {
+			if ctx.prompt != PROMPT_COMMAND {
+				return CompletionResult::empty();
+			}
+
+			let parts: Vec<&str> = ctx.input.split_whitespace().collect();
+			if !matches!(parts.first(), Some(&"theme") | Some(&"colorscheme")) {
+				return CompletionResult::empty();
+			}
+
+			let prefix = parts.get(1).copied().unwrap_or("");
+			if parts.len() == 1 && !ctx.input.ends_with(' ') {
+				return CompletionResult::empty();
+			}
+
+			let cmd_name = parts.first().unwrap();
+			let arg_start = cmd_name.len() + 1;
+
+			let mut items: Vec<_> = runtime_themes()
+				.iter()
+				.copied()
+				.chain(THEMES.iter())
+				.filter(|t| {
+					t.name.starts_with(prefix) || t.aliases.iter().any(|a| a.starts_with(prefix))
+				})
+				.map(|t| CompletionItem {
+					label: t.name.to_string(),
+					insert_text: t.name.to_string(),
+					detail: Some(format!(
+						"{} theme",
+						match t.variant {
+							ThemeVariant::Dark => "dark",
+							ThemeVariant::Light => "light",
+						}
+					)),
+					filter_text: None,
+					kind: CompletionKind::Theme,
+				})
+				.collect();
+
+			items.dedup_by(|a, b| a.label == b.label);
+			CompletionResult::new(arg_start, items)
+		}
+	}
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ActionId(pub u32);
@@ -60,13 +118,11 @@ impl std::fmt::Display for ActionId {
 	}
 }
 
-/// Common semantic color identifiers.
-pub const SEMANTIC_INFO: &str = "info";
-pub const SEMANTIC_WARNING: &str = "warning";
-pub const SEMANTIC_ERROR: &str = "error";
-pub const SEMANTIC_SUCCESS: &str = "success";
-pub const SEMANTIC_DIM: &str = "dim";
-pub const SEMANTIC_NORMAL: &str = "normal";
+// Re-export semantic color identifiers from themes
+pub use evildoer_registry::themes::{
+	SEMANTIC_DIM, SEMANTIC_ERROR, SEMANTIC_INFO, SEMANTIC_NORMAL, SEMANTIC_SUCCESS,
+	SEMANTIC_WARNING,
+};
 
 /// Common metadata for all registry item types.
 pub trait RegistryMetadata {
@@ -77,51 +133,49 @@ pub trait RegistryMetadata {
 }
 
 pub use actions::{
-	ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, EditAction,
+	cursor_motion, dispatch_result, insert_with_motion, selection_motion, ActionArgs,
+	ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult, EditAction,
 	ObjectSelectionKind, PendingAction, PendingKind, ScrollAmount, ScrollDir, VisualDirection,
-	cursor_motion, dispatch_result, insert_with_motion, selection_motion,
 };
 pub use completion::{CompletionContext, CompletionItem, CompletionKind, CompletionSource};
 pub use editor_ctx::{EditorCapabilities, EditorContext, EditorOps, HandleOutcome};
+pub use evildoer_base::Mode;
 pub use evildoer_registry::actions::ACTIONS;
 pub use evildoer_registry::commands::{
-	COMMANDS, CommandContext, CommandDef, CommandError, CommandOutcome, CommandResult, flags,
+	flags, CommandContext, CommandDef, CommandError, CommandOutcome, CommandResult, COMMANDS,
 };
 pub use evildoer_registry::hooks::{
-	BoxFuture as HookBoxFuture, HOOKS, HookAction, HookContext, HookDef, HookEvent, HookEventData,
-	HookHandler, HookMutability, HookResult, HookScheduler, MutableHookContext, OwnedHookContext,
 	all_hooks, emit as emit_hook, emit_mutable as emit_mutable_hook, emit_sync as emit_hook_sync,
-	emit_sync_with as emit_hook_sync_with, find_hooks,
+	emit_sync_with as emit_hook_sync_with, find_hooks, BoxFuture as HookBoxFuture, HookAction,
+	HookContext, HookDef, HookEvent, HookEventData, HookHandler, HookMutability, HookResult,
+	HookScheduler, MutableHookContext, OwnedHookContext, HOOKS,
 };
 pub use evildoer_registry::notifications::{
-	Animation, AutoDismiss, Level, NOTIFICATION_TYPES, NotificationTypeDef, Timing,
-	find_notification_type,
+	find_notification_type, Animation, AutoDismiss, Level, NotificationTypeDef, Timing,
+	NOTIFICATION_TYPES,
 };
-pub use evildoer_registry::options::{OPTIONS, OptionDef, OptionScope, OptionType, OptionValue};
+pub use evildoer_registry::options::{OptionDef, OptionScope, OptionType, OptionValue, OPTIONS};
 pub use evildoer_registry::panels::{
-	PANEL_FACTORIES, PANELS, PanelDef, PanelFactory, PanelFactoryDef, PanelId, all_panels,
-	find_factory, find_panel, find_panel_by_id, panel_kind_index,
+	all_panels, find_factory, find_panel, find_panel_by_id, panel_kind_index, PanelDef,
+	PanelFactory, PanelFactoryDef, PanelId, SplitAttrs, SplitBuffer, SplitCell, SplitColor,
+	SplitCursor, SplitCursorStyle, SplitDockPreference, SplitEventResult, SplitKey, SplitKeyCode,
+	SplitModifiers, SplitMouse, SplitMouseAction, SplitMouseButton, SplitSize, PANELS,
+	PANEL_FACTORIES,
 };
 pub use evildoer_registry::statusline::{
-	RenderedSegment, STATUSLINE_SEGMENTS, SegmentPosition, SegmentStyle, StatuslineContext,
-	StatuslineSegmentDef, all_segments, find_segment, render_position, segments_for_position,
+	all_segments, find_segment, render_position, segments_for_position, RenderedSegment,
+	SegmentPosition, SegmentStyle, StatuslineContext, StatuslineSegmentDef, STATUSLINE_SEGMENTS,
 };
-pub use evildoer_registry::text_objects::{TEXT_OBJECTS, TextObjectDef, TextObjectHandler};
-pub use evildoer_registry::{BindingMode, KEYBINDINGS, KeyBindingDef, MOTIONS, MotionDef};
+pub use evildoer_registry::text_objects::{TextObjectDef, TextObjectHandler, TEXT_OBJECTS};
+pub use evildoer_registry::{BindingMode, KeyBindingDef, MotionDef, KEYBINDINGS, MOTIONS};
 pub use index::{
 	all_actions, all_commands, all_motions, all_text_objects, find_action, find_action_by_id,
 	find_command, find_motion, find_text_object_by_trigger, resolve_action_id,
 };
-pub use keymap_registry::{BindingEntry, KeymapRegistry, LookupResult, get_keymap_registry};
-pub use mode::Mode;
-pub use split_buffer::{
-	SplitAttrs, SplitBuffer, SplitCell, SplitColor, SplitCursor, SplitCursorStyle,
-	SplitDockPreference, SplitEventResult, SplitKey, SplitKeyCode, SplitModifiers, SplitMouse,
-	SplitMouseAction, SplitMouseButton, SplitSize,
-};
+pub use keymap_registry::{get_keymap_registry, BindingEntry, KeymapRegistry, LookupResult};
 pub use terminal_config::{TerminalConfig, TerminalSequence};
 pub use theme::{
-	DEFAULT_THEME, DEFAULT_THEME_ID, NotificationColors, OwnedTheme, PopupColors,
-	SemanticColorPair, StatusColors, THEMES, Theme, ThemeColors, ThemeSource, ThemeVariant,
-	UiColors, blend_colors, get_theme, register_runtime_themes, runtime_themes, suggest_theme,
+	blend_colors, get_theme, register_runtime_themes, runtime_themes, suggest_theme,
+	NotificationColors, OwnedTheme, PopupColors, SemanticColorPair, StatusColors, Theme,
+	ThemeColors, ThemeSource, ThemeVariant, UiColors, DEFAULT_THEME, DEFAULT_THEME_ID, THEMES,
 };

@@ -1,0 +1,12 @@
+[package]
+name = "evildoer-registry-themes"
+description = "Theme and syntax highlighting registry for Evildoer editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+evildoer-base.workspace = true
+evildoer-registry-motions.workspace = true
+linkme.workspace = true
+strsim.workspace = true

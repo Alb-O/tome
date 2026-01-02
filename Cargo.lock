@@ -917,6 +917,7 @@ dependencies = [
  "evildoer-registry-panels",
  "evildoer-registry-statusline",
  "evildoer-registry-text-objects",
+ "evildoer-registry-themes",
 ]
 
 [[package]]
@@ -1025,6 +1026,16 @@ dependencies = [
  "linkme",
  "paste",
  "ropey",
+]
+
+[[package]]
+name = "evildoer-registry-themes"
+version = "0.3.0"
+dependencies = [
+ "evildoer-base",
+ "evildoer-registry-motions",
+ "linkme",
+ "strsim",
 ]
 
 [[package]]
