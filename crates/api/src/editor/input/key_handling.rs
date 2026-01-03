@@ -110,20 +110,6 @@ impl Editor {
 				return false;
 			}
 
-			// Ctrl+w enters window mode - use first buffer's input handler (window-mode panels only)
-			if supports_window_mode
-				&& key.code == KeyCode::Char('w')
-				&& key.modifiers.contains(termina::event::Modifiers::CONTROL)
-			{
-				if let Some(first_buffer_id) = self.layout.first_buffer()
-					&& let Some(buffer) = self.buffers.get_buffer_mut(first_buffer_id)
-				{
-					buffer.input.set_mode(Mode::Window);
-					self.needs_redraw = true;
-				}
-				return false;
-			}
-
 			// Escape releases focus back to the first text buffer
 			if key.code == KeyCode::Escape {
 				if let Some(first_buffer) = self.layout.first_buffer() {
@@ -133,15 +119,16 @@ impl Editor {
 				return false;
 			}
 
-			// Check if we're in window mode (using first buffer's input handler)
 			if supports_window_mode && let Some(first_buffer_id) = self.layout.first_buffer() {
-				let in_window_mode = self
+				let has_pending = self
 					.buffers
 					.get_buffer(first_buffer_id)
-					.is_some_and(|b| matches!(b.input.mode(), Mode::Window));
+					.is_some_and(|b| b.input.pending_key_count() > 0);
 
-				if in_window_mode {
-					// Process window mode key through first buffer's input handler
+				if has_pending
+					|| (key.code == KeyCode::Char('w')
+						&& key.modifiers.contains(termina::event::Modifiers::CONTROL))
+				{
 					return self.handle_terminal_window_key(key, first_buffer_id).await;
 				}
 			}

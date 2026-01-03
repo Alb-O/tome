@@ -11,7 +11,6 @@ result_handler!(
 			let new_mode = match mode {
 				ActionMode::Normal => Mode::Normal,
 				ActionMode::Insert => Mode::Insert,
-				ActionMode::Window => Mode::Window,
 			};
 			ctx.set_mode(new_mode);
 		}

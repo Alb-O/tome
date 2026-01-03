@@ -31,8 +31,6 @@ pub enum ActionMode {
 	Normal,
 	/// Insert mode for text input.
 	Insert,
-	/// Window management mode for split operations.
-	Window,
 }
 
 /// Screen-relative cursor position.

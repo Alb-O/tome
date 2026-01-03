@@ -168,7 +168,6 @@ impl ThemeColors {
 		match mode {
 			Mode::Normal => Style::new().bg(s.normal_bg).fg(s.normal_fg),
 			Mode::Insert => Style::new().bg(s.insert_bg).fg(s.insert_fg),
-			Mode::Window => Style::new().bg(s.prefix_mode_bg).fg(s.prefix_mode_fg),
 			Mode::PendingAction(_) => Style::new().bg(s.command_bg).fg(s.command_fg),
 		}
 	}

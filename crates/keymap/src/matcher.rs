@@ -31,6 +31,16 @@
 //! Each complete match path in the trie may store an associated value (e.g., action, ID, etc.).
 //!
 //! See [`Matcher`] for the main interface and [`Trie`] for the underlying structure.
+//!
+//! ## Hierarchical Key Sequences
+//!
+//! The matcher supports hierarchical key sequences for which-key style UIs. When querying
+//! continuations at a prefix, each child is classified as either:
+//!
+//! - **Leaf**: A terminal binding (no further keys possible)
+//! - **Branch**: A sub-prefix with more bindings underneath (e.g., `ctrl-w f` → focus commands)
+//!
+//! This allows UIs to show "..." indicators for branches that can be drilled into.
 use std::collections::HashMap;
 
 use evildoer_keymap_parser::node::{CharGroup, Key, Node};
@@ -48,6 +58,26 @@ pub enum MatchResult<'a, T> {
 	},
 	/// No match - the sequence doesn't match any binding.
 	None,
+}
+
+/// Classification of a continuation node in the key sequence trie.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContinuationKind {
+	/// Leaf node - pressing this key completes a binding with no further options.
+	Leaf,
+	/// Branch node - pressing this key reveals more options (sub-prefix).
+	Branch,
+}
+
+/// A continuation entry returned when querying available next keys at a prefix.
+#[derive(Debug, Clone)]
+pub struct ContinuationEntry<'a, T> {
+	/// The key that can be pressed next.
+	pub key: &'a Node,
+	/// The value at this node, if any (action for leaf, sticky action for branch).
+	pub value: Option<&'a T>,
+	/// Whether this is a leaf (terminal) or branch (has children).
+	pub kind: ContinuationKind,
 }
 
 /// A prefix tree node for storing key bindings.
@@ -154,6 +184,47 @@ impl<T> Matcher<T> {
 		};
 		let exact = trie.exact.iter().map(|(k, v)| (k, v.value.as_ref()));
 		let groups = trie.groups.iter().map(|(k, v)| (k, v.value.as_ref()));
+		exact.chain(groups).collect()
+	}
+
+	/// Returns continuations with classification (leaf vs branch).
+	///
+	/// Each continuation is classified as:
+	/// - `Leaf`: Terminal binding with no further children
+	/// - `Branch`: Sub-prefix with more bindings underneath
+	///
+	/// This enables which-key UIs to show "..." for branches that can be drilled into.
+	pub fn continuations_with_kind(&self, prefix: &[Node]) -> Vec<ContinuationEntry<'_, T>> {
+		let Some(trie) = navigate_to(&self.root, prefix, 0) else {
+			return Vec::new();
+		};
+
+		let exact = trie.exact.iter().map(|(key, child)| {
+			let has_children = !child.exact.is_empty() || !child.groups.is_empty();
+			ContinuationEntry {
+				key,
+				value: child.value.as_ref(),
+				kind: if has_children {
+					ContinuationKind::Branch
+				} else {
+					ContinuationKind::Leaf
+				},
+			}
+		});
+
+		let groups = trie.groups.iter().map(|(key, child)| {
+			let has_children = !child.exact.is_empty() || !child.groups.is_empty();
+			ContinuationEntry {
+				key,
+				value: child.value.as_ref(),
+				kind: if has_children {
+					ContinuationKind::Branch
+				} else {
+					ContinuationKind::Leaf
+				},
+			}
+		});
+
 		exact.chain(groups).collect()
 	}
 }
@@ -401,5 +472,53 @@ mod tests {
 			matcher.lookup(&parse_seq("a b").unwrap()),
 			MatchResult::None
 		);
+	}
+
+	#[test]
+	fn test_continuations_with_kind_leaf() {
+		let mut matcher = Matcher::new();
+		matcher.add(parse_seq("g h").unwrap(), 1);
+		matcher.add(parse_seq("g j").unwrap(), 2);
+
+		let conts = matcher.continuations_with_kind(&parse_seq("g").unwrap());
+		assert_eq!(conts.len(), 2);
+
+		for cont in &conts {
+			assert_eq!(cont.kind, ContinuationKind::Leaf, "Expected leaf for terminal binding");
+			assert!(cont.value.is_some(), "Leaf should have a value");
+		}
+	}
+
+	#[test]
+	fn test_continuations_with_kind_branch() {
+		let mut matcher = Matcher::new();
+		matcher.add(parse_seq("ctrl-w f h").unwrap(), 1);
+		matcher.add(parse_seq("ctrl-w f j").unwrap(), 2);
+		matcher.add(parse_seq("ctrl-w s").unwrap(), 3);
+
+		let conts = matcher.continuations_with_kind(&parse_seq("ctrl-w").unwrap());
+		assert_eq!(conts.len(), 2);
+
+		let f_cont = conts.iter().find(|c| format!("{}", c.key) == "f").unwrap();
+		let s_cont = conts.iter().find(|c| format!("{}", c.key) == "s").unwrap();
+
+		assert_eq!(f_cont.kind, ContinuationKind::Branch, "'f' should be a branch (has children)");
+		assert!(f_cont.value.is_none(), "Branch without sticky action");
+
+		assert_eq!(s_cont.kind, ContinuationKind::Leaf, "'s' should be a leaf (no children)");
+		assert!(s_cont.value.is_some(), "Leaf should have a value");
+	}
+
+	#[test]
+	fn test_continuations_with_kind_branch_with_sticky() {
+		let mut matcher = Matcher::new();
+		matcher.add(parse_seq("g").unwrap(), 1);
+		matcher.add(parse_seq("g g").unwrap(), 2);
+
+		let conts = matcher.continuations_with_kind(&[]);
+		let g_cont = conts.iter().find(|c| format!("{}", c.key) == "g").unwrap();
+
+		assert_eq!(g_cont.kind, ContinuationKind::Branch, "'g' is a branch (has 'g g' child)");
+		assert_eq!(g_cont.value, Some(&1), "'g' has sticky value");
 	}
 }

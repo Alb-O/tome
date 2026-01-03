@@ -1,7 +1,14 @@
+//! Split and window management actions.
 //!
 //! Split names follow Vim/Helix conventions based on the divider line orientation:
-//! - `split_horizontal` (Ctrl+w s): horizontal divider → windows stacked top/bottom
-//! - `split_vertical` (Ctrl+w v): vertical divider → windows side-by-side left/right
+//! - `split_horizontal`: horizontal divider → windows stacked top/bottom
+//! - `split_vertical`: vertical divider → windows side-by-side left/right
+//!
+//! Bindings use hierarchical key sequences under `ctrl-w`:
+//! - `s/v/q` - Common operations (split, close)
+//! - `f h/j/k/l` - Focus directions
+//! - `b n/p` - Buffer navigation
+//! - `c o` - Close others
 
 use evildoer_registry_panels::keys as panels;
 
@@ -9,13 +16,15 @@ use crate::editor_ctx::HandleOutcome;
 use crate::{action, result_handler, ActionResult};
 
 action!(split_horizontal, {
-	description: "Split horizontally (new buffer below)",
-	bindings: r#"window "s""#,
+	description: "Split horizontal",
+	short_desc: "Horizontal",
+	bindings: r#"normal "ctrl-w s""#,
 }, |_ctx| ActionResult::SplitHorizontal);
 
 action!(split_vertical, {
-	description: "Split vertically (new buffer to right)",
-	bindings: r#"window "v""#,
+	description: "Split vertical",
+	short_desc: "Vertical",
+	bindings: r#"normal "ctrl-w v""#,
 }, |_ctx| ActionResult::SplitVertical);
 
 result_handler!(
@@ -77,23 +86,27 @@ result_handler!(
 );
 
 action!(focus_left, {
-	description: "Focus split to the left",
-	bindings: r#"window "h""#,
+	description: "Focus left",
+	short_desc: "Left",
+	bindings: r#"normal "ctrl-w f h""#,
 }, |_ctx| ActionResult::FocusLeft);
 
 action!(focus_down, {
-	description: "Focus split below",
-	bindings: r#"window "j""#,
+	description: "Focus down",
+	short_desc: "Down",
+	bindings: r#"normal "ctrl-w f j""#,
 }, |_ctx| ActionResult::FocusDown);
 
 action!(focus_up, {
-	description: "Focus split above",
-	bindings: r#"window "k""#,
+	description: "Focus up",
+	short_desc: "Up",
+	bindings: r#"normal "ctrl-w f k""#,
 }, |_ctx| ActionResult::FocusUp);
 
 action!(focus_right, {
-	description: "Focus split to the right",
-	bindings: r#"window "l""#,
+	description: "Focus right",
+	short_desc: "Right",
+	bindings: r#"normal "ctrl-w f l""#,
 }, |_ctx| ActionResult::FocusRight);
 
 result_handler!(
@@ -161,13 +174,15 @@ result_handler!(
 );
 
 action!(buffer_next, {
-	description: "Switch to next buffer",
-	bindings: r#"window "n""#,
+	description: "Next buffer",
+	short_desc: "Next",
+	bindings: r#"normal "ctrl-w b n""#,
 }, |_ctx| ActionResult::BufferNext);
 
 action!(buffer_prev, {
-	description: "Switch to previous buffer",
-	bindings: r#"window "p""#,
+	description: "Previous buffer",
+	short_desc: "Previous",
+	bindings: r#"normal "ctrl-w b p""#,
 }, |_ctx| ActionResult::BufferPrev);
 
 result_handler!(
@@ -203,13 +218,15 @@ result_handler!(
 );
 
 action!(close_split, {
-	description: "Close current split",
-	bindings: r#"window "q" "c""#,
+	description: "Close split",
+	short_desc: "Close",
+	bindings: r#"normal "ctrl-w q""#,
 }, |_ctx| ActionResult::CloseSplit);
 
 action!(close_other_buffers, {
-	description: "Close all other buffers",
-	bindings: r#"window "o""#,
+	description: "Close other buffers",
+	short_desc: "Others",
+	bindings: r#"normal "ctrl-w c o""#,
 }, |_ctx| ActionResult::CloseOtherBuffers);
 
 result_handler!(

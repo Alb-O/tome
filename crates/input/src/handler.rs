@@ -57,7 +57,6 @@ impl InputHandler {
 		match &self.mode {
 			Mode::Normal => "NORMAL",
 			Mode::Insert => "INSERT",
-			Mode::Window => "WINDOW",
 			Mode::PendingAction(kind) => match kind {
 				PendingKind::FindChar { .. } | PendingKind::FindCharReverse { .. } => "FIND",
 				PendingKind::ReplaceChar => "REPLACE",
@@ -129,7 +128,6 @@ impl InputHandler {
 		match &self.mode {
 			Mode::Normal => self.handle_mode_key(key, BindingMode::Normal, registry),
 			Mode::Insert => self.handle_insert_key(key),
-			Mode::Window => self.handle_mode_key(key, BindingMode::Window, registry),
 			Mode::PendingAction(kind) => {
 				let kind = *kind;
 				self.handle_pending_action_key(key, kind)

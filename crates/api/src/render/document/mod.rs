@@ -514,6 +514,7 @@ impl Editor {
 	/// Renders the which-key HUD when there are pending keys.
 	fn render_whichkey_hud(&self, frame: &mut evildoer_tui::Frame, doc_area: Rect) {
 		use crate::buffer::BufferView;
+		use evildoer_core::keymap_registry::ContinuationKind;
 		use evildoer_core::get_keymap_registry;
 		use evildoer_registry::{BindingMode, find_prefix};
 		use evildoer_tui::widgets::keytree::{KeyTree, KeyTreeNode};
@@ -529,32 +530,51 @@ impl Editor {
 
 		let binding_mode = match self.buffer().input.mode() {
 			evildoer_base::Mode::Normal => BindingMode::Normal,
-			evildoer_base::Mode::Window => BindingMode::Window,
 			_ => return,
 		};
 
-		let continuations = get_keymap_registry().continuations_at(binding_mode, pending_keys);
+		let continuations = get_keymap_registry().continuations_with_kind(binding_mode, pending_keys);
 		if continuations.is_empty() {
 			return;
 		}
 
 		let root: String = pending_keys.iter().map(|k| format!("{k} ")).collect();
-		let prefix_key: String = pending_keys.iter().map(|k| format!("{k}")).collect();
+		let prefix_key: String = pending_keys
+			.iter()
+			.map(|k| format!("{k}"))
+			.collect::<Vec<_>>()
+			.join(" ");
 		let prefix_desc = find_prefix(binding_mode, &prefix_key).map(|p| p.description);
 
 		let children: Vec<KeyTreeNode<'_>> = continuations
 			.iter()
-			.map(|(node, entry)| {
-				let key = format!("{node}");
-				let desc = entry.map_or("...", |e| {
-					if !e.short_desc.is_empty() {
-						e.short_desc
-					} else if !e.description.is_empty() {
-						e.description
-					} else {
-						e.action_name
+			.map(|cont| {
+				let key = format!("{}", cont.key);
+				let desc = match cont.kind {
+					ContinuationKind::Branch => {
+						let sub_prefix = if prefix_key.is_empty() {
+							key.clone()
+						} else {
+							format!("{prefix_key} {key}")
+						};
+						if let Some(sub_desc) = find_prefix(binding_mode, &sub_prefix) {
+							format!("{}...", sub_desc.description)
+						} else {
+							"...".to_string()
+						}
 					}
-				});
+					ContinuationKind::Leaf => {
+						cont.value.map_or("...".to_string(), |e| {
+							if !e.short_desc.is_empty() {
+								e.short_desc.to_string()
+							} else if !e.description.is_empty() {
+								e.description.to_string()
+							} else {
+								e.action_name.to_string()
+							}
+						})
+					}
+				};
 				KeyTreeNode::new(key, desc)
 			})
 			.collect();

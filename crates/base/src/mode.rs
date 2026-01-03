@@ -1,4 +1,3 @@
-//!
 //! Editor mode state.
 
 use crate::PendingKind;
@@ -11,8 +10,6 @@ pub enum Mode {
 	Normal,
 	/// Insert mode for text input.
 	Insert,
-	/// Window/split management mode (Ctrl+w prefix).
-	Window,
 	/// Waiting for character input to complete an action.
 	PendingAction(PendingKind),
 }
@@ -23,7 +20,6 @@ impl Mode {
 		match self {
 			Mode::Normal => "normal",
 			Mode::Insert => "insert",
-			Mode::Window => "window",
 			Mode::PendingAction(_) => "pending",
 		}
 	}

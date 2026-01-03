@@ -118,16 +118,7 @@ impl Editor {
 	/// Returns the current editing mode (Normal, Insert, Visual, etc.).
 	pub fn mode(&self) -> Mode {
 		if self.is_panel_focused() {
-			// Check if we're in window mode (using first buffer's input handler)
-			if let Some(first_buffer_id) = self.layout.first_buffer()
-				&& let Some(buffer) = self.buffers.get_buffer(first_buffer_id)
-			{
-				let mode = buffer.input.mode();
-				if matches!(mode, Mode::Window) {
-					return mode;
-				}
-			}
-			Mode::Normal // Panels show as Normal mode
+			Mode::Normal
 		} else {
 			self.buffer().input.mode()
 		}
@@ -136,13 +127,6 @@ impl Editor {
 	/// Returns the display name for the current mode.
 	pub fn mode_name(&self) -> &'static str {
 		if let Some(panel) = self.focused_panel_def() {
-			if panel.supports_window_mode
-				&& let Some(first_buffer_id) = self.layout.first_buffer()
-				&& let Some(buffer) = self.buffers.get_buffer(first_buffer_id)
-				&& matches!(buffer.input.mode(), Mode::Window)
-			{
-				return buffer.input.mode_name();
-			}
 			return panel.mode_name;
 		}
 		self.buffer().input.mode_name()

@@ -168,12 +168,13 @@ macro_rules! result_handler {
 
 /// Registers a key sequence prefix with its description for the which-key HUD.
 ///
+/// Multi-key prefixes require an explicit identifier via the `as` syntax.
+///
 /// # Example
 ///
 /// ```ignore
 /// key_prefix!(normal "g" => "Goto");
-/// key_prefix!(normal "z" => "View");
-/// key_prefix!(window "s" => "Split");
+/// key_prefix!(normal "ctrl-w f" as ctrl_w_f => "Focus");
 /// ```
 #[macro_export]
 macro_rules! key_prefix {
@@ -182,6 +183,17 @@ macro_rules! key_prefix {
 			#[allow(non_upper_case_globals)]
 			#[linkme::distributed_slice($crate::KEY_PREFIXES)]
 			static [<KEY_PREFIX_ $mode:upper _ $keys>]: $crate::KeyPrefixDef = $crate::KeyPrefixDef {
+				mode: $crate::BindingMode::[<$mode:camel>],
+				keys: $keys,
+				description: $desc,
+			};
+		}
+	};
+	($mode:ident $keys:literal as $id:ident => $desc:literal) => {
+		paste::paste! {
+			#[allow(non_upper_case_globals)]
+			#[linkme::distributed_slice($crate::KEY_PREFIXES)]
+			static [<KEY_PREFIX_ $mode:upper _ $id:upper>]: $crate::KeyPrefixDef = $crate::KeyPrefixDef {
 				mode: $crate::BindingMode::[<$mode:camel>],
 				keys: $keys,
 				description: $desc,

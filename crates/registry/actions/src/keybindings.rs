@@ -97,8 +97,6 @@ pub enum BindingMode {
 	Insert,
 	/// Match mode (m prefix).
 	Match,
-	/// Window mode (Ctrl+w prefix).
-	Window,
 	/// Space mode (space prefix).
 	Space,
 }
@@ -108,7 +106,6 @@ impl From<Mode> for BindingMode {
 		match mode {
 			Mode::Normal => BindingMode::Normal,
 			Mode::Insert => BindingMode::Insert,
-			Mode::Window => BindingMode::Window,
 			Mode::PendingAction(_) => BindingMode::Normal,
 		}
 	}

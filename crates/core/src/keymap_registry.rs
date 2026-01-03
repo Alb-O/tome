@@ -15,6 +15,8 @@ use evildoer_keymap::{MatchResult, Matcher};
 use evildoer_registry::actions::{BindingMode, KEYBINDINGS};
 use tracing::warn;
 
+pub use evildoer_keymap::{ContinuationEntry, ContinuationKind};
+
 use crate::ActionId;
 
 /// Binding entry storing action info and the key sequence.
@@ -148,6 +150,24 @@ impl KeymapRegistry {
 			return Vec::new();
 		};
 		matcher.continuations_at(prefix)
+	}
+
+	/// Returns continuations with classification (leaf vs branch).
+	///
+	/// Each continuation is classified as:
+	/// - `Leaf`: Terminal binding with no further children
+	/// - `Branch`: Sub-prefix with more bindings underneath
+	///
+	/// This enables which-key UIs to show "..." for branches that can be drilled into.
+	pub fn continuations_with_kind(
+		&self,
+		mode: BindingMode,
+		prefix: &[Node],
+	) -> Vec<ContinuationEntry<'_, BindingEntry>> {
+		let Some(matcher) = self.matchers.get(&mode) else {
+			return Vec::new();
+		};
+		matcher.continuations_with_kind(prefix)
 	}
 }
 
