@@ -7,7 +7,7 @@
 //! Bindings use hierarchical key sequences under `ctrl-w`:
 //! - `s h/v` - Split horizontal/vertical
 //! - `f h/j/k/l` - Focus directions
-//! - `b n/p` - Buffer navigation
+//! - `f n/p` - Buffer next/previous
 //! - `c c/o` - Close current/others
 
 use crate::editor_ctx::HandleOutcome;
@@ -148,13 +148,13 @@ result_handler!(
 action!(buffer_next, {
 	description: "Next buffer",
 	short_desc: "Next",
-	bindings: r#"normal "ctrl-w b n""#,
+	bindings: r#"normal "ctrl-w f n""#,
 }, |_ctx| ActionResult::BufferNext);
 
 action!(buffer_prev, {
 	description: "Previous buffer",
 	short_desc: "Previous",
-	bindings: r#"normal "ctrl-w b p""#,
+	bindings: r#"normal "ctrl-w f p""#,
 }, |_ctx| ActionResult::BufferPrev);
 
 result_handler!(

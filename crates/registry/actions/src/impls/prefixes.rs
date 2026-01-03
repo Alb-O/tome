@@ -10,5 +10,4 @@ key_prefix!(normal "z" => "View");
 key_prefix!(normal "ctrl-w" => "Window");
 key_prefix!(normal "ctrl-w s" as ctrl_w_s => "Split");
 key_prefix!(normal "ctrl-w f" as ctrl_w_f => "Focus");
-key_prefix!(normal "ctrl-w b" as ctrl_w_b => "Buffer");
 key_prefix!(normal "ctrl-w c" as ctrl_w_c => "Close");
