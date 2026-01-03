@@ -67,12 +67,19 @@ pub const ROUNDED_SYMBOLS: TreeSymbols<'static> = TreeSymbols {
 /// Displays a root key with child continuations as a tree.
 #[derive(Debug, Clone, Default)]
 pub struct KeyTree<'a> {
+	/// The root key label (e.g., the pressed prefix).
 	root: Cow<'a, str>,
+	/// Child nodes representing available continuations.
 	children: Vec<KeyTreeNode<'a>>,
+	/// Symbols used for tree connectors.
 	symbols: TreeSymbols<'a>,
+	/// Style for the root key.
 	root_style: Style,
+	/// Style for child key labels.
 	key_style: Style,
+	/// Style for descriptions.
 	desc_style: Style,
+	/// Style for tree connector lines.
 	line_style: Style,
 }
 

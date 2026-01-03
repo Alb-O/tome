@@ -67,8 +67,8 @@ macro_rules! motion {
 				[<motion_handler_ $name>],
 			);
 
+			#[doc = concat!("Typed handle for the `", stringify!($name), "` motion.")]
 			#[allow(non_upper_case_globals)]
-			#[allow(dead_code)]
 			pub const $name: $crate::MotionKey = $crate::MotionKey::new(&[<MOTION_ $name>]);
 		}
 	};

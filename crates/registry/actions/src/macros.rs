@@ -135,8 +135,8 @@ macro_rules! action {
 				flags: $crate::__opt!($({$flags})?, $crate::flags::NONE),
 			};
 
+			#[doc = concat!("Typed handle for the `", stringify!($name), "` action.")]
 			#[allow(non_upper_case_globals)]
-			#[allow(dead_code)]
 			pub const $name: $crate::ActionKey = $crate::ActionKey::new(&[<ACTION_ $name>]);
 		}
 	};

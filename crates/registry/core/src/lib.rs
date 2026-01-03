@@ -72,16 +72,19 @@ impl<T: 'static> Clone for Key<T> {
 }
 
 impl<T> Key<T> {
+	/// Creates a new typed handle from a static reference.
 	pub const fn new(def: &'static T) -> Self {
 		Self(def)
 	}
 
+	/// Returns the underlying definition.
 	pub const fn def(self) -> &'static T {
 		self.0
 	}
 }
 
 impl<T: RegistryMetadata> Key<T> {
+	/// Returns the name of the referenced definition.
 	pub fn name(self) -> &'static str {
 		self.0.name()
 	}

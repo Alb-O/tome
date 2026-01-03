@@ -327,6 +327,7 @@ pub fn define_events(input: TokenStream) -> TokenStream {
 		}
 
 		impl HookEvent {
+			/// Returns the string identifier for this event type.
 			pub fn as_str(&self) -> &'static str {
 				match self {
 					#(#event_str_arms),*

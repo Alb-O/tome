@@ -36,8 +36,8 @@ macro_rules! panel_id {
 				$crate::__opt!($({$source})?, $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME"))),
 			);
 
+			#[doc = concat!("Typed handle for the `", stringify!($name), "` panel.")]
 			#[allow(non_upper_case_globals)]
-			#[allow(dead_code)]
 			pub const $name: $crate::PanelKey = $crate::PanelKey::new(&[<PANEL_ID_ $name:upper>]);
 		}
 	};
