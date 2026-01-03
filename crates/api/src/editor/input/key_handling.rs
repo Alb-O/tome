@@ -31,7 +31,7 @@ impl Editor {
 				let quit = if let Some(action) = find_action_by_id(*id) {
 					self.execute_action(action.name, *count, *extend, *register)
 				} else {
-					self.notify("error", format!("Unknown action ID: {}", id));
+					self.show_notification(evildoer_registry_notifications::keys::unknown_action::call(&id.to_string()));
 					false
 				};
 				ActionDispatch::Executed(quit)
@@ -52,7 +52,7 @@ impl Editor {
 						*char_arg,
 					)
 				} else {
-					self.notify("error", format!("Unknown action ID: {}", id));
+					self.show_notification(evildoer_registry_notifications::keys::unknown_action::call(&id.to_string()));
 					false
 				};
 				ActionDispatch::Executed(quit)

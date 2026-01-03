@@ -1,3 +1,4 @@
+use evildoer_registry_notifications::keys;
 use futures::future::LocalBoxFuture;
 
 use crate::{CommandContext, CommandError, CommandOutcome, command};
@@ -13,10 +14,7 @@ pub fn test_notify<'a>(
 	ctx: &'a mut CommandContext<'a>,
 ) -> LocalBoxFuture<'a, Result<CommandOutcome, CommandError>> {
 	Box::pin(async move {
-		ctx.editor.notify(
-			"warn",
-			"This is a test notification via distributed slices!",
-		);
+		ctx.emit(keys::warn::call("This is a test notification via typed keys!"));
 		Ok(CommandOutcome::Ok)
 	})
 }

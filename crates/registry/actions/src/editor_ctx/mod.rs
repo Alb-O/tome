@@ -7,7 +7,7 @@
 //!
 //! The editor's capabilities are split into fine-grained traits:
 //!
-//! - **Required**: [`CursorAccess`], [`SelectionAccess`], [`ModeAccess`], [`MessageAccess`]
+//! - **Required**: [`CursorAccess`], [`SelectionAccess`], [`ModeAccess`], [`NotificationAccess`]
 //! - **Optional**: [`SearchAccess`], [`UndoAccess`], [`EditAccess`], [`SplitOps`],
 //!   [`FocusOps`], [`ViewportAccess`], etc.
 //!
@@ -64,13 +64,13 @@ pub struct EditorContext<'a> {
 	inner: &'a mut dyn EditorCapabilities,
 }
 
-impl<'a> MessageAccess for EditorContext<'a> {
-	fn notify(&mut self, type_id: &str, msg: &str) {
-		self.inner.notify(type_id, msg);
+impl<'a> NotificationAccess for EditorContext<'a> {
+	fn emit(&mut self, notification: evildoer_registry_notifications::Notification) {
+		self.inner.emit(notification);
 	}
 
-	fn clear_message(&mut self) {
-		self.inner.clear_message();
+	fn clear_notifications(&mut self) {
+		self.inner.clear_notifications();
 	}
 }
 
@@ -181,9 +181,17 @@ impl<'a> EditorContext<'a> {
 		self.inner.is_readonly()
 	}
 
-	/// Displays a notification message.
-	pub fn notify(&mut self, type_id: &str, msg: &str) {
-		self.inner.notify(type_id, msg);
+	/// Emits a type-safe notification.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// use evildoer_registry_notifications::keys;
+	/// ctx.emit(keys::buffer_readonly);
+	/// ctx.emit(keys::yanked_chars::call(42));
+	/// ```
+	pub fn emit(&mut self, notification: impl Into<evildoer_registry_notifications::Notification>) {
+		self.inner.emit(notification.into());
 	}
 
 	/// Checks if a specific capability is available.
@@ -212,7 +220,7 @@ impl<'a> EditorContext<'a> {
 /// Core capabilities that all editors must provide for result handling.
 ///
 /// Combines required capability traits ([`CursorAccess`], [`SelectionAccess`],
-/// [`ModeAccess`], [`MessageAccess`]) and provides optional accessors for
+/// [`ModeAccess`], [`NotificationAccess`]) and provides optional accessors for
 /// extended features. See module docs for why [`TextAccess`] is not required.
 ///
 /// # Implementing
@@ -224,7 +232,7 @@ impl<'a> EditorContext<'a> {
 ///     }
 /// }
 /// ```
-pub trait EditorCapabilities: CursorAccess + SelectionAccess + ModeAccess + MessageAccess {
+pub trait EditorCapabilities: CursorAccess + SelectionAccess + ModeAccess + NotificationAccess {
 	/// Access to search operations (optional).
 	fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		None

@@ -10,9 +10,10 @@ use evildoer_base::range::CharIdx;
 use evildoer_base::{Mode, Selection};
 use evildoer_core::editor_ctx::{
 	CommandQueueAccess, CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, FocusOps,
-	JumpAccess, MacroAccess, MessageAccess, ModeAccess, SearchAccess, SelectionAccess, SplitOps,
-	ThemeAccess, UndoAccess, ViewportAccess,
+	JumpAccess, MacroAccess, ModeAccess, NotificationAccess, SearchAccess, SelectionAccess,
+	SplitOps, ThemeAccess, UndoAccess, ViewportAccess,
 };
+use evildoer_registry_notifications::{Notification, keys};
 use evildoer_registry::EditAction;
 use evildoer_registry::commands::{CommandEditorOps, CommandError};
 
@@ -54,19 +55,21 @@ impl ModeAccess for Editor {
 
 	fn set_mode(&mut self, mode: Mode) {
 		if matches!(mode, Mode::Insert) && self.buffer().is_readonly() {
-			self.notify("warning", "Buffer is read-only");
+			NotificationAccess::emit(self, keys::buffer_readonly.into());
 			return;
 		}
 		self.buffer_mut().input.set_mode(mode);
 	}
 }
 
-impl MessageAccess for Editor {
-	fn notify(&mut self, type_id: &str, msg: &str) {
-		self.notify(type_id, msg);
+impl NotificationAccess for Editor {
+	fn emit(&mut self, notification: Notification) {
+		self.show_notification(notification);
 	}
 
-	fn clear_message(&mut self) {}
+	fn clear_notifications(&mut self) {
+		self.clear_all_notifications();
+	}
 }
 
 impl SearchAccess for Editor {
@@ -128,11 +131,13 @@ impl ThemeAccess for Editor {
 }
 
 impl CommandEditorOps for Editor {
-	fn notify(&mut self, type_id: &str, msg: &str) {
-		self.notify(type_id, msg);
+	fn emit(&mut self, notification: Notification) {
+		self.show_notification(notification);
 	}
 
-	fn clear_message(&mut self) {}
+	fn clear_notifications(&mut self) {
+		self.clear_all_notifications();
+	}
 
 	fn is_modified(&self) -> bool {
 		FileOpsAccess::is_modified(self)

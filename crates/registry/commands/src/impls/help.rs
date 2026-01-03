@@ -1,3 +1,4 @@
+use evildoer_registry_notifications::keys;
 use futures::future::LocalBoxFuture;
 
 use crate::{CommandContext, CommandError, CommandOutcome, all_commands, command, find_command};
@@ -24,7 +25,7 @@ fn cmd_help<'a>(
 						cmd.required_caps.iter().map(|c| format!("{c:?}")).collect();
 					out.push(format!("Required Capabilities: {}", caps.join(", ")));
 				}
-				ctx.info(&out.join("\n"));
+				ctx.emit(keys::help_text::call(out.join("\n")));
 				return Ok(CommandOutcome::Ok);
 			} else {
 				return Err(CommandError::NotFound(cmd_name.to_string()));
@@ -45,7 +46,7 @@ fn cmd_help<'a>(
 				format!(":{}{} - {}", c.name, aliases, c.description)
 			})
 			.collect();
-		ctx.info(&help_text.join(" | "));
+		ctx.emit(keys::help_text::call(help_text.join(" | ")));
 		Ok(CommandOutcome::Ok)
 	})
 }

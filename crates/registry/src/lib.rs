@@ -24,8 +24,8 @@
 // Re-export commonly used items at the crate root for convenience
 pub use actions::editor_ctx::{
 	CommandQueueAccess, CursorAccess, EditAccess, EditorCapabilities, EditorContext, EditorOps,
-	FileOpsAccess, FocusOps, HandleOutcome, JumpAccess, MacroAccess, MessageAccess, ResultHandler,
-	SearchAccess, SelectionAccess, SplitOps, TextAccess, ThemeAccess, UndoAccess,
+	FileOpsAccess, FocusOps, HandleOutcome, JumpAccess, MacroAccess, NotificationAccess,
+	ResultHandler, SearchAccess, SelectionAccess, SplitOps, TextAccess, ThemeAccess, UndoAccess,
 };
 pub use actions::{
 	ACTIONS, ActionArgs, ActionContext, ActionDef, ActionHandler, ActionMode, ActionResult,
@@ -58,8 +58,8 @@ pub use hooks::{
 pub use menus::{MENU_GROUPS, MENU_ITEMS, MenuGroupDef, MenuItemDef, menu_group, menu_item};
 pub use motions::{Capability, MOTIONS, MotionDef, MotionHandler, flags, motion, movement};
 pub use notifications::{
-	Anchor, Animation, AnimationPhase, AutoDismiss, Level, NOTIFICATION_TYPES, NotificationError,
-	NotificationTypeDef, Overflow, SizeConstraint, SlideDirection, Timing, find_notification_type,
+	AutoDismiss, IntoNotification, Level, NOTIFICATIONS, Notification, NotificationDef,
+	NotificationKey, keys as notification_keys,
 };
 pub use statusline::{
 	RenderedSegment, STATUSLINE_SEGMENTS, SegmentPosition, SegmentStyle, StatuslineContext,

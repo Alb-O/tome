@@ -1,17 +1,34 @@
 //! Notification registry
 //!
-//! Defines notification types and compile-time registrations.
+//! Type-safe notification system with compile-time checked notification keys.
+//!
+//! # Usage
+//!
+//! ```ignore
+//! use evildoer_registry_notifications::keys;
+//!
+//! // Static message notifications
+//! ctx.emit(keys::buffer_readonly);
+//!
+//! // Parameterized notifications
+//! ctx.emit(keys::yanked_chars::call(42));
+//! ctx.emit(keys::file_saved::call(&path));
+//! ```
 
 use std::time::Duration;
 
 use linkme::distributed_slice;
-use thiserror::Error;
 
-mod impls;
+pub use evildoer_registry_core::{Key, RegistryMetadata, RegistrySource, impl_registry_metadata};
 
-pub use evildoer_registry_core::{RegistryMetadata, RegistrySource, impl_registry_metadata};
+mod catalog;
 
-/// Severity level of a notification.
+/// Re-export notification keys for convenient imports.
+pub mod keys {
+	pub use crate::catalog::keys::*;
+}
+
+/// Severity level for notifications.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Level {
 	/// Informational message (default).
@@ -23,44 +40,8 @@ pub enum Level {
 	Error,
 	/// Debug message.
 	Debug,
-	/// Trace message.
-	Trace,
-}
-
-/// Screen position from which notifications expand.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum Anchor {
-	/// Top-left corner of the screen.
-	TopLeft,
-	/// Top-center of the screen.
-	TopCenter,
-	/// Top-right corner of the screen.
-	TopRight,
-	/// Middle-left edge of the screen.
-	MiddleLeft,
-	/// Center of the screen.
-	MiddleCenter,
-	/// Middle-right edge of the screen.
-	MiddleRight,
-	/// Bottom-left corner of the screen.
-	BottomLeft,
-	/// Bottom-center of the screen.
-	BottomCenter,
-	/// Default anchor position. Notifications expand from bottom-right.
-	#[default]
-	BottomRight,
-}
-
-/// Animation style for notification entry and exit.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum Animation {
-	/// Slide animation from a direction.
-	Slide,
-	/// Expand/collapse animation.
-	ExpandCollapse,
-	/// Fade animation (default).
-	#[default]
-	Fade,
+	/// Success message.
+	Success,
 }
 
 /// Controls automatic dismissal of notifications.
@@ -72,133 +53,151 @@ pub enum AutoDismiss {
 	After(Duration),
 }
 
+impl AutoDismiss {
+	/// Default auto-dismiss duration (4 seconds).
+	pub const DEFAULT: Self = Self::After(Duration::from_secs(4));
+}
+
 impl Default for AutoDismiss {
 	fn default() -> Self {
-		Self::After(Duration::from_secs(4))
+		Self::DEFAULT
 	}
 }
 
-/// Animation duration specification.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Timing {
-	/// Fixed duration specified by user.
-	Fixed(Duration),
-	/// Automatically calculated duration.
-	#[default]
-	Auto,
-}
-
-/// Errors specific to the notification system.
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum NotificationError {
-	/// Invalid configuration provided.
-	#[error("Invalid configuration: {0}")]
-	InvalidConfig(String),
-	/// Content exceeds size limits.
-	#[error("Content too large: {0} chars exceeds limit of {1} chars")]
-	ContentTooLarge(usize, usize),
-}
-
-/// Animation phase tracking for notification lifecycle.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum AnimationPhase {
-	/// Notification is queued but not yet visible.
-	#[default]
-	Pending,
-	/// Sliding into view.
-	SlidingIn,
-	/// Expanding from anchor point.
-	Expanding,
-	/// Fading into visibility.
-	FadingIn,
-	/// Fully visible and waiting.
-	Dwelling,
-	/// Sliding out of view.
-	SlidingOut,
-	/// Collapsing back to anchor point.
-	Collapsing,
-	/// Fading out of visibility.
-	FadingOut,
-	/// Animation complete, ready for removal.
-	Finished,
-}
-
-/// Behavior when notification limit is reached.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum Overflow {
-	/// Remove the oldest notification to make room.
-	#[default]
-	DiscardOldest,
-	/// Reject new notifications when at capacity.
-	DiscardNewest,
-}
-
-/// Constraint on notification dimensions.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum SizeConstraint {
-	/// Fixed size in terminal cells.
-	Absolute(u16),
-	/// Percentage of available space (0.0 to 1.0).
-	Percentage(f32),
-}
-
-/// Direction from which a notification slides in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-#[non_exhaustive]
-pub enum SlideDirection {
-	/// Infer direction from anchor position.
-	#[default]
-	Default,
-	/// Slide from the top edge.
-	FromTop,
-	/// Slide from the bottom edge.
-	FromBottom,
-	/// Slide from the left edge.
-	FromLeft,
-	/// Slide from the right edge.
-	FromRight,
-	/// Slide from top-left corner.
-	FromTopLeft,
-	/// Slide from top-right corner.
-	FromTopRight,
-	/// Slide from bottom-left corner.
-	FromBottomLeft,
-	/// Slide from bottom-right corner.
-	FromBottomRight,
-}
-
-/// Definition of a notification type with default styling and behavior.
-pub struct NotificationTypeDef {
-	/// Unique identifier.
+/// Static notification definition registered in the distributed slice.
+///
+/// This contains the metadata for a notification type, but not the message
+/// content itself. Messages are provided at emit time via [`Notification`].
+#[derive(Debug)]
+pub struct NotificationDef {
+	/// Unique identifier for this notification type.
 	pub id: &'static str,
-	/// Display name.
-	pub name: &'static str,
 	/// Severity level.
 	pub level: Level,
-	/// Optional icon glyph.
-	pub icon: Option<&'static str>,
-	/// Semantic category (e.g., "save", "error", "lsp").
-	pub semantic: &'static str,
 	/// Auto-dismiss behavior.
 	pub auto_dismiss: AutoDismiss,
-	/// Animation style.
-	pub animation: Animation,
-	/// Animation timing phases: (In, Dwell, Out)
-	pub timing: (Timing, Timing, Timing),
-	/// Registration priority (lower = earlier).
-	pub priority: i16,
-	/// Origin of the registration.
+	/// Where this notification was defined.
 	pub source: RegistrySource,
 }
 
-/// Registry of all notification type definitions.
-#[distributed_slice]
-pub static NOTIFICATION_TYPES: [NotificationTypeDef];
-
-/// Finds a notification type by name.
-pub fn find_notification_type(name: &str) -> Option<&'static NotificationTypeDef> {
-	NOTIFICATION_TYPES.iter().find(|t| t.name == name)
+impl NotificationDef {
+	/// Creates a new notification definition.
+	pub const fn new(
+		id: &'static str,
+		level: Level,
+		auto_dismiss: AutoDismiss,
+		source: RegistrySource,
+	) -> Self {
+		Self {
+			id,
+			level,
+			auto_dismiss,
+			source,
+		}
+	}
 }
 
-impl_registry_metadata!(NotificationTypeDef);
+/// Registry of all notification definitions.
+#[distributed_slice]
+pub static NOTIFICATIONS: [NotificationDef];
+
+/// Runtime notification instance ready to display.
+///
+/// Created by emitting a [`NotificationKey`] or calling a parameterized
+/// notification builder.
+#[derive(Debug, Clone)]
+pub struct Notification {
+	/// Reference to the static definition.
+	pub def: &'static NotificationDef,
+	/// The formatted message content.
+	pub message: String,
+}
+
+impl Notification {
+	/// Creates a new notification instance.
+	pub fn new(def: &'static NotificationDef, message: impl Into<String>) -> Self {
+		Self {
+			def,
+			message: message.into(),
+		}
+	}
+
+	/// Returns the notification level.
+	pub fn level(&self) -> Level {
+		self.def.level
+	}
+
+	/// Returns the auto-dismiss behavior.
+	pub fn auto_dismiss(&self) -> AutoDismiss {
+		self.def.auto_dismiss
+	}
+}
+
+/// Typed key referencing a notification definition with a static message.
+///
+/// Use `.emit()` to create a [`Notification`] instance, or pass directly
+/// to `ctx.emit()` which will call `into_notification()` automatically.
+#[derive(Clone, Copy)]
+pub struct NotificationKey {
+	def: &'static NotificationDef,
+	message: &'static str,
+}
+
+impl NotificationKey {
+	/// Creates a new notification key with a static message.
+	pub const fn new(def: &'static NotificationDef, message: &'static str) -> Self {
+		Self { def, message }
+	}
+
+	/// Creates a notification instance from this key.
+	pub fn emit(self) -> Notification {
+		Notification::new(self.def, self.message)
+	}
+
+	/// Returns the notification level.
+	pub fn level(self) -> Level {
+		self.def.level
+	}
+}
+
+impl core::fmt::Debug for NotificationKey {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.debug_struct("NotificationKey")
+			.field("id", &self.def.id)
+			.field("message", &self.message)
+			.finish()
+	}
+}
+
+/// Trait for anything that can become a [`Notification`].
+///
+/// Implemented by:
+/// - [`Notification`] (identity)
+/// - [`NotificationKey`] (static message)
+///
+/// This enables `ctx.emit()` to accept both pre-built notifications
+/// and notification keys directly.
+pub trait IntoNotification {
+	/// Converts this value into a notification.
+	fn into_notification(self) -> Notification;
+}
+
+impl IntoNotification for Notification {
+	fn into_notification(self) -> Notification {
+		self
+	}
+}
+
+impl IntoNotification for NotificationKey {
+	fn into_notification(self) -> Notification {
+		self.emit()
+	}
+}
+
+impl From<NotificationKey> for Notification {
+	fn from(key: NotificationKey) -> Self {
+		key.emit()
+	}
+}
+
+

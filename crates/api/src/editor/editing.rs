@@ -2,6 +2,7 @@
 //!
 //! Insert, delete, yank, paste, and transaction application.
 
+use evildoer_registry_notifications::keys;
 use evildoer_base::Transaction;
 
 use super::Editor;
@@ -9,7 +10,7 @@ use super::Editor;
 impl Editor {
 	pub(crate) fn guard_readonly(&mut self) -> bool {
 		if self.buffer().is_readonly() {
-			self.notify("warning", "Buffer is read-only");
+			self.notify(keys::buffer_readonly);
 			return false;
 		}
 		true
@@ -51,7 +52,7 @@ impl Editor {
 		};
 
 		if !applied {
-			self.notify("warning", "Buffer is read-only");
+			self.notify(keys::buffer_readonly);
 			return;
 		}
 
@@ -63,7 +64,7 @@ impl Editor {
 	pub fn yank_selection(&mut self) {
 		if let Some((text, count)) = self.buffer_mut().yank_selection() {
 			self.registers.yank = text;
-			self.notify("info", format!("Yanked {} chars", count));
+			self.notify(keys::yanked_chars::call(count));
 		}
 	}
 
@@ -106,7 +107,7 @@ impl Editor {
 		};
 
 		if !applied {
-			self.notify("warning", "Buffer is read-only");
+			self.notify(keys::buffer_readonly);
 			return;
 		}
 
@@ -153,7 +154,7 @@ impl Editor {
 		};
 
 		if !applied {
-			self.notify("warning", "Buffer is read-only");
+			self.notify(keys::buffer_readonly);
 			return;
 		}
 
@@ -199,7 +200,7 @@ impl Editor {
 		};
 
 		if !applied {
-			self.notify("warning", "Buffer is read-only");
+			self.notify(keys::buffer_readonly);
 			return;
 		}
 
@@ -216,7 +217,7 @@ impl Editor {
 			.expect("focused buffer must exist")
 			.apply_transaction_with_syntax(tx, &self.language_loader);
 		if !applied {
-			self.notify("warning", "Buffer is read-only");
+			self.notify(keys::buffer_readonly);
 			return;
 		}
 		self.dirty_buffers.insert(buffer_id);

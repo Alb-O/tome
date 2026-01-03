@@ -51,7 +51,7 @@ impl Editor {
 		let action = match find_action(name) {
 			Some(a) => a,
 			None => {
-				self.notify("error", format!("Unknown action: {}", name));
+				self.show_notification(evildoer_registry_notifications::keys::unknown_action::call(name));
 				return false;
 			}
 		};
@@ -60,7 +60,7 @@ impl Editor {
 		{
 			let mut e_ctx = EditorContext::new(self);
 			if let Err(e) = e_ctx.check_all_capabilities(action.required_caps) {
-				self.notify("error", e.to_string());
+				self.show_notification(evildoer_registry_notifications::keys::action_error::call(e));
 				return false;
 			}
 		}
@@ -117,7 +117,7 @@ impl Editor {
 		let action = match find_action(name) {
 			Some(a) => a,
 			None => {
-				self.notify("error", format!("Unknown action: {}", name));
+				self.show_notification(evildoer_registry_notifications::keys::unknown_action::call(name));
 				return false;
 			}
 		};
@@ -126,7 +126,7 @@ impl Editor {
 		{
 			let mut e_ctx = EditorContext::new(self);
 			if let Err(e) = e_ctx.check_all_capabilities(action.required_caps) {
-				self.notify("error", e.to_string());
+				self.show_notification(evildoer_registry_notifications::keys::action_error::call(e));
 				return false;
 			}
 		}

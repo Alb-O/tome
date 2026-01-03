@@ -1,3 +1,4 @@
+use evildoer_registry_notifications::keys;
 use futures::future::LocalBoxFuture;
 
 use crate::{CommandContext, CommandError, CommandOutcome, command};
@@ -12,7 +13,7 @@ fn cmd_buffer<'a>(
 		if ctx.args.is_empty() {
 			return Err(CommandError::MissingArgument("buffer name or number"));
 		}
-		ctx.warn(&format!("buffer {} - not yet implemented", ctx.args[0]));
+		ctx.emit(keys::not_implemented::call(&format!("buffer {}", ctx.args[0])));
 		Ok(CommandOutcome::Ok)
 	})
 }
@@ -28,7 +29,7 @@ fn cmd_buffer_next<'a>(
 	ctx: &'a mut CommandContext<'a>,
 ) -> LocalBoxFuture<'a, Result<CommandOutcome, CommandError>> {
 	Box::pin(async move {
-		ctx.warn("buffer-next - not yet implemented");
+		ctx.emit(keys::not_implemented::call("buffer-next"));
 		Ok(CommandOutcome::Ok)
 	})
 }
@@ -44,7 +45,7 @@ fn cmd_buffer_prev<'a>(
 	ctx: &'a mut CommandContext<'a>,
 ) -> LocalBoxFuture<'a, Result<CommandOutcome, CommandError>> {
 	Box::pin(async move {
-		ctx.warn("buffer-previous - not yet implemented");
+		ctx.emit(keys::not_implemented::call("buffer-previous"));
 		Ok(CommandOutcome::Ok)
 	})
 }
@@ -60,7 +61,7 @@ fn cmd_delete_buffer<'a>(
 	ctx: &'a mut CommandContext<'a>,
 ) -> LocalBoxFuture<'a, Result<CommandOutcome, CommandError>> {
 	Box::pin(async move {
-		ctx.warn("delete-buffer - not yet implemented");
+		ctx.emit(keys::not_implemented::call("delete-buffer"));
 		Ok(CommandOutcome::Ok)
 	})
 }
@@ -78,12 +79,11 @@ fn cmd_readonly<'a>(
 	Box::pin(async move {
 		let current = ctx.is_readonly();
 		ctx.set_readonly(!current);
-		let msg = if !current {
-			"Read-only enabled"
+		if !current {
+			ctx.emit(keys::readonly_enabled);
 		} else {
-			"Read-only disabled"
-		};
-		ctx.notify("info", msg);
+			ctx.emit(keys::readonly_disabled);
+		}
 		Ok(CommandOutcome::Ok)
 	})
 }

@@ -47,7 +47,7 @@ impl evildoer_core::editor_ctx::FileOpsAccess for Editor {
 				.map_err(|e| CommandError::Io(e.to_string()))?;
 
 			self.buffer_mut().set_modified(false);
-			self.notify("info", format!("Saved {}", path_owned.display()));
+			self.show_notification(evildoer_registry_notifications::keys::file_saved::call(&path_owned));
 
 			emit_hook(&HookContext::new(
 				HookEventData::BufferWrite { path: &path_owned },

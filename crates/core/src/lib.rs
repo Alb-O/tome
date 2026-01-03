@@ -21,7 +21,6 @@ pub mod index;
 pub mod keymap_registry;
 #[cfg(feature = "host")]
 pub mod movement;
-pub mod notifications;
 /// Terminal capability configuration.
 pub mod terminal_config;
 
@@ -125,8 +124,5 @@ pub use index::{
 pub use keymap_registry::{BindingEntry, KeymapRegistry, LookupResult, get_keymap_registry};
 #[cfg(feature = "host")]
 pub use movement::WordType;
-pub use notifications::{
-	NotifyDEBUGExt, NotifyERRORExt, NotifyINFOExt, NotifySUCCESSExt, NotifyWARNExt,
-};
 pub use terminal_config::{TerminalConfig, TerminalSequence};
 pub use theme::ThemeSource;

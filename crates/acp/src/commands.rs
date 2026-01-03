@@ -33,7 +33,7 @@ fn cmd_acp_start<'a>(
 		let editor = ctx.require_editor_mut();
 		if let Some(acp) = editor.extensions.get_mut::<AcpManager>() {
 			acp.start(cwd);
-			ctx.info("ACP agent starting...");
+			ctx.emit(evildoer_registry::notification_keys::acp_starting);
 			Ok(CommandOutcome::Ok)
 		} else {
 			Err(CommandError::Failed("ACP extension not loaded".to_string()))
@@ -54,7 +54,7 @@ fn cmd_acp_stop<'a>(
 		let editor = ctx.require_editor_mut();
 		if let Some(acp) = editor.extensions.get_mut::<AcpManager>() {
 			acp.stop();
-			ctx.info("ACP agent stopped");
+			ctx.emit(evildoer_registry::notification_keys::acp_stopped);
 			Ok(CommandOutcome::Ok)
 		} else {
 			Err(CommandError::Failed("ACP extension not loaded".to_string()))
@@ -101,7 +101,7 @@ fn cmd_acp_cancel<'a>(
 		let editor = ctx.require_editor_mut();
 		if let Some(acp) = editor.extensions.get_mut::<AcpManager>() {
 			acp.cancel();
-			ctx.info("ACP request cancelled");
+			ctx.emit(evildoer_registry::notification_keys::acp_cancelled);
 			Ok(CommandOutcome::Ok)
 		} else {
 			Err(CommandError::Failed("ACP extension not loaded".to_string()))
@@ -124,24 +124,24 @@ fn cmd_acp_model<'a>(
 		if let Some(acp) = editor.extensions.get_mut::<AcpManager>() {
 			if let Some(model_id) = args.first() {
 				acp.set_model(model_id.to_string());
-				ctx.info(&format!("Setting model to: {}", model_id));
+				ctx.emit(evildoer_registry::notification_keys::acp_model_set::call(model_id));
 				Ok(CommandOutcome::Ok)
 			} else {
 				// No argument - show current model and available models
 				let current = acp.current_model();
 				let available = acp.available_models();
 				if available.is_empty() {
-					ctx.info(&format!("Current model: {}", current));
+					ctx.emit(evildoer_registry::notification_keys::acp_model_info::call(format!("Current model: {}", current)));
 				} else {
 					let models: Vec<String> = available
 						.iter()
 						.map(|m| format!("  {} ({})", m.model_id, m.name))
 						.collect();
-					ctx.info(&format!(
+					ctx.emit(evildoer_registry::notification_keys::acp_model_info::call(format!(
 						"Current model: {}\nAvailable models:\n{}",
 						current,
 						models.join("\n")
-					));
+					)));
 				}
 				Ok(CommandOutcome::Ok)
 			}

@@ -12,7 +12,7 @@
 //! - [`SelectionAccess`] - Get/set selections
 //! - [`TextAccess`] - Read document content
 //! - [`ModeAccess`] - Get/set editor mode
-//! - [`MessageAccess`] - Display notifications
+//! - [`NotificationAccess`] - Display notifications (type-safe)
 //!
 //! # Optional Traits
 //!
@@ -32,6 +32,7 @@
 
 use evildoer_base::range::CharIdx;
 use evildoer_base::selection::Selection;
+use evildoer_registry_notifications::Notification;
 use ropey::RopeSlice;
 
 use crate::{EditAction, Mode};
@@ -84,18 +85,34 @@ pub trait ModeAccess {
 	fn set_mode(&mut self, mode: Mode);
 }
 
-/// Message display and notifications (required).
+/// Type-safe notification display (required).
 ///
-/// Provides a way to display messages to the user in the status bar or
-/// notification system.
-pub trait MessageAccess {
-	/// Displays a notification of the given type.
+/// Provides a way to display notifications to the user using typed keys.
+///
+/// # Example
+///
+/// ```ignore
+/// use evildoer_registry_notifications::keys;
+///
+/// // Static message notification
+/// ctx.emit(keys::buffer_readonly);
+///
+/// // Parameterized notification
+/// ctx.emit(keys::yanked_chars::call(42));
+/// ```
+pub trait NotificationAccess {
+	/// Emits a notification to the user.
 	///
-	/// Common `type_id` values: "info", "warning", "error", "success".
-	fn notify(&mut self, type_id: &str, msg: &str);
+	/// Accepts any type that can be converted into a [`Notification`]:
+	/// - [`NotificationKey`] - static message notifications (via `Into<Notification>`)
+	/// - [`Notification`] - pre-built notifications from parameterized builders
+	///
+	/// [`NotificationKey`]: evildoer_registry_notifications::NotificationKey
+	/// [`Notification`]: evildoer_registry_notifications::Notification
+	fn emit(&mut self, notification: Notification);
 
-	/// Clears the current status message.
-	fn clear_message(&mut self);
+	/// Clears all visible notifications.
+	fn clear_notifications(&mut self);
 }
 
 /// Search operations (optional).
@@ -282,4 +299,4 @@ pub trait CommandQueueAccess {
 }
 
 /// Convenience trait combining common capabilities for command handlers.
-pub trait EditorOps: MessageAccess + FileOpsAccess + ThemeAccess {}
+pub trait EditorOps: NotificationAccess + FileOpsAccess + ThemeAccess {}

@@ -1,5 +1,6 @@
 //! Editor-level undo/redo with multi-view selection sync.
 
+use evildoer_registry_notifications::keys;
 use std::collections::HashMap;
 
 use evildoer_base::Selection;
@@ -87,11 +88,11 @@ impl Editor {
 			.undo(current, &self.language_loader);
 
 		let Some(selections) = restored else {
-			self.notify("warn", "Nothing to undo");
+			self.notify(keys::nothing_to_undo);
 			return;
 		};
 		self.restore_sibling_selections(doc_id, &selections);
-		self.notify("info", "Undo");
+		self.notify(keys::undo);
 	}
 
 	/// Redoes the last undone change, restoring selections for all views of the document.
@@ -115,10 +116,10 @@ impl Editor {
 			.redo(current, &self.language_loader);
 
 		let Some(selections) = restored else {
-			self.notify("warn", "Nothing to redo");
+			self.notify(keys::nothing_to_redo);
 			return;
 		};
 		self.restore_sibling_selections(doc_id, &selections);
-		self.notify("info", "Redo");
+		self.notify(keys::redo);
 	}
 }

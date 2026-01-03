@@ -161,7 +161,7 @@ impl Editor {
 		let commands: Vec<_> = self.command_queue.drain().collect();
 		for cmd in commands {
 			let Some(command_def) = find_command(cmd.name) else {
-				self.notify("error", format!("Unknown command: {}", cmd.name));
+				self.show_notification(evildoer_registry_notifications::keys::unknown_command::call(cmd.name));
 				continue;
 			};
 
@@ -178,7 +178,7 @@ impl Editor {
 				Ok(CommandOutcome::Ok) => {}
 				Ok(CommandOutcome::Quit | CommandOutcome::ForceQuit) => return true,
 				Err(e) => {
-					self.notify("error", e.to_string());
+					self.show_notification(evildoer_registry_notifications::keys::command_error::call(&e.to_string()));
 				}
 			}
 		}

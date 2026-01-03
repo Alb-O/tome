@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 
+use evildoer_registry_notifications::keys;
 use futures::future::LocalBoxFuture;
 use {evildoer_registry_motions as motions, evildoer_registry_text_objects as text_objects};
 
@@ -300,9 +301,9 @@ fn cmd_registry_diag<'a>(
 		}
 
 		if has_collisions {
-			ctx.warn(&out.join("\n"));
+			ctx.emit(keys::diagnostic_warning::call(out.join("\n")));
 		} else {
-			ctx.info(&out.join("\n"));
+			ctx.emit(keys::diagnostic_output::call(out.join("\n")));
 		}
 		Ok(CommandOutcome::Ok)
 	})
@@ -315,7 +316,7 @@ fn cmd_registry_doctor<'a>(
 	Box::pin(async move {
 		let diag = diagnostics();
 		if diag.collisions.is_empty() {
-			ctx.info("All good! No collisions found.");
+			ctx.emit(keys::no_collisions);
 			return Ok(CommandOutcome::Ok);
 		}
 
@@ -357,7 +358,7 @@ fn cmd_registry_doctor<'a>(
 			}
 		}
 
-		ctx.warn(&out.join("\n"));
+		ctx.emit(keys::diagnostic_warning::call(out.join("\n")));
 		Ok(CommandOutcome::Ok)
 	})
 }

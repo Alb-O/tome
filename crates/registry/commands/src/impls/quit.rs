@@ -1,3 +1,4 @@
+use evildoer_registry_notifications::keys;
 use futures::future::LocalBoxFuture;
 
 use crate::{CommandContext, CommandError, CommandOutcome, command};
@@ -10,7 +11,7 @@ fn cmd_quit<'a>(
 ) -> LocalBoxFuture<'a, Result<CommandOutcome, CommandError>> {
 	Box::pin(async move {
 		if ctx.editor.is_modified() {
-			ctx.error("Buffer has unsaved changes (use :q! to force quit)");
+			ctx.emit(keys::unsaved_changes_force_quit);
 			return Ok(CommandOutcome::Ok);
 		}
 		Ok(CommandOutcome::Quit)

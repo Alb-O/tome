@@ -3,12 +3,11 @@
 use evildoer_base::Selection;
 use evildoer_base::range::Range;
 use evildoer_registry::actions::ScreenPosition;
+use evildoer_registry::notification_keys as keys;
 use evildoer_registry::{
 	ActionResult, HandleOutcome, HookContext, HookEventData, Mode, emit_sync as emit_hook_sync,
 	result_handler,
 };
-
-use crate::{NotifyERRORExt, NotifyINFOExt};
 
 result_handler!(RESULT_OK_HANDLERS, HANDLE_OK, "ok", |_, _, _| {
 	HandleOutcome::Handled
@@ -68,12 +67,12 @@ result_handler!(
 			return HandleOutcome::NotHandled;
 		};
 		let Some(viewport) = ctx.viewport() else {
-			ctx.error("Viewport info unavailable for screen motion");
+			ctx.emit(keys::viewport_unavailable);
 			return HandleOutcome::Handled;
 		};
 		let height = viewport.viewport_height();
 		if height == 0 {
-			ctx.error("Viewport height unavailable for screen motion");
+			ctx.emit(keys::viewport_height_unavailable);
 			return HandleOutcome::Handled;
 		}
 		let count = (*count).max(1);
@@ -87,7 +86,7 @@ result_handler!(
 		}
 
 		let Some(target) = viewport.viewport_row_to_doc_position(row) else {
-			ctx.error("Screen motion target is unavailable");
+			ctx.emit(keys::screen_motion_unavailable);
 			return HandleOutcome::Handled;
 		};
 
@@ -160,7 +159,7 @@ result_handler!(RESULT_QUIT_HANDLERS, HANDLE_QUIT, "quit", |_, _, _| {
 
 result_handler!(RESULT_ERROR_HANDLERS, HANDLE_ERROR, "error", |r, ctx, _| {
 	if let ActionResult::Error(msg) = r {
-		ctx.error(msg);
+		ctx.emit(keys::action_error::call(msg));
 	}
 	HandleOutcome::Handled
 });
@@ -171,7 +170,7 @@ result_handler!(
 	"pending",
 	|r, ctx, _| {
 		if let ActionResult::Pending(pending) = r {
-			ctx.info(&pending.prompt);
+			ctx.emit(keys::pending_prompt::call(&pending.prompt));
 			ctx.set_mode(Mode::PendingAction(pending.kind));
 		}
 		HandleOutcome::Handled

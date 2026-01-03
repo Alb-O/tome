@@ -1,5 +1,6 @@
 //! Theme command for switching editor color schemes.
 
+use evildoer_registry_notifications::keys;
 use futures::future::LocalBoxFuture;
 
 use crate::{CommandContext, CommandError, CommandOutcome, RegistrySource, command};
@@ -24,8 +25,7 @@ fn cmd_theme<'a>(
 			.first()
 			.ok_or(CommandError::MissingArgument("theme name"))?;
 		ctx.editor.set_theme(theme_name)?;
-		ctx.editor
-			.notify("info", &format!("Theme set to '{}'", theme_name));
+		ctx.emit(keys::theme_set::call(theme_name));
 		Ok(CommandOutcome::Ok)
 	})
 }

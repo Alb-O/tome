@@ -1,5 +1,6 @@
 use evildoer_base::Selection;
 use evildoer_core::movement;
+use evildoer_registry_notifications::keys;
 
 use super::Editor;
 
@@ -31,14 +32,14 @@ impl Editor {
 					}
 				}
 				Ok(None) => {
-					self.notify("warn", "Pattern not found");
+					self.notify(keys::pattern_not_found);
 				}
 				Err(e) => {
-					self.notify("error", format!("Regex error: {}", e));
+					self.notify(keys::regex_error::call(&e.to_string()));
 				}
 			}
 		} else {
-			self.notify("warn", "No search pattern");
+			self.notify(keys::no_search_pattern);
 		}
 		false
 	}
@@ -70,14 +71,14 @@ impl Editor {
 					}
 				}
 				Ok(None) => {
-					self.notify("warn", "Pattern not found");
+					self.notify(keys::pattern_not_found);
 				}
 				Err(e) => {
-					self.notify("error", format!("Regex error: {}", e));
+					self.notify(keys::regex_error::call(&e.to_string()));
 				}
 			}
 		} else {
-			self.notify("warn", "No search pattern");
+			self.notify(keys::no_search_pattern);
 		}
 		false
 	}
@@ -98,7 +99,7 @@ impl Editor {
 			self.buffer_mut()
 				.input
 				.set_last_search(pattern.clone(), false);
-			self.notify("info", format!("Search: {}", text));
+			self.notify(keys::search_info::call(&text));
 			let search_result = {
 				let buffer = self.buffer();
 				let doc = buffer.doc();
@@ -109,14 +110,14 @@ impl Editor {
 					self.buffer_mut().selection = Selection::single(range.min(), range.max());
 				}
 				Ok(None) => {
-					self.notify("warn", "No more matches");
+					self.notify(keys::no_more_matches);
 				}
 				Err(e) => {
-					self.notify("error", format!("Regex error: {}", e));
+					self.notify(keys::regex_error::call(&e.to_string()));
 				}
 			}
 		} else {
-			self.notify("warn", "No selection");
+			self.notify(keys::no_selection);
 		}
 		false
 	}
@@ -128,7 +129,7 @@ impl Editor {
 		let from = primary.min();
 		let to = primary.max();
 		if from >= to {
-			self.notify("warn", "No selection to search in");
+			self.notify(keys::no_selection_to_search);
 			return false;
 		}
 
@@ -145,13 +146,13 @@ impl Editor {
 					.collect();
 				let count = new_ranges.len();
 				self.buffer_mut().selection = Selection::from_vec(new_ranges, 0);
-				self.notify("info", format!("{} matches", count));
+				self.notify(keys::matches_count::call(count));
 			}
 			Ok(_) => {
-				self.notify("warn", "No matches found");
+				self.notify(keys::no_matches_found);
 			}
 			Err(e) => {
-				self.notify("error", format!("Regex error: {}", e));
+				self.notify(keys::regex_error::call(&e.to_string()));
 			}
 		}
 		false
@@ -164,7 +165,7 @@ impl Editor {
 		let from = primary.min();
 		let to = primary.max();
 		if from >= to {
-			self.notify("warn", "No selection to split");
+			self.notify(keys::no_selection_to_split);
 			return false;
 		}
 
@@ -190,16 +191,16 @@ impl Editor {
 				if !new_ranges.is_empty() {
 					let count = new_ranges.len();
 					self.buffer_mut().selection = Selection::from_vec(new_ranges, 0);
-					self.notify("info", format!("{} splits", count));
+					self.notify(keys::splits_count::call(count));
 				} else {
-					self.notify("warn", "Split produced no ranges");
+					self.notify(keys::split_no_ranges);
 				}
 			}
 			Ok(_) => {
-				self.notify("warn", "No matches found to split on");
+				self.notify(keys::no_matches_to_split);
 			}
 			Err(e) => {
-				self.notify("error", format!("Regex error: {}", e));
+				self.notify(keys::regex_error::call(&e.to_string()));
 			}
 		}
 		false
@@ -238,7 +239,7 @@ impl Editor {
 					}
 				}
 				Err(e) => {
-					self.notify("error", format!("Regex error: {}", e));
+					self.notify(keys::regex_error::call(&e.to_string()));
 					had_error = true;
 					break;
 				}
@@ -250,11 +251,11 @@ impl Editor {
 		}
 
 		if kept_ranges.is_empty() {
-			self.notify("warn", "No selections remain");
+			self.notify(keys::no_selections_remain);
 		} else {
 			let count = kept_ranges.len();
 			self.buffer_mut().selection = Selection::from_vec(kept_ranges, 0);
-			self.notify("info", format!("{} selections kept", count));
+			self.notify(keys::selections_kept::call(count));
 		}
 		false
 	}

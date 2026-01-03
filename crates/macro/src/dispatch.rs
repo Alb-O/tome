@@ -174,7 +174,6 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 			extend: bool,
 		) -> bool {
 			use crate::editor_ctx::HandleOutcome;
-			use crate::editor_ctx::MessageAccess;
 
 			fn run_handlers(
 				handlers: &[crate::editor_ctx::ResultHandler],
@@ -213,13 +212,9 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 			}
 
 			if !handled {
-				ctx.notify(
-					"info",
-					&format!(
-						"Unhandled action result: {:?}",
-						::std::mem::discriminant(result)
-					),
-				);
+				ctx.emit(evildoer_registry_notifications::keys::unhandled_result::call(
+					::std::mem::discriminant(result)
+				));
 			}
 			false
 		}

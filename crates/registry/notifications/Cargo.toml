@@ -8,4 +8,5 @@ license.workspace = true
 [dependencies]
 evildoer-registry-core.workspace = true
 linkme.workspace = true
+paste.workspace = true
 thiserror.workspace = true

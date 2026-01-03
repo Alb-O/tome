@@ -7,6 +7,7 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
 
+use evildoer_registry_notifications::Notification;
 use futures::future::LocalBoxFuture;
 use linkme::distributed_slice;
 use thiserror::Error;
@@ -68,10 +69,10 @@ pub enum CommandOutcome {
 
 /// Editor operations available to commands.
 pub trait CommandEditorOps {
-	/// Displays a notification with the given type and message.
-	fn notify(&mut self, type_id: &str, msg: &str);
-	/// Clears any displayed status message.
-	fn clear_message(&mut self);
+	/// Emits a type-safe notification.
+	fn emit(&mut self, notification: Notification);
+	/// Clears all visible notifications.
+	fn clear_notifications(&mut self);
 	/// Returns whether the current buffer has unsaved changes.
 	fn is_modified(&self) -> bool;
 	/// Returns whether the current buffer is read-only.
@@ -104,39 +105,22 @@ pub struct CommandContext<'a> {
 }
 
 impl<'a> CommandContext<'a> {
-	/// Displays a notification with the given type and message.
-	pub fn notify(&mut self, type_id: &str, msg: &str) {
-		self.editor.notify(type_id, msg);
+	/// Emits a type-safe notification.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// use evildoer_registry_notifications::keys;
+	/// ctx.emit(keys::buffer_readonly);
+	/// ctx.emit(keys::file_saved.call(&path));
+	/// ```
+	pub fn emit(&mut self, notification: impl Into<Notification>) {
+		self.editor.emit(notification.into());
 	}
 
-	/// Clears any displayed status message.
-	pub fn clear_message(&mut self) {
-		self.editor.clear_message();
-	}
-
-	/// Displays an info notification.
-	pub fn info(&mut self, msg: &str) {
-		self.notify("info", msg);
-	}
-
-	/// Displays a warning notification.
-	pub fn warn(&mut self, msg: &str) {
-		self.notify("warn", msg);
-	}
-
-	/// Displays an error notification.
-	pub fn error(&mut self, msg: &str) {
-		self.notify("error", msg);
-	}
-
-	/// Displays a success notification.
-	pub fn success(&mut self, msg: &str) {
-		self.notify("success", msg);
-	}
-
-	/// Displays a debug notification.
-	pub fn debug(&mut self, msg: &str) {
-		self.notify("debug", msg);
+	/// Clears all visible notifications.
+	pub fn clear_notifications(&mut self) {
+		self.editor.clear_notifications();
 	}
 
 	/// Returns whether the current buffer is read-only.

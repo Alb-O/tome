@@ -704,6 +704,7 @@ dependencies = [
  "evildoer-language",
  "evildoer-lsp",
  "evildoer-registry",
+ "evildoer-registry-notifications",
  "evildoer-tui",
  "futures",
  "home",
@@ -930,6 +931,7 @@ dependencies = [
  "evildoer-registry-commands",
  "evildoer-registry-core",
  "evildoer-registry-motions",
+ "evildoer-registry-notifications",
  "evildoer-registry-text-objects",
  "linkme",
  "paste",
@@ -943,6 +945,7 @@ version = "0.3.0"
 dependencies = [
  "evildoer-registry-core",
  "evildoer-registry-motions",
+ "evildoer-registry-notifications",
  "evildoer-registry-text-objects",
  "futures",
  "linkme",
@@ -994,6 +997,7 @@ version = "0.3.0"
 dependencies = [
  "evildoer-registry-core",
  "linkme",
+ "paste",
  "thiserror 2.0.17",
 ]
 

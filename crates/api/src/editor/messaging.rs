@@ -1,57 +1,64 @@
-use evildoer_registry::notifications::{self as registry, find_notification_type};
-use evildoer_registry::themes::{
-	SEMANTIC_DIM, SEMANTIC_ERROR, SEMANTIC_INFO, SEMANTIC_SUCCESS, SEMANTIC_WARNING,
-};
+//! Notification display for the editor.
+
+use evildoer_registry_notifications::{AutoDismiss, Level, Notification};
 use evildoer_tui::style::Style;
 use evildoer_tui::widgets::icon::presets as icon_presets;
 use evildoer_tui::widgets::notifications::{self as notif, Anchor, Toast, ToastIcon};
 
 use crate::editor::Editor;
 
-/// Returns the appropriate icon glyph for a semantic notification type.
-fn icon_for_semantic(semantic: &str) -> Option<&'static str> {
-	match semantic {
-		SEMANTIC_INFO => Some(icon_presets::INFO),
-		SEMANTIC_WARNING => Some(icon_presets::WARNING),
-		SEMANTIC_ERROR => Some(icon_presets::ERROR),
-		SEMANTIC_SUCCESS => Some(icon_presets::SUCCESS),
-		SEMANTIC_DIM => Some(icon_presets::DEBUG),
-		_ => None,
-	}
-}
-
 impl Editor {
-	/// Displays a notification toast with the given type and message.
-	pub fn notify(&mut self, type_name: &str, text: impl Into<String>) {
-		let text = text.into();
-		let type_def = find_notification_type(type_name);
+	/// Emits a typed notification.
+	///
+	/// Accepts anything that converts to a [`Notification`]:
+	/// - `keys::buffer_readonly` (static message key)
+	/// - `keys::yanked_chars::call(42)` (parameterized builder)
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// use evildoer_registry_notifications::keys;
+	///
+	/// editor.notify(keys::buffer_readonly);
+	/// editor.notify(keys::regex_error::call(&err));
+	/// ```
+	pub fn notify(&mut self, notification: impl Into<Notification>) {
+		self.show_notification(notification.into());
+	}
 
-		let semantic = type_def.map(|t| t.semantic).unwrap_or(SEMANTIC_INFO);
+	/// Shows a typed notification (internal).
+	pub fn show_notification(&mut self, notification: Notification) {
+		let level = notification.level();
+		let auto_dismiss = notification.auto_dismiss();
+
+		// Get style based on level
+		let (semantic, icon_glyph) = match level {
+			Level::Info => ("info", icon_presets::INFO),
+			Level::Warn => ("warning", icon_presets::WARNING),
+			Level::Error => ("error", icon_presets::ERROR),
+			Level::Success => ("success", icon_presets::SUCCESS),
+			Level::Debug => ("dim", icon_presets::DEBUG),
+		};
+
 		let notif_style: Style = self.theme.colors.notification_style(semantic);
 		let accent = notif_style.fg.unwrap_or_default();
 
-		let mut toast = Toast::new(text)
+		let toast = Toast::new(notification.message)
 			.anchor(Anchor::TopRight)
 			.style(notif_style)
-			.border_style(Style::default().fg(accent));
-
-		if let Some(glyph) = icon_for_semantic(semantic) {
-			toast = toast.icon(ToastIcon::new(glyph).style(Style::default().fg(accent)));
-		}
-
-		if let Some(def) = type_def {
-			toast = toast
-				.animation(match def.animation {
-					registry::Animation::Slide => notif::Animation::Slide,
-					registry::Animation::ExpandCollapse => notif::Animation::ExpandCollapse,
-					registry::Animation::Fade => notif::Animation::Fade,
-				})
-				.auto_dismiss(match def.auto_dismiss {
-					registry::AutoDismiss::Never => notif::AutoDismiss::Never,
-					registry::AutoDismiss::After(d) => notif::AutoDismiss::After(d),
-				});
-		}
+			.border_style(Style::default().fg(accent))
+			.icon(ToastIcon::new(icon_glyph).style(Style::default().fg(accent)))
+			.animation(notif::Animation::Fade)
+			.auto_dismiss(match auto_dismiss {
+				AutoDismiss::Never => notif::AutoDismiss::Never,
+				AutoDismiss::After(d) => notif::AutoDismiss::After(d),
+			});
 
 		self.notifications.push(toast);
+	}
+
+	/// Clears all visible notifications.
+	pub fn clear_all_notifications(&mut self) {
+		self.notifications.clear();
 	}
 }
