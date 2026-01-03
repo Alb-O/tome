@@ -31,7 +31,7 @@ pub use evildoer_registry_core::{impl_registry_metadata, RegistryMetadata, Regis
 pub use evildoer_registry_motions::{flags, Capability};
 pub use keybindings::{BindingMode, KeyBindingDef, KEYBINDINGS};
 use linkme::distributed_slice;
-pub use motion_helpers::{cursor_motion, insert_with_motion, selection_motion};
+pub use motion_helpers::{cursor_motion, insert_with_motion, selection_motion, word_motion};
 pub use pending::PendingAction;
 pub use result::{
 	dispatch_result, ActionMode, ActionResult, ScreenPosition, RESULT_BUFFER_NEXT_HANDLERS,

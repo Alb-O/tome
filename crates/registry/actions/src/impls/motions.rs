@@ -1,6 +1,6 @@
 use evildoer_registry_motions::keys as motions;
 
-use crate::{action, cursor_motion, selection_motion, ActionResult, ScreenPosition};
+use crate::{action, cursor_motion, selection_motion, word_motion, ActionResult, ScreenPosition};
 
 action!(move_left, {
 	description: "Move cursor left",
@@ -21,22 +21,22 @@ action!(move_line_end, { description: "Move to end of line", bindings: r#"normal
 	|ctx| cursor_motion(ctx, motions::line_end));
 
 action!(next_word_start, { description: "Move to next word start", bindings: r#"normal "w""# },
-	|ctx| cursor_motion(ctx, motions::next_word_start));
+	|ctx| word_motion(ctx, motions::next_word_start));
 
 action!(prev_word_start, { description: "Move to previous word start", bindings: r#"normal "b""# },
-	|ctx| cursor_motion(ctx, motions::prev_word_start));
+	|ctx| word_motion(ctx, motions::prev_word_start));
 
 action!(next_word_end, { description: "Move to next word end", bindings: r#"normal "e""# },
-	|ctx| cursor_motion(ctx, motions::next_word_end));
+	|ctx| word_motion(ctx, motions::next_word_end));
 
 action!(next_long_word_start, { description: "Move to next WORD start", bindings: r#"normal "W""# },
-	|ctx| cursor_motion(ctx, motions::next_long_word_start));
+	|ctx| word_motion(ctx, motions::next_long_word_start));
 
 action!(prev_long_word_start, { description: "Move to previous WORD start", bindings: r#"normal "B""# },
-	|ctx| cursor_motion(ctx, motions::prev_long_word_start));
+	|ctx| word_motion(ctx, motions::prev_long_word_start));
 
 action!(next_long_word_end, { description: "Move to next WORD end", bindings: r#"normal "E""# },
-	|ctx| cursor_motion(ctx, motions::next_long_word_end));
+	|ctx| word_motion(ctx, motions::next_long_word_end));
 
 action!(select_word_forward, { description: "Select to next word start", bindings: r#"normal "alt-w""# },
 	|ctx| selection_motion(ctx, motions::next_word_start));
