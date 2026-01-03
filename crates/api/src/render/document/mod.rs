@@ -1,14 +1,13 @@
 //! Document rendering logic for the editor.
 //!
 //! This module handles rendering of buffers in split views, including
-//! separator styling, junction glyphs, and panel rendering.
+//! separator styling and junction glyphs.
 
 /// Line wrapping calculations for soft-wrapped text.
 mod wrapping;
 
 use std::time::{Duration, SystemTime};
 
-use evildoer_registry::panels::{PanelId, SplitAttrs, SplitBuffer, SplitColor, SplitSize};
 use evildoer_tui::animation::Animatable;
 use evildoer_tui::layout::{Constraint, Direction, Layout, Rect};
 use evildoer_tui::style::{Color, Modifier, Style};
@@ -251,17 +250,11 @@ impl Editor {
 			}
 		}
 
+		// Ensure cursor is visible for all buffers
 		for (_, _, view_areas, _) in &layer_data {
-			for (view, area) in view_areas {
-				match view {
-					BufferView::Text(buffer_id) => {
-						if let Some(buffer) = self.get_buffer_mut(*buffer_id) {
-							ensure_buffer_cursor_visible(buffer, *area);
-						}
-					}
-					BufferView::Panel(panel_id) => {
-						self.resize_panel(*panel_id, *area);
-					}
+			for (buffer_id, area) in view_areas {
+				if let Some(buffer) = self.get_buffer_mut(*buffer_id) {
+					ensure_buffer_cursor_visible(buffer, *area);
 				}
 			}
 		}
@@ -282,8 +275,6 @@ impl Editor {
 			self.needs_redraw = true;
 		}
 
-		let layer_boundary = self.layout.layer_boundary_separator(doc_area);
-		let side_boundary = self.layout.side_boundary_separator(doc_area);
 		let sep_style = SeparatorStyle::new(self, doc_area);
 
 		let ctx = BufferRenderContext {
@@ -293,19 +284,11 @@ impl Editor {
 		};
 
 		for (_, _, view_areas, separators) in &layer_data {
-			for (view, area) in view_areas {
-				let is_focused = *view == focused_view;
-				match view {
-					BufferView::Text(buffer_id) => {
-						if let Some(buffer) = self.get_buffer(*buffer_id) {
-							let result =
-								ctx.render_buffer(buffer, *area, use_block_cursor, is_focused);
-							frame.render_widget(result.widget, *area);
-						}
-					}
-					BufferView::Panel(panel_id) => {
-						self.render_panel(frame, *panel_id, *area, is_focused);
-					}
+			for (buffer_id, area) in view_areas {
+				let is_focused = *buffer_id == focused_view;
+				if let Some(buffer) = self.get_buffer(*buffer_id) {
+					let result = ctx.render_buffer(buffer, *area, use_block_cursor, is_focused);
+					frame.render_widget(result.widget, *area);
 				}
 			}
 
@@ -324,34 +307,6 @@ impl Editor {
 			}
 
 			self.render_separator_junctions(frame, separators, &sep_style);
-		}
-
-		if let Some(boundary_rect) = layer_boundary {
-			let boundary_priority = self.layout.layer_boundary_priority();
-			let style = sep_style.for_rect(boundary_rect, boundary_priority);
-			let line = Line::from(Span::styled(
-				"\u{2500}".repeat(boundary_rect.width as usize),
-				style,
-			));
-			frame.render_widget(Paragraph::new(vec![line]), boundary_rect);
-
-			self.render_layer_boundary_junctions(
-				frame,
-				boundary_rect,
-				boundary_priority,
-				&layer_data,
-				&sep_style,
-			);
-		}
-
-		// Render side boundary separator (vertical line for layer 2)
-		if let Some(boundary_rect) = side_boundary {
-			let boundary_priority = self.layout.side_boundary_priority();
-			let style = sep_style.for_rect(boundary_rect, boundary_priority);
-			let lines: Vec<Line> = (0..boundary_rect.height)
-				.map(|_| Line::from(Span::styled("\u{2502}", style)))
-				.collect();
-			frame.render_widget(Paragraph::new(lines), boundary_rect);
 		}
 	}
 
@@ -439,97 +394,12 @@ impl Editor {
 		}
 	}
 
-	/// Renders junction glyphs where layer boundary meets vertical separators.
-	fn render_layer_boundary_junctions(
-		&self,
-		frame: &mut evildoer_tui::Frame,
-		boundary_rect: Rect,
-		boundary_priority: u8,
-		layer_data: &[LayerRenderData],
-		sep_style: &SeparatorStyle,
-	) {
-		use std::collections::HashMap;
-
-		let buf = frame.buffer_mut();
-		let y = boundary_rect.y;
-
-		let mut junctions: HashMap<u16, (bool, bool, u8)> = HashMap::new();
-
-		for (layer_idx, _, _, separators) in layer_data {
-			for (direction, priority, sep_rect) in separators {
-				if *direction != SplitDirection::Horizontal {
-					continue;
-				}
-
-				let x = sep_rect.x;
-				if x < boundary_rect.x || x >= boundary_rect.right() {
-					continue;
-				}
-
-				let touches_above = *layer_idx == 0 && sep_rect.bottom() == y;
-				let touches_below = *layer_idx == 1 && sep_rect.y == y + 1;
-
-				if touches_above || touches_below {
-					let entry = junctions.entry(x).or_insert((false, false, 0));
-					entry.0 |= touches_above;
-					entry.1 |= touches_below;
-					entry.2 = entry.2.max(*priority);
-				}
-			}
-		}
-
-		for (x, (has_up, has_down, priority)) in junctions {
-			let has_left = x > boundary_rect.x;
-			let has_right = x < boundary_rect.right().saturating_sub(1);
-
-			let connectivity = (has_up as u8)
-				| ((has_down as u8) << 1)
-				| ((has_left as u8) << 2)
-				| ((has_right as u8) << 3);
-
-			let glyph = junction_glyph(connectivity);
-			let style = sep_style.for_rect(boundary_rect, boundary_priority.max(priority));
-
-			if let Some(cell) = buf.cell_mut((x, y)) {
-				cell.set_char(glyph);
-				cell.set_style(style);
-			}
-		}
-	}
-
-	/// Resizes a panel by ID.
-	fn resize_panel(&mut self, panel_id: PanelId, area: Rect) {
-		let size = SplitSize::new(area.width, area.height);
-		if let Some(panel) = self.panels.get_mut(panel_id) {
-			panel.resize(size);
-		}
-	}
-
-	/// Renders a panel by ID.
-	fn render_panel(
-		&self,
-		frame: &mut evildoer_tui::Frame,
-		panel_id: PanelId,
-		area: Rect,
-		is_focused: bool,
-	) {
-		if let Some(panel) = self.panels.get(panel_id) {
-			render_split_buffer(frame, panel, area, is_focused, &self.theme.colors.popup);
-		}
-	}
-
 	/// Renders the which-key HUD when there are pending keys.
 	fn render_whichkey_hud(&self, frame: &mut evildoer_tui::Frame, doc_area: Rect) {
 		use evildoer_core::get_keymap_registry;
 		use evildoer_core::keymap_registry::ContinuationKind;
 		use evildoer_registry::{BindingMode, find_prefix};
 		use evildoer_tui::widgets::keytree::{KeyTree, KeyTreeNode};
-
-		use crate::buffer::BufferView;
-
-		let BufferView::Text(_) = self.focused_view() else {
-			return;
-		};
 
 		let pending_keys = self.buffer().input.pending_keys();
 		if pending_keys.is_empty() {
@@ -643,84 +513,5 @@ impl Editor {
 		}
 
 		frame.render_widget(tree, inner);
-	}
-}
-
-/// Renders any SplitBuffer into the given area.
-fn render_split_buffer(
-	frame: &mut evildoer_tui::Frame,
-	buffer: &dyn SplitBuffer,
-	area: Rect,
-	is_focused: bool,
-	colors: &evildoer_registry::themes::PopupColors,
-) {
-	let base_style = Style::default().bg(colors.bg).fg(colors.fg);
-
-	frame.render_widget(Block::default().style(base_style), area);
-
-	let mut cells_to_render = Vec::new();
-	buffer.for_each_cell(&mut |row, col, cell| {
-		if row < area.height && col < area.width && !cell.wide_continuation {
-			let selected = buffer.is_selected(row, col);
-			cells_to_render.push((row, col, cell.clone(), selected));
-		}
-	});
-
-	let buf = frame.buffer_mut();
-	for (row, col, cell, selected) in cells_to_render {
-		let x = area.x + col;
-		let y = area.y + row;
-
-		let mut style = base_style;
-
-		if let Some(fg) = cell.fg {
-			style = style.fg(convert_split_color(fg));
-		}
-		if let Some(bg) = cell.bg {
-			style = style.bg(convert_split_color(bg));
-		}
-
-		let mut mods = Modifier::empty();
-		if cell.attrs.contains(SplitAttrs::BOLD) {
-			mods |= Modifier::BOLD;
-		}
-		if cell.attrs.contains(SplitAttrs::ITALIC) {
-			mods |= Modifier::ITALIC;
-		}
-		if cell.attrs.contains(SplitAttrs::UNDERLINE) {
-			mods |= Modifier::UNDERLINED;
-		}
-		style = style.add_modifier(mods);
-
-		if cell.attrs.contains(SplitAttrs::INVERSE) != selected {
-			let fg = style.fg;
-			let bg = style.bg;
-			style = style.fg(bg.unwrap_or(Color::Reset));
-			style = style.bg(fg.unwrap_or(Color::Reset));
-		}
-
-		let out = &mut buf[(x, y)];
-		out.set_style(style);
-		if cell.symbol.is_empty() {
-			out.set_symbol(" ");
-		} else {
-			out.set_symbol(&cell.symbol);
-		}
-	}
-
-	if is_focused && let Some(cursor) = buffer.cursor() {
-		let x = area.x + cursor.col;
-		let y = area.y + cursor.row;
-		if x < area.x + area.width && y < area.y + area.height {
-			frame.set_cursor_position(evildoer_tui::layout::Position { x, y });
-		}
-	}
-}
-
-/// Converts a SplitColor to a evildoer_tui Color.
-fn convert_split_color(color: SplitColor) -> Color {
-	match color {
-		SplitColor::Indexed(i) => Color::Indexed(i),
-		SplitColor::Rgb(r, g, b) => Color::Rgb(r, g, b),
 	}
 }

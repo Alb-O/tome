@@ -22,7 +22,6 @@
 //! - [`SearchAccess`] - Pattern search and navigation
 //! - [`UndoAccess`] - Undo/redo history
 //! - [`SplitOps`] - Split management
-//! - [`PanelOps`] - Panel management
 //! - [`FocusOps`] - Focus and buffer navigation
 //! - [`ViewportAccess`] - Viewport position queries
 //! - [`FileOpsAccess`] - Save/load operations
@@ -241,20 +240,6 @@ pub trait SplitOps {
 
 	/// Close all other buffers.
 	fn close_other_buffers(&mut self);
-}
-
-/// Panel management operations.
-pub trait PanelOps {
-	/// Toggle terminal split (open if closed, close if open).
-	fn toggle_terminal(&mut self);
-	/// Toggle the debug panel (open if closed, close if open).
-	fn toggle_debug_panel(&mut self);
-	/// Toggle a panel by name (open if closed, close if open).
-	fn toggle_panel(&mut self, name: &str);
-	/// Open a panel by name (no-op if already open).
-	fn open_panel(&mut self, name: &str);
-	/// Close a panel by name (no-op if not open).
-	fn close_panel(&mut self, name: &str);
 }
 
 /// Focus and buffer navigation operations.

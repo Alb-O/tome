@@ -35,7 +35,7 @@ mod macros;
 mod types;
 
 pub use context::{
-	Bool, HookContext, MutableHookContext, OptionViewId, PanelId, SplitDirection, Str, ViewId,
+	Bool, HookContext, MutableHookContext, OptionViewId, SplitDirection, Str, ViewId,
 };
 pub use emit::{HookScheduler, emit, emit_mutable, emit_sync, emit_sync_with};
 pub use evildoer_base::Mode;
@@ -143,13 +143,6 @@ evildoer_macro::define_events! {
 	SplitClosed => "split:closed" {
 		/// Identifier of the closed split view.
 		view_id: ViewId,
-	},
-	/// Panel visibility toggled.
-	PanelToggled => "panel:toggled" {
-		/// Identifier of the toggled panel.
-		panel_id: Str,
-		/// Whether the panel is now visible.
-		visible: Bool,
 	},
 	/// Action execution starting.
 	ActionPre => "action:pre" {

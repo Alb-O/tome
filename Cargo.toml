@@ -12,7 +12,6 @@ members = [
     "crates/registry/motions",
     "crates/registry/notifications",
     "crates/registry/options",
-    "crates/registry/panels",
     "crates/registry/statusline",
     "crates/registry/text_objects",
     "crates/registry/themes",
@@ -53,7 +52,6 @@ evildoer-registry-menus = { path = "crates/registry/menus" }
 evildoer-registry-motions = { path = "crates/registry/motions" }
 evildoer-registry-notifications = { path = "crates/registry/notifications" }
 evildoer-registry-options = { path = "crates/registry/options" }
-evildoer-registry-panels = { path = "crates/registry/panels" }
 evildoer-registry-statusline = { path = "crates/registry/statusline" }
 evildoer-registry-text-objects = { path = "crates/registry/text_objects" }
 evildoer-registry-themes = { path = "crates/registry/themes" }

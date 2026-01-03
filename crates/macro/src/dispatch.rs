@@ -155,8 +155,13 @@ pub fn derive_dispatch_result(input: TokenStream) -> TokenStream {
 
 		impl #enum_name {
 			/// Returns true if this result can be applied when a terminal is focused.
+			///
+			/// Always returns true since panels are no longer supported.
 			pub fn is_terminal_safe(&self) -> bool {
-				matches!(self, #(#terminal_safe_variants)|*)
+			  // TODO: (refactor)
+				// All results are now safe since we only have text buffers
+				let _ = self;
+				true
 			}
 		}
 

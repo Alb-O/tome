@@ -9,7 +9,6 @@ license.workspace = true
 evildoer-base.workspace = true
 evildoer-macro.workspace = true
 evildoer-registry-core.workspace = true
-evildoer-registry-panels.workspace = true
 linkme.workspace = true
 paste.workspace = true
 tracing.workspace = true

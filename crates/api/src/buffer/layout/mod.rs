@@ -3,8 +3,6 @@
 //! The `Layout` enum represents how buffers are arranged in the editor window.
 //! It supports recursive splitting for complex layouts.
 //!
-//! The layout system is view-agnostic: it can contain text buffers or panels.
-//!
 //! Split positions are stored as absolute screen coordinates, not ratios.
 //! This ensures splits remain stable when other UI elements appear or disappear.
 
@@ -14,7 +12,6 @@ mod navigation;
 mod tests;
 mod types;
 
-use evildoer_registry::panels::PanelId;
 use evildoer_tui::layout::Rect;
 pub use types::{BufferView, SplitDirection, SplitPath};
 
@@ -22,23 +19,23 @@ use super::BufferId;
 
 /// Layout tree for buffer arrangement.
 ///
-/// Represents how views (text buffers and panels) are arranged in splits.
-/// The layout is a binary tree where leaves are single views and internal
+/// Represents how text buffers are arranged in splits.
+/// The layout is a binary tree where leaves are single buffers and internal
 /// nodes are splits.
 ///
 /// # Structure
 ///
 /// ```text
 /// Layout::Split
-/// ├── first: Layout::Single(BufferView::Text(1))
+/// ├── first: Layout::Single(BufferId(1))
 /// └── second: Layout::Split
-///     ├── first: Layout::Single(BufferView::Text(2))
-///     └── second: Layout::Single(BufferView::Panel(...))
+///     ├── first: Layout::Single(BufferId(2))
+///     └── second: Layout::Single(BufferId(3))
 /// ```
 #[derive(Debug, Clone)]
 pub enum Layout {
-	/// A single buffer view (text or terminal).
-	Single(BufferView),
+	/// A single text buffer.
+	Single(BufferId),
 	/// A split containing two child layouts.
 	Split {
 		/// Direction of the split (horizontal or vertical).
@@ -59,19 +56,14 @@ impl Layout {
 	/// Minimum height for a split view in rows.
 	pub const MIN_HEIGHT: u16 = 3;
 
-	/// Creates a new single-view layout from any view type.
-	pub fn single(view: impl Into<BufferView>) -> Self {
-		Layout::Single(view.into())
+	/// Creates a new single-buffer layout.
+	pub fn single(buffer_id: BufferId) -> Self {
+		Layout::Single(buffer_id)
 	}
 
-	/// Creates a new single-view layout for a text buffer.
+	/// Creates a new single-buffer layout (alias for `single`).
 	pub fn text(buffer_id: BufferId) -> Self {
-		Layout::Single(BufferView::Text(buffer_id))
-	}
-
-	/// Creates a new single-view layout for a panel.
-	pub fn panel(panel_id: PanelId) -> Self {
-		Layout::Single(BufferView::Panel(panel_id))
+		Layout::Single(buffer_id)
 	}
 
 	/// Creates a side-by-side split (first on left, second on right).
@@ -100,37 +92,31 @@ impl Layout {
 		}
 	}
 
-	/// Returns the first view in the layout (leftmost/topmost).
-	pub fn first_view(&self) -> BufferView {
+	/// Returns the first buffer in the layout (leftmost/topmost).
+	pub fn first_view(&self) -> BufferId {
 		match self {
-			Layout::Single(view) => *view,
+			Layout::Single(id) => *id,
 			Layout::Split { first, .. } => first.first_view(),
 		}
 	}
 
-	/// Returns the last view in the layout (rightmost/bottommost).
-	pub fn last_view(&self) -> BufferView {
+	/// Returns the last buffer in the layout (rightmost/bottommost).
+	pub fn last_view(&self) -> BufferId {
 		match self {
-			Layout::Single(view) => *view,
+			Layout::Single(id) => *id,
 			Layout::Split { second, .. } => second.last_view(),
 		}
 	}
 
-	/// Returns the first text buffer ID if one exists.
+	/// Returns the first buffer ID (same as first_view for text-only layouts).
 	pub fn first_buffer(&self) -> Option<BufferId> {
-		match self {
-			Layout::Single(BufferView::Text(id)) => Some(*id),
-			Layout::Single(BufferView::Panel(_)) => None,
-			Layout::Split { first, second, .. } => {
-				first.first_buffer().or_else(|| second.first_buffer())
-			}
-		}
+		Some(self.first_view())
 	}
 
-	/// Returns all views in this layout.
-	pub fn views(&self) -> Vec<BufferView> {
+	/// Returns all buffer IDs in this layout.
+	pub fn views(&self) -> Vec<BufferId> {
 		match self {
-			Layout::Single(view) => vec![*view],
+			Layout::Single(id) => vec![*id],
 			Layout::Split { first, second, .. } => {
 				let mut views = first.views();
 				views.extend(second.views());
@@ -139,46 +125,30 @@ impl Layout {
 		}
 	}
 
-	/// Returns all text buffer IDs in this layout.
+	/// Returns all buffer IDs in this layout (alias for views).
 	pub fn buffer_ids(&self) -> Vec<BufferId> {
 		self.views()
-			.into_iter()
-			.filter_map(|v| v.as_text())
-			.collect()
 	}
 
-	/// Returns all panel IDs in this layout.
-	pub fn panel_ids(&self) -> Vec<PanelId> {
-		self.views()
-			.into_iter()
-			.filter_map(|v| v.as_panel())
-			.collect()
-	}
-
-	/// Checks if this layout contains a specific view.
-	pub fn contains_view(&self, view: BufferView) -> bool {
+	/// Checks if this layout contains a specific buffer.
+	pub fn contains_view(&self, buffer_id: BufferId) -> bool {
 		match self {
-			Layout::Single(v) => *v == view,
+			Layout::Single(id) => *id == buffer_id,
 			Layout::Split { first, second, .. } => {
-				first.contains_view(view) || second.contains_view(view)
+				first.contains_view(buffer_id) || second.contains_view(buffer_id)
 			}
 		}
 	}
 
-	/// Checks if this layout contains a specific text buffer.
+	/// Checks if this layout contains a specific buffer (alias for contains_view).
 	pub fn contains(&self, buffer_id: BufferId) -> bool {
-		self.contains_view(BufferView::Text(buffer_id))
+		self.contains_view(buffer_id)
 	}
 
-	/// Checks if this layout contains a specific panel.
-	pub fn contains_panel(&self, panel_id: PanelId) -> bool {
-		self.contains_view(BufferView::Panel(panel_id))
-	}
-
-	/// Replaces a view with a new layout (for splitting). Returns true if replaced.
-	pub fn replace_view(&mut self, target: BufferView, new_layout: Layout) -> bool {
+	/// Replaces a buffer with a new layout (for splitting). Returns true if replaced.
+	pub fn replace_view(&mut self, target: BufferId, new_layout: Layout) -> bool {
 		match self {
-			Layout::Single(view) if *view == target => {
+			Layout::Single(id) if *id == target => {
 				*self = new_layout;
 				true
 			}
@@ -190,16 +160,16 @@ impl Layout {
 		}
 	}
 
-	/// Replaces a buffer ID with a new layout (for splitting). Returns true if replaced.
+	/// Replaces a buffer with a new layout (alias for replace_view).
 	pub fn replace(&mut self, target: BufferId, new_layout: Layout) -> bool {
-		self.replace_view(BufferView::Text(target), new_layout)
+		self.replace_view(target, new_layout)
 	}
 
-	/// Removes a view from the layout, collapsing splits as needed.
-	/// Returns None if removing would leave no views.
-	pub fn remove_view(&self, target: BufferView) -> Option<Layout> {
+	/// Removes a buffer from the layout, collapsing splits as needed.
+	/// Returns None if removing would leave no buffers.
+	pub fn remove_view(&self, target: BufferId) -> Option<Layout> {
 		match self {
-			Layout::Single(view) if *view == target => None,
+			Layout::Single(id) if *id == target => None,
 			Layout::Single(_) => Some(self.clone()),
 			Layout::Split {
 				direction,
@@ -219,17 +189,12 @@ impl Layout {
 		}
 	}
 
-	/// Removes a buffer from the layout, collapsing splits as needed.
+	/// Removes a buffer from the layout (alias for remove_view).
 	pub fn remove(&self, target: BufferId) -> Option<Layout> {
-		self.remove_view(BufferView::Text(target))
+		self.remove_view(target)
 	}
 
-	/// Removes a panel from the layout, collapsing splits as needed.
-	pub fn remove_panel(&self, target: PanelId) -> Option<Layout> {
-		self.remove_view(BufferView::Panel(target))
-	}
-
-	/// Counts the number of views in this layout.
+	/// Counts the number of buffers in this layout.
 	pub fn count(&self) -> usize {
 		match self {
 			Layout::Single(_) => 1,

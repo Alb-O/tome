@@ -6,7 +6,6 @@
 use evildoer_base::Selection;
 use evildoer_base::range::CharIdx;
 use evildoer_macro::DispatchResult;
-use evildoer_registry_panels::PanelKey;
 use linkme::distributed_slice;
 
 use crate::editor_ctx::ResultHandler;
@@ -46,72 +45,49 @@ pub enum ScreenPosition {
 /// Result of executing an action.
 ///
 /// Actions return this enum to indicate what the editor should do next.
-/// Variants marked `#[terminal_safe]` can be applied when a terminal view
-/// is focused (workspace-level operations). Other variants require text
-/// buffer context.
 ///
 /// The `#[derive(DispatchResult)]` macro generates:
 /// - Handler slices (`RESULT_*_HANDLERS`) for each variant
 /// - [`dispatch_result`] function for routing results to handlers
-/// - [`is_terminal_safe`] method from `#[terminal_safe]` attributes
 ///
 /// Extension handlers registered in [`RESULT_EXTENSION_HANDLERS`] run after the
 /// per-variant handlers.
 ///
 /// [`dispatch_result`]: crate::dispatch_result
-/// [`is_terminal_safe`]: Self::is_terminal_safe
 #[derive(Debug, Clone, DispatchResult)]
 #[cfg_attr(feature = "handler-coverage", handler_coverage = "error")]
 pub enum ActionResult {
 	/// No-op success.
-	#[terminal_safe]
 	Ok,
 	/// Quit the editor.
-	#[terminal_safe]
 	#[handler(Quit)]
 	Quit,
 	/// Force quit without save prompts.
-	#[terminal_safe]
 	#[handler(Quit)]
 	ForceQuit,
 	/// Error message to display.
-	#[terminal_safe]
 	Error(String),
 	/// Force a redraw.
-	#[terminal_safe]
 	ForceRedraw,
 	/// Split horizontally with current buffer.
-	#[terminal_safe]
 	SplitHorizontal,
 	/// Split vertically with current buffer.
-	#[terminal_safe]
 	SplitVertical,
-	/// Toggle a named panel.
-	#[terminal_safe]
-	TogglePanel(PanelKey),
 	/// Switch to next buffer.
-	#[terminal_safe]
 	BufferNext,
 	/// Switch to previous buffer.
-	#[terminal_safe]
 	BufferPrev,
 	/// Close current split.
-	#[terminal_safe]
 	CloseSplit,
 	/// Close all other buffers.
-	#[terminal_safe]
 	CloseOtherBuffers,
 	/// Focus split to the left.
-	#[terminal_safe]
 	FocusLeft,
 	/// Focus split to the right.
-	#[terminal_safe]
 	FocusRight,
 	/// Focus split above.
-	#[terminal_safe]
 	FocusUp,
 	/// Focus split below.
-	#[terminal_safe]
 	FocusDown,
 
 	/// Change editor mode.
@@ -152,8 +128,6 @@ pub enum ActionResult {
 	/// The command will be queued and executed on the next tick. This allows
 	/// actions (which are synchronous) to trigger async operations like LSP
 	/// requests.
-	// TODO: Commands are name-driven at boundaries; typed keys deferred.
-	#[terminal_safe]
 	Command {
 		/// Name of the command to execute.
 		name: &'static str,

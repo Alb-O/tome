@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use evildoer_base::Selection;
 
-use crate::buffer::{BufferId, BufferView, DocumentId};
+use crate::buffer::{BufferId, DocumentId};
 use crate::editor::Editor;
 
 impl Editor {
@@ -36,9 +36,7 @@ impl Editor {
 
 	/// Saves current state to undo history for all views of the focused document.
 	pub fn save_undo_state(&mut self) {
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)
@@ -54,9 +52,7 @@ impl Editor {
 
 	/// Saves undo state for insert mode, grouping consecutive inserts.
 	pub(crate) fn save_insert_undo_state(&mut self) {
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)
@@ -72,10 +68,7 @@ impl Editor {
 
 	/// Undoes the last change, restoring selections for all views of the document.
 	pub fn undo(&mut self) {
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			self.notify("warn", "Cannot undo in terminal");
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)
@@ -100,10 +93,7 @@ impl Editor {
 
 	/// Redoes the last undone change, restoring selections for all views of the document.
 	pub fn redo(&mut self) {
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			self.notify("warn", "Cannot redo in terminal");
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)

@@ -19,42 +19,18 @@ impl Editor {
 		let buffer_count = buffer_ids.len();
 
 		// Extract data before creating the context to avoid lifetime issues
-		let (path_str, file_type_str, modified, mode_name, line, col, count, total_lines) =
-			if let Some(panel) = self.focused_panel_def() {
-				(
-					None,
-					Some(panel.name.to_string()),
-					false,
-					self.mode_name(),
-					0,
-					0,
-					0,
-					0,
-				)
-			} else {
-				let buffer = self.buffer();
-				let path_str = buffer
-					.path()
-					.as_ref()
-					.and_then(|p| p.to_str().map(|s| s.to_string()));
-				let file_type_str = buffer.file_type();
-				let modified = buffer.modified();
-				let count = buffer.input.count();
-				let total_lines = buffer.doc().content.len_lines();
-				let mode_name = self.mode_name();
-				let line = self.cursor_line() + 1;
-				let col = self.cursor_col() + 1;
-				(
-					path_str,
-					file_type_str,
-					modified,
-					mode_name,
-					line,
-					col,
-					count,
-					total_lines,
-				)
-			};
+		let buffer = self.buffer();
+		let path_str: Option<String> = buffer
+			.path()
+			.as_ref()
+			.and_then(|p| p.to_str().map(|s| s.to_string()));
+		let file_type_str: Option<String> = buffer.file_type();
+		let modified = buffer.modified();
+		let count = buffer.input.count();
+		let total_lines = buffer.doc().content.len_lines();
+		let mode_name = self.mode_name();
+		let line = self.cursor_line() + 1;
+		let col = self.cursor_col() + 1;
 
 		let ctx = StatuslineContext {
 			mode_name,

@@ -9,7 +9,6 @@ use evildoer_registry::{HookContext, HookEventData, emit_sync_with as emit_hook_
 
 use super::Editor;
 use super::extensions::{RENDER_EXTENSIONS, TICK_EXTENSIONS};
-use crate::buffer::BufferView;
 
 impl Editor {
 	/// Initializes the UI layer at editor startup.
@@ -30,28 +29,8 @@ impl Editor {
 		self.ui = ui;
 	}
 
-	/// Runs the main editor tick: panels, extensions, dirty buffer hooks, and animations.
+	/// Runs the main editor tick: extensions, dirty buffer hooks, and animations.
 	pub fn tick(&mut self) {
-		use std::time::Duration;
-
-		// Tick all panels (terminals, debug panels, etc.)
-		let panel_ids: Vec<_> = self.panels.ids().collect();
-		let mut panels_to_close = Vec::new();
-		for id in panel_ids {
-			if let Some(panel) = self.panels.get_mut(id) {
-				let result = panel.tick(Duration::from_millis(16));
-				if result.needs_redraw {
-					self.needs_redraw = true;
-				}
-				if result.wants_close {
-					panels_to_close.push(id);
-				}
-			}
-		}
-		for id in panels_to_close {
-			self.close_panel(id);
-		}
-
 		let mut sorted_ticks: Vec<_> = TICK_EXTENSIONS.iter().collect();
 		sorted_ticks.sort_by_key(|e| e.priority);
 		for ext in sorted_ticks {
@@ -208,9 +187,7 @@ impl Editor {
 
 	/// Maps sibling buffer selections through a transaction.
 	pub(super) fn sync_sibling_selections(&mut self, tx: &evildoer_base::Transaction) {
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)

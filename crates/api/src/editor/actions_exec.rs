@@ -1,10 +1,8 @@
-use evildoer_base::Selection;
 use evildoer_registry::actions::find_action;
 use evildoer_registry::{
 	ActionArgs, ActionContext, ActionResult, EditorContext, HookContext, HookEventData,
 	dispatch_result, emit_sync_with as emit_hook_sync_with,
 };
-use ropey::Rope;
 use tracing::{debug, info_span};
 
 use crate::editor::Editor;
@@ -19,7 +17,6 @@ fn action_result_variant(result: &ActionResult) -> &'static str {
 		ActionResult::ForceRedraw => "ForceRedraw",
 		ActionResult::SplitHorizontal => "SplitHorizontal",
 		ActionResult::SplitVertical => "SplitVertical",
-		ActionResult::TogglePanel(_) => "TogglePanel",
 		ActionResult::BufferNext => "BufferNext",
 		ActionResult::BufferPrev => "BufferPrev",
 		ActionResult::CloseSplit => "CloseSplit",
@@ -87,49 +84,22 @@ impl Editor {
 		);
 		let _guard = span.enter();
 
-		// When a panel captures input, use a dummy context for workspace-level actions
-		// (window mode actions like split_horizontal, buffer_next, etc. don't use the context)
-		let result = if self
-			.focused_panel_def()
-			.is_some_and(|panel| panel.captures_input)
-		{
-			let dummy_rope = Rope::new();
-			let dummy_selection = Selection::point(0);
-			let ctx = ActionContext {
-				text: dummy_rope.slice(..),
-				cursor: 0,
-				selection: &dummy_selection,
-				count,
-				extend,
-				register,
-				args: ActionArgs::default(),
-			};
-			let result = (action.handler)(&ctx);
-
-			// Reject text-editing results when terminal is focused
-			if !result.is_terminal_safe() {
-				self.notify("warn", "Action not available in terminal");
-				return false;
-			}
-			result
-		} else {
-			self.buffer_mut().ensure_valid_selection();
-			let (content, cursor, selection) = {
-				let buffer = self.buffer();
-				let doc = buffer.doc();
-				(doc.content.clone(), buffer.cursor, buffer.selection.clone())
-			};
-			let ctx = ActionContext {
-				text: content.slice(..),
-				cursor,
-				selection: &selection,
-				count,
-				extend,
-				register,
-				args: ActionArgs::default(),
-			};
-			(action.handler)(&ctx)
+		self.buffer_mut().ensure_valid_selection();
+		let (content, cursor, selection) = {
+			let buffer = self.buffer();
+			let doc = buffer.doc();
+			(doc.content.clone(), buffer.cursor, buffer.selection.clone())
 		};
+		let ctx = ActionContext {
+			text: content.slice(..),
+			cursor,
+			selection: &selection,
+			count,
+			extend,
+			register,
+			args: ActionArgs::default(),
+		};
+		let result = (action.handler)(&ctx);
 
 		debug!(result = ?result, "Action completed");
 		self.apply_action_result(action.id, result, extend)
@@ -181,54 +151,25 @@ impl Editor {
 		);
 		let _guard = span.enter();
 
-		// When a panel captures input, use a dummy context for workspace-level actions
-		let result = if self
-			.focused_panel_def()
-			.is_some_and(|panel| panel.captures_input)
-		{
-			let dummy_rope = Rope::new();
-			let dummy_selection = Selection::point(0);
-			let ctx = ActionContext {
-				text: dummy_rope.slice(..),
-				cursor: 0,
-				selection: &dummy_selection,
-				count,
-				extend,
-				register,
-				args: ActionArgs {
-					char: Some(char_arg),
-					string: None,
-				},
-			};
-			let result = (action.handler)(&ctx);
-
-			// Reject text-editing results when terminal is focused
-			if !result.is_terminal_safe() {
-				self.notify("warn", "Action not available in terminal");
-				return false;
-			}
-			result
-		} else {
-			self.buffer_mut().ensure_valid_selection();
-			let (content, cursor, selection) = {
-				let buffer = self.buffer();
-				let doc = buffer.doc();
-				(doc.content.clone(), buffer.cursor, buffer.selection.clone())
-			};
-			let ctx = ActionContext {
-				text: content.slice(..),
-				cursor,
-				selection: &selection,
-				count,
-				extend,
-				register,
-				args: ActionArgs {
-					char: Some(char_arg),
-					string: None,
-				},
-			};
-			(action.handler)(&ctx)
+		self.buffer_mut().ensure_valid_selection();
+		let (content, cursor, selection) = {
+			let buffer = self.buffer();
+			let doc = buffer.doc();
+			(doc.content.clone(), buffer.cursor, buffer.selection.clone())
 		};
+		let ctx = ActionContext {
+			text: content.slice(..),
+			cursor,
+			selection: &selection,
+			count,
+			extend,
+			register,
+			args: ActionArgs {
+				char: Some(char_arg),
+				string: None,
+			},
+		};
+		let result = (action.handler)(&ctx);
 
 		debug!(result = ?result, "Action completed");
 		self.apply_action_result(action.id, result, extend)

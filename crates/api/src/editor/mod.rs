@@ -55,7 +55,7 @@ mod splits;
 mod theming;
 /// Shared type definitions.
 pub mod types;
-/// View and viewport management.
+/// Buffer access and viewport management.
 mod views;
 
 use std::collections::HashSet;
@@ -80,18 +80,17 @@ use crate::ui::UiManager;
 
 /// The main editor/workspace structure.
 ///
-/// Contains text buffers, terminals, and manages workspace-level state including
-/// theme, UI panels, notifications, and extensions. Supports split views with
-/// heterogeneous content (text buffers and terminals in the same layout).
+/// Contains text buffers and manages workspace-level state including theme, UI,
+/// notifications, and extensions. Supports split views for text buffers.
 ///
 /// # View System
 ///
-/// The editor tracks focus via [`BufferView`], which can be either a text buffer
-/// or a terminal. The layout tree arranges views in splits:
+/// The editor tracks focus via [`BufferView`] (a type alias for [`BufferId`]).
+/// The layout tree arranges views in splits:
 ///
 /// ```text
 /// ┌────────────────┬────────────────┐
-/// │  Text Buffer   │   Terminal     │
+/// │  Text Buffer   │  Text Buffer   │
 /// │   (focused)    │                │
 /// └────────────────┴────────────────┘
 /// ```
@@ -108,14 +107,14 @@ use crate::ui::UiManager;
 ///
 /// # Focus and Navigation
 ///
-/// - [`focused_view`] - Current focus (text or terminal)
-/// - [`focus_buffer`] / [`focus_terminal`] - Focus by ID
+/// - [`focused_view`] - Current focus (buffer ID)
+/// - [`focus_buffer`] - Focus by ID
 /// - [`focus_next_view`] / [`focus_prev_view`] - Cycle through views
 ///
 /// [`BufferView`]: crate::buffer::BufferView
+/// [`BufferId`]: crate::buffer::BufferId
 /// [`focused_view`]: Self::focused_view
 /// [`focus_buffer`]: Self::focus_buffer
-/// [`focus_terminal`]: Self::focus_terminal
 /// [`focus_next_view`]: Self::focus_next_view
 /// [`focus_prev_view`]: Self::focus_prev_view
 pub struct Editor {
@@ -171,9 +170,6 @@ pub struct Editor {
 
 	/// Views with sticky focus (resist mouse hover focus changes).
 	sticky_views: HashSet<BufferView>,
-
-	/// Panel registry for all panel types.
-	pub panels: crate::panels::PanelRegistry,
 
 	/// Jump list for `<C-o>` / `<C-i>` navigation.
 	pub jump_list: JumpList,
@@ -266,7 +262,6 @@ impl Editor {
 			hook_runtime,
 			dirty_buffers: HashSet::new(),
 			sticky_views: HashSet::new(),
-			panels: crate::panels::PanelRegistry::new(),
 			jump_list: JumpList::default(),
 			macro_state: MacroState::default(),
 			command_queue: CommandQueue::new(),

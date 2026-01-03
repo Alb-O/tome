@@ -1,9 +1,8 @@
 //! View focus management.
 //!
-//! Focusing buffers, panels, and navigating between views.
+//! Focusing buffers and navigating between views.
 
 use evildoer_base::Mode;
-use evildoer_registry::panels::PanelId;
 use evildoer_registry::{
 	HookContext, HookEventData, ViewId, emit_sync_with as emit_hook_sync_with,
 };
@@ -13,10 +12,7 @@ use crate::buffer::{BufferId, BufferView};
 
 /// Converts a buffer view to a hook-compatible view ID.
 fn hook_view_id(view: BufferView) -> ViewId {
-	match view {
-		BufferView::Text(id) => ViewId::Text(id.0),
-		BufferView::Panel(id) => ViewId::Panel(id),
-	}
+	ViewId::text(view.0)
 }
 
 impl Editor {
@@ -40,7 +36,7 @@ impl Editor {
 		self.focus_view_inner(view, false)
 	}
 
-	/// Internal focus implementation, handling sticky views and dock layer.
+	/// Internal focus implementation, handling sticky views.
 	fn focus_view_inner(&mut self, view: BufferView, explicit: bool) -> bool {
 		let old_view = self.buffers.focused_view();
 		if !self.buffers.set_focused_view(view) {
@@ -48,13 +44,8 @@ impl Editor {
 		}
 		self.needs_redraw = true;
 
-		if explicit
-			&& view != old_view
-			&& old_view.is_panel()
-			&& self.sticky_views.remove(&old_view)
-			&& self.layout.layer_of_view(old_view) == Some(Self::DOCK_LAYER)
-		{
-			self.layout.set_layer(Self::DOCK_LAYER, None);
+		if explicit && view != old_view {
+			self.sticky_views.remove(&old_view);
 		}
 
 		if view != old_view {
@@ -77,17 +68,10 @@ impl Editor {
 	///
 	/// Returns true if the buffer exists and was focused.
 	pub fn focus_buffer(&mut self, id: BufferId) -> bool {
-		self.focus_view(BufferView::Text(id))
+		self.focus_view(id)
 	}
 
-	/// Focuses a specific panel by ID.
-	///
-	/// Returns true if the panel exists and was focused.
-	pub fn focus_panel(&mut self, id: PanelId) -> bool {
-		self.focus_view(BufferView::Panel(id))
-	}
-
-	/// Focuses the next view in the layout (buffer or terminal).
+	/// Focuses the next view in the layout.
 	pub fn focus_next_view(&mut self) {
 		let next = self.layout.next_view(self.buffers.focused_view());
 		self.focus_view(next);
@@ -101,34 +85,25 @@ impl Editor {
 
 	/// Focuses the next text buffer in the layout.
 	pub fn focus_next_buffer(&mut self) {
-		if let Some(current_id) = self.buffers.focused_view().as_text() {
-			let next_id = self.layout.next_buffer(current_id);
-			self.focus_buffer(next_id);
-		}
+		let current_id = self.buffers.focused_view();
+		let next_id = self.layout.next_buffer(current_id);
+		self.focus_buffer(next_id);
 	}
 
 	/// Focuses the previous text buffer in the layout.
 	pub fn focus_prev_buffer(&mut self) {
-		if let Some(current_id) = self.buffers.focused_view().as_text() {
-			let prev_id = self.layout.prev_buffer(current_id);
-			self.focus_buffer(prev_id);
-		}
+		let current_id = self.buffers.focused_view();
+		let prev_id = self.layout.prev_buffer(current_id);
+		self.focus_buffer(prev_id);
 	}
 
 	/// Returns the current editing mode (Normal, Insert, Visual, etc.).
 	pub fn mode(&self) -> Mode {
-		if self.is_panel_focused() {
-			Mode::Normal
-		} else {
-			self.buffer().input.mode()
-		}
+		self.buffer().input.mode()
 	}
 
 	/// Returns the display name for the current mode.
 	pub fn mode_name(&self) -> &'static str {
-		if let Some(panel) = self.focused_panel_def() {
-			return panel.mode_name;
-		}
 		self.buffer().input.mode_name()
 	}
 }

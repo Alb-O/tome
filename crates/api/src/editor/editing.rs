@@ -5,14 +5,11 @@
 use evildoer_base::Transaction;
 
 use super::Editor;
-use crate::buffer::BufferView;
 
 impl Editor {
 	/// Inserts text at the current cursor position(s).
 	pub fn insert_text(&mut self, text: &str) {
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 
 		if self.buffer().mode() == evildoer_base::Mode::Insert {
 			self.save_insert_undo_state();
@@ -56,9 +53,7 @@ impl Editor {
 			return;
 		}
 
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 
 		self.save_undo_state();
 		let yank = self.registers.yank.clone();
@@ -93,9 +88,7 @@ impl Editor {
 			return;
 		}
 
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 
 		self.save_undo_state();
 		let yank = self.registers.yank.clone();
@@ -130,9 +123,7 @@ impl Editor {
 			return;
 		}
 
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 
 		self.save_undo_state();
 
@@ -162,9 +153,7 @@ impl Editor {
 
 	/// Applies a transaction to the focused buffer.
 	pub fn apply_transaction(&mut self, tx: &Transaction) {
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 		self.buffers
 			.get_buffer_mut(buffer_id)
 			.expect("focused buffer must exist")
@@ -175,9 +164,7 @@ impl Editor {
 
 	/// Triggers a full syntax reparse of the focused buffer.
 	pub fn reparse_syntax(&mut self) {
-		let BufferView::Text(buffer_id) = self.buffers.focused_view() else {
-			return;
-		};
+		let buffer_id = self.buffers.focused_view();
 
 		// Access buffer directly to avoid borrow conflict with language_loader.
 		let buffer = self

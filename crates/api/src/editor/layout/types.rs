@@ -19,10 +19,6 @@ pub enum SeparatorId {
 		/// Index of the layer containing this split.
 		layer: LayerIndex,
 	},
-	/// The boundary between layer 0 and layer 1 (bottom dock boundary).
-	LayerBoundary,
-	/// The boundary between layer 0 and layer 2 (side dock boundary).
-	SideBoundary,
 }
 
 /// Information about a separator found at a screen position.

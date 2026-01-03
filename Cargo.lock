@@ -916,7 +916,6 @@ dependencies = [
  "evildoer-registry-motions",
  "evildoer-registry-notifications",
  "evildoer-registry-options",
- "evildoer-registry-panels",
  "evildoer-registry-statusline",
  "evildoer-registry-text-objects",
  "evildoer-registry-themes",
@@ -931,7 +930,6 @@ dependencies = [
  "evildoer-registry-commands",
  "evildoer-registry-core",
  "evildoer-registry-motions",
- "evildoer-registry-panels",
  "evildoer-registry-text-objects",
  "linkme",
  "paste",
@@ -963,7 +961,6 @@ dependencies = [
  "evildoer-base",
  "evildoer-macro",
  "evildoer-registry-core",
- "evildoer-registry-panels",
  "linkme",
  "paste",
  "tracing",
@@ -1002,15 +999,6 @@ dependencies = [
 
 [[package]]
 name = "evildoer-registry-options"
-version = "0.3.0"
-dependencies = [
- "evildoer-registry-core",
- "linkme",
- "paste",
-]
-
-[[package]]
-name = "evildoer-registry-panels"
 version = "0.3.0"
 dependencies = [
  "evildoer-registry-core",

@@ -13,17 +13,13 @@ mod tests;
 use app::run_editor;
 use clap::Parser;
 use cli::{Cli, Command, GrammarAction};
-use evildoer_api::{DebugPanelLayer, Editor};
-use tracing_subscriber::prelude::*;
+use evildoer_api::Editor;
 // Force-link crates to ensure their distributed_slice registrations are included.
 #[allow(unused_imports, reason = "linkme distributed_slice registration")]
 use {evildoer_acp as _, evildoer_core as _, evildoer_extensions as _};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-	tracing_subscriber::registry()
-		.with(DebugPanelLayer::new())
-		.init();
 
 	let cli = Cli::parse();
 

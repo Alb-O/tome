@@ -11,10 +11,6 @@ use super::Editor;
 
 impl evildoer_core::editor_ctx::FileOpsAccess for Editor {
 	fn is_modified(&self) -> bool {
-		// Panels are never considered "modified" for save purposes
-		if self.is_panel_focused() {
-			return false;
-		}
 		self.buffer().modified()
 	}
 
@@ -22,11 +18,6 @@ impl evildoer_core::editor_ctx::FileOpsAccess for Editor {
 		&mut self,
 	) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), CommandError>> + '_>> {
 		Box::pin(async move {
-			if self.is_panel_focused() {
-				return Err(CommandError::InvalidArgument(
-					"Cannot save a panel".to_string(),
-				));
-			}
 
 			let path_owned = match &self.buffer().path() {
 				Some(p) => p.clone(),
@@ -73,14 +64,6 @@ impl evildoer_core::editor_ctx::FileOpsAccess for Editor {
 		&mut self,
 		path: PathBuf,
 	) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), CommandError>> + '_>> {
-		if self.is_panel_focused() {
-			return Box::pin(async {
-				Err(CommandError::InvalidArgument(
-					"Cannot save a panel".to_string(),
-				))
-			});
-		}
-
 		self.buffer_mut().set_path(Some(path));
 		self.save()
 	}

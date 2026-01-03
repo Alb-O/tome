@@ -10,25 +10,13 @@ use evildoer_base::range::CharIdx;
 use evildoer_base::{Mode, Selection};
 use evildoer_core::editor_ctx::{
 	CommandQueueAccess, CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, FocusOps,
-	JumpAccess, MacroAccess, MessageAccess, ModeAccess, PanelOps, SearchAccess, SelectionAccess,
-	SplitOps, ThemeAccess, UndoAccess, ViewportAccess,
+	JumpAccess, MacroAccess, MessageAccess, ModeAccess, SearchAccess, SelectionAccess, SplitOps,
+	ThemeAccess, UndoAccess, ViewportAccess,
 };
 use evildoer_registry::commands::{CommandEditorOps, CommandError};
-use evildoer_registry::{EditAction, panel_kind_index};
+use evildoer_registry::EditAction;
 
-use crate::buffer::BufferView;
 use crate::editor::Editor;
-
-/// Returns whether a panel with the given name is currently visible.
-fn panel_visible(editor: &Editor, name: &str) -> bool {
-	let Some(kind) = panel_kind_index(name) else {
-		return false;
-	};
-	let Some(panel_id) = editor.panels.find_by_kind(kind) else {
-		return false;
-	};
-	editor.layout.contains_view(BufferView::Panel(panel_id))
-}
 
 impl CursorAccess for Editor {
 	fn cursor(&self) -> CharIdx {
@@ -36,9 +24,6 @@ impl CursorAccess for Editor {
 	}
 
 	fn cursor_line_col(&self) -> Option<(usize, usize)> {
-		if !self.is_text_focused() {
-			return None;
-		}
 		let buffer = self.buffer();
 		Some((buffer.cursor_line(), buffer.cursor_col()))
 	}
@@ -167,36 +152,24 @@ impl CommandEditorOps for Editor {
 
 impl SplitOps for Editor {
 	fn split_horizontal(&mut self) {
-		// Cannot split with buffer content when terminal is focused
-		if self.is_terminal_focused() {
-			return;
-		}
-
 		// Create a new buffer that shares the same document
 		let new_id = self.clone_buffer_for_split();
 		Editor::split_horizontal(self, new_id);
 	}
 
 	fn split_vertical(&mut self) {
-		// Cannot split with buffer content when terminal is focused
-		if self.is_terminal_focused() {
-			return;
-		}
-
 		// Create a new buffer that shares the same document
 		let new_id = self.clone_buffer_for_split();
 		Editor::split_vertical(self, new_id);
 	}
 
 	fn close_split(&mut self) {
-		self.close_current_view();
+		self.close_current_buffer();
 	}
 
 	fn close_other_buffers(&mut self) {
 		// Close all buffers except the current one
-		let Some(current_id) = self.focused_buffer_id() else {
-			return;
-		};
+		let current_id = self.focused_view();
 		let ids: Vec<_> = self
 			.buffer_ids()
 			.into_iter()
@@ -205,34 +178,6 @@ impl SplitOps for Editor {
 		for id in ids {
 			Editor::close_buffer(self, id);
 		}
-	}
-}
-
-impl PanelOps for Editor {
-	fn toggle_terminal(&mut self) {
-		Editor::toggle_panel(self, "terminal");
-	}
-
-	fn toggle_debug_panel(&mut self) {
-		Editor::toggle_panel(self, "debug");
-	}
-
-	fn toggle_panel(&mut self, name: &str) {
-		Editor::toggle_panel(self, name);
-	}
-
-	fn open_panel(&mut self, name: &str) {
-		if panel_visible(self, name) {
-			return;
-		}
-		Editor::toggle_panel(self, name);
-	}
-
-	fn close_panel(&mut self, name: &str) {
-		if !panel_visible(self, name) {
-			return;
-		}
-		Editor::toggle_panel(self, name);
 	}
 }
 
@@ -266,16 +211,10 @@ impl FocusOps for Editor {
 
 impl ViewportAccess for Editor {
 	fn viewport_height(&self) -> usize {
-		if !self.is_text_focused() {
-			return 0;
-		}
 		self.buffer().last_viewport_height
 	}
 
 	fn viewport_row_to_doc_position(&self, row: usize) -> Option<CharIdx> {
-		if !self.is_text_focused() {
-			return None;
-		}
 		let buffer = self.buffer();
 		if buffer.last_viewport_height == 0 {
 			return None;
@@ -292,7 +231,7 @@ impl JumpAccess for Editor {
 			let buffer_id = loc.buffer_id;
 			let cursor = loc.cursor;
 			// Focus the buffer if different
-			if self.focused_buffer_id() != Some(buffer_id) {
+			if self.focused_view() != buffer_id {
 				self.focus_buffer(buffer_id);
 			}
 			self.buffer_mut().cursor = cursor;
@@ -303,17 +242,16 @@ impl JumpAccess for Editor {
 	}
 
 	fn jump_backward(&mut self) -> bool {
-		if let Some(buffer_id) = self.focused_buffer_id() {
-			let cursor = self.buffer().cursor;
-			// Only save if we're at the end of the jump list
-			self.jump_list
-				.push(crate::editor::JumpLocation { buffer_id, cursor });
-		}
+		let buffer_id = self.focused_view();
+		let cursor = self.buffer().cursor;
+		// Only save if we're at the end of the jump list
+		self.jump_list
+			.push(crate::editor::JumpLocation { buffer_id, cursor });
 
 		if let Some(loc) = self.jump_list.jump_backward() {
 			let buffer_id = loc.buffer_id;
 			let cursor = loc.cursor;
-			if self.focused_buffer_id() != Some(buffer_id) {
+			if self.focused_view() != buffer_id {
 				self.focus_buffer(buffer_id);
 			}
 			self.buffer_mut().cursor = cursor;
@@ -324,11 +262,10 @@ impl JumpAccess for Editor {
 	}
 
 	fn save_jump(&mut self) {
-		if let Some(buffer_id) = self.focused_buffer_id() {
-			let cursor = self.buffer().cursor;
-			self.jump_list
-				.push(crate::editor::JumpLocation { buffer_id, cursor });
-		}
+		let buffer_id = self.focused_view();
+		let cursor = self.buffer().cursor;
+		self.jump_list
+			.push(crate::editor::JumpLocation { buffer_id, cursor });
 	}
 }
 
@@ -371,10 +308,6 @@ impl EditorCapabilities for Editor {
 	}
 
 	fn split_ops(&mut self) -> Option<&mut dyn SplitOps> {
-		Some(self)
-	}
-
-	fn panel_ops(&mut self) -> Option<&mut dyn PanelOps> {
 		Some(self)
 	}
 

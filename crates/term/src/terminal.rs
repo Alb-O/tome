@@ -7,7 +7,6 @@ use std::io::{self, Write};
 use std::time::Duration;
 
 use evildoer_core::{TerminalConfig, TerminalSequence};
-use evildoer_registry::panels::SplitCursorStyle;
 use termina::escape::csi::{
 	Csi, Cursor, DecPrivateMode, DecPrivateModeCode, Keyboard, KittyKeyboardFlags, Mode,
 };
@@ -122,18 +121,5 @@ pub fn cursor_style_for_mode(mode: evildoer_base::Mode) -> CursorStyle {
 	match mode {
 		evildoer_base::Mode::Insert => CursorStyle::BlinkingBar,
 		_ => CursorStyle::SteadyBlock,
-	}
-}
-
-/// Converts a split panel cursor style to a termina cursor style.
-pub fn split_cursor_to_termina(style: SplitCursorStyle) -> CursorStyle {
-	match style {
-		SplitCursorStyle::Hidden | SplitCursorStyle::Block => CursorStyle::SteadyBlock,
-		SplitCursorStyle::Default => CursorStyle::Default,
-		SplitCursorStyle::BlinkingBlock => CursorStyle::BlinkingBlock,
-		SplitCursorStyle::Bar => CursorStyle::SteadyBar,
-		SplitCursorStyle::BlinkingBar => CursorStyle::BlinkingBar,
-		SplitCursorStyle::Underline => CursorStyle::SteadyUnderline,
-		SplitCursorStyle::BlinkingUnderline => CursorStyle::BlinkingUnderline,
 	}
 }

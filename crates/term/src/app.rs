@@ -38,7 +38,7 @@ impl Default for RenderTiming {
 }
 use crate::terminal::{
 	coalesce_resize_events, cursor_style_for_mode, disable_terminal_features,
-	enable_terminal_features, install_panic_hook, split_cursor_to_termina,
+	enable_terminal_features, install_panic_hook,
 };
 
 /// Runs the editor main loop.
@@ -75,15 +75,10 @@ pub async fn run_editor(mut editor: Editor) -> io::Result<()> {
 
 			terminal.draw(|frame| editor.render(frame))?;
 
-			// Priority: UI panel > split buffer panel > editor mode
+			// Priority: UI panel > editor mode
 			let cursor_style = editor
 				.ui
 				.cursor_style()
-				.or_else(|| {
-					editor
-						.focused_panel_cursor_style()
-						.map(split_cursor_to_termina)
-				})
 				.unwrap_or_else(|| cursor_style_for_mode(editor.mode()));
 			write!(
 				terminal.backend_mut().terminal_mut(),

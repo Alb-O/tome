@@ -2,7 +2,6 @@
 //!
 //! [`BufferManager`] centralizes ownership of text buffers,
 //! providing a single source of truth for what's open and what's focused.
-//! Panels are managed by [`PanelRegistry`](crate::panels::PanelRegistry).
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -17,7 +16,7 @@ pub struct BufferManager {
 	buffers: HashMap<BufferId, Buffer>,
 	/// Counter for generating unique buffer IDs.
 	next_buffer_id: u64,
-	/// Currently focused view (text buffer or panel).
+	/// Currently focused view (buffer ID).
 	focused_view: BufferView,
 }
 
@@ -34,7 +33,7 @@ impl BufferManager {
 		Self {
 			buffers,
 			next_buffer_id: 2,
-			focused_view: BufferView::Text(buffer_id),
+			focused_view: buffer_id,
 		}
 	}
 
@@ -47,7 +46,7 @@ impl BufferManager {
 		Self {
 			buffers,
 			next_buffer_id: buffer_id.0 + 1,
-			focused_view: BufferView::Text(buffer_id),
+			focused_view: buffer_id,
 		}
 	}
 
@@ -77,10 +76,6 @@ impl BufferManager {
 	///
 	/// The new buffer has independent cursor/selection/scroll state but
 	/// edits in either buffer affect both (they share the same Document).
-	///
-	/// # Panics
-	///
-	/// Panics if the focused view is not a text buffer.
 	pub fn clone_focused_buffer_for_split(&mut self) -> BufferId {
 		let new_id = BufferId(self.next_buffer_id);
 		self.next_buffer_id += 1;
@@ -95,67 +90,55 @@ impl BufferManager {
 		self.buffers.remove(&id)
 	}
 
-	/// Returns the currently focused view.
+	/// Returns the currently focused view (buffer ID).
 	pub fn focused_view(&self) -> BufferView {
 		self.focused_view
 	}
 
 	/// Sets the focused view. Returns true if the view exists.
-	///
-	/// For panels, always returns true since they are managed by PanelRegistry.
 	pub fn set_focused_view(&mut self, view: BufferView) -> bool {
-		let exists = match view {
-			BufferView::Text(id) => self.buffers.contains_key(&id),
-			BufferView::Panel(_) => true,
-		};
-		if exists {
+		if self.buffers.contains_key(&view) {
 			self.focused_view = view;
+			true
+		} else {
+			false
 		}
-		exists
 	}
 
 	/// Returns true if the focused view is a text buffer.
+	///
+	/// Always returns true since all views are now text buffers.
 	pub fn is_text_focused(&self) -> bool {
-		self.focused_view.is_text()
+		true
 	}
 
-	/// Returns true if the focused view is a panel.
-	pub fn is_panel_focused(&self) -> bool {
-		self.focused_view.is_panel()
-	}
-
-	/// Returns the ID of the focused text buffer, if one is focused.
+	/// Returns the ID of the focused text buffer.
 	pub fn focused_buffer_id(&self) -> Option<BufferId> {
-		self.focused_view.as_text()
+		Some(self.focused_view)
 	}
 
 	/// Returns the focused text buffer.
 	///
 	/// # Panics
 	///
-	/// Panics if the focused view is not a text buffer.
+	/// Panics if the focused buffer doesn't exist.
 	#[inline]
 	pub fn focused_buffer(&self) -> &Buffer {
-		match self.focused_view {
-			BufferView::Text(id) => self.buffers.get(&id).expect("focused buffer must exist"),
-			BufferView::Panel(_) => panic!("focused view is a panel, not a text buffer"),
-		}
+		self.buffers
+			.get(&self.focused_view)
+			.expect("focused buffer must exist")
 	}
 
 	/// Returns the focused text buffer mutably.
 	///
 	/// # Panics
 	///
-	/// Panics if the focused view is not a text buffer.
+	/// Panics if the focused buffer doesn't exist.
 	#[inline]
 	pub fn focused_buffer_mut(&mut self) -> &mut Buffer {
-		match self.focused_view {
-			BufferView::Text(id) => self
-				.buffers
-				.get_mut(&id)
-				.expect("focused buffer must exist"),
-			BufferView::Panel(_) => panic!("focused view is a panel, not a text buffer"),
-		}
+		self.buffers
+			.get_mut(&self.focused_view)
+			.expect("focused buffer must exist")
 	}
 
 	/// Returns a buffer by ID.

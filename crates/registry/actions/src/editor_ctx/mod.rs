@@ -9,7 +9,7 @@
 //!
 //! - **Required**: [`CursorAccess`], [`SelectionAccess`], [`ModeAccess`], [`MessageAccess`]
 //! - **Optional**: [`SearchAccess`], [`UndoAccess`], [`EditAccess`], [`SplitOps`],
-//!   [`PanelOps`], [`FocusOps`], [`ViewportAccess`], etc.
+//!   [`FocusOps`], [`ViewportAccess`], etc.
 //!
 //! Note: [`TextAccess`] is intentionally NOT required for result handlers.
 //! Actions receive text through [`ActionContext`] which is built separately
@@ -151,11 +151,6 @@ impl<'a> EditorContext<'a> {
 		self.inner.split_ops()
 	}
 
-	/// Returns panel operations if the capability is available.
-	pub fn panel_ops(&mut self) -> Option<&mut dyn PanelOps> {
-		self.inner.panel_ops()
-	}
-
 	/// Returns focus operations if the capability is available.
 	pub fn focus_ops(&mut self) -> Option<&mut dyn FocusOps> {
 		self.inner.focus_ops()
@@ -237,11 +232,6 @@ pub trait EditorCapabilities: CursorAccess + SelectionAccess + ModeAccess + Mess
 
 	/// Access to split management operations (optional).
 	fn split_ops(&mut self) -> Option<&mut dyn SplitOps> {
-		None
-	}
-
-	/// Access to panel management operations (optional).
-	fn panel_ops(&mut self) -> Option<&mut dyn PanelOps> {
 		None
 	}
 

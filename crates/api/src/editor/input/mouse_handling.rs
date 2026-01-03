@@ -1,13 +1,11 @@
 //! Mouse event handling.
 //!
-//! Processing mouse input for text selection, separator dragging, and panels.
+//! Processing mouse input for text selection and separator dragging.
 
 use evildoer_base::Selection;
 use evildoer_input::KeyResult;
 use termina::event::MouseEventKind;
 
-use super::conversions::convert_mouse_event;
-use crate::buffer::BufferView;
 use crate::editor::Editor;
 
 impl Editor {
@@ -128,9 +126,7 @@ impl Editor {
 					let local_row = clamped_y.saturating_sub(origin_area.y);
 					let local_col = clamped_x.saturating_sub(origin_area.x);
 
-					if let BufferView::Text(buffer_id) = origin_view
-						&& let Some(buffer) = self.buffers.get_buffer_mut(buffer_id)
-					{
+					if let Some(buffer) = self.buffers.get_buffer_mut(origin_view) {
 						let _ = buffer.input.handle_mouse(mouse.into());
 						let doc_pos =
 							buffer
@@ -238,19 +234,6 @@ impl Editor {
 			if !focus_changed && target_view != self.focused_view() {
 				return false;
 			}
-		}
-
-		if let BufferView::Panel(panel_id) = self.focused_view() {
-			let local_x = mouse_x.saturating_sub(view_area.x);
-			let local_y = mouse_y.saturating_sub(view_area.y);
-
-			if let Some(split_mouse) = convert_mouse_event(&mouse, local_x, local_y) {
-				let result = self.handle_panel_mouse(panel_id, split_mouse);
-				if result.needs_redraw {
-					self.needs_redraw = true;
-				}
-			}
-			return false;
 		}
 
 		// Translate screen coordinates to view-local coordinates

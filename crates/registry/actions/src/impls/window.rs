@@ -10,8 +10,6 @@
 //! - `b n/p` - Buffer navigation
 //! - `c c/o` - Close current/others
 
-use evildoer_registry_panels::keys as panels;
-
 use crate::editor_ctx::HandleOutcome;
 use crate::{ActionResult, action, result_handler};
 
@@ -54,32 +52,6 @@ result_handler!(
 
 		if let Some(ops) = ctx.split_ops() {
 			ops.split_vertical();
-		}
-		HandleOutcome::Handled
-	}
-);
-
-action!(toggle_terminal, {
-	description: "Toggle terminal split",
-	bindings: r#"normal ":""#,
-}, |_ctx| ActionResult::TogglePanel(panels::terminal));
-
-action!(toggle_debug_panel, {
-	description: "Toggle debug panel",
-	bindings: r#"normal "D""#,
-}, |_ctx| ActionResult::TogglePanel(panels::debug));
-
-result_handler!(
-	RESULT_TOGGLE_PANEL_HANDLERS,
-	TOGGLE_PANEL_HANDLER,
-	"toggle_panel",
-	|result, ctx, _extend| {
-		let ActionResult::TogglePanel(panel) = result else {
-			return HandleOutcome::NotHandled;
-		};
-
-		if let Some(ops) = ctx.panel_ops() {
-			ops.toggle_panel(panel.name());
 		}
 		HandleOutcome::Handled
 	}

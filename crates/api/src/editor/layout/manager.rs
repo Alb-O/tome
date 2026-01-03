@@ -15,12 +15,6 @@ pub struct LayoutManager {
 	/// Layout layers, index 0 is base (bottom), higher indices overlay on top.
 	pub(super) layers: Vec<Option<Layout>>,
 
-	/// Dock layer height in terminal rows (layer 1, bottom). Persists across window resizes.
-	pub(super) dock_height: u16,
-
-	/// Side dock width in terminal columns (layer 2, right). Persists across window resizes.
-	pub(super) side_dock_width: u16,
-
 	/// Currently hovered separator (for visual feedback during resize).
 	pub hovered_separator: Option<(SplitDirection, Rect)>,
 
@@ -41,24 +35,10 @@ pub struct LayoutManager {
 }
 
 impl LayoutManager {
-	/// Default dock height in rows.
-	pub(super) const DEFAULT_DOCK_HEIGHT: u16 = 12;
-
-	/// Minimum dock height in rows.
-	pub(super) const MIN_DOCK_HEIGHT: u16 = 3;
-
-	/// Default side dock width in columns.
-	pub(super) const DEFAULT_SIDE_DOCK_WIDTH: u16 = 60;
-
-	/// Minimum side dock width in columns.
-	pub(super) const MIN_SIDE_DOCK_WIDTH: u16 = 20;
-
 	/// Creates a new layout manager with a single text buffer on the base layer.
 	pub fn new(buffer_id: BufferId) -> Self {
 		Self {
 			layers: vec![Some(Layout::text(buffer_id))],
-			dock_height: Self::DEFAULT_DOCK_HEIGHT,
-			side_dock_width: Self::DEFAULT_SIDE_DOCK_WIDTH,
 			hovered_separator: None,
 			separator_under_mouse: None,
 			separator_hover_animation: None,

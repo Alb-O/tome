@@ -36,9 +36,6 @@ impl Layout {
 	/// Computes rectangular areas for each buffer in the layout.
 	pub fn compute_areas(&self, area: Rect) -> Vec<(BufferId, Rect)> {
 		self.compute_view_areas(area)
-			.into_iter()
-			.filter_map(|(view, rect)| view.as_text().map(|id| (id, rect)))
-			.collect()
 	}
 
 	/// Finds the separator at the given screen coordinates.
@@ -315,10 +312,8 @@ impl Layout {
 		let (first_area, second_area, sep_rect) =
 			Self::compute_split_areas(area, *direction, *position);
 
-		let priority = first
-			.last_view()
-			.visual_priority()
-			.max(second.first_view().visual_priority());
+		// Visual priority is always 0 for text buffers (no panels)
+		let priority = 0;
 
 		let mut separators = vec![(*direction, priority, sep_rect)];
 		separators.extend(first.separator_positions(first_area));

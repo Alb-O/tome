@@ -4,17 +4,20 @@ use std::any::Any;
 use std::path::Path;
 
 use evildoer_base::Rope;
-pub use evildoer_registry_panels::PanelId;
 
 use super::{HookEvent, HookEventData, OwnedHookContext};
 
 /// Identifier for a focused view in hook payloads.
+///
+/// All views are text buffers, identified by their buffer ID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ViewId {
-	/// A text buffer view, identified by its buffer ID.
-	Text(u64),
-	/// A panel view, identified by its panel ID.
-	Panel(PanelId),
+pub struct ViewId(pub u64);
+
+impl ViewId {
+	/// Creates a new view ID for a text buffer.
+	pub const fn text(id: u64) -> Self {
+		Self(id)
+	}
 }
 
 /// Optional view identifier for hook payloads.

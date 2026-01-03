@@ -28,27 +28,25 @@ evildoer-term          Main binary and terminal UI
 
 Uses `linkme` distributed slices for compile-time registration. Each registry is a self-contained crate under `crates/registry/`.
 
-| Registry      | Crate                             | Slice                                    | Macro                                            |
-| ------------- | --------------------------------- | ---------------------------------------- | ------------------------------------------------ |
-| Actions       | `evildoer-registry-actions`       | `ACTIONS`                                | `action!`                                        |
-| Commands      | `evildoer-registry-commands`      | `COMMANDS`                               | `command!`                                       |
-| Motions       | `evildoer-registry-motions`       | `MOTIONS`                                | `motion!`                                        |
-| Text Objects  | `evildoer-registry-text-objects`  | `TEXT_OBJECTS`                           | `text_object!`                                   |
-| Options       | `evildoer-registry-options`       | `OPTIONS`                                | `option!`                                        |
-| Hooks         | `evildoer-registry-hooks`         | `HOOKS`                                  | `hook!`, `async_hook!`                           |
-| Statusline    | `evildoer-registry-statusline`    | `STATUSLINE_SEGMENTS`                    | `statusline_segment!`                            |
-| Notifications | `evildoer-registry-notifications` | `NOTIFICATION_TYPES`                     | `register_notification!`                         |
-| Themes        | `evildoer-registry-themes`        | `THEMES`                                 | -                                                |
-| Panels        | `evildoer-registry-panels`        | `PANELS`, `PANEL_IDS`, `PANEL_FACTORIES` | `panel!`, `panel_id!`, `register_panel_factory!` |
-| Menus         | `evildoer-registry-menus`         | `MENUS`                                  | -                                                |
-| Keybindings   | (in evildoer-registry)            | `KEYBINDINGS`                            | (inline in `action!`)                            |
+| Registry      | Crate                             | Slice                | Macro                    |
+| ------------- | --------------------------------- | -------------------- | ------------------------ |
+| Actions       | `evildoer-registry-actions`       | `ACTIONS`            | `action!`                |
+| Commands      | `evildoer-registry-commands`      | `COMMANDS`           | `command!`               |
+| Motions       | `evildoer-registry-motions`       | `MOTIONS`            | `motion!`                |
+| Text Objects  | `evildoer-registry-text-objects`  | `TEXT_OBJECTS`       | `text_object!`           |
+| Options       | `evildoer-registry-options`       | `OPTIONS`            | `option!`                |
+| Hooks         | `evildoer-registry-hooks`         | `HOOKS`              | `hook!`, `async_hook!`   |
+| Statusline    | `evildoer-registry-statusline`    | `STATUSLINE_SEGMENTS`| `statusline_segment!`    |
+| Notifications | `evildoer-registry-notifications` | `NOTIFICATION_TYPES` | `register_notification!` |
+| Themes        | `evildoer-registry-themes`        | `THEMES`             | -                        |
+| Menus         | `evildoer-registry-menus`         | `MENUS`              | -                        |
+| Keybindings   | (in evildoer-registry)            | `KEYBINDINGS`        | (inline in `action!`)    |
 
 ### Typed Handles
 
 Typed handles provide compile-time safety for internal registry references:
 
 - Motions: `evildoer_registry_motions::keys::*` used with `cursor_motion` helpers
-- Panels: `evildoer_registry_panels::keys::*` used with `ActionResult::TogglePanel`
 - Actions: `evildoer_registry_actions::keys::*` used for hardcoded action IDs
 - Strings remain at boundaries (user input, config, runtime lookup)
 
@@ -106,7 +104,6 @@ Field type tokens are mapped automatically:
 
 - `ViewFocusChanged` - emitted when focus changes between views
 - `SplitCreated` / `SplitClosed` - emitted on split operations
-- `PanelToggled` - emitted when panels open/close
 
 **Action Lifecycle Events**:
 
@@ -154,7 +151,6 @@ Fine-grained traits in `registry/actions/src/editor_ctx/capabilities.rs`:
 | `SearchAccess`    | Optional | Pattern search           |
 | `UndoAccess`      | Optional | Undo/redo history        |
 | `SplitOps`        | Optional | Split management         |
-| `PanelOps`        | Optional | Panel management         |
 | `FocusOps`        | Optional | Focus/buffer navigation  |
 | `ViewportAccess`  | Optional | Viewport queries         |
 | `FileOpsAccess`   | Optional | Save/load operations     |

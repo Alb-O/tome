@@ -6,8 +6,6 @@ use evildoer_base::{Key, Mode, Selection};
 use evildoer_input::KeyResult;
 use termina::event::KeyCode;
 
-use super::conversions::convert_termina_key;
-use crate::buffer::BufferView;
 use crate::editor::Editor;
 
 /// Result of attempting to dispatch an action from a key result.
@@ -96,58 +94,6 @@ impl Editor {
 			return false;
 		}
 
-		// If a panel is focused, route input to it
-		if let BufferView::Panel(panel_id) = self.focused_view() {
-			let panel_def = self.focused_panel_def();
-			let captures_input = panel_def.is_some_and(|panel| panel.captures_input);
-			let supports_window_mode = panel_def.is_some_and(|panel| panel.supports_window_mode);
-
-			if !captures_input {
-				if let Some(first_buffer) = self.layout.first_buffer() {
-					self.focus_buffer(first_buffer);
-					return self.handle_key_active(key).await;
-				}
-				return false;
-			}
-
-			// Escape releases focus back to the first text buffer
-			if key.code == KeyCode::Escape {
-				if let Some(first_buffer) = self.layout.first_buffer() {
-					self.focus_buffer(first_buffer);
-				}
-				self.needs_redraw = true;
-				return false;
-			}
-
-			if supports_window_mode && let Some(first_buffer_id) = self.layout.first_buffer() {
-				let has_pending = self
-					.buffers
-					.get_buffer(first_buffer_id)
-					.is_some_and(|b| b.input.pending_key_count() > 0);
-
-				if has_pending
-					|| (key.code == KeyCode::Char('w')
-						&& key.modifiers.contains(termina::event::Modifiers::CONTROL))
-				{
-					return self.handle_terminal_window_key(key, first_buffer_id).await;
-				}
-			}
-
-			// Route all other keys to the panel
-			if let Some(split_key) = convert_termina_key(&key) {
-				let result = self.handle_panel_key(panel_id, split_key);
-				if result.needs_redraw {
-					self.needs_redraw = true;
-				}
-				if result.release_focus
-					&& let Some(first_buffer) = self.layout.first_buffer()
-				{
-					self.focus_buffer(first_buffer);
-				}
-			}
-			return false;
-		}
-
 		self.handle_key_active(key).await
 	}
 
@@ -213,35 +159,6 @@ impl Editor {
 				false
 			}
 			_ => unreachable!(),
-		}
-	}
-
-	/// Handles window mode keys when a terminal is focused.
-	async fn handle_terminal_window_key(
-		&mut self,
-		key: termina::event::KeyEvent,
-		buffer_id: crate::buffer::BufferId,
-	) -> bool {
-		let key: Key = key.into();
-
-		let result = {
-			let Some(buffer) = self.buffers.get_buffer_mut(buffer_id) else {
-				return false;
-			};
-			buffer.input.handle_key(key)
-		};
-
-		if let ActionDispatch::Executed(quit) = self.dispatch_action(&result) {
-			return quit;
-		}
-
-		match result {
-			KeyResult::Quit => true,
-			KeyResult::ModeChange(_) | KeyResult::Consumed | KeyResult::Unhandled => {
-				self.needs_redraw = true;
-				false
-			}
-			_ => false,
 		}
 	}
 
