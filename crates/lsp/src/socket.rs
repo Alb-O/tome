@@ -102,7 +102,7 @@ impl PeerSocket {
 	}
 
 	/// Sends an event to the main loop.
-	fn send(&self, v: MainLoopEvent) -> Result<()> {
+	pub(crate) fn send(&self, v: MainLoopEvent) -> Result<()> {
 		self.tx.unbounded_send(v).map_err(|_| Error::ServiceStopped)
 	}
 

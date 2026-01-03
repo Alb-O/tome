@@ -7,10 +7,11 @@ use futures::FutureExt;
 use futures::channel::oneshot;
 use tower_service::Service;
 
-use crate::{
-	AnyEvent, AnyNotification, AnyRequest, AnyResponse, ClientSocket, ErrorCode, LspService,
-	MainLoopEvent, Message, PeerSocket, ResponseError, Result, ServerSocket,
-};
+use crate::event::AnyEvent;
+use crate::message::Message;
+use crate::socket::{MainLoopEvent, PeerSocket};
+use crate::types::{AnyNotification, AnyRequest, AnyResponse, ErrorCode, ResponseError};
+use crate::{ClientSocket, LspService, Result, ServerSocket};
 
 /// Future for awaiting a response forwarded through a peer socket.
 pub struct PeerSocketResponseFuture {
