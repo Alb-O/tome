@@ -158,7 +158,7 @@ impl KeymapRegistry {
 	/// - `Leaf`: Terminal binding with no further children
 	/// - `Branch`: Sub-prefix with more bindings underneath
 	///
-	/// This enables which-key UIs to show "..." for branches that can be drilled into.
+	/// This enables which-key UIs to show "…" for branches that can be drilled into.
 	pub fn continuations_with_kind(
 		&self,
 		mode: BindingMode,

@@ -558,13 +558,13 @@ impl Editor {
 							format!("{prefix_key} {key}")
 						};
 						if let Some(sub_desc) = find_prefix(binding_mode, &sub_prefix) {
-							format!("{}...", sub_desc.description)
+							format!("{}…", sub_desc.description)
 						} else {
-							"...".to_string()
+							"…".to_string()
 						}
 					}
 					ContinuationKind::Leaf => {
-						cont.value.map_or("...".to_string(), |e| {
+						cont.value.map_or("…".to_string(), |e| {
 							if !e.short_desc.is_empty() {
 								e.short_desc.to_string()
 							} else if !e.description.is_empty() {

@@ -5,10 +5,10 @@
 //! - `split_vertical`: vertical divider → windows side-by-side left/right
 //!
 //! Bindings use hierarchical key sequences under `ctrl-w`:
-//! - `s/v/q` - Common operations (split, close)
+//! - `s h/v` - Split horizontal/vertical
 //! - `f h/j/k/l` - Focus directions
 //! - `b n/p` - Buffer navigation
-//! - `c o` - Close others
+//! - `c c/o` - Close current/others
 
 use evildoer_registry_panels::keys as panels;
 
@@ -18,13 +18,13 @@ use crate::{action, result_handler, ActionResult};
 action!(split_horizontal, {
 	description: "Split horizontal",
 	short_desc: "Horizontal",
-	bindings: r#"normal "ctrl-w s""#,
+	bindings: r#"normal "ctrl-w s h""#,
 }, |_ctx| ActionResult::SplitHorizontal);
 
 action!(split_vertical, {
 	description: "Split vertical",
 	short_desc: "Vertical",
-	bindings: r#"normal "ctrl-w v""#,
+	bindings: r#"normal "ctrl-w s v""#,
 }, |_ctx| ActionResult::SplitVertical);
 
 result_handler!(
@@ -218,9 +218,9 @@ result_handler!(
 );
 
 action!(close_split, {
-	description: "Close split",
-	short_desc: "Close",
-	bindings: r#"normal "ctrl-w q""#,
+	description: "Close current split",
+	short_desc: "Current",
+	bindings: r#"normal "ctrl-w c c""#,
 }, |_ctx| ActionResult::CloseSplit);
 
 action!(close_other_buffers, {

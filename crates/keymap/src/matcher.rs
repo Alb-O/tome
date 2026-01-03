@@ -40,7 +40,7 @@
 //! - **Leaf**: A terminal binding (no further keys possible)
 //! - **Branch**: A sub-prefix with more bindings underneath (e.g., `ctrl-w f` → focus commands)
 //!
-//! This allows UIs to show "..." indicators for branches that can be drilled into.
+//! This allows UIs to show "…" indicators for branches that can be drilled into.
 use std::collections::HashMap;
 
 use evildoer_keymap_parser::node::{CharGroup, Key, Node};
@@ -193,7 +193,7 @@ impl<T> Matcher<T> {
 	/// - `Leaf`: Terminal binding with no further children
 	/// - `Branch`: Sub-prefix with more bindings underneath
 	///
-	/// This enables which-key UIs to show "..." for branches that can be drilled into.
+	/// This enables which-key UIs to show "…" for branches that can be drilled into.
 	pub fn continuations_with_kind(&self, prefix: &[Node]) -> Vec<ContinuationEntry<'_, T>> {
 		let Some(trie) = navigate_to(&self.root, prefix, 0) else {
 			return Vec::new();
