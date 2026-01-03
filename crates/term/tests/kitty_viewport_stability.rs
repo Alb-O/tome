@@ -120,11 +120,12 @@ fn viewport_stable_during_adjacent_split_resize() {
 				send_keys(kitty, &[KeyPress::from(KeyCode::Escape)]);
 				pause_briefly();
 
-				// Go to a line in the middle so we have room to scroll
-				// Use :30 to go to line 30
-				send_keys(kitty, &[KeyPress::from(KeyCode::Char(':'))]);
-				type_chars(kitty, "30");
-				send_keys(kitty, &[KeyPress::from(KeyCode::Enter)]);
+				// Go to line 30 using gg then 29 j movements
+				send_keys(kitty, &[KeyPress::from(KeyCode::Char('g'))]);
+				send_keys(kitty, &[KeyPress::from(KeyCode::Char('g'))]);
+				for _ in 0..29 {
+					send_keys(kitty, &[KeyPress::from(KeyCode::Char('j'))]);
+				}
 				pause_briefly();
 
 				// Capture screen to find the separator position
@@ -161,8 +162,8 @@ fn viewport_stable_during_adjacent_split_resize() {
 						clean.contains("LINE_01")
 					});
 
-				// Find first visible line before resize
-				let first_line_before = find_line_number_at_row(&clean_before, 0);
+				// Find first visible line before resize (row 1 is first content after menu)
+				let first_line_before = find_line_number_at_row(&clean_before, 1);
 				assert!(
 					first_line_before.is_some(),
 					"Should find first visible line number, screen:\n{}",
@@ -203,7 +204,7 @@ fn viewport_stable_during_adjacent_split_resize() {
 				let separator_row_after = sep_rows_after[0];
 
 				// Find first visible line after resize
-				let first_line_after = find_line_number_at_row(&clean_after, 0);
+				let first_line_after = find_line_number_at_row(&clean_after, 1);
 				assert!(
 					first_line_after.is_some(),
 					"Should find first visible line after resize, screen:\n{}",

@@ -130,7 +130,10 @@ action!(rotate_selections_backward, {
 	ActionResult::Motion(new_sel)
 });
 
-action!(split_lines, { description: "Split selection into lines" }, |ctx| split_lines_impl(ctx));
+action!(split_lines, {
+	description: "Split selection into lines",
+	bindings: r#"normal "alt-s""#,
+}, |ctx| split_lines_impl(ctx));
 
 /// Splits multi-line selections into one selection per line.
 fn split_lines_impl(ctx: &ActionContext) -> ActionResult {
