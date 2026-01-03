@@ -111,10 +111,30 @@ impl SeparatorStyle {
 		}
 	}
 
-	/// Returns the base style for a given priority (used for junction glyphs).
-	fn for_priority(&self, priority: u8) -> Style {
+	/// Returns the style for a junction at the given position.
+	///
+	/// Checks if the position lies on a hovered/dragged/animated separator to maintain
+	/// continuous highlight across junctions.
+	fn for_junction(&self, x: u16, y: u16, priority: u8) -> Style {
+		let point_on_rect = |rect: Rect| -> bool {
+			x >= rect.x && x < rect.right() && y >= rect.y && y < rect.bottom()
+		};
+
 		let idx = (priority as usize).min(self.base_bg.len() - 1);
-		Style::default().fg(self.base_fg[idx]).bg(self.base_bg[idx])
+		let normal_fg = self.base_fg[idx];
+		let normal_bg = self.base_bg[idx];
+
+		if self.dragging_rect.is_some_and(point_on_rect) {
+			Style::default().fg(self.drag_fg).bg(self.drag_bg)
+		} else if self.anim_rect.is_some_and(point_on_rect) {
+			let fg = normal_fg.lerp(&self.hover_fg, self.anim_intensity);
+			let bg = normal_bg.lerp(&self.hover_bg, self.anim_intensity);
+			Style::default().fg(fg).bg(bg)
+		} else if self.hovered_rect.is_some_and(point_on_rect) {
+			Style::default().fg(self.hover_fg).bg(self.hover_bg)
+		} else {
+			Style::default().fg(normal_fg).bg(normal_bg)
+		}
 	}
 }
 
@@ -412,7 +432,7 @@ impl Editor {
 			}
 
 			let glyph = junction_glyph(connectivity);
-			let style = sep_style.for_priority(priority);
+			let style = sep_style.for_junction(x, y, priority);
 
 			if let Some(cell) = buf.cell_mut((x, y)) {
 				cell.set_char(glyph);
