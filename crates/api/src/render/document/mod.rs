@@ -623,6 +623,7 @@ impl Editor {
 			.padding(Padding::horizontal(1));
 
 		let inner = block.inner(hud_area);
+		frame.render_widget(Clear, hud_area);
 		frame.render_widget(block, hud_area);
 
 		let mut tree = KeyTree::new(root, children)
