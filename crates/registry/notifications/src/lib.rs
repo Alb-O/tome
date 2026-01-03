@@ -1,6 +1,7 @@
-//! Notification registry
+//! Notification registry.
 //!
 //! Type-safe notification system with compile-time checked notification keys.
+//! Keys are organized by domain (editor, commands, actions, core, acp).
 //!
 //! # Usage
 //!
@@ -21,11 +22,21 @@ use linkme::distributed_slice;
 
 pub use evildoer_registry_core::{Key, RegistryMetadata, RegistrySource, impl_registry_metadata};
 
-mod catalog;
+mod acp;
+mod actions;
+mod builtins;
+mod commands;
+mod editor;
+mod runtime;
 
-/// Re-export notification keys for convenient imports.
+/// All notification keys, organized by domain.
 pub mod keys {
-	pub use crate::catalog::keys::*;
+	pub use crate::acp::keys::*;
+	pub use crate::actions::keys::*;
+	pub use crate::builtins::keys::*;
+	pub use crate::commands::keys::*;
+	pub use crate::editor::keys::*;
+	pub use crate::runtime::keys::*;
 }
 
 /// Severity level for notifications.
