@@ -5,6 +5,7 @@
 use xeno_tui::layout::Rect;
 
 use super::manager::LayoutManager;
+use crate::buffer::Direction;
 use crate::buffer::{BufferId, BufferView};
 
 impl LayoutManager {
@@ -127,5 +128,15 @@ impl LayoutManager {
 	/// Computes rectangular areas for each buffer in the base layer.
 	pub fn compute_buffer_areas(&self, area: Rect) -> Vec<(BufferId, Rect)> {
 		self.base_layer().compute_areas(area)
+	}
+
+	/// Finds the view in the given direction, searching the current view's layer.
+	pub fn view_in_direction(&self, area: Rect, current: BufferView, direction: Direction, hint: u16) -> Option<BufferView> {
+		if let Some(idx) = self.layer_of_view(current)
+			&& let Some(layout) = &self.layers[idx]
+		{
+			return layout.view_in_direction(self.layer_area(idx, area), current, direction, hint);
+		}
+		self.base_layer().view_in_direction(area, current, direction, hint)
 	}
 }

@@ -17,7 +17,7 @@ use std::sync::{Arc, RwLock};
 
 pub use document::{Document, DocumentId};
 pub use history::HistoryResult;
-pub use layout::{BufferView, Layout, SplitDirection, SplitPath};
+pub use layout::{BufferView, Direction, Layout, SplitDirection, SplitPath};
 use xeno_base::range::CharIdx;
 use xeno_base::{Mode, Selection};
 use xeno_input::InputHandler;

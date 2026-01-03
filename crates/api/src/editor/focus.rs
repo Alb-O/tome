@@ -6,7 +6,7 @@ use xeno_base::Mode;
 use xeno_registry::{HookContext, HookEventData, ViewId, emit_sync_with as emit_hook_sync_with};
 
 use super::Editor;
-use crate::buffer::{BufferId, BufferView};
+use crate::buffer::{BufferId, BufferView, Direction};
 
 /// Converts a buffer view to a hook-compatible view ID.
 fn hook_view_id(view: BufferView) -> ViewId {
@@ -93,6 +93,40 @@ impl Editor {
 		let current_id = self.buffers.focused_view();
 		let prev_id = self.layout.prev_buffer(current_id);
 		self.focus_buffer(prev_id);
+	}
+
+	/// Focuses the view in the given direction, using cursor position as tiebreaker.
+	pub fn focus_direction(&mut self, direction: Direction) {
+		let area = self.doc_area();
+		let current = self.buffers.focused_view();
+		let hint = self.cursor_screen_pos(direction, area);
+
+		if let Some(target) = self.layout.view_in_direction(area, current, direction, hint) {
+			self.focus_view(target);
+		}
+	}
+
+	/// Returns cursor screen position along the perpendicular axis for directional hints.
+	fn cursor_screen_pos(&self, direction: Direction, area: xeno_tui::layout::Rect) -> u16 {
+		let buffer = self.buffer();
+		let view_rect = self
+			.layout
+			.compute_view_areas(area)
+			.into_iter()
+			.find(|(v, _)| *v == self.buffers.focused_view())
+			.map(|(_, r)| r)
+			.unwrap_or(area);
+
+		match direction {
+			Direction::Left | Direction::Right => {
+				let visible_line = buffer.cursor_line().saturating_sub(buffer.scroll_line);
+				view_rect.y + (visible_line as u16).min(view_rect.height.saturating_sub(1))
+			}
+			Direction::Up | Direction::Down => {
+				let gutter = buffer.gutter_width();
+				view_rect.x + gutter + (buffer.cursor_col() as u16).min(view_rect.width.saturating_sub(gutter + 1))
+			}
+		}
 	}
 
 	/// Returns the current editing mode (Normal, Insert, Visual, etc.).

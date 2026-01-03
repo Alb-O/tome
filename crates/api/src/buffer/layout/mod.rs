@@ -12,6 +12,7 @@ mod navigation;
 mod tests;
 mod types;
 
+pub use navigation::Direction;
 pub use types::{BufferView, SplitDirection, SplitPath};
 use xeno_tui::layout::Rect;
 

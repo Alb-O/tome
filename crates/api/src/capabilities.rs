@@ -208,21 +208,19 @@ impl FocusOps for Editor {
 	}
 
 	fn focus_left(&mut self) {
-		// For now, just cycle to prev buffer (proper split navigation would need layout awareness)
-		self.focus_prev_buffer();
+		self.focus_direction(crate::buffer::Direction::Left);
 	}
 
 	fn focus_right(&mut self) {
-		// For now, just cycle to next buffer (proper split navigation would need layout awareness)
-		self.focus_next_buffer();
+		self.focus_direction(crate::buffer::Direction::Right);
 	}
 
 	fn focus_up(&mut self) {
-		self.focus_prev_buffer();
+		self.focus_direction(crate::buffer::Direction::Up);
 	}
 
 	fn focus_down(&mut self) {
-		self.focus_next_buffer();
+		self.focus_direction(crate::buffer::Direction::Down);
 	}
 }
 
