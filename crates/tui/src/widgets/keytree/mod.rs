@@ -49,6 +49,8 @@ pub struct TreeSymbols<'a> {
 	pub corner: &'a str,
 	/// Horizontal line after connector.
 	pub horizontal: &'a str,
+	/// Vertical line for separator.
+	pub vertical: &'a str,
 }
 
 impl Default for TreeSymbols<'_> {
@@ -62,6 +64,7 @@ pub const ROUNDED_SYMBOLS: TreeSymbols<'static> = TreeSymbols {
 	branch: line::VERTICAL_RIGHT,
 	corner: line::ROUNDED_BOTTOM_LEFT,
 	horizontal: line::HORIZONTAL,
+	vertical: line::VERTICAL,
 };
 
 /// Displays a root key with child continuations as a tree.
@@ -69,6 +72,8 @@ pub const ROUNDED_SYMBOLS: TreeSymbols<'static> = TreeSymbols {
 pub struct KeyTree<'a> {
 	/// The root key label (e.g., the pressed prefix).
 	root: Cow<'a, str>,
+	/// Optional description shown after the root key (e.g., "Goto...").
+	root_desc: Option<Cow<'a, str>>,
 	/// Child nodes representing available continuations.
 	children: Vec<KeyTreeNode<'a>>,
 	/// Symbols used for tree connectors.
@@ -87,6 +92,13 @@ impl<'a> KeyTree<'a> {
 	/// Creates a new key tree with a root key and its continuations.
 	pub fn new(root: impl Into<Cow<'a, str>>, children: Vec<KeyTreeNode<'a>>) -> Self {
 		Self { root: root.into(), children, ..Default::default() }
+	}
+
+	/// Sets the description shown after the root key (e.g., "Goto...").
+	#[must_use]
+	pub fn root_desc(mut self, desc: impl Into<Cow<'a, str>>) -> Self {
+		self.root_desc = Some(desc.into());
+		self
 	}
 
 	/// Sets the tree line symbols.
@@ -133,12 +145,21 @@ impl Widget for KeyTree<'_> {
 
 		let mut y = area.y;
 
-		// Render root key
 		let root_width = self.root.len().min(area.width as usize);
 		buf.set_stringn(area.x, y, &self.root, root_width, self.root_style);
+		if let Some(ref desc) = self.root_desc {
+			let desc_x = area.x + root_width as u16;
+			if desc_x < area.right() {
+				buf.set_stringn(desc_x, y, desc, (area.right() - desc_x) as usize, self.desc_style);
+			}
+		}
 		y += 1;
 
-		// Render children with tree connectors
+		if y < area.bottom() {
+			buf.set_string(area.x, y, self.symbols.vertical, self.line_style);
+			y += 1;
+		}
+
 		for (i, node) in self.children.iter().enumerate() {
 			if y >= area.bottom() {
 				break;
@@ -211,9 +232,10 @@ mod tests {
 	fn root_with_single_child() {
 		let children = vec![KeyTreeNode::new("g", "document_start")];
 		let tree = KeyTree::new("g", children);
-		let lines = render_to_lines(tree, 25, 3);
+		let lines = render_to_lines(tree, 25, 4);
 		assert_eq!(lines[0], "g");
-		assert!(lines[1].contains("╰─g document_start"));
+		assert_eq!(lines[1], "│");
+		assert!(lines[2].contains("╰─g document_start"));
 	}
 
 	#[test]
@@ -224,12 +246,12 @@ mod tests {
 			KeyTreeNode::new("h", "home"),
 		];
 		let tree = KeyTree::new("g", children);
-		let lines = render_to_lines(tree, 20, 5);
-
+		let lines = render_to_lines(tree, 20, 6);
 		assert_eq!(lines[0], "g");
-		assert!(lines[1].contains("├─g"));
-		assert!(lines[2].contains("├─e"));
-		assert!(lines[3].contains("╰─h"));
+		assert_eq!(lines[1], "│");
+		assert!(lines[2].contains("├─g"));
+		assert!(lines[3].contains("├─e"));
+		assert!(lines[4].contains("╰─h"));
 	}
 
 	#[test]
@@ -237,7 +259,7 @@ mod tests {
 		use unicode_width::UnicodeWidthStr;
 		let children = vec![KeyTreeNode::new("g", "a very long description")];
 		let tree = KeyTree::new("g", children);
-		let lines = render_to_lines(tree, 12, 2);
-		assert!(lines[1].width() <= 12);
+		let lines = render_to_lines(tree, 12, 4);
+		assert!(lines[2].width() <= 12);
 	}
 }

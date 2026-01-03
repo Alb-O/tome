@@ -28,6 +28,38 @@ use linkme::distributed_slice;
 #[distributed_slice]
 pub static KEYBINDINGS: [KeyBindingDef];
 
+/// Distributed slice for key sequence prefix descriptions.
+///
+/// Used by the which-key HUD to show a description for the pressed prefix key.
+/// For example, pressing `g` shows "Goto..." as the prefix description.
+#[distributed_slice]
+pub static KEY_PREFIXES: [KeyPrefixDef];
+
+/// Definition of a key sequence prefix with its description.
+///
+/// Registered via the `key_prefix!` macro:
+///
+/// ```ignore
+/// key_prefix!(normal "g" => "Goto");
+/// key_prefix!(normal "z" => "View");
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct KeyPrefixDef {
+	/// Mode this prefix is active in.
+	pub mode: BindingMode,
+	/// The prefix key sequence (e.g., `"g"`, `"z"`).
+	pub keys: &'static str,
+	/// Human-readable description (e.g., "Goto", "View").
+	pub description: &'static str,
+}
+
+/// Finds a prefix definition for the given mode and key sequence.
+pub fn find_prefix(mode: BindingMode, keys: &str) -> Option<&'static KeyPrefixDef> {
+	KEY_PREFIXES
+		.iter()
+		.find(|p| p.mode == mode && p.keys == keys)
+}
+
 /// Key sequence binding definition.
 ///
 /// Maps a key sequence (e.g., `"g g"`, `"ctrl-home"`) to an action in a mode.

@@ -69,8 +69,9 @@ macro_rules! __opt_slice {
 macro_rules! action {
 	($name:ident, {
 		$(aliases: $aliases:expr,)?
-		description: $desc:expr,
-		bindings: $kdl:literal
+		description: $desc:expr
+		$(, short_desc: $short:expr)?
+		$(, bindings: $kdl:literal)?
 		$(, priority: $priority:expr)?
 		$(, caps: $caps:expr)?
 		$(, flags: $flags:expr)?
@@ -84,37 +85,22 @@ macro_rules! action {
 
 			$crate::action!($name, {
 				$(aliases: $aliases,)?
-				description: $desc,
-				bindings: $kdl
+				description: $desc
+				$(, short_desc: $short)?
 				$(, priority: $priority)?
 				$(, caps: $caps)?
 				$(, flags: $flags)?
 			}, handler: [<handler_ $name>]);
+
+			$(evildoer_macro::parse_keybindings!($name, $kdl);)?
 		}
 	};
 
 	($name:ident, {
 		$(aliases: $aliases:expr,)?
-		description: $desc:expr,
-		bindings: $kdl:literal
-		$(, priority: $priority:expr)?
-		$(, caps: $caps:expr)?
-		$(, flags: $flags:expr)?
-		$(,)?
-	}, handler: $handler:expr) => {
-		$crate::action!($name, {
-			$(aliases: $aliases,)?
-			description: $desc
-			$(, priority: $priority)?
-			$(, caps: $caps)?
-			$(, flags: $flags)?
-		}, handler: $handler);
-		evildoer_macro::parse_keybindings!($name, $kdl);
-	};
-
-	($name:ident, {
-		$(aliases: $aliases:expr,)?
 		description: $desc:expr
+		$(, short_desc: $short:expr)?
+		$(, bindings: $kdl:literal)?
 		$(, priority: $priority:expr)?
 		$(, caps: $caps:expr)?
 		$(, flags: $flags:expr)?
@@ -128,6 +114,7 @@ macro_rules! action {
 				name: stringify!($name),
 				aliases: $crate::__opt_slice!($({$aliases})?),
 				description: $desc,
+				short_desc: $crate::__opt!($({$short})?, ""),
 				handler: $handler,
 				priority: $crate::__opt!($({$priority})?, 0),
 				source: $crate::RegistrySource::Crate(env!("CARGO_PKG_NAME")),
@@ -138,29 +125,8 @@ macro_rules! action {
 			#[doc = concat!("Typed handle for the `", stringify!($name), "` action.")]
 			#[allow(non_upper_case_globals)]
 			pub const $name: $crate::ActionKey = $crate::ActionKey::new(&[<ACTION_ $name>]);
-		}
-	};
 
-	($name:ident, {
-		$(aliases: $aliases:expr,)?
-		description: $desc:expr
-		$(, priority: $priority:expr)?
-		$(, caps: $caps:expr)?
-		$(, flags: $flags:expr)?
-		$(,)?
-	}, |$ctx:ident| $body:expr) => {
-		paste::paste! {
-			#[allow(unused_variables)]
-			fn [<handler_ $name>]($ctx: &$crate::ActionContext) -> $crate::ActionResult {
-				$body
-			}
-			$crate::action!($name, {
-				$(aliases: $aliases,)?
-				description: $desc
-				$(, priority: $priority)?
-				$(, caps: $caps)?
-				$(, flags: $flags)?
-			}, handler: [<handler_ $name>]);
+			$(evildoer_macro::parse_keybindings!($name, $kdl);)?
 		}
 	};
 }
@@ -197,6 +163,30 @@ macro_rules! result_handler {
 				required_caps: $crate::__opt_slice!($({$caps})?),
 				handle: $body,
 			};
+	};
+}
+
+/// Registers a key sequence prefix with its description for the which-key HUD.
+///
+/// # Example
+///
+/// ```ignore
+/// key_prefix!(normal "g" => "Goto");
+/// key_prefix!(normal "z" => "View");
+/// key_prefix!(window "s" => "Split");
+/// ```
+#[macro_export]
+macro_rules! key_prefix {
+	($mode:ident $keys:literal => $desc:literal) => {
+		paste::paste! {
+			#[allow(non_upper_case_globals)]
+			#[linkme::distributed_slice($crate::KEY_PREFIXES)]
+			static [<KEY_PREFIX_ $mode:upper _ $keys>]: $crate::KeyPrefixDef = $crate::KeyPrefixDef {
+				mode: $crate::BindingMode::[<$mode:camel>],
+				keys: $keys,
+				description: $desc,
+			};
+		}
 	};
 }
 

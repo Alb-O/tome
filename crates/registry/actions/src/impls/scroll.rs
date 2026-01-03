@@ -2,7 +2,11 @@
 
 use crate::{action, ActionResult, EditAction, ScrollAmount, ScrollDir, VisualDirection};
 
-action!(scroll_up, { description: "Scroll view up", bindings: r#"normal "z k""# }, |ctx| {
+action!(scroll_up, {
+	description: "View scroll up",
+	short_desc: "Scroll up",
+	bindings: r#"normal "z k""#,
+}, |ctx| {
 	ActionResult::Edit(EditAction::Scroll {
 		direction: ScrollDir::Up,
 		amount: ScrollAmount::Line(ctx.count),
@@ -10,7 +14,11 @@ action!(scroll_up, { description: "Scroll view up", bindings: r#"normal "z k""# 
 	})
 });
 
-action!(scroll_down, { description: "Scroll view down", bindings: r#"normal "z j""# }, |ctx| {
+action!(scroll_down, {
+	description: "View scroll down",
+	short_desc: "Scroll down",
+	bindings: r#"normal "z j""#,
+}, |ctx| {
 	ActionResult::Edit(EditAction::Scroll {
 		direction: ScrollDir::Down,
 		amount: ScrollAmount::Line(ctx.count),

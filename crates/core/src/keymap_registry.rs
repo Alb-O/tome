@@ -24,6 +24,10 @@ pub struct BindingEntry {
 	pub action_id: ActionId,
 	/// Action name (for display/debugging).
 	pub action_name: &'static str,
+	/// Human-readable description for UI display.
+	pub description: &'static str,
+	/// Short description without key-sequence prefix (for which-key HUD).
+	pub short_desc: &'static str,
 	/// Key sequence that triggers this binding (for display).
 	pub keys: Vec<Node>,
 }
@@ -85,7 +89,7 @@ impl KeymapRegistry {
 
 	/// Initialize from the KEYBINDINGS distributed slice.
 	pub fn from_slice() -> Self {
-		use crate::index::resolve_action_id;
+		use crate::index::{find_action, resolve_action_id};
 
 		let mut registry = Self::new();
 
@@ -108,9 +112,15 @@ impl KeymapRegistry {
 				continue;
 			};
 
+			let (description, short_desc) = find_action(def.action)
+				.map(|a| (a.description, a.short_desc))
+				.unwrap_or(("", ""));
+
 			let entry = BindingEntry {
 				action_id,
 				action_name: def.action,
+				description,
+				short_desc,
 				keys: keys.clone(),
 			};
 
@@ -161,6 +171,8 @@ mod tests {
 		BindingEntry {
 			action_id: ActionId(1),
 			action_name: name,
+			description: "",
+			short_desc: "",
 			keys: vec![],
 		}
 	}

@@ -29,6 +29,13 @@ pub struct ActionDef {
 	pub aliases: &'static [&'static str],
 	/// Description for help text.
 	pub description: &'static str,
+	/// Short description without key-sequence prefix (for which-key HUD).
+	///
+	/// When actions share a common prefix (e.g., `g` for "Goto"), this field
+	/// contains just the suffix (e.g., "Line start" instead of "Goto line start").
+	/// The prefix description is shown on the root key, making the tree read
+	/// naturally: `g Goto...` → `h Line start`.
+	pub short_desc: &'static str,
 	/// The function that executes this action.
 	pub handler: ActionHandler,
 	/// Priority for conflict resolution (higher wins).

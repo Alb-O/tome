@@ -515,7 +515,7 @@ impl Editor {
 	fn render_whichkey_hud(&self, frame: &mut evildoer_tui::Frame, doc_area: Rect) {
 		use crate::buffer::BufferView;
 		use evildoer_core::get_keymap_registry;
-		use evildoer_registry::BindingMode;
+		use evildoer_registry::{BindingMode, find_prefix};
 		use evildoer_tui::widgets::keytree::{KeyTree, KeyTreeNode};
 
 		let BufferView::Text(_) = self.focused_view() else {
@@ -539,17 +539,27 @@ impl Editor {
 		}
 
 		let root: String = pending_keys.iter().map(|k| format!("{k} ")).collect();
+		let prefix_key: String = pending_keys.iter().map(|k| format!("{k}")).collect();
+		let prefix_desc = find_prefix(binding_mode, &prefix_key).map(|p| p.description);
+
 		let children: Vec<KeyTreeNode<'_>> = continuations
 			.iter()
 			.map(|(node, entry)| {
 				let key = format!("{node}");
-				let desc = entry.map_or("...", |e| e.action_name);
+				let desc = entry.map_or("...", |e| {
+					if !e.short_desc.is_empty() {
+						e.short_desc
+					} else if !e.description.is_empty() {
+						e.description
+					} else {
+						e.action_name
+					}
+				});
 				KeyTreeNode::new(key, desc)
 			})
 			.collect();
 
-		// +1 for root line, +2 for border
-		let content_height = (children.len() as u16 + 1).clamp(2, 11);
+		let content_height = (children.len() as u16 + 2).clamp(3, 12);
 		let width = 32u16.min(doc_area.width.saturating_sub(4));
 		let height = content_height + 2;
 		let hud_area = Rect {
@@ -569,11 +579,15 @@ impl Editor {
 		let inner = block.inner(hud_area);
 		frame.render_widget(block, hud_area);
 
-		let tree = KeyTree::new(root, children)
+		let mut tree = KeyTree::new(root, children)
 			.root_style(Style::default().fg(self.theme.colors.popup.fg).add_modifier(Modifier::BOLD))
 			.key_style(Style::default().fg(self.theme.colors.status.warning_fg).add_modifier(Modifier::BOLD))
 			.desc_style(Style::default().fg(self.theme.colors.popup.fg))
 			.line_style(Style::default().fg(self.theme.colors.ui.gutter_fg));
+
+		if let Some(desc) = prefix_desc {
+			tree = tree.root_desc(desc);
+		}
 
 		frame.render_widget(tree, inner);
 	}

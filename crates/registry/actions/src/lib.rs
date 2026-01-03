@@ -29,7 +29,9 @@ pub use evildoer_base::{Mode, ObjectSelectionKind, PendingKind};
 pub use evildoer_registry_commands::CommandError;
 pub use evildoer_registry_core::{impl_registry_metadata, RegistryMetadata, RegistrySource};
 pub use evildoer_registry_motions::{flags, Capability};
-pub use keybindings::{BindingMode, KeyBindingDef, KEYBINDINGS};
+pub use keybindings::{
+	find_prefix, BindingMode, KeyBindingDef, KeyPrefixDef, KEYBINDINGS, KEY_PREFIXES,
+};
 use linkme::distributed_slice;
 pub use motion_helpers::{cursor_motion, insert_with_motion, selection_motion, word_motion};
 pub use pending::PendingAction;
