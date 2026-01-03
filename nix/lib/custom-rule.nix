@@ -3,9 +3,7 @@
 */
 { lib }:
 {
-  toJson =
-    rule:
-    builtins.toJSON (lib.filterAttrs (_: v: v != null && v != [ ]) rule);
+  toJson = rule: builtins.toJSON (lib.filterAttrs (_: v: v != null && v != [ ]) rule);
 
   mkCommandRule =
     {
@@ -15,7 +13,12 @@
       severity ? "warning",
     }:
     {
-      inherit id severity message run;
+      inherit
+        id
+        severity
+        message
+        run
+        ;
       type = "command";
     };
 

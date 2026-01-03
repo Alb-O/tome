@@ -225,9 +225,9 @@ export def "imp lint" [
         $all_findings | format-summary-table | print
 
         if $error_count > 0 {
-            print $"\n(ansi red_bold)($error_count) error(s)(ansi reset), ($warn_count) warning(s)"
+            print $"\n(ansi red_bold)($error_count) error\(s\)(ansi reset), ($warn_count) warning\(s\)"
         } else {
-            print $"\n(ansi yellow_bold)($warn_count) warning(s)(ansi reset)"
+            print $"\n(ansi yellow_bold)($warn_count) warning\(s\)(ansi reset)"
         }
     }
 }

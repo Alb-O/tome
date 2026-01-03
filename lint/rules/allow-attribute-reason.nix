@@ -10,13 +10,21 @@ mkRule {
       {
         all = [
           { pattern = ''#[allow($$$ARGS)]''; }
-          { not = { regex = ''reason\s*=''; }; }
+          {
+            not = {
+              regex = ''reason\s*='';
+            };
+          }
         ];
       }
       {
         all = [
           { pattern = ''#![allow($$$ARGS)]''; }
-          { not = { regex = ''reason\s*=''; }; }
+          {
+            not = {
+              regex = ''reason\s*='';
+            };
+          }
         ];
       }
     ];

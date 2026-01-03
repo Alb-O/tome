@@ -7,9 +7,7 @@
 { lib }:
 {
   # Filter out empty lists for cleaner YAML output
-  toJson =
-    rule:
-    builtins.toJSON (lib.filterAttrs (_: v: v != null && v != [ ]) rule);
+  toJson = rule: builtins.toJSON (lib.filterAttrs (_: v: v != null && v != [ ]) rule);
 
   # Helper to define a rule with defaults
   mkRule =
