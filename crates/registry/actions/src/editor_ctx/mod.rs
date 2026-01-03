@@ -176,6 +176,16 @@ impl<'a> EditorContext<'a> {
 		self.inner.command_queue()
 	}
 
+	/// Returns whether the current buffer is read-only.
+	pub fn is_readonly(&self) -> bool {
+		self.inner.is_readonly()
+	}
+
+	/// Displays a notification message.
+	pub fn notify(&mut self, type_id: &str, msg: &str) {
+		self.inner.notify(type_id, msg);
+	}
+
 	/// Checks if a specific capability is available.
 	pub fn check_capability(&mut self, cap: Capability) -> bool {
 		use Capability::*;
@@ -263,5 +273,10 @@ pub trait EditorCapabilities: CursorAccess + SelectionAccess + ModeAccess + Mess
 	/// Access to command queue operations (optional).
 	fn command_queue(&mut self) -> Option<&mut dyn CommandQueueAccess> {
 		None
+	}
+
+	/// Returns whether the current buffer is read-only.
+	fn is_readonly(&self) -> bool {
+		false
 	}
 }

@@ -53,6 +53,10 @@ impl ModeAccess for Editor {
 	}
 
 	fn set_mode(&mut self, mode: Mode) {
+		if matches!(mode, Mode::Insert) && self.buffer().is_readonly() {
+			self.notify("warning", "Buffer is read-only");
+			return;
+		}
 		self.buffer_mut().input.set_mode(mode);
 	}
 }
@@ -341,5 +345,9 @@ impl EditorCapabilities for Editor {
 
 	fn command_queue(&mut self) -> Option<&mut dyn CommandQueueAccess> {
 		Some(self)
+	}
+
+	fn is_readonly(&self) -> bool {
+		self.buffer().is_readonly()
 	}
 }

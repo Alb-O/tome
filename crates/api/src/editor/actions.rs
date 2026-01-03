@@ -1,5 +1,6 @@
 use evildoer_base::range::{Direction as MoveDir, Range};
 use evildoer_base::{Mode, Selection, Transaction};
+use evildoer_core::editor_ctx::ModeAccess;
 use evildoer_core::movement;
 use evildoer_registry::{EditAction, ScrollAmount, ScrollDir, VisualDirection};
 use tracing::debug;
@@ -10,9 +11,6 @@ impl Editor {
 	/// Executes an edit action (delete, change, yank, etc.).
 	pub(crate) fn do_execute_edit_action(&mut self, action: EditAction, _extend: bool) {
 		debug!(edit = ?action, "Executing edit action");
-		if !self.guard_readonly() {
-			return;
-		}
 		match action {
 			EditAction::Delete { yank } => {
 				if yank {
@@ -71,7 +69,7 @@ impl Editor {
 					self.buffer_mut().selection = new_sel;
 					self.apply_transaction(&tx);
 				}
-				self.buffer_mut().input.set_mode(Mode::Insert);
+				self.set_mode(Mode::Insert);
 			}
 			EditAction::Yank => {
 				self.yank_selection();
@@ -313,7 +311,7 @@ impl Editor {
 						Selection::from_vec(new_ranges, buffer.selection.primary_index());
 				}
 				self.insert_text("\n");
-				self.buffer_mut().input.set_mode(Mode::Insert);
+				self.set_mode(Mode::Insert);
 			}
 			EditAction::OpenAbove => {
 				{
@@ -355,7 +353,7 @@ impl Editor {
 					buffer.selection =
 						Selection::from_vec(new_ranges, buffer.selection.primary_index());
 				}
-				self.buffer_mut().input.set_mode(Mode::Insert);
+				self.set_mode(Mode::Insert);
 			}
 			EditAction::MoveVisual {
 				direction,
