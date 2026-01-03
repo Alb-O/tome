@@ -70,6 +70,7 @@ pub struct KeyTree<'a> {
 	root: Cow<'a, str>,
 	children: Vec<KeyTreeNode<'a>>,
 	symbols: TreeSymbols<'a>,
+	root_style: Style,
 	key_style: Style,
 	desc_style: Style,
 	line_style: Style,
@@ -88,7 +89,14 @@ impl<'a> KeyTree<'a> {
 		self
 	}
 
-	/// Sets the style for key labels.
+	/// Sets the style for the root key.
+	#[must_use]
+	pub const fn root_style(mut self, style: Style) -> Self {
+		self.root_style = style;
+		self
+	}
+
+	/// Sets the style for child key labels.
 	#[must_use]
 	pub const fn key_style(mut self, style: Style) -> Self {
 		self.key_style = style;
@@ -120,7 +128,7 @@ impl Widget for KeyTree<'_> {
 
 		// Render root key
 		let root_width = self.root.len().min(area.width as usize);
-		buf.set_stringn(area.x, y, &self.root, root_width, self.key_style);
+		buf.set_stringn(area.x, y, &self.root, root_width, self.root_style);
 		y += 1;
 
 		// Render children with tree connectors

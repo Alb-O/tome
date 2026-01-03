@@ -4,7 +4,7 @@ use evildoer_registry::themes::{
 };
 use evildoer_tui::style::Style;
 use evildoer_tui::widgets::icon::presets as icon_presets;
-use evildoer_tui::widgets::notifications::{self as notif, Toast, ToastIcon};
+use evildoer_tui::widgets::notifications::{self as notif, Anchor, Toast, ToastIcon};
 
 use crate::editor::Editor;
 
@@ -31,6 +31,7 @@ impl Editor {
 		let accent = notif_style.fg.unwrap_or_default();
 
 		let mut toast = Toast::new(text)
+			.anchor(Anchor::TopRight)
 			.style(notif_style)
 			.border_style(Style::default().fg(accent));
 

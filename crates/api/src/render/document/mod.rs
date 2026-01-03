@@ -14,7 +14,7 @@ use evildoer_tui::layout::{Constraint, Direction, Layout, Rect};
 use evildoer_tui::style::{Color, Modifier, Style};
 use evildoer_tui::text::{Line, Span};
 use evildoer_tui::widgets::menu::Menu;
-use evildoer_tui::widgets::{Block, Clear, Paragraph, StatefulWidget};
+use evildoer_tui::widgets::{Block, BorderType, Borders, Clear, Padding, Paragraph, StatefulWidget};
 
 use super::buffer::{BufferRenderContext, ensure_buffer_cursor_visible};
 use crate::Editor;
@@ -543,9 +543,10 @@ impl Editor {
 			})
 			.collect();
 
-		// +1 for root line
-		let height = (children.len() as u16 + 1).clamp(2, 11);
-		let width = 30u16.min(doc_area.width.saturating_sub(4));
+		// +1 for root line, +2 for border
+		let content_height = (children.len() as u16 + 1).clamp(2, 11);
+		let width = 32u16.min(doc_area.width.saturating_sub(4));
+		let height = content_height + 2;
 		let hud_area = Rect {
 			x: doc_area.x + doc_area.width.saturating_sub(width + 2),
 			y: doc_area.y + doc_area.height.saturating_sub(height + 2),
@@ -553,28 +554,23 @@ impl Editor {
 			height,
 		};
 
-		let bg = Block::default().style(
-			Style::default()
-				.bg(self.theme.colors.popup.bg)
-				.fg(self.theme.colors.popup.fg),
-		);
-		frame.render_widget(bg, hud_area);
+		let block = Block::default()
+			.style(Style::default().bg(self.theme.colors.popup.bg).fg(self.theme.colors.popup.fg))
+			.borders(Borders::ALL)
+			.border_type(BorderType::Stripe)
+			.border_style(Style::default().fg(self.theme.colors.status.warning_fg))
+			.padding(Padding::horizontal(1));
 
-		let key_style = self
-			.theme
-			.colors
-			.syntax
-			.keyword
-			.fg
-			.map_or_else(Style::default, |c| Style::default().fg(c))
-			.add_modifier(Modifier::BOLD);
+		let inner = block.inner(hud_area);
+		frame.render_widget(block, hud_area);
 
 		let tree = KeyTree::new(root, children)
-			.key_style(key_style)
+			.root_style(Style::default().fg(self.theme.colors.popup.fg).add_modifier(Modifier::BOLD))
+			.key_style(Style::default().fg(self.theme.colors.status.warning_fg).add_modifier(Modifier::BOLD))
 			.desc_style(Style::default().fg(self.theme.colors.popup.fg))
 			.line_style(Style::default().fg(self.theme.colors.ui.gutter_fg));
 
-		frame.render_widget(tree, hud_area);
+		frame.render_widget(tree, inner);
 	}
 }
 
