@@ -31,12 +31,23 @@ pub struct KeyTreeNode<'a> {
 	pub key: Cow<'a, str>,
 	/// Description of the action.
 	pub description: Cow<'a, str>,
+	/// Optional suffix displayed after description with distinct style (e.g., "…").
+	pub suffix: Option<Cow<'a, str>>,
 }
 
 impl<'a> KeyTreeNode<'a> {
 	/// Creates a new node.
 	pub fn new(key: impl Into<Cow<'a, str>>, description: impl Into<Cow<'a, str>>) -> Self {
-		Self { key: key.into(), description: description.into() }
+		Self { key: key.into(), description: description.into(), suffix: None }
+	}
+
+	/// Creates a new node with a suffix.
+	pub fn with_suffix(
+		key: impl Into<Cow<'a, str>>,
+		description: impl Into<Cow<'a, str>>,
+		suffix: impl Into<Cow<'a, str>>,
+	) -> Self {
+		Self { key: key.into(), description: description.into(), suffix: Some(suffix.into()) }
 	}
 }
 
@@ -72,7 +83,7 @@ pub const ROUNDED_SYMBOLS: TreeSymbols<'static> = TreeSymbols {
 pub struct KeyTree<'a> {
 	/// The root key label (e.g., the pressed prefix).
 	root: Cow<'a, str>,
-	/// Optional description shown after the root key (e.g., "Goto...").
+	/// Optional description shown after the root key (e.g., "Goto…").
 	root_desc: Option<Cow<'a, str>>,
 	/// Child nodes representing available continuations.
 	children: Vec<KeyTreeNode<'a>>,
@@ -84,6 +95,8 @@ pub struct KeyTree<'a> {
 	key_style: Style,
 	/// Style for descriptions.
 	desc_style: Style,
+	/// Style for suffix text (e.g., "…" indicator).
+	suffix_style: Style,
 	/// Style for tree connector lines.
 	line_style: Style,
 }
@@ -126,6 +139,13 @@ impl<'a> KeyTree<'a> {
 	#[must_use]
 	pub const fn desc_style(mut self, style: Style) -> Self {
 		self.desc_style = style;
+		self
+	}
+
+	/// Sets the style for suffix text (e.g., "…" indicator).
+	#[must_use]
+	pub const fn suffix_style(mut self, style: Style) -> Self {
+		self.suffix_style = style;
 		self
 	}
 
@@ -191,6 +211,14 @@ impl Widget for KeyTree<'_> {
 			if x < area.right() {
 				let desc_width = node.description.len().min((area.right() - x) as usize);
 				buf.set_stringn(x, y, &node.description, desc_width, self.desc_style);
+				x += desc_width as u16;
+			}
+
+			if let Some(ref suffix) = node.suffix {
+				if x < area.right() {
+					let suffix_width = suffix.len().min((area.right() - x) as usize);
+					buf.set_stringn(x, y, suffix, suffix_width, self.suffix_style);
+				}
 			}
 
 			y += 1;

@@ -550,32 +550,31 @@ impl Editor {
 			.iter()
 			.map(|cont| {
 				let key = format!("{}", cont.key);
-				let desc = match cont.kind {
+				match cont.kind {
 					ContinuationKind::Branch => {
 						let sub_prefix = if prefix_key.is_empty() {
 							key.clone()
 						} else {
 							format!("{prefix_key} {key}")
 						};
-						if let Some(sub_desc) = find_prefix(binding_mode, &sub_prefix) {
-							format!("{}…", sub_desc.description)
-						} else {
-							"…".to_string()
-						}
+						let desc = find_prefix(binding_mode, &sub_prefix)
+							.map(|p| p.description)
+							.unwrap_or("");
+						KeyTreeNode::with_suffix(key, desc, "…")
 					}
 					ContinuationKind::Leaf => {
-						cont.value.map_or("…".to_string(), |e| {
+						let desc = cont.value.map_or("", |e| {
 							if !e.short_desc.is_empty() {
-								e.short_desc.to_string()
+								e.short_desc
 							} else if !e.description.is_empty() {
-								e.description.to_string()
+								e.description
 							} else {
-								e.action_name.to_string()
+								e.action_name
 							}
-						})
+						});
+						KeyTreeNode::new(key, desc)
 					}
-				};
-				KeyTreeNode::new(key, desc)
+				}
 			})
 			.collect();
 
@@ -603,6 +602,7 @@ impl Editor {
 			.root_style(Style::default().fg(self.theme.colors.popup.fg).add_modifier(Modifier::BOLD))
 			.key_style(Style::default().fg(self.theme.colors.status.warning_fg).add_modifier(Modifier::BOLD))
 			.desc_style(Style::default().fg(self.theme.colors.popup.fg))
+			.suffix_style(Style::default().fg(self.theme.colors.ui.gutter_fg))
 			.line_style(Style::default().fg(self.theme.colors.ui.gutter_fg));
 
 		if let Some(desc) = prefix_desc {
