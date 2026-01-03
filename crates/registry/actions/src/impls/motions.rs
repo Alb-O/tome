@@ -47,11 +47,20 @@ action!(select_word_backward, { description: "Select to previous word start", bi
 action!(select_word_end, { description: "Select to next word end", bindings: r#"normal "alt-e""# },
 	|ctx| selection_motion(ctx, motions::next_word_end));
 
-action!(document_start, { description: "Move to document start", bindings: r#"normal "g g""# },
+action!(document_start, { description: "Goto file start", bindings: r#"normal "g g""# },
 	|ctx| cursor_motion(ctx, motions::document_start));
 
-action!(document_end, { description: "Move to document end", bindings: r#"normal "G""# },
+action!(document_end, { description: "Goto file end", bindings: r#"normal "g e" "G""# },
 	|ctx| cursor_motion(ctx, motions::document_end));
+
+action!(goto_line_start, { description: "Goto line start", bindings: r#"normal "g h""# },
+	|ctx| cursor_motion(ctx, motions::line_start));
+
+action!(goto_line_end, { description: "Goto line end", bindings: r#"normal "g l""# },
+	|ctx| cursor_motion(ctx, motions::line_end));
+
+action!(goto_first_nonwhitespace, { description: "Goto first non-blank", bindings: r#"normal "g s""# },
+	|ctx| cursor_motion(ctx, motions::first_nonwhitespace));
 
 action!(move_top_screen, { description: "Move to top of screen", bindings: r#"normal "H""# }, |ctx| {
 	ActionResult::ScreenMotion {

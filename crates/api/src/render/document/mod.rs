@@ -533,7 +533,8 @@ impl Editor {
 			return;
 		}
 
-		let nodes: Vec<KeyTreeNode<'_>> = continuations
+		let root: String = pending_keys.iter().map(|k| format!("{k} ")).collect();
+		let children: Vec<KeyTreeNode<'_>> = continuations
 			.iter()
 			.map(|(node, entry)| {
 				let key = format!("{node}");
@@ -542,7 +543,8 @@ impl Editor {
 			})
 			.collect();
 
-		let height = (nodes.len() as u16).clamp(1, 10);
+		// +1 for root line
+		let height = (children.len() as u16 + 1).clamp(2, 11);
 		let width = 30u16.min(doc_area.width.saturating_sub(4));
 		let hud_area = Rect {
 			x: doc_area.x + doc_area.width.saturating_sub(width + 2),
@@ -567,7 +569,7 @@ impl Editor {
 			.map_or_else(Style::default, |c| Style::default().fg(c))
 			.add_modifier(Modifier::BOLD);
 
-		let tree = KeyTree::new(nodes)
+		let tree = KeyTree::new(root, children)
 			.key_style(key_style)
 			.desc_style(Style::default().fg(self.theme.colors.popup.fg))
 			.line_style(Style::default().fg(self.theme.colors.ui.gutter_fg));

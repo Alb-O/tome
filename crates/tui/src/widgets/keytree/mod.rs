@@ -1,18 +1,18 @@
 //! A widget for displaying key bindings with tree-style connectors.
 //!
-//! [`KeyTree`] renders a flat list of key→description pairs with
-//! box-drawing characters indicating structure.
+//! [`KeyTree`] renders a root key with child continuations using
+//! box-drawing characters.
 //!
 //! # Example
 //!
 //! ```
 //! use evildoer_tui::widgets::keytree::{KeyTree, KeyTreeNode};
 //!
-//! let nodes = vec![
-//!     KeyTreeNode::new("g", "goto..."),
-//!     KeyTreeNode::new("z", "view..."),
+//! let children = vec![
+//!     KeyTreeNode::new("g", "document_start"),
+//!     KeyTreeNode::new("e", "document_end"),
 //! ];
-//! let tree = KeyTree::new(nodes);
+//! let tree = KeyTree::new("g", children);
 //! ```
 
 use alloc::borrow::Cow;
@@ -64,10 +64,11 @@ pub const ROUNDED_SYMBOLS: TreeSymbols<'static> = TreeSymbols {
 	horizontal: line::HORIZONTAL,
 };
 
-/// Displays key bindings as a list with tree connectors.
+/// Displays a root key with child continuations as a tree.
 #[derive(Debug, Clone, Default)]
 pub struct KeyTree<'a> {
-	nodes: Vec<KeyTreeNode<'a>>,
+	root: Cow<'a, str>,
+	children: Vec<KeyTreeNode<'a>>,
 	symbols: TreeSymbols<'a>,
 	key_style: Style,
 	desc_style: Style,
@@ -75,9 +76,9 @@ pub struct KeyTree<'a> {
 }
 
 impl<'a> KeyTree<'a> {
-	/// Creates a new key tree with the given nodes.
-	pub fn new(nodes: Vec<KeyTreeNode<'a>>) -> Self {
-		Self { nodes, ..Default::default() }
+	/// Creates a new key tree with a root key and its continuations.
+	pub fn new(root: impl Into<Cow<'a, str>>, children: Vec<KeyTreeNode<'a>>) -> Self {
+		Self { root: root.into(), children, ..Default::default() }
 	}
 
 	/// Sets the tree line symbols.
@@ -111,17 +112,24 @@ impl<'a> KeyTree<'a> {
 
 impl Widget for KeyTree<'_> {
 	fn render(self, area: Rect, buf: &mut Buffer) {
-		if area.is_empty() || self.nodes.is_empty() {
+		if area.is_empty() || self.children.is_empty() {
 			return;
 		}
 
-		for (i, node) in self.nodes.iter().enumerate() {
-			let y = area.y + i as u16;
+		let mut y = area.y;
+
+		// Render root key
+		let root_width = self.root.len().min(area.width as usize);
+		buf.set_stringn(area.x, y, &self.root, root_width, self.key_style);
+		y += 1;
+
+		// Render children with tree connectors
+		for (i, node) in self.children.iter().enumerate() {
 			if y >= area.bottom() {
 				break;
 			}
 
-			let is_last = i == self.nodes.len() - 1;
+			let is_last = i == self.children.len() - 1;
 			let connector = if is_last { self.symbols.corner } else { self.symbols.branch };
 
 			let mut x = area.x;
@@ -148,6 +156,8 @@ impl Widget for KeyTree<'_> {
 				let desc_width = node.description.len().min((area.right() - x) as usize);
 				buf.set_stringn(x, y, &node.description, desc_width, self.desc_style);
 			}
+
+			y += 1;
 		}
 	}
 }
@@ -177,41 +187,42 @@ mod tests {
 
 	#[test]
 	fn empty_tree_renders_nothing() {
-		let tree = KeyTree::default();
+		let tree = KeyTree::new("g", vec![]);
 		let lines = render_to_lines(tree, 20, 5);
 		assert!(lines.iter().all(|l| l.is_empty()));
 	}
 
 	#[test]
-	fn single_node() {
-		let nodes = vec![KeyTreeNode::new("g", "goto mode")];
-		let tree = KeyTree::new(nodes);
-		let lines = render_to_lines(tree, 20, 3);
-		assert!(lines[0].contains("╰"));
-		assert!(lines[0].contains("g goto mode"));
+	fn root_with_single_child() {
+		let children = vec![KeyTreeNode::new("g", "document_start")];
+		let tree = KeyTree::new("g", children);
+		let lines = render_to_lines(tree, 25, 3);
+		assert_eq!(lines[0], "g");
+		assert!(lines[1].contains("╰─g document_start"));
 	}
 
 	#[test]
-	fn multiple_nodes_show_connectors() {
-		let nodes = vec![
-			KeyTreeNode::new("g", "goto"),
-			KeyTreeNode::new("z", "view"),
-			KeyTreeNode::new("m", "match"),
+	fn root_with_multiple_children() {
+		let children = vec![
+			KeyTreeNode::new("g", "start"),
+			KeyTreeNode::new("e", "end"),
+			KeyTreeNode::new("h", "home"),
 		];
-		let tree = KeyTree::new(nodes);
+		let tree = KeyTree::new("g", children);
 		let lines = render_to_lines(tree, 20, 5);
 
-		assert!(lines[0].contains("├"));
-		assert!(lines[1].contains("├"));
-		assert!(lines[2].contains("╰"));
+		assert_eq!(lines[0], "g");
+		assert!(lines[1].contains("├─g"));
+		assert!(lines[2].contains("├─e"));
+		assert!(lines[3].contains("╰─h"));
 	}
 
 	#[test]
 	fn truncates_to_area() {
 		use unicode_width::UnicodeWidthStr;
-		let nodes = vec![KeyTreeNode::new("g", "a very long description")];
-		let tree = KeyTree::new(nodes);
-		let lines = render_to_lines(tree, 12, 1);
-		assert!(lines[0].width() <= 12);
+		let children = vec![KeyTreeNode::new("g", "a very long description")];
+		let tree = KeyTree::new("g", children);
+		let lines = render_to_lines(tree, 12, 2);
+		assert!(lines[1].width() <= 12);
 	}
 }
