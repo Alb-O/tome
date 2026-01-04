@@ -6,4 +6,5 @@
 mod core;
 mod edit;
 mod mode;
+mod palette;
 mod search;

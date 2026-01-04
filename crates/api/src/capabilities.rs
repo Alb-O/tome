@@ -10,8 +10,8 @@ use xeno_base::range::CharIdx;
 use xeno_base::{Mode, Selection};
 use xeno_core::editor_ctx::{
 	CommandQueueAccess, CursorAccess, EditAccess, EditorCapabilities, FileOpsAccess, FocusOps,
-	JumpAccess, MacroAccess, ModeAccess, NotificationAccess, SearchAccess, SelectionAccess,
-	SplitOps, ThemeAccess, UndoAccess, ViewportAccess,
+	JumpAccess, MacroAccess, ModeAccess, NotificationAccess, PaletteAccess, SearchAccess,
+	SelectionAccess, SplitOps, ThemeAccess, UndoAccess, ViewportAccess,
 };
 use xeno_registry::EditAction;
 use xeno_registry::commands::{CommandEditorOps, CommandError};
@@ -309,6 +309,24 @@ impl CommandQueueAccess for Editor {
 	}
 }
 
+impl PaletteAccess for Editor {
+	fn open_palette(&mut self) {
+		Editor::open_palette(self);
+	}
+
+	fn close_palette(&mut self) {
+		Editor::close_palette(self);
+	}
+
+	fn execute_palette(&mut self) {
+		Editor::execute_palette(self);
+	}
+
+	fn palette_is_open(&self) -> bool {
+		Editor::palette_is_open(self)
+	}
+}
+
 impl EditorCapabilities for Editor {
 	fn search(&mut self) -> Option<&mut dyn SearchAccess> {
 		Some(self)
@@ -347,6 +365,10 @@ impl EditorCapabilities for Editor {
 	}
 
 	fn command_queue(&mut self) -> Option<&mut dyn CommandQueueAccess> {
+		Some(self)
+	}
+
+	fn palette(&mut self) -> Option<&mut dyn PaletteAccess> {
 		Some(self)
 	}
 

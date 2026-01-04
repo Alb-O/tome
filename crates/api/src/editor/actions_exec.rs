@@ -36,6 +36,9 @@ fn action_result_variant(result: &ActionResult) -> &'static str {
 		ActionResult::SearchPrev { .. } => "SearchPrev",
 		ActionResult::UseSelectionAsSearch => "UseSelectionAsSearch",
 		ActionResult::Command { .. } => "Command",
+		ActionResult::OpenPalette => "OpenPalette",
+		ActionResult::ClosePalette => "ClosePalette",
+		ActionResult::ExecutePalette => "ExecutePalette",
 	}
 }
 

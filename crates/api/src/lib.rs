@@ -36,6 +36,8 @@ pub mod render;
 /// Style utilities and conversions.
 pub mod styles;
 pub mod test_events;
+/// Command palette for executing commands.
+pub mod palette;
 /// Window management and floating UI.
 pub mod window;
 /// UI management: focus tracking.

@@ -10,6 +10,8 @@ pub(crate) mod misc;
 pub(crate) mod modes;
 /// Motion-based actions.
 pub(crate) mod motions;
+/// Command palette actions.
+pub mod palette;
 /// Key sequence prefix descriptions for which-key HUD.
 pub(crate) mod prefixes;
 /// Viewport scrolling actions.

@@ -320,13 +320,11 @@ impl Editor {
 	/// and then finds the focused view's rectangle within that area.
 	pub(crate) fn focused_view_area(&self) -> xeno_tui::layout::Rect {
 		let doc_area = self.doc_area();
-		if let FocusTarget::Buffer { window, .. } = &self.focus {
-			if *window != self.windows.base_id() {
-				if let Some(Window::Floating(floating)) = self.windows.get(*window) {
+		if let FocusTarget::Buffer { window, .. } = &self.focus
+			&& *window != self.windows.base_id()
+				&& let Some(Window::Floating(floating)) = self.windows.get(*window) {
 					return floating.content_rect();
 				}
-			}
-		}
 		let focused = self.focused_view();
 		for (view, area) in self
 			.layout

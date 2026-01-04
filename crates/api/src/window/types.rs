@@ -1,6 +1,8 @@
 //! Window and floating window types.
 
 use xeno_tui::layout::Rect;
+use xeno_tui::widgets::block::Padding;
+use xeno_tui::widgets::BorderType;
 
 use crate::buffer::{BufferId, Layout};
 
@@ -40,6 +42,20 @@ pub struct FloatingWindow {
 #[derive(Debug, Clone)]
 pub struct FloatingStyle {
 	pub border: bool,
+	pub border_type: BorderType,
+	pub padding: Padding,
 	pub shadow: bool,
 	pub title: Option<String>,
+}
+
+impl Default for FloatingStyle {
+	fn default() -> Self {
+		Self {
+			border: true,
+			border_type: BorderType::Rounded,
+			padding: Padding::ZERO,
+			shadow: false,
+			title: None,
+		}
+	}
 }

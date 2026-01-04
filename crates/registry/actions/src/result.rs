@@ -134,4 +134,11 @@ pub enum ActionResult {
 		/// Arguments to pass to the command.
 		args: Vec<String>,
 	},
+
+	/// Open the command palette.
+	OpenPalette,
+	/// Close the command palette without executing.
+	ClosePalette,
+	/// Execute the command in the palette and close it.
+	ExecutePalette,
 }

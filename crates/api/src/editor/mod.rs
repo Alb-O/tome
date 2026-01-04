@@ -45,6 +45,8 @@ mod lifecycle;
 mod messaging;
 /// Cursor navigation utilities.
 mod navigation;
+/// Command palette operations.
+mod palette;
 /// Search state and operations.
 mod search;
 /// Separator hit detection.
@@ -191,6 +193,9 @@ pub struct Editor {
 
 	/// Application menu bar state.
 	pub menu: MenuState<MenuAction>,
+
+	/// Command palette state.
+	pub palette: crate::palette::PaletteState,
 }
 
 impl xeno_core::EditorOps for Editor {}
@@ -299,6 +304,7 @@ impl Editor {
 			macro_state: MacroState::default(),
 			command_queue: CommandQueue::new(),
 			menu: create_menu(),
+			palette: crate::palette::PaletteState::default(),
 		}
 	}
 

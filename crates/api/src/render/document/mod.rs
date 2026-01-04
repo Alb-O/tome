@@ -66,14 +66,11 @@ impl SeparatorStyle {
 	fn new(editor: &Editor, doc_area: Rect) -> Self {
 		Self {
 			hovered_rect: editor.layout.hovered_separator.map(|(_, rect)| rect),
-			dragging_rect: editor
-				.layout
-				.drag_state()
-				.and_then(|ds| {
-					editor
-						.layout
-						.separator_rect(&editor.base_window().layout, doc_area, &ds.id)
-				}),
+			dragging_rect: editor.layout.drag_state().and_then(|ds| {
+				editor
+					.layout
+					.separator_rect(&editor.base_window().layout, doc_area, &ds.id)
+			}),
 			anim_rect: editor.layout.animation_rect(),
 			anim_intensity: editor.layout.animation_intensity(),
 			base_bg: [editor.theme.colors.ui.bg, editor.theme.colors.popup.bg],
@@ -290,12 +287,12 @@ impl Editor {
 		for layer_idx in 0..layer_count {
 			if self.layout.layer(base_layout, layer_idx).is_some() {
 				let layer_area = self.layout.layer_area(layer_idx, doc_area);
-				let view_areas = self
-					.layout
-					.compute_view_areas_for_layer(base_layout, layer_idx, layer_area);
-				let separators = self
-					.layout
-					.separator_positions_for_layer(base_layout, layer_idx, layer_area);
+				let view_areas =
+					self.layout
+						.compute_view_areas_for_layer(base_layout, layer_idx, layer_area);
+				let separators =
+					self.layout
+						.separator_positions_for_layer(base_layout, layer_idx, layer_area);
 				layer_data.push((layer_idx, layer_area, view_areas, separators));
 			}
 		}
@@ -424,22 +421,20 @@ impl Editor {
 
 			frame.render_widget(Clear, rect);
 
-			let mut block =
-				Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
+			let mut block = Block::default()
+				.style(Style::default().bg(self.theme.colors.popup.bg))
+				.padding(window.style.padding);
 			if window.style.border {
 				block = block
 					.borders(Borders::ALL)
+					.border_type(window.style.border_type)
 					.border_style(Style::default().fg(self.theme.colors.popup.fg));
 				if let Some(title) = &window.style.title {
 					block = block.title(title.as_str());
 				}
 			}
 
-			let content_area = if window.style.border {
-				block.inner(rect)
-			} else {
-				rect
-			};
+			let content_area = block.inner(rect);
 
 			frame.render_widget(block, rect);
 

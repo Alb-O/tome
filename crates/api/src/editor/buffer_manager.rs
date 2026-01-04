@@ -72,6 +72,18 @@ impl BufferManager {
 		buffer_id
 	}
 
+	/// Creates an empty scratch buffer without syntax highlighting.
+	///
+	/// Used for temporary input buffers like command palette.
+	pub fn create_scratch(&mut self) -> BufferId {
+		let buffer_id = BufferId(self.next_buffer_id);
+		self.next_buffer_id += 1;
+
+		let buffer = Buffer::new(buffer_id, String::new(), None);
+		self.buffers.insert(buffer_id, buffer);
+		buffer_id
+	}
+
 	/// Creates a new buffer that shares the same document as the focused buffer.
 	///
 	/// The new buffer has independent cursor/selection/scroll state but

@@ -251,16 +251,19 @@ impl Editor {
 			}
 		}
 
-		if let Some(window) = old_window {
-			if old_window != new_window {
+		if let Some(window) = old_window
+			&& old_window != new_window {
 				let should_close = matches!(
 					self.windows.get(window),
 					Some(Window::Floating(floating)) if floating.dismiss_on_blur
 				);
 				if should_close {
-					self.close_floating_window(window);
+					if Some(window) == self.palette.window_id() {
+						self.close_palette();
+					} else {
+						self.close_floating_window(window);
+					}
 				}
 			}
-		}
 	}
 }

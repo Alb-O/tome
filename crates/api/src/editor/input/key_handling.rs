@@ -109,6 +109,13 @@ impl Editor {
 		use xeno_registry::{HookContext, HookEventData, emit as emit_hook};
 
 		let old_mode = self.mode();
+
+		if self.palette_is_open() && key.code == KeyCode::Enter {
+			self.execute_palette();
+			self.needs_redraw = true;
+			return false;
+		}
+
 		if self.handle_floating_escape(&key) {
 			return false;
 		}
@@ -237,6 +244,12 @@ impl Editor {
 		let Some(Window::Floating(floating)) = self.windows.get(window) else {
 			return false;
 		};
+
+		if Some(window) == self.palette.window_id() {
+			self.close_palette();
+			self.needs_redraw = true;
+			return true;
+		}
 
 		if floating.dismiss_on_blur {
 			self.close_floating_window(window);

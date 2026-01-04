@@ -298,5 +298,19 @@ pub trait CommandQueueAccess {
 	fn queue_command(&mut self, name: &'static str, args: Vec<String>);
 }
 
+/// Command palette operations.
+///
+/// Opens, closes, and executes the command palette floating input.
+pub trait PaletteAccess {
+	/// Opens the command palette.
+	fn open_palette(&mut self);
+	/// Closes the command palette without executing.
+	fn close_palette(&mut self);
+	/// Executes the current palette input and closes it.
+	fn execute_palette(&mut self);
+	/// Returns true if the palette is currently open.
+	fn palette_is_open(&self) -> bool;
+}
+
 /// Convenience trait combining common capabilities for command handlers.
 pub trait EditorOps: NotificationAccess + FileOpsAccess + ThemeAccess {}

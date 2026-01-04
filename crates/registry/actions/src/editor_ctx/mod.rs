@@ -176,6 +176,27 @@ impl<'a> EditorContext<'a> {
 		self.inner.command_queue()
 	}
 
+	/// Opens the command palette.
+	pub fn open_palette(&mut self) {
+		if let Some(p) = self.inner.palette() {
+			p.open_palette();
+		}
+	}
+
+	/// Closes the command palette without executing.
+	pub fn close_palette(&mut self) {
+		if let Some(p) = self.inner.palette() {
+			p.close_palette();
+		}
+	}
+
+	/// Executes the current palette input and closes it.
+	pub fn execute_palette(&mut self) {
+		if let Some(p) = self.inner.palette() {
+			p.execute_palette();
+		}
+	}
+
 	/// Returns whether the current buffer is read-only.
 	pub fn is_readonly(&self) -> bool {
 		self.inner.is_readonly()
@@ -282,6 +303,11 @@ pub trait EditorCapabilities:
 
 	/// Access to command queue operations (optional).
 	fn command_queue(&mut self) -> Option<&mut dyn CommandQueueAccess> {
+		None
+	}
+
+	/// Access to command palette operations (optional).
+	fn palette(&mut self) -> Option<&mut dyn PaletteAccess> {
 		None
 	}
 
