@@ -10,15 +10,15 @@ use reqwest::header::CONTENT_TYPE;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::constants::CLIENT_ID;
-use crate::constants::CODEX_API_BASE;
-use crate::constants::CODEX_RESPONSES_PATH;
-use crate::constants::ORIGINATOR;
-use crate::constants::TOKEN_URL;
+use super::constants::CLIENT_ID;
+use super::constants::CODEX_API_BASE;
+use super::constants::CODEX_RESPONSES_PATH;
+use super::constants::ORIGINATOR;
+use super::constants::TOKEN_URL;
+use super::token::AuthState;
 use crate::error::AuthError;
 use crate::error::AuthResult;
 use crate::pkce::PkceCodes;
-use crate::token::AuthState;
 
 /// Tokens returned from OAuth token exchange.
 #[derive(Debug, Clone)]

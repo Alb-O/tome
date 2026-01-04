@@ -63,6 +63,12 @@ pub enum AuthAction {
 pub enum LoginProvider {
 	/// Log in to OpenAI Codex via OAuth
 	Codex,
+	/// Log in to Anthropic Claude via OAuth
+	Claude {
+		/// Create API key instead of using OAuth tokens
+		#[arg(long)]
+		api_key: bool,
+	},
 }
 
 /// Logout providers.
@@ -70,6 +76,8 @@ pub enum LoginProvider {
 pub enum LogoutProvider {
 	/// Log out from OpenAI Codex
 	Codex,
+	/// Log out from Anthropic Claude
+	Claude,
 }
 
 /// Grammar management subcommands.

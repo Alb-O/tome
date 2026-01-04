@@ -1,4 +1,4 @@
-//! Token types and JWT parsing utilities.
+//! Token types and JWT parsing utilities for Codex.
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -7,7 +7,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::constants::JWT_AUTH_CLAIM;
+use super::constants::JWT_AUTH_CLAIM;
 use crate::error::AuthError;
 use crate::error::AuthResult;
 
@@ -56,9 +56,7 @@ pub struct TokenData {
     pub account_id: Option<String>,
 }
 
-
-
-/// Stored authentication state.
+/// Stored authentication state for Codex.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AuthState {
     /// Optional API key (for API key auth mode).

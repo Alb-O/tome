@@ -2,7 +2,6 @@
 resolver = "3"
 members = [
     "crates/*",
-    "crates/auth/codex",
     "crates/keymap/derive",
     "crates/keymap/parser",
     "crates/registry/actions",
@@ -16,9 +15,6 @@ members = [
     "crates/registry/statusline",
     "crates/registry/text_objects",
     "crates/registry/themes",
-]
-exclude = [
-    "crates/auth",
 ]
 
 [workspace.package]
@@ -99,7 +95,7 @@ xeno-registry-text-objects = { path = "crates/registry/text_objects" }
 xeno-registry-themes = { path = "crates/registry/themes" }
 xeno-runtime = { path = "crates/runtime" }
 xeno-tui = { path = "crates/tui" }
-xeno-auth-codex = { path = "crates/auth/codex" }
+xeno-auth = { path = "crates/auth" }
 base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 rand = "0.9"

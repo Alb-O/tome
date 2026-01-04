@@ -60,13 +60,14 @@ async fn main() -> anyhow::Result<()> {
 
 /// Handles auth login/logout/status subcommands.
 async fn handle_auth_command(action: AuthAction) -> anyhow::Result<()> {
-	use xeno_auth_codex::{default_data_dir, load_auth, logout, start_login, LoginConfig};
+	use xeno_auth::default_data_dir;
 
 	let data_dir = default_data_dir()?;
 
 	match action {
 		AuthAction::Login { provider } => match provider {
 			LoginProvider::Codex => {
+				use xeno_auth::codex::{start_login, LoginConfig};
 				let config = LoginConfig::new(data_dir);
 				let server = start_login(config)?;
 				println!("Opening browser for authentication...");
@@ -74,32 +75,74 @@ async fn handle_auth_command(action: AuthAction) -> anyhow::Result<()> {
 				server.wait().await?;
 				println!("Login successful!");
 			}
+			LoginProvider::Claude { api_key } => {
+				use xeno_auth::claude::{complete_login, start_login, LoginMode};
+				let mode = if api_key { LoginMode::Console } else { LoginMode::Max };
+				let session = start_login(data_dir, mode);
+				println!("Open this URL in your browser:");
+				println!("  {}", session.auth_url);
+				println!();
+				println!("After authentication, paste the authorization code below.");
+				print!("Code: ");
+				use std::io::Write;
+				std::io::stdout().flush()?;
+				let mut code = String::new();
+				std::io::stdin().read_line(&mut code)?;
+				complete_login(&session, code.trim()).await?;
+				println!("Login successful!");
+			}
 		},
 		AuthAction::Logout { provider } => match provider {
 			LogoutProvider::Codex => {
+				use xeno_auth::codex::logout;
 				if logout(&data_dir)? {
 					println!("Logged out from Codex.");
 				} else {
 					println!("Not logged in to Codex.");
 				}
 			}
-		},
-		AuthAction::Status => match load_auth(&data_dir)? {
-			Some(auth) if auth.api_key.is_some() => {
-				println!("Codex: authenticated (API key)");
-			}
-			Some(auth) if auth.tokens.is_some() => {
-				let email = auth
-					.tokens
-					.as_ref()
-					.and_then(|t| t.id_token.email.as_deref())
-					.unwrap_or("<unknown>");
-				println!("Codex: authenticated as {email}");
-			}
-			_ => {
-				println!("Codex: not authenticated");
+			LogoutProvider::Claude => {
+				use xeno_auth::claude::logout;
+				if logout(&data_dir)? {
+					println!("Logged out from Claude.");
+				} else {
+					println!("Not logged in to Claude.");
+				}
 			}
 		},
+		AuthAction::Status => {
+			use xeno_auth::codex::load_auth as load_codex;
+			use xeno_auth::claude::load_auth as load_claude;
+
+			match load_codex(&data_dir)? {
+				Some(auth) if auth.api_key.is_some() => {
+					println!("Codex: authenticated (API key)");
+				}
+				Some(auth) if auth.tokens.is_some() => {
+					let email = auth
+						.tokens
+						.as_ref()
+						.and_then(|t| t.id_token.email.as_deref())
+						.unwrap_or("<unknown>");
+					println!("Codex: authenticated as {email}");
+				}
+				_ => {
+					println!("Codex: not authenticated");
+				}
+			}
+
+			match load_claude(&data_dir)? {
+				Some(auth) if auth.api_key.is_some() => {
+					println!("Claude: authenticated (API key)");
+				}
+				Some(auth) if auth.oauth.is_some() => {
+					println!("Claude: authenticated (OAuth)");
+				}
+				_ => {
+					println!("Claude: not authenticated");
+				}
+			}
+		}
 	}
 
 	Ok(())

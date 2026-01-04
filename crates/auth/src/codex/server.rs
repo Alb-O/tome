@@ -1,4 +1,4 @@
-//! Local OAuth callback server.
+//! Local OAuth callback server for Codex authentication.
 //!
 //! Handles the OAuth redirect by spinning up a temporary HTTP server
 //! on localhost to receive the authorization code.
@@ -21,22 +21,22 @@ use tiny_http::Server;
 use tokio::sync::mpsc;
 use tokio::sync::Notify;
 
-use crate::client::exchange_code_for_tokens;
-use crate::client::ExchangedTokens;
-use crate::constants::CLIENT_ID;
-use crate::constants::DEFAULT_PORT;
-use crate::constants::ISSUER;
-use crate::constants::ORIGINATOR;
-use crate::constants::SCOPE;
+use super::client::ExchangedTokens;
+use super::client::exchange_code_for_tokens;
+use super::constants::CLIENT_ID;
+use super::constants::DEFAULT_PORT;
+use super::constants::ISSUER;
+use super::constants::ORIGINATOR;
+use super::constants::SCOPE;
+use super::storage::save_auth;
+use super::token::AuthState;
+use super::token::TokenData;
+use super::token::jwt_auth_claims;
+use super::token::parse_id_token;
 use crate::error::AuthError;
 use crate::error::AuthResult;
 use crate::pkce::PkceCodes;
 use crate::pkce::generate_state;
-use crate::storage::save_auth;
-use crate::token::AuthState;
-use crate::token::TokenData;
-use crate::token::jwt_auth_claims;
-use crate::token::parse_id_token;
 
 /// Configuration for the login server.
 #[derive(Debug, Clone)]

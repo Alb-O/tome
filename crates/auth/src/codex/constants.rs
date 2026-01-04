@@ -1,14 +1,7 @@
 //! OAuth constants for OpenAI Codex authentication.
-//!
-//! These values are from the official OpenAI Codex CLI implementation.
-
-#![allow(dead_code)]
 
 /// OAuth client ID for Codex CLI applications.
 pub const CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
-
-/// OpenAI OAuth authorization endpoint.
-pub const AUTHORIZE_URL: &str = "https://auth.openai.com/oauth/authorize";
 
 /// OpenAI OAuth token endpoint.
 pub const TOKEN_URL: &str = "https://auth.openai.com/oauth/token";
@@ -33,6 +26,3 @@ pub const CODEX_RESPONSES_PATH: &str = "/codex/responses";
 
 /// Originator identifier for API requests.
 pub const ORIGINATOR: &str = "xeno";
-
-/// Token refresh interval in days.
-pub const TOKEN_REFRESH_INTERVAL_DAYS: i64 = 8;

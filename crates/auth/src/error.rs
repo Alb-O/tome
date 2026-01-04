@@ -1,4 +1,4 @@
-//! Error types for Codex authentication.
+//! Error types for authentication.
 
 use std::io;
 
@@ -66,19 +66,4 @@ pub enum AuthError {
     /// Not authenticated.
     #[error("not authenticated")]
     NotAuthenticated,
-}
-
-impl AuthError {
-    /// Check if this error is transient and the operation could be retried.
-    pub fn is_transient(&self) -> bool {
-        matches!(self, Self::Network(_) | Self::Timeout)
-    }
-
-    /// Check if this error requires re-authentication.
-    pub fn requires_reauth(&self) -> bool {
-        matches!(
-            self,
-            Self::TokenRefresh(_) | Self::InvalidToken(_) | Self::NotAuthenticated
-        )
-    }
 }

@@ -4305,7 +4305,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xeno-auth-codex"
+name = "xeno-auth"
 version = "0.3.0"
 dependencies = [
  "base64",
@@ -4320,7 +4320,6 @@ dependencies = [
  "thiserror 2.0.17",
  "tiny_http",
  "tokio",
- "tracing",
  "url",
  "urlencoding",
  "webbrowser",
@@ -4667,7 +4666,7 @@ dependencies = [
  "tracing-subscriber",
  "xeno-acp",
  "xeno-api",
- "xeno-auth-codex",
+ "xeno-auth",
  "xeno-base",
  "xeno-config",
  "xeno-core",
