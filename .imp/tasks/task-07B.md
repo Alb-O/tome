@@ -147,6 +147,10 @@ The evaluation should answer:
 - What's the simplest change that enables `GutterLayout::prompt('>')` for palette?
 - Can we avoid changing render_buffer() signature?
 
+### Decision
+
+Choose Option B with an Option A selector: add a `GutterSelector` to `FloatingWindow` (default registry), and add `GutterLayout::from_selector(...)` plus `hidden/prompt/custom` constructors. `BufferRenderContext` keeps `render_buffer(...)` for default registry and adds a minimal `render_buffer_with_gutter(...)` used by floating windows, avoiding one-off palette checks and keeping Buffer untouched.
+
 ---
 
 ## Implementation Roadmap

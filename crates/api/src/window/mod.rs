@@ -5,4 +5,4 @@ mod manager;
 mod types;
 
 pub use manager::WindowManager;
-pub use types::{BaseWindow, FloatingStyle, FloatingWindow, Window, WindowId};
+pub use types::{BaseWindow, FloatingStyle, FloatingWindow, GutterSelector, Window, WindowId};

@@ -16,6 +16,7 @@ use xeno_tui::widgets::Paragraph;
 
 use super::gutter::GutterLayout;
 use crate::buffer::Buffer;
+use crate::window::GutterSelector;
 use crate::editor::extensions::StyleOverlays;
 use crate::render::types::{RenderResult, wrap_line};
 
@@ -179,20 +180,7 @@ impl<'a> BufferRenderContext<'a> {
 		Some(modified)
 	}
 
-	/// Renders a buffer into a paragraph widget.
-	///
-	/// This is the main buffer rendering function that handles:
-	/// - Line wrapping and viewport positioning
-	/// - Cursor rendering (primary and secondary)
-	/// - Selection highlighting
-	/// - Gutter with line numbers
-	/// - Cursor blinking in insert mode
-	///
-	/// # Parameters
-	/// - `buffer`: The buffer to render
-	/// - `area`: The rectangular area to render into
-	/// - `use_block_cursor`: Whether to render block-style cursors
-	/// - `is_focused`: Whether this buffer is the focused/active buffer
+	/// Renders a buffer into a paragraph widget using registry gutters.
 	pub fn render_buffer(
 		&self,
 		buffer: &Buffer,
@@ -200,8 +188,40 @@ impl<'a> BufferRenderContext<'a> {
 		use_block_cursor: bool,
 		is_focused: bool,
 	) -> RenderResult {
+		self.render_buffer_with_gutter(
+			buffer,
+			area,
+			use_block_cursor,
+			is_focused,
+			GutterSelector::Registry,
+		)
+	}
+
+	/// Renders a buffer into a paragraph widget.
+	///
+	/// This is the main buffer rendering function that handles:
+	/// - Line wrapping and viewport positioning
+	/// - Cursor rendering (primary and secondary)
+	/// - Selection highlighting
+	/// - Gutter rendering
+	/// - Cursor blinking in insert mode
+	///
+	/// # Parameters
+	/// - `buffer`: The buffer to render
+	/// - `area`: The rectangular area to render into
+	/// - `use_block_cursor`: Whether to render block-style cursors
+	/// - `is_focused`: Whether this buffer is the focused/active buffer
+	/// - `gutter`: Gutter selection for this render pass
+	pub fn render_buffer_with_gutter(
+		&self,
+		buffer: &Buffer,
+		area: Rect,
+		use_block_cursor: bool,
+		is_focused: bool,
+		gutter: GutterSelector,
+	) -> RenderResult {
 		let total_lines = buffer.doc().content.len_lines();
-		let gutter_layout = GutterLayout::new(total_lines, area.width);
+		let gutter_layout = GutterLayout::from_selector(gutter, total_lines, area.width);
 		let gutter_width = gutter_layout.total_width;
 		let text_width = area.width.saturating_sub(gutter_width) as usize;
 		let tab_width = 4usize;

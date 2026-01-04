@@ -4,7 +4,7 @@ use xeno_base::Mode;
 
 use super::Editor;
 use crate::palette::{Palette, PaletteState, palette_rect, palette_style};
-use crate::window::Window;
+use crate::window::{GutterSelector, Window};
 
 impl Editor {
 	/// Opens the command palette.
@@ -30,6 +30,7 @@ impl Editor {
 		};
 		float.sticky = true;
 		float.dismiss_on_blur = true;
+		float.gutter = GutterSelector::Prompt('>');
 
 		self.focus_floating_window(window_id);
 		self.buffers

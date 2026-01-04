@@ -2,7 +2,7 @@
 
 use xeno_tui::layout::Rect;
 
-use super::types::{FloatingStyle, FloatingWindow, WindowId};
+use super::types::{FloatingStyle, FloatingWindow, GutterSelector, WindowId};
 use crate::buffer::BufferId;
 
 impl FloatingWindow {
@@ -12,6 +12,7 @@ impl FloatingWindow {
 			id,
 			buffer,
 			rect,
+			gutter: GutterSelector::Registry,
 			sticky: false,
 			dismiss_on_blur: false,
 			style,

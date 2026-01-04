@@ -1,5 +1,6 @@
 //! Window and floating window types.
 
+use xeno_registry::gutter::{GutterCell, GutterLineContext};
 use xeno_tui::layout::Rect;
 use xeno_tui::widgets::BorderType;
 use xeno_tui::widgets::block::Padding;
@@ -9,6 +10,29 @@ use crate::buffer::{BufferId, Layout};
 /// Unique identifier for a window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct WindowId(pub(crate) u64);
+
+#[derive(Debug, Clone, Copy)]
+pub enum GutterSelector {
+	/// Use enabled gutters from registry (default behavior).
+	Registry,
+	/// Use specific gutters by name.
+	Named(&'static [&'static str]),
+	/// Hide gutter entirely.
+	Hidden,
+	/// Single prompt character.
+	Prompt(char),
+	/// Custom render function.
+	Custom {
+		width: u16,
+		render: fn(&GutterLineContext) -> Option<GutterCell>,
+	},
+}
+
+impl Default for GutterSelector {
+	fn default() -> Self {
+		Self::Registry
+	}
+}
 
 /// Window kinds.
 pub enum Window {
@@ -30,6 +54,8 @@ pub struct FloatingWindow {
 	pub id: WindowId,
 	pub buffer: BufferId,
 	pub rect: Rect,
+	/// Gutter configuration for this window.
+	pub gutter: GutterSelector,
 	/// If true, resists losing focus from mouse hover.
 	pub sticky: bool,
 	/// If true, closes when focus is lost.

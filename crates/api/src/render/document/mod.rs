@@ -446,7 +446,13 @@ impl Editor {
 				let is_focused = focused
 					.map(|(win, buf)| win == window_id && buf == window.buffer)
 					.unwrap_or(false);
-				let result = ctx.render_buffer(buffer, content_area, use_block_cursor, is_focused);
+				let result = ctx.render_buffer_with_gutter(
+					buffer,
+					content_area,
+					use_block_cursor,
+					is_focused,
+					window.gutter,
+				);
 				frame.render_widget(result.widget, content_area);
 			}
 		}
