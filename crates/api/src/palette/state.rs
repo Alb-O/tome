@@ -58,7 +58,7 @@ pub fn palette_style() -> FloatingStyle {
 		border_type: BorderType::Stripe,
 		padding: Padding::horizontal(1),
 		shadow: false,
-		title: Some("Command".into()),
+		title: None,
 	}
 }
 
