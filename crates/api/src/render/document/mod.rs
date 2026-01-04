@@ -18,6 +18,7 @@ use xeno_tui::widgets::{Block, BorderType, Borders, Clear, Padding, Paragraph, S
 use super::buffer::{BufferRenderContext, ensure_buffer_cursor_visible};
 use crate::Editor;
 use crate::buffer::{BufferView, SplitDirection};
+use crate::editor::FocusTarget;
 use crate::test_events::SeparatorAnimationEvent;
 
 /// Per-layer rendering data: (layer_index, layer_area, view_areas, separators).
@@ -68,7 +69,11 @@ impl SeparatorStyle {
 			dragging_rect: editor
 				.layout
 				.drag_state()
-				.and_then(|ds| editor.layout.separator_rect(doc_area, &ds.id)),
+				.and_then(|ds| {
+					editor
+						.layout
+						.separator_rect(&editor.base_window().layout, doc_area, &ds.id)
+				}),
 			anim_rect: editor.layout.animation_rect(),
 			anim_intensity: editor.layout.animation_intensity(),
 			base_bg: [editor.theme.colors.ui.bg, editor.theme.colors.popup.bg],
@@ -152,6 +157,25 @@ fn junction_glyph(connectivity: u8) -> char {
 	}
 }
 
+/// Clamps a rectangle to a bounding area, returning the intersection.
+fn clamp_rect(rect: Rect, bounds: Rect) -> Option<Rect> {
+	let x1 = rect.x.max(bounds.x);
+	let y1 = rect.y.max(bounds.y);
+	let x2 = rect.right().min(bounds.right());
+	let y2 = rect.bottom().min(bounds.bottom());
+
+	if x2 <= x1 || y2 <= y1 {
+		return None;
+	}
+
+	Some(Rect {
+		x: x1,
+		y: y1,
+		width: x2.saturating_sub(x1),
+		height: y2.saturating_sub(y1),
+	})
+}
+
 impl Editor {
 	/// Renders the complete editor frame.
 	///
@@ -209,6 +233,7 @@ impl Editor {
 
 		// Render all buffers in the layout
 		self.render_split_buffers(frame, doc_area, use_block_cursor && doc_focused);
+		self.render_floating_windows(frame, use_block_cursor && doc_focused);
 
 		if let Some(cursor_pos) = ui.render_panels(self, frame, &dock_layout, self.theme) {
 			frame.set_cursor_position(cursor_pos);
@@ -257,19 +282,20 @@ impl Editor {
 		use_block_cursor: bool,
 	) {
 		let focused_view = self.focused_view();
+		let base_layout = &self.base_window().layout;
 
 		let layer_count = self.layout.layer_count();
 		let mut layer_data: Vec<LayerRenderData> = Vec::new();
 
 		for layer_idx in 0..layer_count {
-			if self.layout.layer(layer_idx).is_some() {
+			if self.layout.layer(base_layout, layer_idx).is_some() {
 				let layer_area = self.layout.layer_area(layer_idx, doc_area);
 				let view_areas = self
 					.layout
-					.compute_view_areas_for_layer(layer_idx, layer_area);
+					.compute_view_areas_for_layer(base_layout, layer_idx, layer_area);
 				let separators = self
 					.layout
-					.separator_positions_for_layer(layer_idx, layer_area);
+					.separator_positions_for_layer(base_layout, layer_idx, layer_area);
 				layer_data.push((layer_idx, layer_area, view_areas, separators));
 			}
 		}
@@ -331,6 +357,103 @@ impl Editor {
 			}
 
 			self.render_separator_junctions(frame, separators, &sep_style);
+		}
+	}
+
+	/// Renders floating windows above the base layout.
+	fn render_floating_windows(&mut self, frame: &mut xeno_tui::Frame, use_block_cursor: bool) {
+		let bounds = frame.area();
+		let focused = match &self.focus {
+			FocusTarget::Buffer { window, buffer } => Some((*window, *buffer)),
+			_ => None,
+		};
+
+		let floating_windows: Vec<_> = self
+			.windows
+			.floating_windows()
+			.map(|(id, window)| (id, window.clone()))
+			.collect();
+		for (_, window) in &floating_windows {
+			let Some(rect) = clamp_rect(window.rect, bounds) else {
+				continue;
+			};
+			let content_area = if window.style.border {
+				Rect {
+					x: rect.x.saturating_add(1),
+					y: rect.y.saturating_add(1),
+					width: rect.width.saturating_sub(2),
+					height: rect.height.saturating_sub(2),
+				}
+			} else {
+				rect
+			};
+
+			if content_area.width == 0 || content_area.height == 0 {
+				continue;
+			}
+
+			if let Some(buffer) = self.get_buffer_mut(window.buffer) {
+				ensure_buffer_cursor_visible(buffer, content_area);
+			}
+		}
+
+		let ctx = BufferRenderContext {
+			theme: self.theme,
+			language_loader: &self.language_loader,
+			style_overlays: &self.style_overlays,
+		};
+
+		for (window_id, window) in floating_windows {
+			let Some(rect) = clamp_rect(window.rect, bounds) else {
+				continue;
+			};
+
+			if window.style.shadow {
+				let shadow_rect = Rect {
+					x: rect.x.saturating_add(1),
+					y: rect.y.saturating_add(1),
+					width: rect.width,
+					height: rect.height,
+				};
+				if let Some(shadow) = clamp_rect(shadow_rect, bounds) {
+					let shadow_block =
+						Block::default().style(Style::default().bg(self.theme.colors.ui.bg));
+					frame.render_widget(shadow_block, shadow);
+				}
+			}
+
+			frame.render_widget(Clear, rect);
+
+			let mut block =
+				Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
+			if window.style.border {
+				block = block
+					.borders(Borders::ALL)
+					.border_style(Style::default().fg(self.theme.colors.popup.fg));
+				if let Some(title) = &window.style.title {
+					block = block.title(title.as_str());
+				}
+			}
+
+			let content_area = if window.style.border {
+				block.inner(rect)
+			} else {
+				rect
+			};
+
+			frame.render_widget(block, rect);
+
+			if content_area.width == 0 || content_area.height == 0 {
+				continue;
+			}
+
+			if let Some(buffer) = self.get_buffer(window.buffer) {
+				let is_focused = focused
+					.map(|(win, buf)| win == window_id && buf == window.buffer)
+					.unwrap_or(false);
+				let result = ctx.render_buffer(buffer, content_area, use_block_cursor, is_focused);
+				frame.render_widget(result.widget, content_area);
+			}
 		}
 	}
 

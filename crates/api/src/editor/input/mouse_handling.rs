@@ -6,7 +6,8 @@ use termina::event::MouseEventKind;
 use xeno_base::Selection;
 use xeno_input::KeyResult;
 
-use crate::editor::Editor;
+use crate::editor::{Editor, FocusTarget};
+use crate::window::Window;
 
 impl Editor {
 	/// Processes a mouse event, returning true if the event triggered a quit.
@@ -65,12 +66,14 @@ impl Editor {
 				self.needs_redraw = true;
 			}
 			self.ui = ui;
+			self.sync_focus_from_ui();
 			return false;
 		}
 		if ui.take_wants_redraw() {
 			self.needs_redraw = true;
 		}
 		self.ui = ui;
+		self.sync_focus_from_ui();
 
 		// Get the document area (excluding panels/docks)
 		let doc_area = dock_layout.doc_area;
@@ -101,8 +104,9 @@ impl Editor {
 		if let Some(drag_state) = self.layout.drag_state().cloned() {
 			match mouse.kind {
 				MouseEventKind::Drag(_) => {
+					let base_layout = &mut self.windows.base_window_mut().layout;
 					self.layout
-						.resize_separator(doc_area, &drag_state.id, mouse_x, mouse_y);
+						.resize_separator(base_layout, doc_area, &drag_state.id, mouse_x, mouse_y);
 					self.needs_redraw = true;
 					return false;
 				}
@@ -157,9 +161,20 @@ impl Editor {
 			}
 		}
 
-		let separator_hit = self
-			.layout
-			.separator_hit_at_position(doc_area, mouse_x, mouse_y);
+		let mut floating_hit = None;
+		for (window_id, window) in self.windows.floating_windows() {
+			if window.contains(mouse_x, mouse_y) {
+				floating_hit = Some((window_id, window));
+			}
+		}
+
+		let separator_hit = if floating_hit.is_some() {
+			None
+		} else {
+			let base_layout = &self.base_window().layout;
+			self.layout
+				.separator_hit_at_position(base_layout, doc_area, mouse_x, mouse_y)
+		};
 
 		self.layout.update_mouse_velocity(mouse_x, mouse_y);
 		let is_fast_mouse = self.layout.is_mouse_fast();
@@ -220,18 +235,57 @@ impl Editor {
 			}
 		}
 
-		let Some((target_view, view_area)) =
-			self.layout.view_at_position(doc_area, mouse_x, mouse_y)
-		else {
+		let view_hit = if let Some((window_id, window)) = floating_hit {
+			Some((window.buffer, window.content_rect(), window_id))
+		} else {
+			let base_layout = &self.base_window().layout;
+			self.layout
+				.view_at_position(base_layout, doc_area, mouse_x, mouse_y)
+				.map(|(view, area)| (view, area, self.windows.base_id()))
+		};
+		let Some((target_view, view_area, target_window)) = view_hit else {
 			return false;
 		};
 
-		if target_view != self.focused_view() {
+		let focused_window = match &self.focus {
+			FocusTarget::Buffer { window, .. } => Some(*window),
+			FocusTarget::Panel(_) => None,
+		};
+		let sticky_floating = focused_window
+			.and_then(|id| self.windows.get(id))
+			.and_then(|window| match window {
+				Window::Floating(floating) => Some(floating.sticky),
+				Window::Base(_) => None,
+			})
+			.unwrap_or(false);
+
+		if matches!(mouse.kind, MouseEventKind::Moved)
+			&& sticky_floating
+			&& Some(target_window) != focused_window
+		{
+			return false;
+		}
+
+		let needs_focus = match &self.focus {
+			FocusTarget::Buffer { window, buffer } => {
+				*window != target_window || *buffer != target_view
+			}
+			FocusTarget::Panel(_) => true,
+		};
+		if needs_focus {
 			let focus_changed = match mouse.kind {
-				MouseEventKind::Down(_) => self.focus_view(target_view),
-				_ => self.focus_view_implicit(target_view),
+				MouseEventKind::Down(_) => {
+					self.focus_buffer_in_window(target_window, target_view, true)
+				}
+				_ => {
+					if target_window == self.windows.base_id() {
+						self.focus_view_implicit(target_view)
+					} else {
+						self.focus_buffer_in_window(target_window, target_view, false)
+					}
+				}
 			};
-			if !focus_changed && target_view != self.focused_view() {
+			if !focus_changed && needs_focus {
 				return false;
 			}
 		}
@@ -266,8 +320,18 @@ impl Editor {
 	/// and then finds the focused view's rectangle within that area.
 	pub(crate) fn focused_view_area(&self) -> xeno_tui::layout::Rect {
 		let doc_area = self.doc_area();
+		if let FocusTarget::Buffer { window, .. } = &self.focus {
+			if *window != self.windows.base_id() {
+				if let Some(Window::Floating(floating)) = self.windows.get(*window) {
+					return floating.content_rect();
+				}
+			}
+		}
 		let focused = self.focused_view();
-		for (view, area) in self.layout.compute_view_areas(doc_area) {
+		for (view, area) in self
+			.layout
+			.compute_view_areas(&self.base_window().layout, doc_area)
+		{
 			if view == focused {
 				return area;
 			}

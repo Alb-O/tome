@@ -1,12 +1,12 @@
 //! Layout management for buffer splits.
 //!
-//! The [`LayoutManager`] owns stacked layout layers and handles all split operations,
+//! The [`LayoutManager`] manages overlay layers and handles split operations,
 //! view navigation, and separator interactions (hover/drag for resizing).
 //!
 //! # Layer System
 //!
 //! Layouts are organized in ordered layers (index 0 at bottom):
-//! - Layer 0: Base layer (always exists, opaque background)
+//! - Layer 0: Base layout (owned by the base window)
 //! - Layer 1+: Overlay layers (transparent base, rendered on top)
 //!
 //! Focus goes to the topmost layer containing views by default.
@@ -37,7 +37,7 @@ mod tests {
 	use xeno_tui::layout::Rect;
 
 	use super::*;
-	use crate::buffer::BufferId;
+	use crate::buffer::{BufferId, Layout};
 
 	fn make_doc_area() -> Rect {
 		Rect {
@@ -50,7 +50,7 @@ mod tests {
 
 	#[test]
 	fn layer_area_base_only() {
-		let mgr = LayoutManager::new(BufferId(0));
+		let mgr = LayoutManager::new();
 		let doc = make_doc_area();
 
 		let layer0 = mgr.layer_area(0, doc);
@@ -59,10 +59,11 @@ mod tests {
 
 	#[test]
 	fn view_at_position_finds_buffer() {
-		let mgr = LayoutManager::new(BufferId(0));
+		let mgr = LayoutManager::new();
 		let doc = make_doc_area();
+		let base_layout = Layout::text(BufferId(0));
 
-		let hit = mgr.view_at_position(doc, 40, 12);
+		let hit = mgr.view_at_position(&base_layout, doc, 40, 12);
 		assert!(hit.is_some());
 		let (view, _) = hit.unwrap();
 		assert_eq!(view, BufferId(0), "clicking in base area returns buffer 0");

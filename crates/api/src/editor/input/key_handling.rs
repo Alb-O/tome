@@ -6,7 +6,8 @@ use termina::event::KeyCode;
 use xeno_base::{Key, Mode, Selection};
 use xeno_input::KeyResult;
 
-use crate::editor::Editor;
+use crate::editor::{Editor, FocusTarget};
+use crate::window::Window;
 
 /// Result of attempting to dispatch an action from a key result.
 pub(crate) enum ActionDispatch {
@@ -85,6 +86,7 @@ impl Editor {
 			if self.ui.take_wants_redraw() {
 				self.needs_redraw = true;
 			}
+			self.sync_focus_from_ui();
 			return false;
 		}
 
@@ -95,6 +97,7 @@ impl Editor {
 				self.needs_redraw = true;
 			}
 			self.ui = ui;
+			self.sync_focus_from_ui();
 			return false;
 		}
 
@@ -106,6 +109,9 @@ impl Editor {
 		use xeno_registry::{HookContext, HookEventData, emit as emit_hook};
 
 		let old_mode = self.mode();
+		if self.handle_floating_escape(&key) {
+			return false;
+		}
 		let key: Key = key.into();
 
 		let result = self.buffer_mut().input.handle_key(key);
@@ -213,5 +219,32 @@ impl Editor {
 			_ => {}
 		}
 		self.needs_redraw = true;
+	}
+
+	fn handle_floating_escape(&mut self, key: &termina::event::KeyEvent) -> bool {
+		if key.code != KeyCode::Escape {
+			return false;
+		}
+
+		let FocusTarget::Buffer { window, .. } = self.focus else {
+			return false;
+		};
+
+		if window == self.windows.base_id() {
+			return false;
+		}
+
+		let Some(Window::Floating(floating)) = self.windows.get(window) else {
+			return false;
+		};
+
+		if floating.dismiss_on_blur {
+			self.close_floating_window(window);
+		}
+
+		let base_buffer = self.base_window().focused_buffer;
+		self.focus_view(base_buffer);
+		self.needs_redraw = true;
+		true
 	}
 }

@@ -35,7 +35,8 @@ mod macros;
 mod types;
 
 pub use context::{
-	Bool, HookContext, MutableHookContext, OptionViewId, SplitDirection, Str, ViewId,
+	Bool, HookContext, MutableHookContext, OptionViewId, SplitDirection, Str, ViewId, WindowId,
+	WindowKind,
 };
 pub use emit::{HookScheduler, emit, emit_mutable, emit_sync, emit_sync_with};
 pub use types::{
@@ -131,6 +132,25 @@ xeno_macro::define_events! {
 		view_id: ViewId,
 		/// Identifier of the previously focused view, if any.
 		prev_view_id: OptionViewId,
+	},
+	/// A window was created.
+	WindowCreated => "window:created" {
+		/// Identifier of the created window.
+		window_id: WindowId,
+		/// Kind of window created.
+		kind: WindowKind,
+	},
+	/// A window was closed.
+	WindowClosed => "window:closed" {
+		/// Identifier of the closed window.
+		window_id: WindowId,
+	},
+	/// Focused window changed.
+	WindowFocusChanged => "window:focus_changed" {
+		/// Identifier of the window whose focus state changed.
+		window_id: WindowId,
+		/// Whether the window is now focused.
+		focused: Bool,
 	},
 	/// Split view created.
 	SplitCreated => "split:created" {

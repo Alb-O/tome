@@ -37,7 +37,7 @@ impl Editor {
 
 	/// Saves current state to undo history for all views of the focused document.
 	pub fn save_undo_state(&mut self) {
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)
@@ -53,7 +53,7 @@ impl Editor {
 
 	/// Saves undo state for insert mode, grouping consecutive inserts.
 	pub(crate) fn save_insert_undo_state(&mut self) {
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)
@@ -72,7 +72,7 @@ impl Editor {
 		if !self.guard_readonly() {
 			return;
 		}
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)
@@ -100,7 +100,7 @@ impl Editor {
 		if !self.guard_readonly() {
 			return;
 		}
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)

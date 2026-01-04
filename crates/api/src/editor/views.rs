@@ -2,37 +2,71 @@
 //!
 //! Provides convenient methods for accessing buffers. Delegates to [`BufferManager`].
 
-use super::Editor;
+use super::{Editor, FocusTarget};
 use crate::buffer::{Buffer, BufferId, BufferView};
+use crate::window::Window;
 
 impl Editor {
 	/// Returns a reference to the currently focused text buffer.
 	#[inline]
 	pub fn buffer(&self) -> &Buffer {
-		self.buffers.focused_buffer()
+		self.focused_buffer()
 	}
 
 	/// Returns a mutable reference to the currently focused text buffer.
 	#[inline]
 	pub fn buffer_mut(&mut self) -> &mut Buffer {
-		self.buffers.focused_buffer_mut()
+		self.focused_buffer_mut()
+	}
+
+	/// Returns the currently focused window.
+	pub fn focused_window(&self) -> &Window {
+		match &self.focus {
+			FocusTarget::Buffer { window, .. } => self
+				.windows
+				.get(*window)
+				.expect("focused window must exist"),
+			FocusTarget::Panel(_) => self
+				.windows
+				.get(self.windows.base_id())
+				.expect("base window must exist"),
+		}
+	}
+
+	/// Returns a reference to the currently focused text buffer.
+	#[inline]
+	pub fn focused_buffer(&self) -> &Buffer {
+		let buffer_id = self.focused_view();
+		self.buffers
+			.get_buffer(buffer_id)
+			.expect("focused buffer must exist")
+	}
+
+	/// Returns a mutable reference to the currently focused text buffer.
+	#[inline]
+	pub fn focused_buffer_mut(&mut self) -> &mut Buffer {
+		let buffer_id = self.focused_view();
+		self.buffers
+			.get_buffer_mut(buffer_id)
+			.expect("focused buffer must exist")
 	}
 
 	/// Returns the currently focused view (buffer ID).
 	pub fn focused_view(&self) -> BufferView {
-		self.buffers.focused_view()
+		match &self.focus {
+			FocusTarget::Buffer { buffer, .. } => *buffer,
+			FocusTarget::Panel(_) => self.base_window().focused_buffer,
+		}
 	}
 
 	/// Returns true if the focused view is a text buffer.
-	///
-	/// Always returns true since all views are now text buffers.
 	pub fn is_text_focused(&self) -> bool {
-		true
+		matches!(self.focus, FocusTarget::Buffer { .. })
 	}
 
 	/// Returns the ID of the focused text buffer.
 	pub fn focused_buffer_id(&self) -> Option<BufferId> {
-		Some(self.buffers.focused_view())
+		Some(self.focused_view())
 	}
 
 	/// Returns all text buffer IDs.

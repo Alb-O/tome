@@ -142,6 +142,7 @@ impl Editor {
 			self.needs_redraw = true;
 		}
 		self.ui = ui;
+		self.sync_focus_from_ui();
 
 		if handled {
 			self.needs_redraw = true;
@@ -191,7 +192,7 @@ impl Editor {
 
 	/// Maps sibling buffer selections through a transaction.
 	pub(super) fn sync_sibling_selections(&mut self, tx: &xeno_base::Transaction) {
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 		let doc_id = self
 			.buffers
 			.get_buffer(buffer_id)

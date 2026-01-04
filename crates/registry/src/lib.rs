@@ -49,8 +49,8 @@ pub use commands::{
 pub use hooks::{
 	Bool, BoxFuture, HOOKS, HookAction, HookContext, HookDef, HookEvent, HookEventData,
 	HookHandler, HookMutability, HookResult, HookScheduler, MutableHookContext, OptionViewId,
-	OwnedHookContext, SplitDirection, Str, ViewId, all_hooks, async_hook, emit, emit_mutable,
-	emit_sync, emit_sync_with, find_hooks, hook,
+	OwnedHookContext, SplitDirection, Str, ViewId, WindowId, WindowKind, all_hooks, async_hook,
+	emit, emit_mutable, emit_sync, emit_sync_with, find_hooks, hook,
 };
 pub use menus::{MENU_GROUPS, MENU_ITEMS, MenuGroupDef, MenuItemDef, menu_group, menu_item};
 pub use motions::{Capability, MOTIONS, MotionDef, MotionHandler, flags, motion, movement};

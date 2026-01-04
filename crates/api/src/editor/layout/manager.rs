@@ -4,15 +4,15 @@
 
 use xeno_tui::layout::Rect;
 
-use crate::buffer::{BufferId, BufferView, Layout, SplitDirection};
+use crate::buffer::{BufferView, Layout, SplitDirection};
 use crate::editor::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
 
 /// Manages stacked layout layers and separator interactions.
 ///
-/// Layouts are organized in ordered layers. Layer 0 is the base (opaque),
-/// higher layers overlay on top with transparent backgrounds.
+/// Layouts are organized in ordered layers. Layer 0 is the base layout
+/// owned by the base window; higher layers overlay on top with transparent backgrounds.
 pub struct LayoutManager {
-	/// Layout layers, index 0 is base (bottom), higher indices overlay on top.
+	/// Layout layers above the base layout (index 0 reserved for base).
 	pub(super) layers: Vec<Option<Layout>>,
 
 	/// Currently hovered separator (for visual feedback during resize).
@@ -35,10 +35,10 @@ pub struct LayoutManager {
 }
 
 impl LayoutManager {
-	/// Creates a new layout manager with a single text buffer on the base layer.
-	pub fn new(buffer_id: BufferId) -> Self {
+	/// Creates a new layout manager without owning the base layout.
+	pub fn new() -> Self {
 		Self {
-			layers: vec![Some(Layout::text(buffer_id))],
+			layers: vec![None],
 			hovered_separator: None,
 			separator_under_mouse: None,
 			separator_hover_animation: None,

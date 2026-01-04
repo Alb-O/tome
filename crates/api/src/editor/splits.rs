@@ -21,10 +21,11 @@ impl Editor {
 	///
 	/// Matches Vim's `:split` / Helix's `hsplit` (Ctrl+w s).
 	pub fn split_horizontal(&mut self, new_buffer_id: BufferId) {
-		let current_view = self.buffers.focused_view();
+		let current_view = self.focused_view();
 		let doc_area = self.doc_area();
-		self.layout
-			.split_horizontal(current_view, new_buffer_id, doc_area);
+		let base_layout = &mut self.windows.base_window_mut().layout;
+		let layout = &mut self.layout;
+		layout.split_horizontal(base_layout, current_view, new_buffer_id, doc_area);
 		self.focus_buffer(new_buffer_id);
 		emit_hook_sync_with(
 			&HookContext::new(
@@ -42,10 +43,11 @@ impl Editor {
 	///
 	/// Matches Vim's `:vsplit` / Helix's `vsplit` (Ctrl+w v).
 	pub fn split_vertical(&mut self, new_buffer_id: BufferId) {
-		let current_view = self.buffers.focused_view();
+		let current_view = self.focused_view();
 		let doc_area = self.doc_area();
-		self.layout
-			.split_vertical(current_view, new_buffer_id, doc_area);
+		let base_layout = &mut self.windows.base_window_mut().layout;
+		let layout = &mut self.layout;
+		layout.split_vertical(base_layout, current_view, new_buffer_id, doc_area);
 		self.focus_buffer(new_buffer_id);
 		emit_hook_sync_with(
 			&HookContext::new(
@@ -78,7 +80,7 @@ impl Editor {
 	///
 	/// Returns true if the view was closed.
 	pub fn close_view(&mut self, view: BufferView) -> bool {
-		if self.layout.count() <= 1 {
+		if self.layout.count(&self.base_window().layout) <= 1 {
 			return false;
 		}
 
@@ -109,7 +111,9 @@ impl Editor {
 		);
 
 		// Remove from layout - returns the new focus target if successful
-		let new_focus = self.layout.remove_view(view);
+		let base_layout = &mut self.windows.base_window_mut().layout;
+		let layout = &mut self.layout;
+		let new_focus = layout.remove_view(base_layout, view);
 		if new_focus.is_none() {
 			return false;
 		}
@@ -117,10 +121,10 @@ impl Editor {
 		self.buffers.remove_buffer(view);
 
 		// If we closed the focused view, focus another one
-		if self.buffers.focused_view() == view
+		if self.focused_view() == view
 			&& let Some(focus) = new_focus
 		{
-			self.buffers.set_focused_view(focus);
+			self.focus_view(focus);
 		}
 
 		self.needs_redraw = true;
@@ -138,13 +142,13 @@ impl Editor {
 	///
 	/// Returns true if the view was closed.
 	pub fn close_current_view(&mut self) -> bool {
-		self.close_view(self.buffers.focused_view())
+		self.close_view(self.focused_view())
 	}
 
 	/// Closes the current buffer if a text buffer is focused.
 	///
 	/// Returns true if the buffer was closed.
 	pub fn close_current_buffer(&mut self) -> bool {
-		self.close_buffer(self.buffers.focused_view())
+		self.close_buffer(self.focused_view())
 	}
 }

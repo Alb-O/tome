@@ -20,6 +20,10 @@ impl ViewId {
 	}
 }
 
+/// Identifier for a window in hook payloads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct WindowId(pub u64);
+
 /// Optional view identifier for hook payloads.
 pub type OptionViewId = Option<ViewId>;
 
@@ -36,6 +40,13 @@ pub enum SplitDirection {
 	Horizontal,
 	/// Vertical split (stacked).
 	Vertical,
+}
+
+/// Window kinds for window lifecycle events.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WindowKind {
+	Base,
+	Floating,
 }
 
 /// Context passed to hook handlers.

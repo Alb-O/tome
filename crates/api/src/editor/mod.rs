@@ -63,20 +63,23 @@ use std::path::PathBuf;
 
 pub use buffer_manager::BufferManager;
 pub use command_queue::CommandQueue;
+pub use focus::{FocusReason, FocusTarget, PanelId};
 pub use hook_runtime::HookRuntime;
 pub use layout::{LayoutManager, SeparatorHit, SeparatorId};
 pub use types::{HistoryEntry, JumpList, JumpLocation, MacroState, Registers};
 use xeno_language::LanguageLoader;
 use xeno_registry::themes::Theme;
-use xeno_registry::{HookContext, HookEventData, emit_sync_with as emit_hook_sync_with};
+use xeno_registry::{HookContext, HookEventData, WindowKind, emit_sync_with as emit_hook_sync_with};
+use xeno_tui::layout::Rect;
 use xeno_tui::widgets::menu::MenuState;
 
 pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
-use crate::buffer::{BufferId, BufferView};
+use crate::buffer::{BufferId, BufferView, Layout};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::editor::types::CompletionState;
 use crate::menu::{MenuAction, create_menu};
 use crate::ui::UiManager;
+use crate::window::{BaseWindow, FloatingStyle, WindowId, WindowManager};
 
 /// The main editor/workspace structure.
 ///
@@ -120,6 +123,12 @@ use crate::ui::UiManager;
 pub struct Editor {
 	/// Buffer and terminal management.
 	pub buffers: BufferManager,
+
+	/// Window management (base + floating).
+	pub windows: WindowManager,
+
+	/// Current keyboard focus target.
+	pub focus: focus::FocusTarget,
 
 	/// Layout and split management.
 	pub layout: LayoutManager,
@@ -219,8 +228,24 @@ impl Editor {
 		// Create buffer manager with initial buffer
 		let buffer_manager = BufferManager::new(content, path.clone(), &language_loader);
 		let buffer_id = buffer_manager.focused_buffer_id().unwrap();
+		let window_manager = WindowManager::new(Layout::text(buffer_id), buffer_id);
+		let focus = focus::FocusTarget::Buffer {
+			window: window_manager.base_id(),
+			buffer: buffer_id,
+		};
 
 		let mut hook_runtime = HookRuntime::new();
+
+		emit_hook_sync_with(
+			&HookContext::new(
+				HookEventData::WindowCreated {
+					window_id: xeno_registry::WindowId(window_manager.base_id().0),
+					kind: WindowKind::Base,
+				},
+				None,
+			),
+			&mut hook_runtime,
+		);
 
 		let scratch_path = PathBuf::from("[scratch]");
 		let hook_path = path.as_ref().unwrap_or(&scratch_path);
@@ -240,7 +265,9 @@ impl Editor {
 
 		Self {
 			buffers: buffer_manager,
-			layout: LayoutManager::new(buffer_id),
+			windows: window_manager,
+			focus,
+			layout: LayoutManager::new(),
 			registers: Registers::default(),
 			theme: xeno_registry::themes::get_theme(xeno_registry::themes::DEFAULT_THEME_ID)
 				.unwrap_or(&xeno_registry::themes::DEFAULT_THEME),
@@ -273,6 +300,55 @@ impl Editor {
 			command_queue: CommandQueue::new(),
 			menu: create_menu(),
 		}
+	}
+
+	/// Returns the base window.
+	pub fn base_window(&self) -> &BaseWindow {
+		self.windows.base_window()
+	}
+
+	/// Returns the base window mutably.
+	pub fn base_window_mut(&mut self) -> &mut BaseWindow {
+		self.windows.base_window_mut()
+	}
+
+	/// Creates a floating window and emits a hook.
+	pub fn create_floating_window(
+		&mut self,
+		buffer: BufferId,
+		rect: Rect,
+		style: FloatingStyle,
+	) -> WindowId {
+		let id = self.windows.create_floating(buffer, rect, style);
+		emit_hook_sync_with(
+			&HookContext::new(
+				HookEventData::WindowCreated {
+					window_id: xeno_registry::WindowId(id.0),
+					kind: WindowKind::Floating,
+				},
+				Some(&self.extensions),
+			),
+			&mut self.hook_runtime,
+		);
+		id
+	}
+
+	/// Closes a floating window and emits a hook.
+	pub fn close_floating_window(&mut self, id: WindowId) {
+		if !matches!(self.windows.get(id), Some(crate::window::Window::Floating(_))) {
+			return;
+		}
+
+		self.windows.close_floating(id);
+		emit_hook_sync_with(
+			&HookContext::new(
+				HookEventData::WindowClosed {
+					window_id: xeno_registry::WindowId(id.0),
+				},
+				Some(&self.extensions),
+			),
+			&mut self.hook_runtime,
+		);
 	}
 }
 

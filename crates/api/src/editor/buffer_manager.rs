@@ -1,7 +1,7 @@
 //! Buffer storage, ID generation, and focus tracking.
 //!
-//! [`BufferManager`] centralizes ownership of text buffers,
-//! providing a single source of truth for what's open and what's focused.
+//! [`BufferManager`] centralizes ownership of text buffers.
+//! Focus state is mirrored from the [`Editor`] for compatibility.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -16,7 +16,7 @@ pub struct BufferManager {
 	buffers: HashMap<BufferId, Buffer>,
 	/// Counter for generating unique buffer IDs.
 	next_buffer_id: u64,
-	/// Currently focused view (buffer ID).
+	/// Currently focused view (buffer ID), mirrored from the editor focus.
 	focused_view: BufferView,
 }
 
@@ -96,6 +96,8 @@ impl BufferManager {
 	}
 
 	/// Sets the focused view. Returns true if the view exists.
+	///
+	/// This should be driven by the editor focus model.
 	pub fn set_focused_view(&mut self, view: BufferView) -> bool {
 		if self.buffers.contains_key(&view) {
 			self.focused_view = view;

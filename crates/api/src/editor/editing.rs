@@ -18,7 +18,7 @@ impl Editor {
 
 	/// Inserts text at the current cursor position(s).
 	pub fn insert_text(&mut self, text: &str) {
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 
 		if !self.guard_readonly() {
 			return;
@@ -78,7 +78,7 @@ impl Editor {
 			return;
 		}
 
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 
 		self.save_undo_state();
 		let yank = self.registers.yank.clone();
@@ -125,7 +125,7 @@ impl Editor {
 			return;
 		}
 
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 
 		self.save_undo_state();
 		let yank = self.registers.yank.clone();
@@ -172,7 +172,7 @@ impl Editor {
 			return;
 		}
 
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 
 		self.save_undo_state();
 
@@ -210,7 +210,7 @@ impl Editor {
 
 	/// Applies a transaction to the focused buffer.
 	pub fn apply_transaction(&mut self, tx: &Transaction) {
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 		let applied = self
 			.buffers
 			.get_buffer_mut(buffer_id)
@@ -226,7 +226,7 @@ impl Editor {
 
 	/// Triggers a full syntax reparse of the focused buffer.
 	pub fn reparse_syntax(&mut self) {
-		let buffer_id = self.buffers.focused_view();
+		let buffer_id = self.focused_view();
 
 		// Access buffer directly to avoid borrow conflict with language_loader.
 		let buffer = self
