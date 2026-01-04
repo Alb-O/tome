@@ -67,7 +67,7 @@ async fn handle_auth_command(action: AuthAction) -> anyhow::Result<()> {
 	match action {
 		AuthAction::Login { provider } => match provider {
 			LoginProvider::Codex => {
-				use xeno_auth::codex::{start_login, LoginConfig};
+				use xeno_auth::codex::{LoginConfig, start_login};
 				let config = LoginConfig::new(data_dir);
 				let server = start_login(config)?;
 				println!("Opening browser for authentication...");
@@ -76,8 +76,12 @@ async fn handle_auth_command(action: AuthAction) -> anyhow::Result<()> {
 				println!("Login successful!");
 			}
 			LoginProvider::Claude { api_key } => {
-				use xeno_auth::claude::{complete_login, start_login, LoginMode};
-				let mode = if api_key { LoginMode::Console } else { LoginMode::Max };
+				use xeno_auth::claude::{LoginMode, complete_login, start_login};
+				let mode = if api_key {
+					LoginMode::Console
+				} else {
+					LoginMode::Max
+				};
 				let session = start_login(data_dir, mode);
 				println!("Open this URL in your browser:");
 				println!("  {}", session.auth_url);
@@ -111,8 +115,8 @@ async fn handle_auth_command(action: AuthAction) -> anyhow::Result<()> {
 			}
 		},
 		AuthAction::Status => {
-			use xeno_auth::codex::load_auth as load_codex;
 			use xeno_auth::claude::load_auth as load_claude;
+			use xeno_auth::codex::load_auth as load_codex;
 
 			match load_codex(&data_dir)? {
 				Some(auth) if auth.api_key.is_some() => {

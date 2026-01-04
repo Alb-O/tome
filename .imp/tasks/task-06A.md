@@ -20,49 +20,50 @@ The current architecture assumes `BufferId == View`. Every text view is a buffer
 The solution is a **Window** abstraction that:
 
 1. Contains one or more views (initially just one buffer, but extensible)
-2. Has its own focus state, position, and z-order
-3. Can be floating (positioned absolutely) or docked (in the split tree)
-4. Enables independent input handling per window
+1. Has its own focus state, position, and z-order
+1. Can be floating (positioned absolutely) or docked (in the split tree)
+1. Enables independent input handling per window
 
 ______________________________________________________________________
 
 ## Implementation Expectations
 
-<mandatory_execution_requirements>
+\<mandatory_execution_requirements>
 
 1. Implement changes incrementally, verifying each step compiles with `cargo check -p xeno-api`
-2. Preserve existing split behavior exactly - all current tests must pass
-3. Do not break the existing keybinding, action, or hook systems
-4. Complete Phase 1-3 before moving to Phase 4+ (command palette)
+1. Preserve existing split behavior exactly - all current tests must pass
+1. Do not break the existing keybinding, action, or hook systems
+1. Complete Phase 1-3 before moving to Phase 4+ (command palette)
 
 Unacceptable:
+
 - Breaking existing split navigation or focus behavior
 - Changing action handler signatures without updating all call sites
 - Partial implementations that leave the codebase in an inconsistent state
 
-</mandatory_execution_requirements>
+\</mandatory_execution_requirements>
 
 ______________________________________________________________________
 
 ## Behavioral Constraints
 
-<verbosity_and_scope_constraints>
+\<verbosity_and_scope_constraints>
 
 - Follow existing registry patterns (`linkme` distributed slices, `define_events!` macro)
 - Prefer minimal changes that achieve correctness
 - Do not implement the command palette UI in this task - only the Window infrastructure
 - If any instruction is ambiguous, choose the approach that minimizes API surface changes
 
-</verbosity_and_scope_constraints>
+\</verbosity_and_scope_constraints>
 
-<design_freedom>
+\<design_freedom>
 
 - New types (`WindowId`, `Window`, `FloatingWindow`) are expected
 - New hook events (`WindowCreated`, `WindowClosed`, `WindowFocusChanged`) are acceptable
 - Refactoring `LayoutManager` to separate split-tree from window management is encouraged
 - The focus model can be redesigned if it improves clarity
 
-</design_freedom>
+\</design_freedom>
 
 ______________________________________________________________________
 
@@ -119,10 +120,10 @@ impl Editor {
 ### Key Invariants
 
 1. **Exactly one focused target** at any time (buffer or panel)
-2. **Base window always exists** - created at editor startup, never closed
-3. **Floating windows are z-ordered** - topmost receives input first
-4. **Buffers are shared** - a buffer can appear in multiple windows (but typically doesn't)
-5. **Actions receive focus context** - know which window/buffer they operate on
+1. **Base window always exists** - created at editor startup, never closed
+1. **Floating windows are z-ordered** - topmost receives input first
+1. **Buffers are shared** - a buffer can appear in multiple windows (but typically doesn't)
+1. **Actions receive focus context** - know which window/buffer they operate on
 
 ______________________________________________________________________
 
@@ -210,6 +211,7 @@ ______________________________________________________________________
 **Objective**: Add `WindowId`, `Window`, `WindowManager` types without changing behavior.
 
 **Files**:
+
 - `crates/api/src/window/mod.rs` (new)
 - `crates/api/src/window/types.rs` (new)
 - `crates/api/src/window/manager.rs` (new)
@@ -220,6 +222,7 @@ ______________________________________________________________________
 1.1 Create `crates/api/src/window/` module with types above
 
 1.2 Create `WindowManager` with:
+
 ```rust
 pub struct WindowManager {
     next_id: u64,
@@ -248,6 +251,7 @@ impl WindowManager {
 **Objective**: Move layout ownership from `LayoutManager` to `BaseWindow`.
 
 **Files**:
+
 - `crates/api/src/editor/layout/manager.rs`
 - `crates/api/src/window/manager.rs`
 
@@ -266,6 +270,7 @@ impl WindowManager {
 **Objective**: Replace `BufferManager.focused_view` with `FocusTarget` on Editor.
 
 **Files**:
+
 - `crates/api/src/editor/mod.rs`
 - `crates/api/src/editor/focus.rs`
 - `crates/api/src/editor/buffer_manager.rs`
@@ -289,12 +294,14 @@ impl WindowManager {
 **Objective**: Implement floating window lifecycle and rendering.
 
 **Files**:
+
 - `crates/api/src/window/floating.rs` (new)
 - `crates/api/src/render/document/mod.rs`
 
 **Tasks**:
 
 4.1 Add `WindowManager::create_floating()`:
+
 ```rust
 pub fn create_floating(
     &mut self,
@@ -307,6 +314,7 @@ pub fn create_floating(
 4.2 Add `WindowManager::close_floating(id: WindowId)`
 
 4.3 Modify render pipeline:
+
 ```
 1. Render base window (splits) as before
 2. For each floating window (bottom to top):
@@ -325,6 +333,7 @@ pub fn create_floating(
 **Objective**: Route keyboard and mouse input to focused floating window.
 
 **Files**:
+
 - `crates/api/src/editor/input/mod.rs`
 - `crates/term/src/app.rs`
 
@@ -345,12 +354,14 @@ pub fn create_floating(
 **Objective**: Add hook events for window lifecycle.
 
 **Files**:
+
 - `crates/registry/hooks/src/` (wherever define_events! is used)
 - `crates/api/src/window/manager.rs`
 
 **Tasks**:
 
 6.1 Add events to `define_events!`:
+
 ```rust
 WindowCreated => "window:created" {
     window_id: WindowId,
@@ -376,11 +387,11 @@ ______________________________________________________________________
 Once Phases 1-6 are complete, the command palette can be implemented as:
 
 1. Create a new buffer (empty, scratch)
-2. Create floating window containing that buffer
-3. Position centered, small height (1-3 lines initially)
-4. Custom rendering overlay for suggestions/completions below input
-5. On Enter: parse command, execute, close window
-6. On Escape: close window, return focus to base
+1. Create floating window containing that buffer
+1. Position centered, small height (1-3 lines initially)
+1. Custom rendering overlay for suggestions/completions below input
+1. On Enter: parse command, execute, close window
+1. On Escape: close window, return focus to base
 
 The key insight is that the **input line is just a buffer** with familiar keybindings. The suggestions panel is a separate overlay rendered below.
 
@@ -388,16 +399,16 @@ ______________________________________________________________________
 
 ## Key Files Reference
 
-| Purpose | File |
-|---------|------|
-| Window types | `crates/api/src/window/types.rs` (new) |
-| Window manager | `crates/api/src/window/manager.rs` (new) |
-| Focus types | `crates/api/src/editor/focus.rs` (modify) |
-| Editor integration | `crates/api/src/editor/mod.rs` (modify) |
-| Render pipeline | `crates/api/src/render/document/mod.rs` (modify) |
-| Input routing | `crates/api/src/editor/input/mod.rs` (modify) |
-| Layout manager | `crates/api/src/editor/layout/manager.rs` (modify) |
-| Hook events | `crates/registry/hooks/src/` (add events) |
+| Purpose            | File                                               |
+| ------------------ | -------------------------------------------------- |
+| Window types       | `crates/api/src/window/types.rs` (new)             |
+| Window manager     | `crates/api/src/window/manager.rs` (new)           |
+| Focus types        | `crates/api/src/editor/focus.rs` (modify)          |
+| Editor integration | `crates/api/src/editor/mod.rs` (modify)            |
+| Render pipeline    | `crates/api/src/render/document/mod.rs` (modify)   |
+| Input routing      | `crates/api/src/editor/input/mod.rs` (modify)      |
+| Layout manager     | `crates/api/src/editor/layout/manager.rs` (modify) |
+| Hook events        | `crates/registry/hooks/src/` (add events)          |
 
 ______________________________________________________________________
 
@@ -405,19 +416,20 @@ ______________________________________________________________________
 
 1. **Don't duplicate focus state**: Single source of truth in `Editor.focus`, not also in `BufferManager` and `WindowManager`
 
-2. **Don't special-case floating in actions**: Actions should work on "focused buffer" regardless of whether it's in base or floating window
+1. **Don't special-case floating in actions**: Actions should work on "focused buffer" regardless of whether it's in base or floating window
 
-3. **Don't hardcode command palette**: Build generic floating window infrastructure that command palette uses
+1. **Don't hardcode command palette**: Build generic floating window infrastructure that command palette uses
 
-4. **Don't break split navigation**: `focus_direction()`, `split_horizontal()`, etc. must work exactly as before for base window
+1. **Don't break split navigation**: `focus_direction()`, `split_horizontal()`, etc. must work exactly as before for base window
 
-5. **Don't mix rendering concerns**: Floating window rendering should be composable, not interleaved with split rendering
+1. **Don't mix rendering concerns**: Floating window rendering should be composable, not interleaved with split rendering
 
 ______________________________________________________________________
 
 ## Success Criteria
 
 Phase 1-3 (Foundation):
+
 - [ ] `WindowId`, `Window`, `WindowManager` types exist
 - [ ] `Editor.focus: FocusTarget` replaces `BufferManager.focused_view`
 - [ ] `Editor::focused_buffer()` returns correct buffer for any focus state
@@ -425,6 +437,7 @@ Phase 1-3 (Foundation):
 - [ ] No behavioral changes to user-facing functionality
 
 Phase 4-6 (Floating Windows):
+
 - [ ] Can create floating window with `WindowManager::create_floating()`
 - [ ] Floating windows render above base window
 - [ ] Hit testing correctly identifies floating windows
@@ -440,6 +453,7 @@ ______________________________________________________________________
 ### For Action Handlers
 
 Current:
+
 ```rust
 action!(my_action, { ... }, |ctx| {
     ctx.cursor_mut().move_left();  // Operates on focused buffer
@@ -447,6 +461,7 @@ action!(my_action, { ... }, |ctx| {
 ```
 
 After refactoring:
+
 ```rust
 // No change needed - ctx.cursor_mut() still operates on focused buffer
 // The focus model change is internal to Editor
@@ -457,7 +472,7 @@ After refactoring:
 Extensions that access `editor.buffer()` or `editor.buffers.focused_view` should continue to work because:
 
 1. `Editor::buffer()` is updated to return `focused_buffer()` from new focus model
-2. `BufferManager::focused_view` becomes a computed property delegating to `Editor.focus`
+1. `BufferManager::focused_view` becomes a computed property delegating to `Editor.focus`
 
 ### For Hooks
 

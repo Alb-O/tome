@@ -15,10 +15,7 @@ pub type PanelId = String;
 /// Identifies what has keyboard focus.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FocusTarget {
-	Buffer {
-		window: WindowId,
-		buffer: BufferId,
-	},
+	Buffer { window: WindowId, buffer: BufferId },
 	Panel(PanelId),
 }
 
@@ -137,14 +134,18 @@ impl Editor {
 	/// Focuses the next text buffer in the layout.
 	pub fn focus_next_buffer(&mut self) {
 		let current_id = self.focused_view();
-		let next_id = self.layout.next_buffer(&self.base_window().layout, current_id);
+		let next_id = self
+			.layout
+			.next_buffer(&self.base_window().layout, current_id);
 		self.focus_buffer(next_id);
 	}
 
 	/// Focuses the previous text buffer in the layout.
 	pub fn focus_prev_buffer(&mut self) {
 		let current_id = self.focused_view();
-		let prev_id = self.layout.prev_buffer(&self.base_window().layout, current_id);
+		let prev_id = self
+			.layout
+			.prev_buffer(&self.base_window().layout, current_id);
 		self.focus_buffer(prev_id);
 	}
 
@@ -154,10 +155,13 @@ impl Editor {
 		let current = self.focused_view();
 		let hint = self.cursor_screen_pos(direction, area);
 
-		if let Some(target) = self
-			.layout
-			.view_in_direction(&self.base_window().layout, area, current, direction, hint)
-		{
+		if let Some(target) = self.layout.view_in_direction(
+			&self.base_window().layout,
+			area,
+			current,
+			direction,
+			hint,
+		) {
 			self.focus_view(target);
 		}
 	}
@@ -178,7 +182,6 @@ impl Editor {
 			let new_focus = self.focus.clone();
 			self.handle_window_focus_change(old_focus, &new_focus);
 		}
-
 	}
 
 	/// Returns cursor screen position along the perpendicular axis for directional hints.
@@ -199,7 +202,9 @@ impl Editor {
 			}
 			Direction::Up | Direction::Down => {
 				let gutter = buffer.gutter_width();
-				view_rect.x + gutter + (buffer.cursor_col() as u16).min(view_rect.width.saturating_sub(gutter + 1))
+				view_rect.x
+					+ gutter + (buffer.cursor_col() as u16)
+					.min(view_rect.width.saturating_sub(gutter + 1))
 			}
 		}
 	}
@@ -252,18 +257,19 @@ impl Editor {
 		}
 
 		if let Some(window) = old_window
-			&& old_window != new_window {
-				let should_close = matches!(
-					self.windows.get(window),
-					Some(Window::Floating(floating)) if floating.dismiss_on_blur
-				);
-				if should_close {
-					if Some(window) == self.palette.window_id() {
-						self.close_palette();
-					} else {
-						self.close_floating_window(window);
-					}
+			&& old_window != new_window
+		{
+			let should_close = matches!(
+				self.windows.get(window),
+				Some(Window::Floating(floating)) if floating.dismiss_on_blur
+			);
+			if should_close {
+				if Some(window) == self.palette.window_id() {
+					self.close_palette();
+				} else {
+					self.close_floating_window(window);
 				}
 			}
+		}
 	}
 }

@@ -14,9 +14,6 @@ mod pkce;
 mod xdg;
 
 // Re-export shared types at crate root
-pub use error::AuthError;
-pub use error::AuthResult;
-pub use pkce::PkceCodes;
-pub use pkce::generate_state;
-pub use xdg::default_config_dir;
-pub use xdg::default_data_dir;
+pub use error::{AuthError, AuthResult};
+pub use pkce::{PkceCodes, generate_state};
+pub use xdg::{default_config_dir, default_data_dir};

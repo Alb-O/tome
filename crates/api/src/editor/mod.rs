@@ -71,7 +71,9 @@ pub use layout::{LayoutManager, SeparatorHit, SeparatorId};
 pub use types::{HistoryEntry, JumpList, JumpLocation, MacroState, Registers};
 use xeno_language::LanguageLoader;
 use xeno_registry::themes::Theme;
-use xeno_registry::{HookContext, HookEventData, WindowKind, emit_sync_with as emit_hook_sync_with};
+use xeno_registry::{
+	HookContext, HookEventData, WindowKind, emit_sync_with as emit_hook_sync_with,
+};
 use xeno_tui::layout::Rect;
 use xeno_tui::widgets::menu::MenuState;
 
@@ -341,7 +343,10 @@ impl Editor {
 
 	/// Closes a floating window and emits a hook.
 	pub fn close_floating_window(&mut self, id: WindowId) {
-		if !matches!(self.windows.get(id), Some(crate::window::Window::Floating(_))) {
+		if !matches!(
+			self.windows.get(id),
+			Some(crate::window::Window::Floating(_))
+		) {
 			return;
 		}
 

@@ -19,4 +19,5 @@ pub const REDIRECT_URI: &str = "https://console.anthropic.com/oauth/code/callbac
 pub const SCOPE: &str = "org:create_api_key user:profile user:inference";
 
 /// API key creation endpoint.
-pub const CREATE_API_KEY_URL: &str = "https://api.anthropic.com/api/oauth/claude_cli/create_api_key";
+pub const CREATE_API_KEY_URL: &str =
+	"https://api.anthropic.com/api/oauth/claude_cli/create_api_key";

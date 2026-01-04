@@ -5,8 +5,7 @@
 use xeno_tui::layout::Rect;
 
 use super::manager::LayoutManager;
-use crate::buffer::Direction;
-use crate::buffer::{BufferId, BufferView, Layout};
+use crate::buffer::{BufferId, BufferView, Direction, Layout};
 
 impl LayoutManager {
 	/// Returns the first view in the layout (from topmost non-empty layer).

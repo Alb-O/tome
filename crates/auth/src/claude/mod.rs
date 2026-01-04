@@ -14,11 +14,6 @@ mod login;
 mod storage;
 mod token;
 
-pub use login::complete_login;
-pub use login::start_login;
-pub use login::LoginMode;
-pub use login::LoginSession;
-pub use storage::load_auth;
-pub use storage::logout;
-pub use token::AuthState;
-pub use token::OAuthTokens;
+pub use login::{LoginMode, LoginSession, complete_login, start_login};
+pub use storage::{load_auth, logout};
+pub use token::{AuthState, OAuthTokens};

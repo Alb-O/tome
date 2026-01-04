@@ -105,8 +105,13 @@ impl Editor {
 			match mouse.kind {
 				MouseEventKind::Drag(_) => {
 					let base_layout = &mut self.windows.base_window_mut().layout;
-					self.layout
-						.resize_separator(base_layout, doc_area, &drag_state.id, mouse_x, mouse_y);
+					self.layout.resize_separator(
+						base_layout,
+						doc_area,
+						&drag_state.id,
+						mouse_x,
+						mouse_y,
+					);
 					self.needs_redraw = true;
 					return false;
 				}
@@ -322,9 +327,10 @@ impl Editor {
 		let doc_area = self.doc_area();
 		if let FocusTarget::Buffer { window, .. } = &self.focus
 			&& *window != self.windows.base_id()
-				&& let Some(Window::Floating(floating)) = self.windows.get(*window) {
-					return floating.content_rect();
-				}
+			&& let Some(Window::Floating(floating)) = self.windows.get(*window)
+		{
+			return floating.content_rect();
+		}
 		let focused = self.focused_view();
 		for (view, area) in self
 			.layout

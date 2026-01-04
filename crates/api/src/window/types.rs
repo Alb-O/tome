@@ -1,8 +1,8 @@
 //! Window and floating window types.
 
 use xeno_tui::layout::Rect;
-use xeno_tui::widgets::block::Padding;
 use xeno_tui::widgets::BorderType;
+use xeno_tui::widgets::block::Padding;
 
 use crate::buffer::{BufferId, Layout};
 

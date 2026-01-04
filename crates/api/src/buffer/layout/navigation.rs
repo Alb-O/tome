@@ -82,7 +82,13 @@ impl Layout {
 		views
 			.iter()
 			.filter(|(v, r)| *v != current && is_in_direction(current_rect, *r, wrap))
-			.max_by(|(_, a), (_, b)| compute_distance(current_rect, *a, wrap).cmp(&compute_distance(current_rect, *b, wrap)))
+			.max_by(|(_, a), (_, b)| {
+				compute_distance(current_rect, *a, wrap).cmp(&compute_distance(
+					current_rect,
+					*b,
+					wrap,
+				))
+			})
 			.map(|(v, _)| *v)
 	}
 }
@@ -139,12 +145,24 @@ fn compute_distance(current: Rect, candidate: Rect, direction: Direction) -> u16
 }
 
 /// Compares candidates by: overlap (more) > distance (less) > hint proximity (less).
-fn compare_candidates(current: Rect, a: Rect, b: Rect, direction: Direction, hint: u16) -> std::cmp::Ordering {
-	let overlap = compute_overlap(current, a, direction).cmp(&compute_overlap(current, b, direction));
-	if overlap != std::cmp::Ordering::Equal { return overlap; }
+fn compare_candidates(
+	current: Rect,
+	a: Rect,
+	b: Rect,
+	direction: Direction,
+	hint: u16,
+) -> std::cmp::Ordering {
+	let overlap =
+		compute_overlap(current, a, direction).cmp(&compute_overlap(current, b, direction));
+	if overlap != std::cmp::Ordering::Equal {
+		return overlap;
+	}
 
-	let dist = compute_distance(current, b, direction).cmp(&compute_distance(current, a, direction));
-	if dist != std::cmp::Ordering::Equal { return dist; }
+	let dist =
+		compute_distance(current, b, direction).cmp(&compute_distance(current, a, direction));
+	if dist != std::cmp::Ordering::Equal {
+		return dist;
+	}
 
 	let hint_dist = |r| (perpendicular_center(r, direction) as i32 - hint as i32).unsigned_abs();
 	hint_dist(b).cmp(&hint_dist(a))

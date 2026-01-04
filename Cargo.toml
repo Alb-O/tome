@@ -27,12 +27,14 @@ repository = "https://github.com/Alb-O/xeno"
 agent-client-protocol = { version = "0.9", features = ["unstable_session_model"] }
 anyhow = "1"
 async-trait = "0.1"
+base64 = "0.22"
+chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
 criterion = "0.8"
 crossterm = "0.29"
+dirs = "6"
 futures = "0.3"
 globset = "0.4"
-dirs = "6"
 insta = "1"
 kdl = "6"
 kitty-test-harness = "0.1"
@@ -48,11 +50,14 @@ portable-pty = "0.9"
 proc-macro2 = "1"
 proptest = "1"
 quote = "1"
+rand = "0.9"
 regex = "1"
+reqwest = { version = "0.12", features = ["json"] }
 ropey = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serial_test = "3"
+sha2 = "0.10"
 smallvec = "1"
 strsim = "0.11"
 syn = { version = "2", features = ["full"] }
@@ -60,6 +65,7 @@ tempfile = "3"
 termina = "0.1"
 termwiz = "0.23"
 thiserror = "2"
+tiny_http = "0.12"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["compat"] }
 toml = "0.9"
@@ -68,8 +74,12 @@ tracing-subscriber = "0.3"
 tree-house = "0.3"
 unicode-segmentation = "1"
 unicode-width = "0.2"
+url = "2"
+urlencoding = "2"
+webbrowser = "1"
 xeno-acp = { path = "crates/acp" }
 xeno-api = { path = "crates/api" }
+xeno-auth = { path = "crates/auth" }
 xeno-base = { path = "crates/base" }
 xeno-config = { path = "crates/config" }
 xeno-core = { path = "crates/core" }
@@ -95,16 +105,6 @@ xeno-registry-text-objects = { path = "crates/registry/text_objects" }
 xeno-registry-themes = { path = "crates/registry/themes" }
 xeno-runtime = { path = "crates/runtime" }
 xeno-tui = { path = "crates/tui" }
-xeno-auth = { path = "crates/auth" }
-base64 = "0.22"
-chrono = { version = "0.4", features = ["serde"] }
-rand = "0.9"
-reqwest = { version = "0.12", features = ["json"] }
-sha2 = "0.10"
-tiny_http = "0.12"
-url = "2"
-urlencoding = "2"
-webbrowser = "1"
 
 [profile.dev]
 opt-level = 1

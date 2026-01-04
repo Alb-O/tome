@@ -90,7 +90,9 @@ impl Editor {
 			self.command_queue.push(cmd.name, args);
 			Some(input)
 		} else {
-			self.notify(xeno_registry::notifications::keys::unknown_command::call(name));
+			self.notify(xeno_registry::notifications::keys::unknown_command::call(
+				name,
+			));
 			None
 		}
 	}

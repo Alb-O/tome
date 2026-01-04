@@ -29,6 +29,8 @@ pub mod editor;
 #[cfg(feature = "lsp")]
 pub mod lsp;
 pub mod menu;
+/// Command palette for executing commands.
+pub mod palette;
 /// Platform-specific configuration paths.
 pub mod paths;
 /// Rendering utilities for buffers, status line, and completion.
@@ -36,12 +38,10 @@ pub mod render;
 /// Style utilities and conversions.
 pub mod styles;
 pub mod test_events;
-/// Command palette for executing commands.
-pub mod palette;
-/// Window management and floating UI.
-pub mod window;
 /// UI management: focus tracking.
 pub mod ui;
+/// Window management and floating UI.
+pub mod window;
 
 pub use buffer::{Buffer, BufferId, HistoryResult};
 pub use editor::Editor;

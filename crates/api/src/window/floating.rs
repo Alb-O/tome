@@ -2,9 +2,8 @@
 
 use xeno_tui::layout::Rect;
 
-use crate::buffer::BufferId;
-
 use super::types::{FloatingStyle, FloatingWindow, WindowId};
+use crate::buffer::BufferId;
 
 impl FloatingWindow {
 	/// Creates a new floating window with default behaviors.

@@ -4,9 +4,8 @@ use std::collections::HashMap;
 
 use xeno_tui::layout::Rect;
 
-use crate::buffer::{BufferId, Layout};
-
 use super::types::{BaseWindow, FloatingStyle, FloatingWindow, Window, WindowId};
+use crate::buffer::{BufferId, Layout};
 
 /// Tracks all editor windows and their ordering.
 pub struct WindowManager {
