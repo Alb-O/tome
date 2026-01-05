@@ -199,7 +199,6 @@ impl CommandEditorOps for Editor {
 		let opt_value = parse_option_value(kdl_key, value)?;
 		let _ = self.global_options.set_by_kdl(kdl_key, opt_value);
 
-		// Emit OptionChanged hook with static kdl_key from definition
 		if let Some(def) = find_by_kdl(kdl_key) {
 			emit_hook_sync_with(
 				&HookContext::new(
@@ -219,7 +218,6 @@ impl CommandEditorOps for Editor {
 		let opt_value = parse_option_value(kdl_key, value)?;
 		let _ = self.buffer_mut().local_options.set_by_kdl(kdl_key, opt_value);
 
-		// Emit OptionChanged hook with static kdl_key from definition
 		if let Some(def) = find_by_kdl(kdl_key) {
 			emit_hook_sync_with(
 				&HookContext::new(

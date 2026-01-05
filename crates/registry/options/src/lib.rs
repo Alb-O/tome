@@ -275,7 +275,7 @@ impl core::fmt::Debug for OptionDef {
 ///     (key.def().default)()
 /// }
 ///
-/// let value = get_default(keys::tab_width);
+/// let value = get_default(keys::TAB_WIDTH.untyped());
 /// ```
 pub type OptionKey = Key<OptionDef>;
 
@@ -446,7 +446,7 @@ pub fn init_global(store: OptionStore) {
 /// ```ignore
 /// use xeno_registry_options::{global, keys};
 ///
-/// let theme = global(keys::theme);
+/// let theme = global(keys::THEME.untyped());
 /// ```
 pub fn global(key: OptionKey) -> OptionValue {
 	GLOBAL_OPTIONS

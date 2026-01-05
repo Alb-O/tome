@@ -6,11 +6,6 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Expr, Item, Lit, Meta, parse_macro_input};
 
-/// Convert SCREAMING_SNAKE_CASE to snake_case.
-fn to_snake_case(s: &str) -> String {
-	s.to_lowercase()
-}
-
 /// Entry point for the `#[derive_option]` macro.
 ///
 /// Transforms a static definition into an option registration:
@@ -34,7 +29,6 @@ pub fn derive_option(input: TokenStream) -> TokenStream {
 			.into();
 	};
 
-	// Parse #[option(...)] attribute
 	let Some(option_attr) = item.attrs.iter().find(|a| a.path().is_ident("option")) else {
 		return syn::Error::new_spanned(&item, "missing #[option(...)] attribute")
 			.to_compile_error()
@@ -45,7 +39,6 @@ pub fn derive_option(input: TokenStream) -> TokenStream {
 	let mut scope: Option<syn::Ident> = None;
 	let mut priority: Option<i16> = None;
 
-	// Parse attribute arguments
 	if let Err(e) = option_attr.parse_nested_meta(|meta| {
 		if meta.path.is_ident("kdl") {
 			let value: syn::LitStr = meta.value()?.parse()?;
@@ -82,7 +75,6 @@ pub fn derive_option(input: TokenStream) -> TokenStream {
 			.into();
 	};
 
-	// Convert scope to enum variant
 	let scope_variant = if scope_ident == "global" {
 		format_ident!("Global")
 	} else {
@@ -91,15 +83,12 @@ pub fn derive_option(input: TokenStream) -> TokenStream {
 
 	let priority = priority.unwrap_or(0);
 
-	// Extract name from static
 	let name = &item.ident;
 	let name_str = name.to_string();
 
-	// Extract type from static
 	let ty = &item.ty;
 	let ty_str = quote!(#ty).to_string();
 
-	// Map Rust type to OptionType and TypedOptionKey type parameter
 	let (option_type, value_wrapper, key_type): (_, _, syn::Type) = match ty_str.as_str() {
 		"i64" => (format_ident!("Int"), format_ident!("Int"), syn::parse_quote!(i64)),
 		"bool" => (format_ident!("Bool"), format_ident!("Bool"), syn::parse_quote!(bool)),
@@ -117,17 +106,13 @@ pub fn derive_option(input: TokenStream) -> TokenStream {
 		}
 	};
 
-	// Extract default value
 	let default_expr = &item.expr;
-
-	// Handle &'static str -> String conversion
 	let default_value = if ty_str.contains("str") {
 		quote! { (#default_expr).to_string() }
 	} else {
 		quote! { #default_expr }
 	};
 
-	// Extract doc comments as description
 	let description = item
 		.attrs
 		.iter()
@@ -155,35 +140,13 @@ pub fn derive_option(input: TokenStream) -> TokenStream {
 		description
 	};
 
-	// Generate internal static name
 	let internal_static = format_ident!("__OPT_{}", name_str);
-
-	// Generate snake_case alias for backward compatibility
-	let snake_case_name = format_ident!("{}", to_snake_case(&name_str));
-	let has_snake_case_alias = name_str != to_snake_case(&name_str);
-
-	// Preserve visibility
 	let vis = &item.vis;
-
-	// Preserve non-option attributes (like doc comments)
 	let other_attrs: Vec<_> = item
 		.attrs
 		.iter()
 		.filter(|a| !a.path().is_ident("option"))
 		.collect();
-
-	// Generate snake_case alias if the name is SCREAMING_SNAKE_CASE
-	let snake_case_alias = if has_snake_case_alias {
-		quote! {
-			#[doc = concat!("Untyped handle for the `", stringify!(#name), "` option (deprecated, use `", stringify!(#name), "` instead).")]
-			#[deprecated(since = "0.4.0", note = "use UPPER_CASE TypedOptionKey instead")]
-			#[allow(non_upper_case_globals)]
-			#vis const #snake_case_name: ::xeno_registry_options::OptionKey =
-				::xeno_registry_options::OptionKey::new(&#internal_static);
-		}
-	} else {
-		quote! {}
-	};
 
 	let expanded = quote! {
 		#[allow(non_upper_case_globals)]
@@ -204,8 +167,6 @@ pub fn derive_option(input: TokenStream) -> TokenStream {
 		#[doc = concat!("Typed handle for the `", stringify!(#name), "` option.")]
 		#vis const #name: ::xeno_registry_options::TypedOptionKey<#key_type> =
 			::xeno_registry_options::TypedOptionKey::new(&#internal_static);
-
-		#snake_case_alias
 	};
 
 	expanded.into()
