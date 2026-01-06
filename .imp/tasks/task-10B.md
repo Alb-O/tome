@@ -590,15 +590,21 @@ All LSP integration tests go in `crates/term/tests/`:
   - Is `goto_definition()` opening the target file?
   - Is `find_references()` populating the panel?
   - Is the references panel wired to the dock system?
-  - **BUG FOUND AND FIXED**: Keybinding syntax was wrong!
-    - Was: `bindings: r#"normal "g" "d""#` (parsed as TWO separate bindings for "g" and "d")
-    - Fixed: `bindings: r#"normal "g d""#` (parsed as ONE sequence "g d")
-  - **REMAINING ISSUE**: Test has timing problem - `/` search mode doesn't activate fast enough
-    - Characters typed after `/` get interpreted as normal mode commands
-    - Need longer pause or wait-for-mode-change after pressing `/`
+  - **BUG 1 FIXED**: Keybinding syntax was wrong!
+    - Was: `bindings: r#"normal "g" "d""#` (parsed as TWO separate bindings)
+    - Fixed: `bindings: r#"normal "g d""#` (parsed as ONE sequence)
+  - **BUG 2 FIXED**: Fixture projects missing `[workspace]` 
+    - rust-analyzer failed because fixtures were seen as workspace members
+    - Added `[workspace]` to all fixture Cargo.toml files
+  - **BUG 3 FIXED**: Test used `/search` which had timing issues
+    - Changed to use `:17` line navigation instead
+  - **REMAINING**: LSP returns "No definition found"
+    - `gd` keybinding now works (command executes)
+    - But rust-analyzer not returning definition results
+    - May need longer LSP init time or additional debugging
 
 - [ ] 5.6 Verify: `LSP_TESTS=1 KITTY_TESTS=1 cargo test -p xeno-term --test lsp_navigation`
-  - BLOCKED: Tests need timing fixes for search mode activation
+  - gd executes but returns no definition (needs LSP debugging)
 
 **CHECKPOINT 5**: Navigation features work with real LSP
 
