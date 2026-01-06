@@ -603,25 +603,48 @@ All LSP integration tests go in `crates/term/tests/`:
     - But rust-analyzer not returning definition results
     - May need longer LSP init time or additional debugging
 
-- [ ] 5.6 Debug why `gd` returns "No definition found":
-  - [ ] 5.6.1 Check if LSP client exists for the buffer
-    - Add debug logging to `get_client_for_buffer()` in `lsp_ui.rs`
-    - Verify `registry.get_for_file()` returns a client
-  - [ ] 5.6.2 Check if rust-analyzer is actually running
-    - Add `ps aux | grep rust-analyzer` check in test
-    - Or add logging when LSP client is spawned
-  - [ ] 5.6.3 Check the LSP request being sent
-    - Log the URI and position in `goto_definition()` 
-    - Verify position is correct (line 17, column 5 should be on `helper_function`)
-  - [ ] 5.6.4 Check the LSP response
-    - Log what rust-analyzer returns (empty array? error? null?)
-    - The `client.definition()` call - what does it return?
-  - [ ] 5.6.5 Verify fixture is valid for rust-analyzer
-    - Run `rust-analyzer analysis-stats` on fixture directory
-    - Check if `helper_function` is recognized as a symbol
-  - [ ] 5.6.6 Test hover on same position
-    - If hover works but gd doesn't, the issue is in definition handling
-    - If hover also fails, the issue is client/position lookup
+- [x] 5.6 Debug why `gd` returns "No definition found":
+  
+  **ROOT CAUSE IDENTIFIED**: The `lsp` feature is NOT enabled on `xeno-api`!
+  
+  In `crates/api/src/capabilities.rs`:
+  ```rust
+  #[cfg(feature = "lsp")]
+  fn goto_definition(&mut self) -> ... {
+      crate::lsp_ui::goto_definition(self).await  // Real implementation
+  }
+  
+  #[cfg(not(feature = "lsp"))]
+  fn goto_definition(&mut self) -> ... {
+      Box::pin(async { false })  // Just returns false!
+  }
+  ```
+  
+  Since `xeno-term` depends on `xeno-api` WITHOUT the `lsp` feature, all LSP
+  functions (`goto_definition`, `find_references`, `show_hover`, etc.) just
+  return `false` immediately.
+  
+  **The fix requires**:
+  1. Enable `lsp` feature: `xeno-api = { workspace = true, features = ["lsp"] }`
+  2. BUT this causes 36+ compilation errors - the LSP code is out of sync
+     with the rest of the codebase (API changes not propagated)
+  
+  **Errors include**:
+  - `cannot find struct Change in xeno_base`
+  - `module buffer is private`
+  - `no field text on type UiColors`
+  - `no method get_popup on UiManager`
+  
+- [ ] 5.6.1 Fix xeno-api LSP feature compilation errors
+  - Update `lsp.rs` and `lsp_ui.rs` to use current APIs
+  - Fix `xeno_base::Change` references
+  - Fix `UiColors` field accesses
+  - Fix `UiManager::get_popup` calls
+  - Fix buffer/focus module visibility issues
+  
+- [ ] 5.6.2 Enable LSP feature in xeno-term
+  - Change: `xeno-api = { workspace = true, features = ["lsp"] }`
+  - Verify build succeeds
   
 - [ ] 5.7 Verify: `LSP_TESTS=1 KITTY_TESTS=1 cargo test -p xeno-term --test lsp_navigation`
 
