@@ -2,10 +2,14 @@
 
 /// Buffer navigation and management commands.
 mod buffer;
+/// Diagnostic navigation commands.
+mod diagnostic;
 /// File editing commands (edit, open).
 mod edit;
 /// Help and documentation commands.
 mod help;
+/// LSP-related commands.
+mod lsp;
 /// Quit and exit commands.
 mod quit;
 /// Registry diagnostic commands.

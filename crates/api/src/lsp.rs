@@ -250,6 +250,21 @@ impl LspManager {
 		self.sync.total_warning_count()
 	}
 
+	/// Get the total diagnostic revision across all active servers.
+	///
+	/// This counter increases each time any server publishes diagnostics.
+	/// Can be used to detect when diagnostics have changed and a redraw is needed.
+	pub fn diagnostic_revision(&self) -> u64 {
+		self.sync.registry().total_diagnostic_revision()
+	}
+
+	/// Get all diagnostics across all documents.
+	///
+	/// Returns a vector of (URI, diagnostics) pairs for all documents that have diagnostics.
+	pub fn all_diagnostics(&self) -> Vec<(xeno_lsp::lsp_types::Url, Vec<xeno_lsp::lsp_types::Diagnostic>)> {
+		self.sync.all_diagnostics()
+	}
+
 	/// Get a language server client for a buffer.
 	pub fn get_client(&self, buffer: &Buffer) -> Option<ClientHandle> {
 		let path = buffer.path()?;
@@ -371,6 +386,138 @@ impl LspManager {
 		client.formatting(uri, options).await
 	}
 
+	/// Request signature help at the cursor position.
+	pub async fn signature_help(
+		&self,
+		buffer: &Buffer,
+		context: Option<xeno_lsp::lsp_types::SignatureHelpContext>,
+	) -> Result<Option<xeno_lsp::lsp_types::SignatureHelp>> {
+		let client = match self.get_client(buffer) {
+			Some(c) => c,
+			None => return Ok(None),
+		};
+
+		let path = buffer.path().unwrap();
+		let language = buffer.file_type().unwrap();
+		let uri = xeno_lsp::lsp_types::Url::from_file_path(&path)
+			.map_err(|_| xeno_lsp::Error::Protocol("Invalid path".into()))?;
+
+		let encoding = self.get_encoding_for_path(&path, &language);
+		let position =
+			xeno_lsp::char_to_lsp_position(&buffer.doc().content, buffer.cursor, encoding)
+				.ok_or_else(|| xeno_lsp::Error::Protocol("Invalid position".into()))?;
+
+		client.signature_help(uri, position, context).await
+	}
+
+	/// Request code actions for the current line or selection.
+	///
+	/// If a range is provided, code actions are requested for that range.
+	/// Otherwise, code actions are requested for the current line.
+	pub async fn code_actions(
+		&self,
+		buffer: &Buffer,
+		range: Option<xeno_base::range::Range>,
+	) -> Result<Option<xeno_lsp::lsp_types::CodeActionResponse>> {
+		let client = match self.get_client(buffer) {
+			Some(c) => c,
+			None => return Ok(None),
+		};
+
+		let path = buffer.path().unwrap();
+		let language = buffer.file_type().unwrap();
+		let uri = xeno_lsp::lsp_types::Url::from_file_path(&path)
+			.map_err(|_| xeno_lsp::Error::Protocol("Invalid path".into()))?;
+
+		let encoding = self.get_encoding_for_path(&path, &language);
+
+		// Convert range to LSP range
+		let lsp_range = if let Some(r) = range {
+			let start =
+				xeno_lsp::char_to_lsp_position(&buffer.doc().content, r.from(), encoding)
+					.ok_or_else(|| xeno_lsp::Error::Protocol("Invalid start position".into()))?;
+			let end = xeno_lsp::char_to_lsp_position(&buffer.doc().content, r.to(), encoding)
+				.ok_or_else(|| xeno_lsp::Error::Protocol("Invalid end position".into()))?;
+			xeno_lsp::lsp_types::Range { start, end }
+		} else {
+			// Use current line range
+			let line = buffer.cursor_line();
+			let line_start = buffer.doc().content.line_to_char(line);
+			let line_end = if line + 1 < buffer.doc().content.len_lines() {
+				buffer.doc().content.line_to_char(line + 1)
+			} else {
+				buffer.doc().content.len_chars()
+			};
+
+			let start =
+				xeno_lsp::char_to_lsp_position(&buffer.doc().content, line_start, encoding)
+					.ok_or_else(|| xeno_lsp::Error::Protocol("Invalid start position".into()))?;
+			let end = xeno_lsp::char_to_lsp_position(&buffer.doc().content, line_end, encoding)
+				.ok_or_else(|| xeno_lsp::Error::Protocol("Invalid end position".into()))?;
+			xeno_lsp::lsp_types::Range { start, end }
+		};
+
+		// Build the code action context with diagnostics for this range
+		let diagnostics: Vec<xeno_lsp::lsp_types::Diagnostic> = self
+			.get_diagnostics(buffer)
+			.into_iter()
+			.filter(|d| ranges_overlap(&d.range, &lsp_range))
+			.collect();
+
+		let context = xeno_lsp::lsp_types::CodeActionContext {
+			diagnostics,
+			only: None,
+			trigger_kind: Some(xeno_lsp::lsp_types::CodeActionTriggerKind::INVOKED),
+		};
+
+		client.code_action(uri, lsp_range, context).await
+	}
+
+	/// Request inlay hints for a range in the buffer.
+	///
+	/// If no range is provided, requests hints for the entire visible viewport.
+	/// Inlay hints show type annotations, parameter names, and other inferred
+	/// information as virtual text.
+	pub async fn inlay_hints(
+		&self,
+		buffer: &Buffer,
+		start_line: usize,
+		end_line: usize,
+	) -> Result<Option<Vec<xeno_lsp::lsp_types::InlayHint>>> {
+		let client = match self.get_client(buffer) {
+			Some(c) => c,
+			None => return Ok(None),
+		};
+
+		let path = buffer.path().unwrap();
+		let language = buffer.file_type().unwrap();
+		let uri = xeno_lsp::lsp_types::Url::from_file_path(&path)
+			.map_err(|_| xeno_lsp::Error::Protocol("Invalid path".into()))?;
+
+		let encoding = self.get_encoding_for_path(&path, &language);
+
+		// Convert line range to LSP range
+		let content = &buffer.doc().content;
+		let start_char = content.line_to_char(start_line);
+		let end_char = if end_line < content.len_lines() {
+			content.line_to_char(end_line)
+		} else {
+			content.len_chars()
+		};
+
+		let start_pos = xeno_lsp::char_to_lsp_position(content, start_char, encoding)
+			.ok_or_else(|| xeno_lsp::Error::Protocol("Invalid start position".into()))?;
+		let end_pos = xeno_lsp::char_to_lsp_position(content, end_char, encoding)
+			.ok_or_else(|| xeno_lsp::Error::Protocol("Invalid end position".into()))?;
+
+		let range = xeno_lsp::lsp_types::Range {
+			start: start_pos,
+			end: end_pos,
+		};
+
+		client.inlay_hints(uri, range).await
+	}
+
 	/// Shutdown all language servers.
 	pub async fn shutdown_all(&self) {
 		self.sync.registry().shutdown_all().await;
@@ -390,6 +537,15 @@ impl Default for LspManager {
 	fn default() -> Self {
 		Self::new()
 	}
+}
+
+/// Checks if two LSP ranges overlap.
+fn ranges_overlap(a: &xeno_lsp::lsp_types::Range, b: &xeno_lsp::lsp_types::Range) -> bool {
+	// Two ranges overlap if neither ends before the other starts
+	!(a.end.line < b.start.line
+		|| (a.end.line == b.start.line && a.end.character < b.start.character)
+		|| b.end.line < a.start.line
+		|| (b.end.line == a.start.line && b.end.character < a.start.character))
 }
 
 #[cfg(test)]

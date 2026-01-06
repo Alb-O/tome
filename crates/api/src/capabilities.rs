@@ -249,6 +249,174 @@ impl CommandEditorOps for Editor {
 		);
 		Ok(())
 	}
+
+	#[cfg(feature = "lsp")]
+	fn goto_next_diagnostic(&mut self) -> Option<String> {
+		self.navigate_diagnostic(true)
+	}
+
+	#[cfg(not(feature = "lsp"))]
+	fn goto_next_diagnostic(&mut self) -> Option<String> {
+		None
+	}
+
+	#[cfg(feature = "lsp")]
+	fn goto_prev_diagnostic(&mut self) -> Option<String> {
+		self.navigate_diagnostic(false)
+	}
+
+	#[cfg(not(feature = "lsp"))]
+	fn goto_prev_diagnostic(&mut self) -> Option<String> {
+		None
+	}
+
+	#[cfg(feature = "lsp")]
+	fn show_hover(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async move {
+			// Request hover first (immutable borrow)
+			let hover = {
+				let buffer = self.buffer();
+				let lsp = crate::lsp_ui::get_lsp_manager(&self.extensions);
+				match lsp {
+					Some(lsp) => crate::lsp_ui::request_hover(&lsp, buffer).await,
+					None => None,
+				}
+			};
+
+			// Then show popup if we got hover data (mutable borrow)
+			let Some(hover) = hover else {
+				return false;
+			};
+
+			let cursor_screen_pos = self.cursor_screen_position();
+			let mut popup = crate::ui::popup::HoverPopup::from_hover(hover);
+			if let Some((x, y)) = cursor_screen_pos {
+				popup = popup.with_anchor(crate::ui::popup::PopupAnchor::Position {
+					x,
+					y,
+					prefer_above: false,
+				});
+			}
+			self.ui.show_popup(Box::new(popup));
+			true
+		})
+	}
+
+	#[cfg(not(feature = "lsp"))]
+	fn show_hover(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async { false })
+	}
+
+	#[cfg(feature = "lsp")]
+	fn trigger_completion(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async move {
+			// Get metadata and request completion first (immutable borrow)
+			let trigger_column = self.get_word_start_column();
+			let filter_text = self.get_word_before_cursor();
+			let response = {
+				let buffer = self.buffer();
+				let lsp = crate::lsp_ui::get_lsp_manager(&self.extensions);
+				match lsp {
+					Some(lsp) => crate::lsp_ui::request_completion(&lsp, buffer).await,
+					None => None,
+				}
+			};
+
+			// Then show popup if we got completion data (mutable borrow)
+			let Some(response) = response else {
+				return false;
+			};
+
+			let cursor_screen_pos = self.cursor_screen_position();
+			let popup = crate::ui::popup::CompletionPopup::from_response(
+				response,
+				filter_text,
+				trigger_column,
+			);
+
+			if !popup.has_items() {
+				return false;
+			}
+
+			self.ui.show_popup(Box::new(popup));
+			true
+		})
+	}
+
+	#[cfg(not(feature = "lsp"))]
+	fn trigger_completion(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async { false })
+	}
+
+	#[cfg(feature = "lsp")]
+	fn goto_definition(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async move {
+			crate::lsp_ui::goto_definition(self).await
+		})
+	}
+
+	#[cfg(not(feature = "lsp"))]
+	fn goto_definition(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async { false })
+	}
+
+	#[cfg(feature = "lsp")]
+	fn find_references(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async move {
+			crate::lsp_ui::find_references(self).await
+		})
+	}
+
+	#[cfg(not(feature = "lsp"))]
+	fn find_references(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async { false })
+	}
+
+	#[cfg(feature = "lsp")]
+	fn show_code_actions(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async move {
+			// Request code actions first (immutable borrow)
+			let actions = {
+				let buffer = self.buffer();
+				let lsp = crate::lsp_ui::get_lsp_manager(&self.extensions);
+				match lsp {
+					Some(lsp) => crate::lsp_ui::request_code_actions(&lsp, buffer, None).await,
+					None => None,
+				}
+			};
+
+			// Then show popup if we got code actions (mutable borrow)
+			let Some(actions) = actions else {
+				return false;
+			};
+
+			if actions.is_empty() {
+				return false;
+			}
+
+			let Some(popup) = crate::ui::popup::CodeActionsPopup::from_response(actions) else {
+				return false;
+			};
+
+			self.ui.show_popup(Box::new(popup));
+			true
+		})
+	}
+
+	#[cfg(not(feature = "lsp"))]
+	fn show_code_actions(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async { false })
+	}
+
+	#[cfg(feature = "lsp")]
+	fn toggle_diagnostics_panel(&mut self) {
+		Editor::toggle_diagnostics_panel(self);
+	}
+
+	#[cfg(not(feature = "lsp"))]
+	fn toggle_diagnostics_panel(&mut self) {
+		// No-op without LSP feature
+	}
 }
 
 impl SplitOps for Editor {

@@ -5,11 +5,13 @@ use std::collections::HashMap;
 use termina::event::{KeyEvent, MouseEvent};
 use xeno_registry::themes::Theme;
 use xeno_tui::layout::Rect;
+use xeno_tui::Frame;
 
 use super::dock::{DockLayout, DockManager};
 use super::focus::{FocusManager, FocusTarget};
 use super::keymap::{BindingScope, KeybindingRegistry};
 use super::panel::{Panel, PanelInitContext, UiEvent, UiRequest};
+use super::popup::{Popup, PopupManager};
 
 /// Central coordinator for the editor UI subsystem.
 ///
@@ -22,6 +24,8 @@ pub struct UiManager {
 	pub focus: FocusManager,
 	/// Registry of keybindings for UI elements.
 	pub keymap: KeybindingRegistry,
+	/// Manages popup overlays (hover, completion, signature help, etc.).
+	pub popups: PopupManager,
 	/// Map of panel IDs to their implementations.
 	panels: HashMap<String, Box<dyn Panel>>,
 	/// Flag indicating the UI needs to be redrawn.
@@ -35,6 +39,7 @@ impl UiManager {
 			dock: DockManager::new(),
 			focus: FocusManager::new(),
 			keymap: KeybindingRegistry::new(),
+			popups: PopupManager::new(),
 			panels: HashMap::new(),
 			wants_redraw: false,
 		}
@@ -69,6 +74,170 @@ impl UiManager {
 		let v = self.wants_redraw;
 		self.wants_redraw = false;
 		v
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Popup Management
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	/// Shows a popup, adding it to the popup stack.
+	///
+	/// If a popup with the same ID already exists, it is replaced.
+	pub fn show_popup(&mut self, popup: Box<dyn Popup>) {
+		self.popups.show(popup);
+		self.wants_redraw = true;
+	}
+
+	/// Dismisses a popup by ID.
+	pub fn dismiss_popup(&mut self, id: &str) {
+		self.popups.dismiss(id);
+		self.wants_redraw = true;
+	}
+
+	/// Dismisses all popups.
+	pub fn dismiss_all_popups(&mut self) {
+		if self.popups.has_popups() {
+			self.popups.dismiss_all();
+			self.wants_redraw = true;
+		}
+	}
+
+	/// Returns whether any popups are currently shown.
+	pub fn has_popups(&self) -> bool {
+		self.popups.has_popups()
+	}
+
+	/// Returns whether a popup with the given ID is currently shown.
+	pub fn has_popup(&self, id: &str) -> bool {
+		self.popups.has_popup(id)
+	}
+
+	/// Gets a mutable reference to a popup by ID, with downcasting.
+	pub fn get_popup_mut<T: Popup + 'static>(&mut self, id: &str) -> Option<&mut T> {
+		self.popups.get_popup_mut::<T>(id)
+	}
+
+	/// Notifies popups that the cursor has moved.
+	///
+	/// Popups with `dismiss_on_cursor_move() == true` will be dismissed.
+	pub fn notify_cursor_moved(&mut self) {
+		if self.popups.has_popups() {
+			self.popups.notify_cursor_moved();
+			self.wants_redraw = true;
+		}
+	}
+
+	/// Handles a key event for popups, returning true if consumed.
+	///
+	/// This should be called before routing to panels/editor.
+	pub fn handle_popup_key(&mut self, key: KeyEvent) -> bool {
+		if self.popups.has_popups() {
+			let consumed = self.popups.handle_key(key);
+			if consumed {
+				self.wants_redraw = true;
+			}
+			return consumed;
+		}
+		false
+	}
+
+	/// Checks if a completion popup is currently active.
+	#[cfg(feature = "lsp")]
+	pub fn has_completion_popup(&self) -> bool {
+		self.popups.has_completion_popup()
+	}
+
+	/// Attempts to accept the currently selected completion item.
+	///
+	/// If a completion popup is active and Tab/Enter is pressed, this method:
+	/// 1. Gets the acceptance result from the completion popup
+	/// 2. Dismisses the completion popup
+	/// 3. Returns the acceptance result and trigger column
+	///
+	/// Returns `None` if no completion popup is active, the key is not an accept key,
+	/// or no item is selected.
+	#[cfg(feature = "lsp")]
+	pub fn try_accept_completion(
+		&mut self,
+		key: &KeyEvent,
+	) -> Option<(super::popup::CompletionAcceptResult, usize)> {
+		let result = self.popups.try_accept_completion(key);
+		if result.is_some() {
+			self.wants_redraw = true;
+		}
+		result
+	}
+
+	/// Updates the filter text for an active completion popup.
+	///
+	/// If no completion popup is active, this does nothing.
+	#[cfg(feature = "lsp")]
+	pub fn update_completion_filter(&mut self, filter_text: String) {
+		if self.popups.update_completion_filter(filter_text) {
+			self.wants_redraw = true;
+		}
+	}
+
+	/// Checks if the completion popup should be dismissed (no matches).
+	#[cfg(feature = "lsp")]
+	pub fn should_dismiss_completion(&self) -> bool {
+		self.popups.should_dismiss_completion()
+	}
+
+	/// Checks if a location picker popup is currently active.
+	#[cfg(feature = "lsp")]
+	pub fn has_location_picker(&self) -> bool {
+		self.popups.has_location_picker()
+	}
+
+	/// Attempts to accept the currently selected location in the picker.
+	///
+	/// If a location picker popup is active and Enter is pressed, this method:
+	/// 1. Gets the selected location from the location picker popup
+	/// 2. Dismisses the location picker popup
+	/// 3. Returns the selected location
+	///
+	/// Returns `None` if no location picker popup is active, the key is not Enter,
+	/// or no location is selected.
+	#[cfg(feature = "lsp")]
+	pub fn try_accept_location_picker(
+		&mut self,
+		key: &KeyEvent,
+	) -> Option<xeno_lsp::lsp_types::Location> {
+		let result = self.popups.try_accept_location_picker(key);
+		if result.is_some() {
+			self.wants_redraw = true;
+		}
+		result
+	}
+
+	/// Handles a mouse event for popups, returning true if consumed.
+	///
+	/// This should be called before routing to panels/editor.
+	pub fn handle_popup_mouse(&mut self, mouse: MouseEvent) -> bool {
+		if self.popups.has_popups() {
+			let consumed = self.popups.handle_mouse(mouse);
+			if consumed {
+				self.wants_redraw = true;
+			}
+			return consumed;
+		}
+		false
+	}
+
+	/// Renders all popups on top of other content.
+	///
+	/// This should be called after rendering panels and the editor.
+	pub fn render_popups(
+		&mut self,
+		frame: &mut Frame,
+		screen: Rect,
+		cursor_pos: Option<(u16, u16)>,
+		theme: &Theme,
+	) {
+		if self.popups.has_popups() {
+			self.popups.render(frame, screen, cursor_pos, theme);
+		}
 	}
 
 	/// Returns the ID of the currently focused panel, if any.

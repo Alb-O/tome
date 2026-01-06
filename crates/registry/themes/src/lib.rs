@@ -99,6 +99,21 @@ pub struct PopupColors {
 	pub border: Color,
 	/// Popup title color.
 	pub title: Color,
+	/// Selected item background color.
+	pub selection: Color,
+}
+
+/// Diagnostic display colors for inline errors/warnings.
+#[derive(Clone, Copy, Debug)]
+pub struct DiagnosticColors {
+	/// Error diagnostic color (underline and virtual text).
+	pub error: Color,
+	/// Warning diagnostic color.
+	pub warning: Color,
+	/// Information diagnostic color.
+	pub info: Color,
+	/// Hint diagnostic color.
+	pub hint: Color,
 }
 
 /// Per-semantic-style color pair for notifications.
@@ -156,6 +171,8 @@ pub struct ThemeColors {
 	pub popup: PopupColors,
 	/// Notification color overrides.
 	pub notification: NotificationColors,
+	/// Diagnostic display colors.
+	pub diagnostic: DiagnosticColors,
 	/// Syntax highlighting styles.
 	pub syntax: SyntaxStyles,
 }
@@ -199,6 +216,26 @@ impl ThemeColors {
 	/// Resolve notification border color.
 	pub fn notification_border(&self) -> Color {
 		self.notification.border.unwrap_or(self.popup.border)
+	}
+
+	/// Get diagnostic color for a severity level.
+	///
+	/// Severity uses LSP values: 1=Error, 2=Warning, 3=Info, 4=Hint.
+	pub fn diagnostic_color(&self, severity: u8) -> Color {
+		match severity {
+			1 => self.diagnostic.error,
+			2 => self.diagnostic.warning,
+			3 => self.diagnostic.info,
+			4 => self.diagnostic.hint,
+			_ => self.diagnostic.error, // Default to error
+		}
+	}
+
+	/// Get diagnostic style with underline for a severity level.
+	pub fn diagnostic_style(&self, severity: u8) -> Style {
+		Style::new()
+			.fg(self.diagnostic_color(severity))
+			.add_modifier(Modifier::UNDERLINED)
 	}
 }
 
@@ -321,8 +358,15 @@ pub static DEFAULT_THEME: Theme = Theme {
 			fg: Color::White,
 			border: Color::White,
 			title: Color::Yellow,
+			selection: Color::Rgb(60, 60, 80),
 		},
 		notification: NotificationColors::INHERITED,
+		diagnostic: DiagnosticColors {
+			error: Color::Red,
+			warning: Color::Yellow,
+			info: Color::Blue,
+			hint: Color::DarkGray,
+		},
 		syntax: SyntaxStyles::minimal(),
 	},
 	priority: 0,

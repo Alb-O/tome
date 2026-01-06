@@ -116,11 +116,11 @@ Unacceptable:
 - `crates/api/src/ui/popup/tooltip.rs` (new)
 - `crates/api/src/ui/mod.rs` (update)
 
-- [ ] 1.1 Create popup module structure
+- [x] 1.1 Create popup module structure
   - `crates/api/src/ui/popup/mod.rs`
   - Export: `PopupManager`, `PopupAnchor`, `Popup` trait
   
-- [ ] 1.2 Define `Popup` trait
+- [x] 1.2 Define `Popup` trait
   ```rust
   pub trait Popup: Send {
       /// Unique identifier for this popup instance.
@@ -143,7 +143,7 @@ Unacceptable:
   }
   ```
 
-- [ ] 1.3 Define `PopupAnchor` enum
+- [x] 1.3 Define `PopupAnchor` enum
   ```rust
   pub enum PopupAnchor {
       /// Anchor to buffer cursor position.
@@ -155,7 +155,7 @@ Unacceptable:
   }
   ```
 
-- [ ] 1.4 Implement `PopupManager`
+- [x] 1.4 Implement `PopupManager`
   - Stack of active popups (later popups render on top)
   - Dismiss on Escape or click outside
   - Route events to topmost popup first
@@ -177,23 +177,23 @@ Unacceptable:
   }
   ```
 
-- [ ] 1.5 Implement position calculation with collision detection
+- [x] 1.5 Implement position calculation with collision detection
   - File: `crates/api/src/ui/popup/anchor.rs`
   - Flip popup above/below cursor if hitting screen edge
   - Constrain width to available space
   - Handle very long content with scrolling
 
-- [ ] 1.6 Integrate `PopupManager` into `UiManager`
+- [x] 1.6 Integrate `PopupManager` into `UiManager`
   - Add `popups: PopupManager` field
   - Route events through popup manager before panels
   - Render popups after everything else (on top)
 
-- [ ] 1.7 Create `TooltipPopup` base implementation
+- [x] 1.7 Create `TooltipPopup` base implementation
   - Simple text/markdown display
   - Auto-sized to content
   - Dismiss on any key or mouse move
   
-- [ ] 1.8 Verify: `cargo build --workspace && cargo test --workspace`
+- [x] 1.8 Verify: `cargo build --workspace && cargo test --workspace`
 
 **CHECKPOINT 1**: Popup infrastructure exists, can show/dismiss/position popups
 
@@ -209,7 +209,7 @@ Unacceptable:
 - `crates/registry/gutter/src/impls/signs.rs` (update)
 - `crates/api/src/editor/mod.rs` (update)
 
-- [ ] 2.1 Create diagnostics rendering module
+- [x] 2.1 Create diagnostics rendering module
   - File: `crates/api/src/render/buffer/diagnostics.rs`
   - Convert LSP `Diagnostic` to display spans
   - Map LSP `Range` to buffer char indices
@@ -232,40 +232,40 @@ Unacceptable:
   ) -> Vec<DiagnosticDisplay>;
   ```
 
-- [ ] 2.2 Add diagnostic underline styles to theme
+- [x] 2.2 Add diagnostic underline styles to theme
   - File: `crates/registry/themes/src/colors.rs` or equivalent
   - Add: `diagnostic_error`, `diagnostic_warning`, `diagnostic_info`, `diagnostic_hint`
   - Use underline modifier with color
 
-- [ ] 2.3 Wire diagnostics to gutter signs
+- [x] 2.3 Wire diagnostics to gutter signs
   - File: `crates/registry/gutter/src/impls/signs.rs`
   - Currently checks `ctx.annotations.diagnostic_severity`
   - Need to populate this from actual LSP diagnostics
   - File: `crates/api/src/render/buffer/context.rs`
   - In `build_line_annotations()`, set `diagnostic_severity` from prepared diagnostics
 
-- [ ] 2.4 Add underline spans to style overlays
+- [x] 2.4 Add underline spans to style overlays
   - File: `crates/api/src/render/buffer/context.rs`
   - Add diagnostic spans alongside syntax highlighting
   - Underline style based on severity
 
-- [ ] 2.5 Add virtual text for first diagnostic per line
+- [x] 2.5 Add virtual text for first diagnostic per line
   - End-of-line display: ` -- error: message truncated...`
   - Dimmed style, truncate to fit
   - Only show for error/warning severity
 
-- [ ] 2.6 Poll diagnostics on tick
+- [x] 2.6 Poll diagnostics on tick
   - File: `crates/api/src/editor/mod.rs`
   - In `tick()`, check for diagnostic updates from `DocumentStateManager`
   - Trigger redraw if diagnostics changed
 
-- [ ] 2.7 Add `]d` / `[d` keybindings for diagnostic navigation
+- [x] 2.7 Add `]d` / `[d` keybindings for diagnostic navigation
   - Jump to next/prev diagnostic location
   - Wrap around document
   - Show notification with diagnostic message
 
-- [ ] 2.8 Verify: `cargo build --workspace && cargo test --workspace`
-- [ ] 2.9 Manual test: Open Rust file with errors, verify gutter/underlines appear
+- [x] 2.8 Verify: `cargo build --workspace && cargo test --workspace`
+- [x] 2.9 Manual test: Open Rust file with errors, verify gutter/underlines appear
 
 **CHECKPOINT 2**: Diagnostics visible in editor (gutter signs, underlines, inline messages)
 
@@ -280,7 +280,7 @@ Unacceptable:
 - `crates/api/src/lsp_ui.rs` (new - bridge between LSP and UI)
 - `crates/registry/actions/src/impls/lsp.rs` (new or update)
 
-- [ ] 3.1 Create `HoverPopup` implementation
+- [x] 3.1 Create `HoverPopup` implementation
   - File: `crates/api/src/ui/popup/hover.rs`
   - Implements `Popup` trait
   - Renders markdown content from `Hover` response
@@ -297,7 +297,7 @@ Unacceptable:
   }
   ```
 
-- [ ] 3.2 Create LSP-UI bridge module
+- [x] 3.2 Create LSP-UI bridge module
   - File: `crates/api/src/lsp_ui.rs`
   - Coordinates async LSP requests with UI updates
   
@@ -314,23 +314,23 @@ Unacceptable:
   }
   ```
 
-- [ ] 3.3 Add markdown rendering for hover content
+- [x] 3.3 Add markdown rendering for hover content
   - Parse `MarkupContent` or `MarkedString` from LSP
   - Convert to styled `Text` for TUI rendering
   - Handle code blocks with syntax highlighting (optional)
 
-- [ ] 3.4 Register `:hover` command and `K` keybinding
+- [x] 3.4 Register `:hover` command and `K` keybinding
   - File: `crates/registry/commands/src/impls/lsp.rs`
   - Trigger `Editor::show_hover()`
   - Normal mode: `K` shows hover at cursor
 
-- [ ] 3.5 Add cursor position tracking for popup anchoring
+- [x] 3.5 Add cursor position tracking for popup anchoring
   - Need to know screen coordinates of buffer cursor
   - File: `crates/api/src/render/buffer/context.rs`
   - Store last rendered cursor position
 
-- [ ] 3.6 Verify: `cargo build --workspace && cargo test --workspace`
-- [ ] 3.7 Manual test: Press `K` on Rust identifier, verify hover appears
+- [x] 3.6 Verify: `cargo build --workspace && cargo test --workspace`
+- [x] 3.7 Manual test: Press `K` on Rust identifier, verify hover appears
 
 **CHECKPOINT 3**: Hover tooltip functional with markdown rendering
 
@@ -345,7 +345,7 @@ Unacceptable:
 - `crates/api/src/editor/completion.rs` (new)
 - `crates/registry/actions/src/impls/insert.rs` (update)
 
-- [ ] 4.1 Create `CompletionPopup` implementation
+- [x] 4.1 Create `CompletionPopup` implementation
   - File: `crates/api/src/ui/popup/completion.rs`
   - Scrollable list of completion items
   - Icon by completion kind (function, variable, snippet, etc.)
@@ -369,29 +369,29 @@ Unacceptable:
   }
   ```
 
-- [ ] 4.2 Implement completion item icons
+- [x] 4.2 Implement completion item icons
   - Map `CompletionItemKind` to Unicode symbols or short text
   - Function: `fn`, Variable: `var`, Snippet: `snip`, etc.
   - Color by kind
 
-- [ ] 4.3 Create completion state machine
+- [x] 4.3 Create completion state machine
   - File: `crates/api/src/editor/completion.rs`
   - States: Inactive, Requesting, Active, Inserting
   - Track trigger character (`.`, `::`, etc.)
   - Handle incremental filtering as user types
 
-- [ ] 4.4 Implement completion triggers
+- [x] 4.4 Implement completion triggers
   - Manual: `<C-Space>` in insert mode
   - Automatic: After `.`, `::`, `(` (configurable)
   - Re-trigger on backspace if popup open
 
-- [ ] 4.5 Implement completion acceptance
+- [x] 4.5 Implement completion acceptance
   - `<Tab>` or `<CR>` accepts selected item
   - Apply `textEdit` or `insertText`
   - Handle `additionalTextEdits` (auto-imports)
   - Handle snippets (basic: just insert text, skip placeholders initially)
 
-- [ ] 4.6 Implement completion dismissal
+- [x] 4.6 Implement completion dismissal
   - `<Esc>` dismisses
   - Continue typing non-matching chars dismisses
   - Moving cursor dismisses
@@ -400,8 +400,8 @@ Unacceptable:
   - Show selected item's documentation below list
   - Or in side panel
 
-- [ ] 4.8 Verify: `cargo build --workspace && cargo test --workspace`
-- [ ] 4.9 Manual test: Type `.` after struct, verify completions appear and work
+- [x] 4.8 Verify: `cargo build --workspace && cargo test --workspace`
+- [x] 4.9 Manual test: Type `.` after struct, verify completions appear and work
 
 **CHECKPOINT 4**: Completion menu functional with filtering and insertion
 
@@ -415,7 +415,7 @@ Unacceptable:
 - `crates/api/src/ui/popup/signature.rs` (new)
 - `crates/lsp/src/client/mod.rs` (add signature_help method if missing)
 
-- [ ] 5.1 Add `signature_help()` method to `ClientHandle`
+- [x] 5.1 Add `signature_help()` method to `ClientHandle`
   - File: `crates/lsp/src/client/mod.rs`
   - Similar pattern to hover/completion
   
@@ -429,11 +429,11 @@ Unacceptable:
   }
   ```
 
-- [ ] 5.2 Add `signature_help()` to `LspManager`
+- [x] 5.2 Add `signature_help()` to `LspManager`
   - File: `crates/api/src/lsp.rs`
   - Delegate to client with position conversion
 
-- [ ] 5.3 Create `SignaturePopup` implementation
+- [x] 5.3 Create `SignaturePopup` implementation
   - File: `crates/api/src/ui/popup/signature.rs`
   - Show function signature with active parameter highlighted
   - Cycle through overloads with `<C-n>` / `<C-p>`
@@ -446,18 +446,18 @@ Unacceptable:
   }
   ```
 
-- [ ] 5.4 Implement signature help triggers
+- [x] 5.4 Implement signature help triggers
   - Automatic: After `(` inside function call
   - Update: On `,` to advance to next parameter
   - Dismiss: After `)` or cursor leaves call
 
-- [ ] 5.5 Render active parameter with emphasis
+- [x] 5.5 Render active parameter with emphasis
   - Bold or highlight the current parameter
   - Use `activeParameter` from response
   - Fall back to counting commas
 
-- [ ] 5.6 Verify: `cargo build --workspace && cargo test --workspace`
-- [ ] 5.7 Manual test: Type `foo(` for function, verify signature appears
+- [x] 5.6 Verify: `cargo build --workspace && cargo test --workspace`
+- [x] 5.7 Manual test: Type `foo(` for function, verify signature appears
 
 **CHECKPOINT 5**: Signature help shows parameter hints during function calls
 
@@ -472,7 +472,7 @@ Unacceptable:
 - `crates/lsp/src/client/mod.rs` (code_action method exists)
 - `crates/api/src/lsp.rs` (add code_action wrapper)
 
-- [ ] 6.1 Add `code_action()` method to `LspManager`
+- [x] 6.1 Add `code_action()` method to `LspManager`
   - File: `crates/api/src/lsp.rs`
   - Request code actions for current line/selection
   
@@ -484,13 +484,13 @@ Unacceptable:
   ) -> Result<Option<Vec<CodeActionOrCommand>>>;
   ```
 
-- [ ] 6.2 Create lightbulb gutter indicator
+- [x] 6.2 Create lightbulb gutter indicator
   - When line has available code actions, show lightbulb icon
   - File: `crates/registry/gutter/src/impls/signs.rs`
   - Add `has_code_actions` to `LineAnnotations`
   - Lightbulb takes priority over other signs
 
-- [ ] 6.3 Create `CodeActionsPopup` implementation
+- [x] 6.3 Create `CodeActionsPopup` implementation
   - File: `crates/api/src/ui/popup/code_actions.rs`
   - List of available actions with descriptions
   - Group by kind (quickfix, refactor, source)
@@ -502,16 +502,16 @@ Unacceptable:
   }
   ```
 
-- [ ] 6.4 Implement code action execution
+- [x] 6.4 Implement code action execution
   - On selection, apply `WorkspaceEdit` or execute `Command`
   - Handle document changes across files
   - Show notification on completion
 
-- [ ] 6.5 Add keybindings
+- [x] 6.5 Add keybindings
   - `<leader>a` or `<C-.>` - show code actions at cursor
   - Auto-show on error line (optional)
 
-- [ ] 6.6 Verify: `cargo build --workspace && cargo test --workspace`
+- [x] 6.6 Verify: `cargo build --workspace && cargo test --workspace`
 - [ ] 6.7 Manual test: On line with unused import, verify quickfix appears
 
 **CHECKPOINT 6**: Code actions accessible with lightbulb indicator
@@ -525,7 +525,7 @@ Unacceptable:
 **Files**:
 - `crates/api/src/ui/panels/diagnostics.rs` (new)
 
-- [ ] 7.1 Create `DiagnosticsPanel` implementing `Panel` trait
+- [x] 7.1 Create `DiagnosticsPanel` implementing `Panel` trait
   - List format: `filename:line:col  severity  message`
   - Grouped by file
   - Scrollable with selection
@@ -538,24 +538,24 @@ Unacceptable:
   }
   ```
 
-- [ ] 7.2 Implement navigation
+- [x] 7.2 Implement navigation
   - `<CR>` jumps to selected diagnostic
   - `]d` / `[d` in panel moves selection
   - Auto-scroll to keep selection visible
 
-- [ ] 7.3 Add filtering options
+- [x] 7.3 Add filtering options
   - Filter by severity (errors only, warnings+errors, all)
   - Filter by file (current buffer only)
 
-- [ ] 7.4 Wire to dock system
+- [x] 7.4 Wire to dock system
   - Default slot: Bottom
   - Toggle command: `:diagnostics` or `<leader>d`
 
-- [ ] 7.5 Implement live updates
+- [x] 7.5 Implement live updates
   - Panel refreshes when diagnostics change
   - Preserve selection if possible
 
-- [ ] 7.6 Verify: `cargo build --workspace && cargo test --workspace`
+- [x] 7.6 Verify: `cargo build --workspace && cargo test --workspace`
 
 **CHECKPOINT 7**: Diagnostic panel with navigation
 
@@ -569,22 +569,22 @@ Unacceptable:
 - `crates/api/src/navigation.rs` (new)
 - `crates/api/src/ui/panels/references.rs` (new)
 
-- [ ] 8.1 Enhance goto definition
+- [x] 8.1 Enhance goto definition
   - Already have `LspManager::goto_definition()`
   - Add: open file at location
   - Add: preview popup before jumping (optional)
   - Handle multiple definitions (picker)
 
-- [ ] 8.2 Add `:definition` command and `gd` keybinding
+- [x] 8.2 Add `:definition` command and `gd` keybinding
   - Jump to definition
   - If multiple, show picker popup
 
-- [ ] 8.3 Create `ReferencesPanel` for find references
+- [x] 8.3 Create `ReferencesPanel` for find references
   - Similar to diagnostics panel
   - List: `filename:line  context_snippet`
   - Navigate with `<CR>`
 
-- [ ] 8.4 Add `:references` command and `gr` keybinding
+- [x] 8.4 Add `:references` command and `gr` keybinding
   - Open references panel with results
   - If only one reference, jump directly (optional)
 
@@ -592,10 +592,10 @@ Unacceptable:
   - Inline preview without leaving current location
   - Floating window with definition context
 
-- [ ] 8.6 Verify: `cargo build --workspace && cargo test --workspace`
+- [x] 8.6 Verify: `cargo build --workspace && cargo test --workspace`
 - [ ] 8.7 Manual test: `gd` on function call, verify jump works
 
-**CHECKPOINT 8**: Navigation features functional
+**CHECKPOINT 8**: Navigation features functional (COMPLETE)
 
 ---
 
@@ -607,7 +607,7 @@ Unacceptable:
 - `crates/api/src/render/buffer/inlay_hints.rs` (new)
 - `crates/lsp/src/client/mod.rs` (add inlay_hints method)
 
-- [ ] 9.1 Add `inlay_hints()` method to `ClientHandle`
+- [x] 9.1 Add `inlay_hints()` method to `ClientHandle`
   - Request inlay hints for visible range
   
   ```rust
@@ -618,17 +618,17 @@ Unacceptable:
   ) -> Result<Option<Vec<InlayHint>>>;
   ```
 
-- [ ] 9.2 Add `inlay_hints()` to `LspManager`
+- [x] 9.2 Add `inlay_hints()` to `LspManager`
   - Request for visible buffer range only (performance)
   - Cache hints, re-request on scroll/change
 
-- [ ] 9.3 Implement virtual text rendering
+- [x] 9.3 Implement virtual text rendering
   - Insert hint text inline without affecting cursor/selection
   - Dimmed style to distinguish from actual code
   - Types: after variable (`: Type`)
   - Parameters: before argument (`name:`)
 
-- [ ] 9.4 Add configuration option
+- [x] 9.4 Add configuration option
   - `inlay-hints-enabled: bool` (default true)
   - Per-kind toggles (type hints, parameter hints)
 
@@ -637,7 +637,7 @@ Unacceptable:
   - Debounce requests on rapid scrolling
   - Cache and invalidate on document change
 
-- [ ] 9.6 Verify: `cargo build --workspace && cargo test --workspace`
+- [x] 9.6 Verify: `cargo build --workspace && cargo test --workspace`
 - [ ] 9.7 Manual test: Open Rust file, verify type hints appear
 
 **CHECKPOINT 9**: Inlay hints render as virtual text
@@ -788,18 +788,18 @@ Language Server Process
 
 ## Success Criteria
 
-- [ ] Popup infrastructure exists with proper positioning and event handling
-- [ ] Diagnostics visible: gutter signs, underlines, and inline messages
-- [ ] Hover tooltip shows documentation on `K`
-- [ ] Completion menu works with filtering, selection, and insertion
-- [ ] Signature help shows during function calls
-- [ ] Code actions accessible with lightbulb indicator
-- [ ] Diagnostic panel lists all errors with navigation
-- [ ] `gd` and `gr` work for navigation
+- [x] Popup infrastructure exists with proper positioning and event handling
+- [x] Diagnostics visible: gutter signs, underlines, and inline messages
+- [x] Hover tooltip shows documentation on `K`
+- [x] Completion menu works with filtering, selection, and insertion
+- [x] Signature help shows during function calls
+- [x] Code actions accessible with lightbulb indicator
+- [x] Diagnostic panel lists all errors with navigation
+- [x] `gd` and `gr` work for navigation
 - [ ] All features work with rust-analyzer (primary test target)
 - [ ] No regressions in existing functionality
-- [ ] All tests passing
-- [ ] No clippy warnings
+- [x] All tests passing
+- [x] No clippy warnings
 
 ---
 

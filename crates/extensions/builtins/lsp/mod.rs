@@ -126,6 +126,31 @@ impl LspManager {
 	pub async fn shutdown_all(&self) {
 		self.registry.shutdown_all().await;
 	}
+
+	/// Get diagnostics for a file path from the appropriate language server.
+	pub fn get_diagnostics(&self, path: &Path, language: Option<&str>) -> Vec<xeno_lsp::lsp_types::Diagnostic> {
+		let Some(language) = language else {
+			return Vec::new();
+		};
+		let Some(root_path) = path.parent() else {
+			return Vec::new();
+		};
+		let Some(client) = self.registry.get(language, root_path) else {
+			return Vec::new();
+		};
+		let Ok(uri) = Url::from_file_path(path) else {
+			return Vec::new();
+		};
+		client.diagnostics(&uri)
+	}
+
+	/// Get the total diagnostic revision across all active servers.
+	///
+	/// This counter increases each time any server publishes diagnostics.
+	/// Can be used to detect when diagnostics have changed and a redraw is needed.
+	pub fn diagnostic_revision(&self) -> u64 {
+		self.registry.total_diagnostic_revision()
+	}
 }
 
 fn init_lsp(map: &mut ExtensionMap) {

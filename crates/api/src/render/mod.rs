@@ -8,4 +8,6 @@ mod status;
 pub mod types;
 
 pub use buffer::{BufferRenderContext, ensure_buffer_cursor_visible};
+#[cfg(feature = "lsp")]
+pub use buffer::{PreparedDiagnostics, prepare_diagnostics};
 pub use types::{RenderResult, WrapSegment, wrap_line};

@@ -125,6 +125,18 @@ pub fn get_color_field(doc: &KdlDocument, name: &str, ctx: &ParseContext) -> Res
 	ctx.resolve_color(value)
 }
 
+/// Get an optional color field from a KDL document, returning None if not present.
+pub fn get_color_field_optional(
+	doc: &KdlDocument,
+	name: &str,
+	ctx: &ParseContext,
+) -> Result<Option<Color>> {
+	match doc.get_arg(name).and_then(|v| v.as_string()) {
+		Some(value) => Ok(Some(ctx.resolve_color(value)?)),
+		None => Ok(None),
+	}
+}
+
 /// Parse a palette block into the context.
 pub fn parse_palette(node: &KdlNode, ctx: &mut ParseContext) -> Result<()> {
 	let Some(children) = node.children() else {

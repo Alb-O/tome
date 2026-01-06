@@ -92,6 +92,46 @@ pub trait CommandEditorOps {
 	fn set_option(&mut self, kdl_key: &str, value: &str) -> Result<(), CommandError>;
 	/// Sets a buffer-local option value by KDL key.
 	fn set_local_option(&mut self, kdl_key: &str, value: &str) -> Result<(), CommandError>;
+
+	/// Navigate to the next diagnostic in the buffer.
+	///
+	/// Returns true if navigation succeeded (a diagnostic was found).
+	/// The message parameter receives the diagnostic message if found.
+	fn goto_next_diagnostic(&mut self) -> Option<String>;
+
+	/// Navigate to the previous diagnostic in the buffer.
+	///
+	/// Returns true if navigation succeeded (a diagnostic was found).
+	/// The message parameter receives the diagnostic message if found.
+	fn goto_prev_diagnostic(&mut self) -> Option<String>;
+
+	/// Show hover information at the cursor position.
+	///
+	/// Returns a future that resolves to true if hover was shown.
+	fn show_hover(&mut self) -> Pin<Box<dyn Future<Output = bool> + '_>>;
+
+	/// Trigger completion at the cursor position.
+	///
+	/// Returns a future that resolves to true if completion was shown.
+	fn trigger_completion(&mut self) -> Pin<Box<dyn Future<Output = bool> + '_>>;
+
+	/// Go to the definition at the cursor position.
+	///
+	/// Returns a future that resolves to true if a definition was found and navigated to.
+	fn goto_definition(&mut self) -> Pin<Box<dyn Future<Output = bool> + '_>>;
+
+	/// Find all references at the cursor position.
+	///
+	/// Returns a future that resolves to true if references were found.
+	fn find_references(&mut self) -> Pin<Box<dyn Future<Output = bool> + '_>>;
+
+	/// Show code actions at the cursor position.
+	///
+	/// Returns a future that resolves to true if code actions were shown.
+	fn show_code_actions(&mut self) -> Pin<Box<dyn Future<Output = bool> + '_>>;
+
+	/// Toggles the diagnostics panel visibility.
+	fn toggle_diagnostics_panel(&mut self);
 }
 
 /// Context provided to command handlers.

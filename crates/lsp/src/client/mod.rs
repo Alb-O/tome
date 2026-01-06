@@ -30,6 +30,7 @@ use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use lsp_types::notification::Notification;
 use lsp_types::request::Request;
@@ -72,6 +73,8 @@ pub struct ClientHandle {
 	root_uri: Option<Url>,
 	/// Notification channel for initialization completion.
 	initialize_notify: Arc<Notify>,
+	/// Client state (diagnostics, etc.).
+	state: Arc<ClientState>,
 }
 
 impl std::fmt::Debug for ClientHandle {
@@ -428,6 +431,41 @@ impl ClientHandle {
 		.await
 	}
 
+	/// Request signature help.
+	pub async fn signature_help(
+		&self,
+		uri: Url,
+		position: lsp_types::Position,
+		context: Option<lsp_types::SignatureHelpContext>,
+	) -> Result<Option<lsp_types::SignatureHelp>> {
+		self.request::<lsp_types::request::SignatureHelpRequest>(lsp_types::SignatureHelpParams {
+			text_document_position_params: lsp_types::TextDocumentPositionParams {
+				text_document: lsp_types::TextDocumentIdentifier { uri },
+				position,
+			},
+			work_done_progress_params: Default::default(),
+			context,
+		})
+		.await
+	}
+
+	/// Request inlay hints for a range.
+	///
+	/// Inlay hints are displayed as virtual text inline with the code,
+	/// showing type annotations, parameter names, and other inferred information.
+	pub async fn inlay_hints(
+		&self,
+		uri: Url,
+		range: lsp_types::Range,
+	) -> Result<Option<Vec<lsp_types::InlayHint>>> {
+		self.request::<lsp_types::request::InlayHintRequest>(lsp_types::InlayHintParams {
+			text_document: lsp_types::TextDocumentIdentifier { uri },
+			range,
+			work_done_progress_params: Default::default(),
+		})
+		.await
+	}
+
 	/// Send a request to the language server.
 	pub async fn request<R: Request>(&self, params: R::Params) -> Result<R::Result> {
 		self.socket.request::<R>(params).await
@@ -437,6 +475,29 @@ impl ClientHandle {
 	pub fn notify<N: Notification>(&self, params: N::Params) -> Result<()> {
 		self.socket.notify::<N>(params)
 	}
+
+	/// Get diagnostics for a document URI.
+	pub fn diagnostics(&self, uri: &Url) -> Vec<lsp_types::Diagnostic> {
+		self.state
+			.diagnostics
+			.lock()
+			.get(uri)
+			.cloned()
+			.unwrap_or_default()
+	}
+
+	/// Get all diagnostics across all documents.
+	pub fn all_diagnostics(&self) -> HashMap<Url, Vec<lsp_types::Diagnostic>> {
+		self.state.diagnostics.lock().clone()
+	}
+
+	/// Get the current diagnostic revision counter.
+	///
+	/// This counter is incremented each time diagnostics are published by the server.
+	/// Can be used to detect when diagnostics have changed and a redraw is needed.
+	pub fn diagnostic_revision(&self) -> u64 {
+		self.state.diagnostic_revision.load(Ordering::Relaxed)
+	}
 }
 
 /// State for the LSP client service.
@@ -445,6 +506,9 @@ impl ClientHandle {
 struct ClientState {
 	/// Diagnostics received from the server, keyed by document URI.
 	diagnostics: Mutex<HashMap<Url, Vec<lsp_types::Diagnostic>>>,
+	/// Revision counter incremented each time diagnostics are updated.
+	/// Used by the editor to detect changes and trigger redraws.
+	diagnostic_revision: AtomicU64,
 }
 
 impl ClientState {
@@ -452,6 +516,7 @@ impl ClientState {
 	fn new() -> Self {
 		Self {
 			diagnostics: Mutex::new(HashMap::new()),
+			diagnostic_revision: AtomicU64::new(0),
 		}
 	}
 }
@@ -506,6 +571,7 @@ pub fn start_server(
 			.notification::<lsp_types::notification::PublishDiagnostics>(|state, params| {
 				let mut diagnostics = state.diagnostics.lock();
 				diagnostics.insert(params.uri, params.diagnostics);
+				state.diagnostic_revision.fetch_add(1, Ordering::Relaxed);
 				ControlFlow::Continue(())
 			})
 			.notification::<lsp_types::notification::LogMessage>(|_state, params| {
@@ -558,6 +624,7 @@ pub fn start_server(
 		root_path: config.root_path,
 		root_uri,
 		initialize_notify,
+		state,
 	};
 
 	let join_handle = tokio::spawn(async move {

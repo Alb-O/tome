@@ -110,6 +110,28 @@ impl Editor {
 
 		let old_mode = self.mode();
 
+		// Handle completion popup acceptance (Tab/Enter) before other handling
+		#[cfg(feature = "lsp")]
+		if self.try_accept_completion(&key) {
+			self.needs_redraw = true;
+			return false;
+		}
+
+		// Handle location picker acceptance (Enter) before other handling
+		#[cfg(feature = "lsp")]
+		if self.try_accept_location_picker(&key).await {
+			self.needs_redraw = true;
+			return false;
+		}
+
+		// Handle other popup events (Escape to dismiss, navigation, etc.)
+		if self.ui.handle_popup_key(key) {
+			if self.ui.take_wants_redraw() {
+				self.needs_redraw = true;
+			}
+			return false;
+		}
+
 		if self.palette_is_open() && key.code == KeyCode::Enter {
 			self.execute_palette();
 			self.needs_redraw = true;
@@ -154,6 +176,11 @@ impl Editor {
 					return false;
 				}
 				self.insert_text(&c.to_string());
+
+				// Update completion filter after typing, dismiss if no matches
+				#[cfg(feature = "lsp")]
+				self.update_completion_after_insert();
+
 				false
 			}
 			KeyResult::Consumed | KeyResult::Unhandled => false,

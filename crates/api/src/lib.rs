@@ -28,6 +28,8 @@ pub mod capabilities;
 pub mod editor;
 #[cfg(feature = "lsp")]
 pub mod lsp;
+#[cfg(feature = "lsp")]
+pub mod lsp_ui;
 pub mod menu;
 /// Command palette for executing commands.
 pub mod palette;

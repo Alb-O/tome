@@ -209,6 +209,100 @@ impl Editor {
 		}
 	}
 
+	/// Returns the cursor's screen position as (x, y) coordinates.
+	///
+	/// This computes where the cursor would appear on screen based on the
+	/// current view area, scroll position, and cursor location in the buffer.
+	///
+	/// Returns `None` if the cursor is not visible in the current viewport.
+	pub fn cursor_screen_position(&self) -> Option<(u16, u16)> {
+		let area = self.doc_area();
+		let buffer = self.buffer();
+		let view_rect = self
+			.layout
+			.compute_view_areas(&self.base_window().layout, area)
+			.into_iter()
+			.find(|(v, _)| *v == self.focused_view())
+			.map(|(_, r)| r)
+			.unwrap_or(area);
+
+		// Calculate Y position
+		let cursor_line = buffer.cursor_line();
+		let visible_line = cursor_line.saturating_sub(buffer.scroll_line);
+		if visible_line >= view_rect.height as usize {
+			return None; // Cursor is below visible area
+		}
+		let y = view_rect.y + visible_line as u16;
+
+		// Calculate X position (no horizontal scrolling currently)
+		let gutter = buffer.gutter_width();
+		let cursor_col = buffer.cursor_col() as u16;
+		let content_width = view_rect.width.saturating_sub(gutter);
+		if cursor_col >= content_width {
+			return None; // Cursor is to the right of visible area
+		}
+		let x = view_rect.x + gutter + cursor_col;
+
+		Some((x, y))
+	}
+
+	/// Returns the column position where the current word starts.
+	///
+	/// This is used to determine the trigger column for completion requests.
+	/// Words are delimited by whitespace and punctuation.
+	pub fn get_word_start_column(&self) -> usize {
+		let buffer = self.buffer();
+		let cursor = buffer.cursor;
+		let rope = &buffer.doc().content;
+		
+		// Find the start of the current line
+		let line_idx = rope.char_to_line(cursor);
+		let line_start = rope.line_to_char(line_idx);
+		
+		// Get the text from line start to cursor
+		let line_to_cursor: String = rope.slice(line_start..cursor).chars().collect();
+		
+		// Find the start of the word by scanning backwards
+		let mut word_start = line_to_cursor.len();
+		for (i, c) in line_to_cursor.chars().rev().enumerate() {
+			if !c.is_alphanumeric() && c != '_' {
+				word_start = line_to_cursor.len() - i;
+				break;
+			}
+			if i == line_to_cursor.len() - 1 {
+				word_start = 0;
+			}
+		}
+		
+		word_start
+	}
+
+	/// Returns the text from the word start to the cursor position.
+	///
+	/// This is used as the initial filter text for completion.
+	pub fn get_word_before_cursor(&self) -> String {
+		let buffer = self.buffer();
+		let cursor = buffer.cursor;
+		let rope = &buffer.doc().content;
+		
+		// Find the start of the current line
+		let line_idx = rope.char_to_line(cursor);
+		let line_start = rope.line_to_char(line_idx);
+		
+		// Get the text from line start to cursor
+		let line_to_cursor: String = rope.slice(line_start..cursor).chars().collect();
+		
+		// Find the start of the word
+		let word_start = self.get_word_start_column();
+		
+		// Extract the word text
+		if word_start < line_to_cursor.len() {
+			line_to_cursor[word_start..].to_string()
+		} else {
+			String::new()
+		}
+	}
+
 	/// Returns the current editing mode (Normal, Insert, Visual, etc.).
 	pub fn mode(&self) -> Mode {
 		self.buffer().input.mode()

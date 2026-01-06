@@ -6,12 +6,13 @@ use std::path::PathBuf;
 
 use kdl::{KdlDocument, KdlNode};
 pub use xeno_registry::themes::{
-	NotificationColors, PopupColors, StatusColors, ThemeColors, ThemeVariant, UiColors,
+	DiagnosticColors, NotificationColors, PopupColors, StatusColors, ThemeColors, ThemeVariant,
+	UiColors,
 };
 use xeno_registry::themes::{SyntaxStyle, SyntaxStyles};
 
 use crate::error::{ConfigError, Result};
-use crate::kdl_util::{ParseContext, get_color_field, parse_modifier, parse_palette};
+use crate::kdl_util::{ParseContext, get_color_field, get_color_field_optional, parse_modifier, parse_palette};
 
 /// A parsed theme with owned data suitable for runtime use.
 #[derive(Debug, Clone)]
@@ -79,6 +80,7 @@ pub fn parse_standalone_theme(input: &str) -> Result<ParsedTheme> {
 	let ui = parse_ui_colors(doc.get("ui"), &ctx)?;
 	let status = parse_status_colors(doc.get("status"), &ctx)?;
 	let popup = parse_popup_colors(doc.get("popup"), &ctx)?;
+	let diagnostic = parse_diagnostic_colors(doc.get("diagnostic"), &ctx, &status);
 	let syntax = parse_syntax_styles(doc.get("syntax"), &ctx)?;
 
 	Ok(ParsedTheme {
@@ -90,6 +92,7 @@ pub fn parse_standalone_theme(input: &str) -> Result<ParsedTheme> {
 			status,
 			popup,
 			notification: NotificationColors::INHERITED,
+			diagnostic,
 			syntax,
 		},
 		source_path: None,
@@ -134,6 +137,7 @@ pub fn parse_theme_node(node: &KdlNode) -> Result<ParsedTheme> {
 	let ui = parse_ui_colors(children.get("ui"), &ctx)?;
 	let status = parse_status_colors(children.get("status"), &ctx)?;
 	let popup = parse_popup_colors(children.get("popup"), &ctx)?;
+	let diagnostic = parse_diagnostic_colors(children.get("diagnostic"), &ctx, &status);
 	let syntax = parse_syntax_styles(children.get("syntax"), &ctx)?;
 
 	Ok(ParsedTheme {
@@ -145,6 +149,7 @@ pub fn parse_theme_node(node: &KdlNode) -> Result<ParsedTheme> {
 			status,
 			popup,
 			notification: NotificationColors::INHERITED,
+			diagnostic,
 			syntax,
 		},
 		source_path: None,
@@ -208,17 +213,68 @@ fn parse_status_colors(node: Option<&KdlNode>, ctx: &ParseContext) -> Result<Sta
 
 /// Parses popup/menu colors from a KDL node.
 fn parse_popup_colors(node: Option<&KdlNode>, ctx: &ParseContext) -> Result<PopupColors> {
+	use xeno_registry::themes::Color;
+
 	let node = node.ok_or_else(|| ConfigError::MissingField("popup".into()))?;
 	let children = node
 		.children()
 		.ok_or_else(|| ConfigError::MissingField("popup".into()))?;
 
+	let bg = get_color_field(children, "bg", ctx)?;
+	// Default selection color: slightly lighter than background
+	let default_selection = match bg {
+		Color::Rgb(r, g, b) => Color::Rgb(
+			r.saturating_add(30),
+			g.saturating_add(30),
+			b.saturating_add(50),
+		),
+		_ => Color::Rgb(60, 60, 80),
+	};
+
 	Ok(PopupColors {
-		bg: get_color_field(children, "bg", ctx)?,
+		bg,
 		fg: get_color_field(children, "fg", ctx)?,
 		border: get_color_field(children, "border", ctx)?,
 		title: get_color_field(children, "title", ctx)?,
+		selection: get_color_field_optional(children, "selection", ctx)?.unwrap_or(default_selection),
 	})
+}
+
+/// Parses diagnostic colors from a KDL node.
+///
+/// Falls back to status colors (error_fg, warning_fg) if diagnostic section is not present.
+fn parse_diagnostic_colors(
+	node: Option<&KdlNode>,
+	ctx: &ParseContext,
+	status: &StatusColors,
+) -> DiagnosticColors {
+	use xeno_registry::themes::Color;
+
+	let Some(node) = node else {
+		// Fall back to status colors for backward compatibility
+		return DiagnosticColors {
+			error: status.error_fg,
+			warning: status.warning_fg,
+			info: Color::Blue,
+			hint: status.dim_fg,
+		};
+	};
+
+	let Some(children) = node.children() else {
+		return DiagnosticColors {
+			error: status.error_fg,
+			warning: status.warning_fg,
+			info: Color::Blue,
+			hint: status.dim_fg,
+		};
+	};
+
+	DiagnosticColors {
+		error: get_color_field(children, "error", ctx).unwrap_or(status.error_fg),
+		warning: get_color_field(children, "warning", ctx).unwrap_or(status.warning_fg),
+		info: get_color_field(children, "info", ctx).unwrap_or(Color::Blue),
+		hint: get_color_field(children, "hint", ctx).unwrap_or(status.dim_fg),
+	}
 }
 
 /// Parses syntax highlighting styles from a KDL node.

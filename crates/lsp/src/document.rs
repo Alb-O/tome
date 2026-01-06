@@ -270,6 +270,24 @@ impl DocumentStateManager {
 			.map(|s| s.warning_count())
 			.sum()
 	}
+
+	/// Get all diagnostics across all documents.
+	///
+	/// Returns a vector of (URI, diagnostics) pairs.
+	pub fn all_diagnostics(&self) -> Vec<(Url, Vec<Diagnostic>)> {
+		self.documents
+			.read()
+			.values()
+			.filter_map(|state| {
+				let diags = state.diagnostics();
+				if diags.is_empty() {
+					None
+				} else {
+					Some((state.uri().clone(), diags))
+				}
+			})
+			.collect()
+	}
 }
 
 #[cfg(test)]

@@ -1,9 +1,13 @@
+/// Diagnostic navigation actions.
+pub(crate) mod diagnostic;
 /// Text editing actions (delete, change, yank).
 pub(crate) mod editing;
 /// Search and find actions.
 pub(crate) mod find;
 /// Insert mode text entry actions.
 pub(crate) mod insert;
+/// LSP-related actions.
+pub(crate) mod lsp;
 /// Miscellaneous utility actions.
 pub(crate) mod misc;
 /// Mode switching actions.

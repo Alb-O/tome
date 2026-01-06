@@ -93,6 +93,8 @@ pub struct GutterAnnotations {
 	pub git_status: Option<GitHunkStatus>,
 	/// Custom sign character (breakpoint, bookmark, etc.).
 	pub sign: Option<char>,
+	/// Whether this line has available code actions (shows lightbulb).
+	pub has_code_actions: bool,
 }
 
 /// Git hunk status for gutter display.

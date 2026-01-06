@@ -274,6 +274,54 @@ static NOTIF_OPTION_SET: NotificationDef = NotificationDef::new(
 	RegistrySource::Builtin,
 );
 
+#[distributed_slice(NOTIFICATIONS)]
+static NOTIF_DIAGNOSTIC_MESSAGE: NotificationDef = NotificationDef::new(
+	"diagnostic_message",
+	Level::Warn,
+	AutoDismiss::After(Duration::from_secs(6)),
+	RegistrySource::Builtin,
+);
+
+#[distributed_slice(NOTIFICATIONS)]
+static NOTIF_NO_DIAGNOSTICS: NotificationDef = NotificationDef::new(
+	"no_diagnostics",
+	Level::Info,
+	AutoDismiss::DEFAULT,
+	RegistrySource::Builtin,
+);
+
+#[distributed_slice(NOTIFICATIONS)]
+static NOTIF_NO_HOVER_INFO: NotificationDef = NotificationDef::new(
+	"no_hover_info",
+	Level::Info,
+	AutoDismiss::DEFAULT,
+	RegistrySource::Builtin,
+);
+
+#[distributed_slice(NOTIFICATIONS)]
+static NOTIF_NO_DEFINITION: NotificationDef = NotificationDef::new(
+	"no_definition",
+	Level::Info,
+	AutoDismiss::DEFAULT,
+	RegistrySource::Builtin,
+);
+
+#[distributed_slice(NOTIFICATIONS)]
+static NOTIF_NO_REFERENCES: NotificationDef = NotificationDef::new(
+	"no_references",
+	Level::Info,
+	AutoDismiss::DEFAULT,
+	RegistrySource::Builtin,
+);
+
+#[distributed_slice(NOTIFICATIONS)]
+static NOTIF_NO_CODE_ACTIONS: NotificationDef = NotificationDef::new(
+	"no_code_actions",
+	Level::Info,
+	AutoDismiss::DEFAULT,
+	RegistrySource::Builtin,
+);
+
 #[allow(non_upper_case_globals, non_camel_case_types)]
 pub mod keys {
 	use super::*;
@@ -453,4 +501,32 @@ pub mod keys {
 			Notification::new(&NOTIF_OPTION_SET, format!("{}={}", key, value))
 		}
 	}
+
+	/// Diagnostic message notification.
+	pub struct diagnostic_message;
+	impl diagnostic_message {
+		pub fn call(message: &str) -> Notification {
+			Notification::new(&NOTIF_DIAGNOSTIC_MESSAGE, message.to_string())
+		}
+	}
+
+	/// No diagnostics in buffer.
+	pub const no_diagnostics: NotificationKey =
+		NotificationKey::new(&NOTIF_NO_DIAGNOSTICS, "No diagnostics in buffer");
+
+	/// No hover information available.
+	pub const no_hover_info: NotificationKey =
+		NotificationKey::new(&NOTIF_NO_HOVER_INFO, "No hover information available");
+
+	/// No definition found at cursor.
+	pub const no_definition: NotificationKey =
+		NotificationKey::new(&NOTIF_NO_DEFINITION, "No definition found");
+
+	/// No references found at cursor.
+	pub const no_references: NotificationKey =
+		NotificationKey::new(&NOTIF_NO_REFERENCES, "No references found");
+
+	/// No code actions available at cursor.
+	pub const no_code_actions: NotificationKey =
+		NotificationKey::new(&NOTIF_NO_CODE_ACTIONS, "No code actions available");
 }

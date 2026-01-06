@@ -16,7 +16,11 @@ use xeno_tui::widgets::menu::Menu;
 use xeno_tui::widgets::{Block, BorderType, Borders, Clear, Padding, Paragraph, StatefulWidget};
 
 use super::buffer::{BufferRenderContext, ensure_buffer_cursor_visible};
+#[cfg(feature = "lsp")]
+use super::buffer::{PreparedDiagnostics, prepare_diagnostics};
 use crate::Editor;
+#[cfg(feature = "lsp")]
+use crate::buffer::BufferId;
 use crate::buffer::{BufferView, SplitDirection};
 use crate::editor::FocusTarget;
 use crate::test_events::SeparatorAnimationEvent;
@@ -173,7 +177,32 @@ fn clamp_rect(rect: Rect, bounds: Rect) -> Option<Rect> {
 	})
 }
 
+#[cfg(feature = "lsp")]
+type LspManager = std::sync::Arc<crate::lsp::LspManager>;
+
 impl Editor {
+	/// Prepares diagnostics for a buffer by fetching from LSP.
+	#[cfg(feature = "lsp")]
+	fn prepare_buffer_diagnostics(&self, buffer_id: BufferId) -> Option<PreparedDiagnostics> {
+		let buffer = self.buffers.get_buffer(buffer_id)?;
+		// Check path exists (get_diagnostics requires it)
+		let _ = buffer.path()?;
+
+		// Get LspManager from extension map
+		let lsp_manager = self.extensions.get::<LspManager>()?;
+		let diagnostics = lsp_manager.get_diagnostics(buffer);
+
+		if diagnostics.is_empty() {
+			return None;
+		}
+
+		// Determine encoding - default to UTF-16 for LSP
+		let encoding = xeno_lsp::OffsetEncoding::Utf16;
+
+		let prepared = prepare_diagnostics(&buffer.doc().content, &diagnostics, encoding);
+		Some(prepared)
+	}
+
 	/// Renders the complete editor frame.
 	///
 	/// This is the main rendering entry point that orchestrates all UI elements:
@@ -325,17 +354,28 @@ impl Editor {
 
 		let sep_style = SeparatorStyle::new(self, doc_area);
 
-		let ctx = BufferRenderContext {
-			theme: self.theme,
-			language_loader: &self.language_loader,
-			style_overlays: &self.style_overlays,
-		};
+		// Prepare diagnostics for all visible buffers
+		#[cfg(feature = "lsp")]
+		let diagnostics_map: std::collections::HashMap<BufferId, PreparedDiagnostics> = layer_data
+			.iter()
+			.flat_map(|(_, _, view_areas, _)| view_areas.iter().map(|(id, _)| *id))
+			.filter_map(|id| self.prepare_buffer_diagnostics(id).map(|d| (id, d)))
+			.collect();
 
 		for (_, _, view_areas, separators) in &layer_data {
 			for (buffer_id, area) in view_areas {
 				let is_focused = *buffer_id == focused_view;
 				let tab_width = self.tab_width_for(*buffer_id);
 				if let Some(buffer) = self.get_buffer(*buffer_id) {
+					let ctx = BufferRenderContext {
+						theme: self.theme,
+						language_loader: &self.language_loader,
+						style_overlays: &self.style_overlays,
+						#[cfg(feature = "lsp")]
+						diagnostics: diagnostics_map.get(buffer_id),
+						#[cfg(feature = "lsp")]
+						inlay_hints: self.inlay_hints_cache.get(buffer_id),
+					};
 					let result =
 						ctx.render_buffer(buffer, *area, use_block_cursor, is_focused, tab_width);
 					frame.render_widget(result.widget, *area);
@@ -398,11 +438,13 @@ impl Editor {
 			}
 		}
 
-		let ctx = BufferRenderContext {
-			theme: self.theme,
-			language_loader: &self.language_loader,
-			style_overlays: &self.style_overlays,
-		};
+		// Prepare diagnostics for floating window buffers
+		#[cfg(feature = "lsp")]
+		let floating_diagnostics: std::collections::HashMap<BufferId, PreparedDiagnostics> =
+			floating_windows
+				.iter()
+				.filter_map(|(_, w)| self.prepare_buffer_diagnostics(w.buffer).map(|d| (w.buffer, d)))
+				.collect();
 
 		for (window_id, window) in floating_windows {
 			let Some(rect) = clamp_rect(window.rect, bounds) else {
@@ -451,6 +493,15 @@ impl Editor {
 					.map(|(win, buf)| win == window_id && buf == window.buffer)
 					.unwrap_or(false);
 				let tab_width = self.tab_width_for(window.buffer);
+				let ctx = BufferRenderContext {
+					theme: self.theme,
+					language_loader: &self.language_loader,
+					style_overlays: &self.style_overlays,
+					#[cfg(feature = "lsp")]
+					diagnostics: floating_diagnostics.get(&window.buffer),
+					#[cfg(feature = "lsp")]
+					inlay_hints: self.inlay_hints_cache.get(&window.buffer),
+				};
 				let result = ctx.render_buffer_with_gutter(
 					buffer,
 					content_area,

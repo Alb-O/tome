@@ -3,6 +3,8 @@
 //! Tick, startup, and render update methods.
 
 use std::path::PathBuf;
+#[cfg(feature = "lsp")]
+use std::sync::Arc;
 
 use xeno_registry::commands::{CommandContext, CommandOutcome, find_command};
 use xeno_registry::{HookContext, HookEventData, emit_sync_with as emit_hook_sync_with};
@@ -42,8 +44,25 @@ impl Editor {
 			self.needs_redraw = true;
 		}
 
+		// Check if LSP diagnostics have changed and trigger redraw
+		#[cfg(feature = "lsp")]
+		{
+			type LspManager = Arc<crate::lsp::LspManager>;
+			if let Some(lsp) = self.extensions.get::<LspManager>() {
+				let revision = lsp.diagnostic_revision();
+				if revision != self.last_diagnostic_revision {
+					self.last_diagnostic_revision = revision;
+					self.needs_redraw = true;
+				}
+			}
+		}
+
 		let dirty_ids: Vec<_> = self.dirty_buffers.drain().collect();
 		for buffer_id in dirty_ids {
+			// Invalidate inlay hints cache when buffer content changes
+			#[cfg(feature = "lsp")]
+			self.clear_inlay_hints(buffer_id);
+
 			if let Some(buffer) = self.buffers.get_buffer(buffer_id) {
 				let scratch_path = PathBuf::from("[scratch]");
 				let path = buffer.path().unwrap_or_else(|| scratch_path.clone());
@@ -88,6 +107,46 @@ impl Editor {
 	/// Returns true if any UI panel is currently open.
 	pub fn any_panel_open(&self) -> bool {
 		self.ui.any_panel_open()
+	}
+
+	/// Toggles the diagnostics panel visibility.
+	///
+	/// If the panel hasn't been registered yet, it will be registered first.
+	#[cfg(feature = "lsp")]
+	pub fn toggle_diagnostics_panel(&mut self) {
+		use crate::ui::DiagnosticsPanel;
+
+		let panel_id = DiagnosticsPanel::ID;
+
+		// Register panel if not already open (re-registering is safe)
+		if !self.ui.dock.is_open(panel_id) {
+			self.ui.register_panel(Box::new(DiagnosticsPanel::new()));
+		}
+
+		self.ui.toggle_panel(panel_id);
+		self.needs_redraw = true;
+	}
+
+	/// Shows the references panel with the given locations.
+	///
+	/// Opens and focuses the references panel, populating it with the given references.
+	#[cfg(feature = "lsp")]
+	pub fn show_references_panel(&mut self, locations: Vec<xeno_lsp::lsp_types::Location>, title: &str) {
+		use crate::ui::ReferencesPanel;
+
+		let panel_id = ReferencesPanel::ID;
+
+		// Create and configure the panel
+		let mut panel = ReferencesPanel::new();
+		panel.set_references(locations, title);
+
+		// Register and open the panel
+		self.ui.register_panel(Box::new(panel));
+		self.ui.set_open(panel_id, true);
+		self.ui.apply_requests(vec![crate::ui::panel::UiRequest::Focus(
+			crate::ui::focus::FocusTarget::panel(panel_id.to_string()),
+		)]);
+		self.needs_redraw = true;
 	}
 
 	/// Handles terminal window resize events, updating buffer text widths and emitting hooks.

@@ -23,6 +23,12 @@ mod buffer_manager;
 mod buffer_ops;
 /// Command queue for deferred execution.
 mod command_queue;
+/// LSP completion state machine.
+#[cfg(feature = "lsp")]
+pub mod completion;
+/// LSP signature help state machine.
+#[cfg(feature = "lsp")]
+pub mod signature;
 /// Text editing operations.
 mod editing;
 /// Extension container and lifecycle.
@@ -45,6 +51,9 @@ mod lifecycle;
 mod messaging;
 /// Cursor navigation utilities.
 mod navigation;
+/// Inlay hints management (LSP feature).
+#[cfg(feature = "lsp")]
+mod inlay_hints;
 /// Command palette operations.
 mod palette;
 /// Search state and operations.
@@ -207,6 +216,18 @@ pub struct Editor {
 
 	/// Per-language option overrides.
 	pub language_options: std::collections::HashMap<String, OptionStore>,
+
+	/// Last seen LSP diagnostic revision for change detection.
+	#[cfg(feature = "lsp")]
+	last_diagnostic_revision: u64,
+
+	/// Signature help state machine.
+	#[cfg(feature = "lsp")]
+	pub signature_state: signature::SignatureHelpState,
+
+	/// Cached inlay hints per buffer.
+	#[cfg(feature = "lsp")]
+	pub inlay_hints_cache: std::collections::HashMap<BufferId, crate::render::buffer::PreparedInlayHints>,
 }
 
 impl xeno_core::EditorOps for Editor {}
@@ -318,6 +339,12 @@ impl Editor {
 			palette: crate::palette::PaletteState::default(),
 			global_options: OptionStore::new(),
 			language_options: std::collections::HashMap::new(),
+			#[cfg(feature = "lsp")]
+			last_diagnostic_revision: 0,
+			#[cfg(feature = "lsp")]
+			signature_state: signature::SignatureHelpState::default(),
+			#[cfg(feature = "lsp")]
+			inlay_hints_cache: std::collections::HashMap::new(),
 		}
 	}
 

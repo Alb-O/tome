@@ -227,6 +227,18 @@ impl Registry {
 	pub fn active_count(&self) -> usize {
 		self.servers.read().len()
 	}
+
+	/// Get the sum of diagnostic revisions across all active servers.
+	///
+	/// This can be used to detect when any server has published new diagnostics.
+	/// If this value changes between ticks, a redraw is likely needed.
+	pub fn total_diagnostic_revision(&self) -> u64 {
+		self.servers
+			.read()
+			.values()
+			.map(|s| s.handle.diagnostic_revision())
+			.sum()
+	}
 }
 
 /// Find the project root by walking up from the file path.

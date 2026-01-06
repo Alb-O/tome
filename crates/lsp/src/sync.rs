@@ -295,6 +295,13 @@ impl DocumentSync {
 	pub fn documents(&self) -> &DocumentStateManager {
 		&self.documents
 	}
+
+	/// Get all diagnostics across all documents.
+	///
+	/// Returns a vector of (URI, diagnostics) pairs.
+	pub fn all_diagnostics(&self) -> Vec<(lsp_types::Url, Vec<lsp_types::Diagnostic>)> {
+		self.documents.all_diagnostics()
+	}
 }
 
 #[cfg(test)]

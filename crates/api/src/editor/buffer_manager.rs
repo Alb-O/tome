@@ -170,6 +170,15 @@ impl BufferManager {
 		self.buffers.keys().copied()
 	}
 
+	/// Finds a buffer by its file path.
+	///
+	/// Returns the buffer ID if found, None otherwise.
+	pub fn find_by_path(&self, path: &std::path::Path) -> Option<BufferId> {
+		self.buffers.iter().find_map(|(&id, buffer)| {
+			buffer.path().as_ref().filter(|p| p.as_path() == path).map(|_| id)
+		})
+	}
+
 	/// Returns the number of open text buffers.
 	pub fn buffer_count(&self) -> usize {
 		self.buffers.len()

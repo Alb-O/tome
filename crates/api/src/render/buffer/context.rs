@@ -15,6 +15,8 @@ use xeno_tui::text::{Line, Span};
 use xeno_tui::widgets::Paragraph;
 
 use super::gutter::GutterLayout;
+#[cfg(feature = "lsp")]
+use super::{PreparedDiagnostics, PreparedInlayHints};
 use crate::buffer::Buffer;
 use crate::window::GutterSelector;
 use crate::editor::extensions::StyleOverlays;
@@ -32,6 +34,12 @@ pub struct BufferRenderContext<'a> {
 	pub language_loader: &'a LanguageLoader,
 	/// Style overlays (e.g., zen mode dimming).
 	pub style_overlays: &'a StyleOverlays,
+	/// Prepared diagnostics for gutter signs and underlines (LSP feature).
+	#[cfg(feature = "lsp")]
+	pub diagnostics: Option<&'a PreparedDiagnostics>,
+	/// Prepared inlay hints for virtual text rendering (LSP feature).
+	#[cfg(feature = "lsp")]
+	pub inlay_hints: Option<&'a PreparedInlayHints>,
 }
 
 /// Cursor styling configuration for rendering.
@@ -149,6 +157,154 @@ impl<'a> BufferRenderContext<'a> {
 		None
 	}
 
+	/// Computes gutter annotations for a specific line.
+	///
+	/// When LSP diagnostics are available, this sets the diagnostic_severity field
+	/// and has_code_actions for lines with errors/warnings.
+	#[cfg(feature = "lsp")]
+	fn line_annotations(&self, line_idx: usize) -> GutterAnnotations {
+		let mut annotations = GutterAnnotations::default();
+		if let Some(diags) = self.diagnostics {
+			let severity = diags.gutter_severity(line_idx);
+			annotations.diagnostic_severity = severity;
+			// Lines with errors or warnings likely have code actions (quickfixes)
+			annotations.has_code_actions = severity >= 3;
+		}
+		annotations
+	}
+
+	/// Computes gutter annotations for a specific line (non-LSP version).
+	#[cfg(not(feature = "lsp"))]
+	fn line_annotations(&self, _line_idx: usize) -> GutterAnnotations {
+		GutterAnnotations::default()
+	}
+
+	/// Returns the diagnostic severity at a character position (LSP version).
+	///
+	/// Returns LSP severity (1=Error, 2=Warning, 3=Info, 4=Hint) or 0 if none.
+	#[cfg(feature = "lsp")]
+	fn diagnostic_severity_at(&self, char_pos: usize) -> u8 {
+		self.diagnostics
+			.map(|d| d.severity_at_char(char_pos))
+			.unwrap_or(0)
+	}
+
+	/// Returns the diagnostic severity at a character position (non-LSP version).
+	#[cfg(not(feature = "lsp"))]
+	fn diagnostic_severity_at(&self, _char_pos: usize) -> u8 {
+		0
+	}
+
+	/// Applies diagnostic underline style if there's a diagnostic at the position.
+	///
+	/// This merges the diagnostic underline with existing style.
+	fn apply_diagnostic_style(&self, char_pos: usize, style: Style) -> Style {
+		let severity = self.diagnostic_severity_at(char_pos);
+		if severity == 0 {
+			return style;
+		}
+		// Apply underline with diagnostic color
+		let diag_color = self.theme.colors.diagnostic_color(severity);
+		style.underline_color(diag_color).add_modifier(Modifier::UNDERLINED)
+	}
+
+	/// Returns virtual text for diagnostic display at end of line.
+	///
+	/// Only returns text for errors (severity 1) and warnings (severity 2).
+	/// Returns None if no diagnostic or no space available.
+	#[cfg(feature = "lsp")]
+	fn diagnostic_virtual_text(
+		&self,
+		line_idx: usize,
+		available_width: usize,
+	) -> Option<(String, Style)> {
+		let diags = self.diagnostics?;
+		let line_diags = diags.line(line_idx)?;
+
+		// Only show for errors and warnings (LSP severity 1-2)
+		// max_severity uses gutter format where 4=error, 3=warning
+		if line_diags.max_severity < 3 {
+			return None;
+		}
+
+		let message = line_diags.first_message()?;
+		let severity = line_diags.diagnostics.first()?.severity;
+
+		// Format: " -- message" with truncation
+		let prefix = " -- ";
+		let min_msg_len = 10; // Minimum message length to show
+		let min_width = prefix.len() + min_msg_len;
+
+		if available_width < min_width {
+			return None;
+		}
+
+		let max_msg_len = available_width.saturating_sub(prefix.len());
+		let truncated = if message.len() > max_msg_len {
+			let mut msg: String = message.chars().take(max_msg_len.saturating_sub(3)).collect();
+			msg.push_str("...");
+			msg
+		} else {
+			message.to_string()
+		};
+
+		let text = format!("{prefix}{truncated}");
+
+		// Use diagnostic color, dimmed
+		let diag_color = self.theme.colors.diagnostic_color(severity);
+		let dimmed = diag_color.blend(self.theme.colors.ui.bg, 0.5);
+		let style = Style::default().fg(dimmed);
+
+		Some((text, style))
+	}
+
+	/// Returns virtual text for diagnostic display (non-LSP version).
+	#[cfg(not(feature = "lsp"))]
+	fn diagnostic_virtual_text(
+		&self,
+		_line_idx: usize,
+		_available_width: usize,
+	) -> Option<(String, Style)> {
+		None
+	}
+
+	/// Returns the inlay hints that appear at or after a given column on a line.
+	#[cfg(feature = "lsp")]
+	fn inlay_hints_after(&self, line_idx: usize, column: usize) -> Vec<&super::InlayHintDisplay> {
+		self.inlay_hints
+			.map(|ih| ih.hints_after(line_idx, column).collect())
+			.unwrap_or_default()
+	}
+
+	/// Renders an inlay hint as styled text.
+	#[cfg(feature = "lsp")]
+	fn render_inlay_hint(&self, hint: &super::InlayHintDisplay, is_cursor_line: bool) -> Vec<Span<'static>> {
+		let mut spans = Vec::new();
+
+		// Use a dimmed style for inlay hints
+		let hint_color = self.theme.colors.ui.fg.blend(self.theme.colors.ui.bg, 0.5);
+		let mut hint_style = Style::default().fg(hint_color);
+		if is_cursor_line {
+			let cursorline_bg: xeno_tui::style::Color = self.theme.colors.ui.cursorline_bg;
+			hint_style = hint_style.bg(cursorline_bg);
+		}
+
+		// Add padding left if requested
+		if hint.padding_left {
+			spans.push(Span::styled(" ", hint_style));
+		}
+
+		// Render the hint text
+		spans.push(Span::styled(hint.text.clone(), hint_style));
+
+		// Add padding right if requested
+		if hint.padding_right {
+			spans.push(Span::styled(" ", hint_style));
+		}
+
+		spans
+	}
+
 	/// Applies style overlay modifications (e.g., zen mode dimming).
 	pub fn apply_style_overlay(&self, byte_pos: usize, style: Option<Style>) -> Option<Style> {
 		use xeno_tui::animation::Animatable;
@@ -241,8 +397,6 @@ impl<'a> BufferRenderContext<'a> {
 		let cursor_line = buffer.cursor_line();
 		let cursorline_bg: xeno_tui::style::Color = self.theme.colors.ui.cursorline_bg;
 
-		// Shared empty annotations for lines without diagnostic/git data
-		let empty_annotations = GutterAnnotations::default();
 		let buffer_path_owned = buffer.path();
 		let buffer_path = buffer_path_owned.as_deref();
 
@@ -276,6 +430,7 @@ impl<'a> BufferRenderContext<'a> {
 				let is_last_segment = seg_idx == num_segments - 1;
 				let is_continuation = !is_first_segment;
 
+				let line_annotations = self.line_annotations(current_line_idx);
 				let mut spans = gutter_layout.render_line(
 					current_line_idx,
 					total_lines,
@@ -283,19 +438,45 @@ impl<'a> BufferRenderContext<'a> {
 					is_continuation,
 					buffer.doc().content.line(current_line_idx),
 					buffer_path,
-					&empty_annotations,
+					&line_annotations,
 					self.theme,
 					cursorline_bg,
 				);
 
 				let seg_char_offset = segment.start_offset;
 				let mut seg_col = 0usize;
+
+				// Collect inlay hints for this line once (LSP only)
+				#[cfg(feature = "lsp")]
+				let line_hints: Vec<_> = self.inlay_hints_after(current_line_idx, seg_char_offset);
+				#[cfg(feature = "lsp")]
+				let mut hint_idx = 0usize;
+
 				for (i, ch) in segment.text.chars().enumerate() {
 					if seg_col >= text_width {
 						break;
 					}
 
-					let doc_pos: CharIdx = line_start + seg_char_offset + i;
+					let char_col = seg_char_offset + i;
+					let doc_pos: CharIdx = line_start + char_col;
+
+					// Render any inlay hints that appear at this column (before the character)
+					#[cfg(feature = "lsp")]
+					while hint_idx < line_hints.len() && line_hints[hint_idx].column == char_col {
+						let hint = line_hints[hint_idx];
+						let hint_spans = self.render_inlay_hint(hint, is_cursor_line);
+						for hint_span in hint_spans {
+							let hint_len = hint_span.content.chars().count();
+							if seg_col + hint_len <= text_width {
+								spans.push(hint_span);
+								seg_col += hint_len;
+							} else {
+								// Truncate hint if it doesn't fit
+								break;
+							}
+						}
+						hint_idx += 1;
+					}
 					let is_cursor = cursor_heads.contains(&doc_pos);
 					let is_primary_cursor = doc_pos == primary_cursor;
 					let in_selection = ranges
@@ -337,6 +518,8 @@ impl<'a> BufferRenderContext<'a> {
 							base
 						}
 					};
+					// Apply diagnostic underline if there's a diagnostic at this position
+					let non_cursor_style = self.apply_diagnostic_style(doc_pos, non_cursor_style);
 					let style = if is_cursor && (use_block_cursor || !is_focused) {
 						if blink_on || !is_focused {
 							cursor_style
@@ -420,6 +603,19 @@ impl<'a> BufferRenderContext<'a> {
 						seg_col += 1;
 					}
 
+					// Add diagnostic virtual text after line content
+					let available = text_width.saturating_sub(seg_col);
+					if let Some((vtext, vstyle)) = self.diagnostic_virtual_text(current_line_idx, available) {
+						let vtext_len = vtext.chars().count();
+						let vstyle = if is_cursor_line {
+							vstyle.bg(cursorline_bg)
+						} else {
+							vstyle
+						};
+						spans.push(Span::styled(vtext, vstyle));
+						seg_col += vtext_len;
+					}
+
 					if is_cursor_line && seg_col < text_width {
 						spans.push(Span::styled(
 							" ".repeat(text_width - seg_col),
@@ -435,6 +631,7 @@ impl<'a> BufferRenderContext<'a> {
 				&& start_segment == 0
 				&& output_lines.len() < viewport_height
 			{
+				let line_annotations = self.line_annotations(current_line_idx);
 				let mut spans = gutter_layout.render_line(
 					current_line_idx,
 					total_lines,
@@ -442,7 +639,7 @@ impl<'a> BufferRenderContext<'a> {
 					false, // not a continuation
 					buffer.doc().content.line(current_line_idx),
 					buffer_path,
-					&empty_annotations,
+					&line_annotations,
 					self.theme,
 					cursorline_bg,
 				);
@@ -471,6 +668,19 @@ impl<'a> BufferRenderContext<'a> {
 					};
 					spans.push(Span::styled(" ", cursor_style));
 					cols_used = 1;
+				}
+
+				// Add diagnostic virtual text for empty lines
+				let available = text_width.saturating_sub(cols_used);
+				if let Some((vtext, vstyle)) = self.diagnostic_virtual_text(current_line_idx, available) {
+					let vtext_len = vtext.chars().count();
+					let vstyle = if is_cursor_line {
+						vstyle.bg(cursorline_bg)
+					} else {
+						vstyle
+					};
+					spans.push(Span::styled(vtext, vstyle));
+					cols_used += vtext_len;
 				}
 
 				if is_cursor_line && cols_used < text_width {

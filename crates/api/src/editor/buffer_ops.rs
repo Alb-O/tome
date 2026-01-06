@@ -102,4 +102,11 @@ impl Editor {
 	pub fn clone_buffer_for_split(&mut self) -> BufferId {
 		self.buffers.clone_focused_buffer_for_split()
 	}
+
+	/// Finds a buffer by its file path.
+	///
+	/// Returns the buffer ID if found, None if no buffer has this path.
+	pub fn find_buffer_by_path(&self, path: &std::path::Path) -> Option<BufferId> {
+		self.buffers.find_by_path(path)
+	}
 }
