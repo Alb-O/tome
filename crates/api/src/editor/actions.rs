@@ -90,8 +90,8 @@ impl Editor {
 			}
 			EditAction::ReplaceWithChar { ch } => {
 				let primary = self.buffer().selection.primary();
-				let from = primary.min();
-				let to = primary.max();
+				let from = primary.from();
+				let to = primary.to();
 				if from < to {
 					self.save_undo_state();
 					let len = to - from;
@@ -425,8 +425,8 @@ impl Editor {
 		F: Fn(char) -> Box<dyn Iterator<Item = char>>,
 	{
 		let primary = self.buffer().selection.primary();
-		let from = primary.min();
-		let to = primary.max();
+		let from = primary.from();
+		let to = primary.to();
 		if from < to {
 			self.save_undo_state();
 			let text: String = {

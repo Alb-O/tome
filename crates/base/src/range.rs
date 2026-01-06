@@ -57,10 +57,32 @@ impl Range {
 		std::cmp::max(self.anchor, self.head)
 	}
 
+	/// Returns the start of the selection extent (inclusive).
+	///
+	/// For both forward and backward selections, this is `min()`.
+	#[inline]
+	pub fn from(&self) -> CharIdx {
+		self.min()
+	}
+
+	/// Returns the end of the selection extent (exclusive).
+	///
+	/// For backward selections, this includes the anchor character by
+	/// returning `anchor + 1`. This ensures the character under the cursor
+	/// when selection started is included.
+	#[inline]
+	pub fn to(&self) -> CharIdx {
+		if self.direction() == Direction::Backward {
+			self.anchor + 1
+		} else {
+			self.max()
+		}
+	}
+
 	/// Returns the length of the range in characters.
 	#[inline]
 	pub fn len(&self) -> CharLen {
-		self.max() - self.min()
+		self.to() - self.from()
 	}
 
 	/// Returns true if anchor equals head (zero-width cursor).
@@ -188,6 +210,26 @@ mod tests {
 		assert_eq!(r.min(), 5);
 		assert_eq!(r.max(), 10);
 		assert_eq!(r.direction(), Direction::Backward);
+	}
+
+	#[test]
+	fn test_range_from_to_forward() {
+		// Forward selection: anchor=5, head=10
+		// Selects characters 5,6,7,8,9 (head position is cursor, not selected)
+		let r = Range::new(5, 10);
+		assert_eq!(r.from(), 5);
+		assert_eq!(r.to(), 10);
+		assert_eq!(r.len(), 5);
+	}
+
+	#[test]
+	fn test_range_from_to_backward() {
+		// Backward selection: anchor=10, head=5
+		// Selects characters 5,6,7,8,9,10 (anchor char IS selected)
+		let r = Range::new(10, 5);
+		assert_eq!(r.from(), 5);
+		assert_eq!(r.to(), 11); // anchor + 1 to include anchor char
+		assert_eq!(r.len(), 6);
 	}
 
 	#[test]

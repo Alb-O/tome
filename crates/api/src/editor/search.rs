@@ -86,8 +86,8 @@ impl Editor {
 	/// Sets the current selection as the search pattern.
 	pub(crate) fn do_use_selection_as_search(&mut self) -> bool {
 		let primary = self.buffer().selection.primary();
-		let from = primary.min();
-		let to = primary.max();
+		let from = primary.from();
+		let to = primary.to();
 		if from < to {
 			let (text, pattern) = {
 				let buffer = self.buffer();
@@ -126,8 +126,8 @@ impl Editor {
 	#[allow(dead_code, reason = "regex selection will be re-enabled via picker UI")]
 	pub(crate) fn select_regex(&mut self, pattern: &str) -> bool {
 		let primary = self.buffer().selection.primary();
-		let from = primary.min();
-		let to = primary.max();
+		let from = primary.from();
+		let to = primary.to();
 		if from >= to {
 			self.notify(keys::no_selection_to_search);
 			return false;
@@ -162,8 +162,8 @@ impl Editor {
 	#[allow(dead_code, reason = "regex split will be re-enabled via picker UI")]
 	pub(crate) fn split_regex(&mut self, pattern: &str) -> bool {
 		let primary = self.buffer().selection.primary();
-		let from = primary.min();
-		let to = primary.max();
+		let from = primary.from();
+		let to = primary.to();
 		if from >= to {
 			self.notify(keys::no_selection_to_split);
 			return false;
@@ -221,8 +221,8 @@ impl Editor {
 				.ranges()
 				.iter()
 				.map(|range| {
-					let from = range.min();
-					let to = range.max();
+					let from = range.from();
+					let to = range.to();
 					let text: String = doc.content.slice(from..to).chars().collect();
 					(*range, text)
 				})

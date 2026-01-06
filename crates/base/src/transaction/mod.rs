@@ -106,8 +106,8 @@ impl Transaction {
 		Self::change(
 			doc,
 			selection.iter().map(|r: &Range| Change {
-				start: r.min(),
-				end: r.max(),
+				start: r.from(),
+				end: r.to(),
 				replacement: Some(text.clone()),
 			}),
 		)
@@ -115,7 +115,8 @@ impl Transaction {
 
 	/// Creates a transaction that deletes each selection range.
 	///
-	/// For each range in the selection, deletes the text in `[min, max)`.
+	/// For each range in the selection, deletes the text in `[from, to)`.
+	/// For backward selections, this includes the anchor character.
 	///
 	/// # Parameters
 	/// - `doc`: The document slice
@@ -127,8 +128,8 @@ impl Transaction {
 		Self::change(
 			doc,
 			selection.iter().map(|r: &Range| Change {
-				start: r.min(),
-				end: r.max(),
+				start: r.from(),
+				end: r.to(),
 				replacement: None,
 			}),
 		)

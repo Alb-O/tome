@@ -297,7 +297,7 @@ impl<'a> BufferRenderContext<'a> {
 					let is_primary_cursor = doc_pos == primary_cursor;
 					let in_selection = ranges
 						.iter()
-						.any(|r: &xeno_base::range::Range| doc_pos >= r.min() && doc_pos < r.max());
+						.any(|r: &xeno_base::range::Range| doc_pos >= r.from() && doc_pos < r.to());
 
 					let cursor_style = if !is_focused {
 						styles.unfocused
