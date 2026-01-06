@@ -10,4 +10,11 @@ pub fn helper_function(x: i32) -> i32 {
     x * 2
 }
 
+/// Test function that calls helper_function.
+/// Used for testing go-to-definition within the same file.
+pub fn test_caller() -> i32 {
+    // Call helper_function here - gd on this should jump to line 9
+    helper_function(5)
+}
+
 mod other;

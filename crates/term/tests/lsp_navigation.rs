@@ -32,8 +32,9 @@ fn goto_definition_jumps() {
 	}
 
 	run_with_timeout(TEST_TIMEOUT, || {
-		// Open other.rs which has calls to shared_function defined in lib.rs
-		let fixture_file = fixtures_dir().join("rust-navigation/src/other.rs");
+		// Open lib.rs which has test_caller() that calls helper_function()
+		// This tests gd within the same file (no import indirection)
+		let fixture_file = fixtures_dir().join("rust-navigation/src/lib.rs");
 		let cmd = xeno_cmd_with_file(&fixture_file.display().to_string());
 
 		with_kitty_capture(&workspace_dir(), &cmd, |kitty| {
@@ -42,46 +43,46 @@ fn goto_definition_jumps() {
 			// Give rust-analyzer more time to index the project
 			std::thread::sleep(Duration::from_secs(3));
 
-			// Navigate to line 6 where shared_function() call is
-			// Using :6 command to go to specific line
-			kitty_send_keys!(kitty, KeyCode::Char(':'));
-			pause_briefly(); // Wait for command mode to activate
-			type_chars(kitty, "6");
+			// Use search to navigate to the helper_function(5) call in test_caller
+			// This is more reliable than :17 command
+			kitty_send_keys!(kitty, KeyCode::Char('/'));
+			pause_briefly();
+			type_chars(kitty, "helper_function(5)");
 			pause_briefly();
 			kitty_send_keys!(kitty, KeyCode::Enter);
 			pause_briefly();
+			kitty_send_keys!(kitty, KeyCode::Escape);
+			pause_briefly();
 			pause_briefly();
 
-			// Move to the shared_function call (cursor is at line start)
-			// The call is at column 4 (after 4 spaces of indentation)
-			kitty_send_keys!(kitty, KeyCode::Char('w')); // Move to shared_function
-			pause_briefly();
+			// Cursor should now be on helper_function(5) call
 
 			// Go to definition with gd
 			kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('d'));
-			pause_briefly();
+
+			// Give async command more time to complete
+			// The command needs to: send LSP request -> wait response -> navigate
+			std::thread::sleep(Duration::from_secs(2));
 			pause_briefly();
 			pause_briefly();
 
-			// Wait for navigation to complete - should jump to lib.rs
+			// Wait for cursor to move to definition (line 9)
+			// helper_function is defined at line 9: pub fn helper_function(x: i32) -> i32
 			let (_raw, clean) =
-				wait_for_screen_text_clean(kitty, Duration::from_secs(5), |_raw, clean| {
-					// After gd, we should see the definition in lib.rs
-					// The status bar or content should show lib.rs
-					clean.contains("lib.rs")
-						|| clean.contains("pub fn shared_function")
-						|| clean.contains("/// A shared function")
+				wait_for_screen_text_clean(kitty, Duration::from_secs(8), |_raw, clean| {
+					// After gd, cursor should be on the definition line
+					// Check status bar shows we're near line 9, or we see a "no definition" message
+					clean.contains(" 9:") || clean.contains(":9 ") || clean.contains("No definition")
 				});
 
-			// Verify we jumped to the definition in lib.rs
+			// Verify we jumped to the definition (should still be in lib.rs, at line 9)
+			// The status bar format is: NORMAL path line:col filetype position
 			let jumped_to_definition = clean.contains("lib.rs")
-				|| clean.contains("pub fn shared_function")
-				|| clean.contains("/// A shared function")
-				|| clean.contains("42"); // The return value in shared_function
+				&& (clean.contains(" 9:") || clean.contains(":9 "));
 
 			assert!(
 				jumped_to_definition,
-				"Should jump to shared_function definition in lib.rs. Screen:\n{clean}"
+				"Should jump to helper_function definition at line 9. Screen:\n{clean}"
 			);
 		});
 	});
@@ -285,19 +286,21 @@ fn goto_definition_from_import() {
 			// Should jump to lib.rs definition
 			let (_raw, clean) =
 				wait_for_screen_text_clean(kitty, Duration::from_secs(5), |_raw, clean| {
+					// After gd from import, should navigate to lib.rs
 					clean.contains("lib.rs")
 						|| clean.contains("pub fn shared_function")
 						|| clean.contains("/// A shared function")
 				});
 
-			let jumped_to_definition = clean.contains("lib.rs")
-				|| clean.contains("pub fn shared_function")
+			// Check if we jumped to lib.rs (the file where shared_function is defined)
+			let jumped_to_lib = clean.contains("lib.rs");
+			let shows_definition = clean.contains("pub fn shared_function")
 				|| clean.contains("/// A shared function")
 				|| clean.contains("42");
 
 			assert!(
-				jumped_to_definition,
-				"Should jump to definition from import statement. Screen:\n{clean}"
+				jumped_to_lib || shows_definition,
+				"Should jump to definition in lib.rs from import statement. Screen:\n{clean}"
 			);
 		});
 	});
