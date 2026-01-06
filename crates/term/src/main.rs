@@ -14,6 +14,7 @@ use app::run_editor;
 use clap::Parser;
 use cli::{AuthAction, Cli, Command, GrammarAction, LoginProvider, LogoutProvider};
 use xeno_api::Editor;
+use xeno_registry::options::keys;
 // Force-link crates to ensure their distributed_slice registrations are included.
 #[allow(unused_imports, reason = "linkme distributed_slice registration")]
 use {xeno_acp as _, xeno_core as _, xeno_extensions as _};
@@ -43,11 +44,52 @@ async fn main() -> anyhow::Result<()> {
 		);
 	}
 
+	// Load user config if present
+	let user_config = if let Some(config_dir) = xeno_api::paths::get_config_dir() {
+		let config_path = config_dir.join("config.kdl");
+		if config_path.exists() {
+			match xeno_config::Config::load(&config_path) {
+				Ok(config) => Some(config),
+				Err(e) => {
+					eprintln!("Warning: failed to load config: {}", e);
+					None
+				}
+			}
+		} else {
+			None
+		}
+	} else {
+		None
+	};
+
 	let mut editor = match cli.file {
 		Some(path) => Editor::new(path).await?,
 		None => Editor::new_scratch(),
 	};
 
+	// Apply user config to editor
+	if let Some(config) = user_config {
+		// Apply global options
+		editor.global_options.merge(&config.options);
+
+		// Apply language-specific options
+		for lang_config in config.languages {
+			editor
+				.language_options
+				.entry(lang_config.name)
+				.or_default()
+				.merge(&lang_config.options);
+		}
+
+		// Apply theme from config if specified
+		if let Some(theme_name) = config.options.get_string(keys::THEME.untyped())
+			&& let Err(e) = editor.set_theme(theme_name)
+		{
+			eprintln!("Warning: failed to set config theme '{}': {}", theme_name, e);
+		}
+	}
+
+	// CLI theme flag overrides config
 	if let Some(theme_name) = cli.theme
 		&& let Err(e) = editor.set_theme(&theme_name)
 	{

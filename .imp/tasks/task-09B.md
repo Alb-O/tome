@@ -84,7 +84,7 @@ Unacceptable:
 - `crates/term/src/main.rs`
 - `crates/api/src/paths.rs` (already has `get_config_dir()`)
 
-- [ ] 1.1 Add config loading to `main.rs` after theme loading
+- [x] 1.1 Add config loading to `main.rs` after theme loading
   ```rust
   // After line 44 (theme loading)
   if let Some(config_dir) = xeno_api::paths::get_config_dir() {
@@ -100,16 +100,16 @@ Unacceptable:
   }
   ```
 
-- [ ] 1.2 Apply parsed config to `Editor` after creation
+- [x] 1.2 Apply parsed config to `Editor` after creation
   - Set `editor.global_options = config.options`
   - Populate `editor.language_options` from `config.languages`
   - Apply theme from config if specified (check `config.options` for theme key)
 
-- [ ] 1.3 Handle config-specified theme
+- [x] 1.3 Handle config-specified theme
   - If config contains `theme` option, call `editor.set_theme()` with that value
   - CLI `--theme` flag should override config (already happens after)
 
-- [ ] 1.4 Verify: Create test config file, run editor, confirm options loaded
+- [x] 1.4 Verify: Create test config file, run editor, confirm options loaded
   - Test with `:set tab-width` to see if config value is active
 
 **Verification**: `cargo build -p xeno-term && cargo test -p xeno-term`
