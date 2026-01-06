@@ -37,6 +37,7 @@ use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::task::JoinHandle;
+use tracing::warn;
 
 use crate::Result;
 use crate::client::{ClientHandle, LanguageServerId, ServerConfig, start_server};
@@ -160,9 +161,17 @@ impl Registry {
 
 		// Check for existing server
 		{
-			let servers = self.servers.read();
+			let mut servers = self.servers.write();
 			if let Some(instance) = servers.get(&key) {
-				return Ok(instance.handle.clone());
+				if instance.handle.is_service_alive() {
+					return Ok(instance.handle.clone());
+				}
+				warn!(
+					language = %language,
+					root = ?root_path,
+					"LSP server stopped; restarting"
+				);
+				servers.remove(&key);
 			}
 		}
 
@@ -192,7 +201,28 @@ impl Registry {
 	/// Get an active client for a language and root path, if one exists.
 	pub fn get(&self, language: &str, root_path: &Path) -> Option<ClientHandle> {
 		let key = (language.to_string(), root_path.to_path_buf());
-		self.servers.read().get(&key).map(|s| s.handle.clone())
+		{
+			let servers = self.servers.read();
+			if let Some(instance) = servers.get(&key) {
+				if instance.handle.is_service_alive() {
+					return Some(instance.handle.clone());
+				}
+			}
+		}
+
+		let mut servers = self.servers.write();
+		if let Some(instance) = servers.get(&key) {
+			if instance.handle.is_service_alive() {
+				return Some(instance.handle.clone());
+			}
+			warn!(
+				language = %language,
+				root = ?root_path,
+				"LSP server stopped; dropping handle"
+			);
+			servers.remove(&key);
+		}
+		None
 	}
 
 	/// Get an active client for a language and file path, if one exists.

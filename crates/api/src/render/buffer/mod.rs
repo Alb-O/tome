@@ -14,7 +14,11 @@ mod viewport;
 
 pub use context::BufferRenderContext;
 #[cfg(feature = "lsp")]
-pub use diagnostics::{DiagnosticDisplay, LineDiagnostics, PreparedDiagnostics, prepare_diagnostics};
+pub use diagnostics::{
+	DiagnosticDisplay, LineDiagnostics, PreparedDiagnostics, prepare_diagnostics,
+};
 #[cfg(feature = "lsp")]
-pub use inlay_hints::{InlayHintDisplay, InlayHintDisplayKind, LineInlayHints, PreparedInlayHints, prepare_inlay_hints};
+pub use inlay_hints::{
+	InlayHintDisplay, InlayHintDisplayKind, LineInlayHints, PreparedInlayHints, prepare_inlay_hints,
+};
 pub use viewport::ensure_buffer_cursor_visible;

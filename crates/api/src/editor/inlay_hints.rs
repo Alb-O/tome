@@ -76,7 +76,6 @@ impl Editor {
 
 		// Get all visible buffer views
 		for buffer_id in self.windows.base_window().layout.views() {
-
 			// Check if inlay hints are enabled for this buffer
 			if !self.inlay_hints_enabled(buffer_id) {
 				continue;

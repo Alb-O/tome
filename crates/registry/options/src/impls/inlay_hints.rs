@@ -2,12 +2,15 @@
 
 use linkme::distributed_slice;
 
-use crate::{OptionDef, OptionScope, OptionType, OptionValue, RegistrySource, TypedOptionKey, OPTIONS};
+use crate::{
+	OPTIONS, OptionDef, OptionScope, OptionType, OptionValue, RegistrySource, TypedOptionKey,
+};
 
 /// Typed handle for the `INLAY_HINTS_ENABLED` option.
 ///
 /// Whether to display inlay hints (type annotations, parameter names, etc.).
-pub const INLAY_HINTS_ENABLED: TypedOptionKey<bool> = TypedOptionKey::new(&__OPT_INLAY_HINTS_ENABLED);
+pub const INLAY_HINTS_ENABLED: TypedOptionKey<bool> =
+	TypedOptionKey::new(&__OPT_INLAY_HINTS_ENABLED);
 
 #[allow(non_upper_case_globals)]
 #[distributed_slice(OPTIONS)]

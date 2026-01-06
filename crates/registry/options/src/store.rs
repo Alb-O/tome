@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use crate::{find_by_kdl, OptionError, OptionKey, OptionValue};
+use crate::{OptionError, OptionKey, OptionValue, find_by_kdl};
 
 /// Runtime storage for option values.
 ///
@@ -116,7 +116,10 @@ mod tests {
 		let mut store = OptionStore::new();
 		store.set(keys::TAB_WIDTH.untyped(), OptionValue::Int(8));
 
-		assert_eq!(store.get(keys::TAB_WIDTH.untyped()), Some(&OptionValue::Int(8)));
+		assert_eq!(
+			store.get(keys::TAB_WIDTH.untyped()),
+			Some(&OptionValue::Int(8))
+		);
 		assert_eq!(store.get_int(keys::TAB_WIDTH.untyped()), Some(8));
 	}
 
@@ -147,7 +150,10 @@ mod tests {
 	fn test_merge() {
 		let mut store1 = OptionStore::new();
 		store1.set(keys::TAB_WIDTH.untyped(), OptionValue::Int(4));
-		store1.set(keys::THEME.untyped(), OptionValue::String("gruvbox".to_string()));
+		store1.set(
+			keys::THEME.untyped(),
+			OptionValue::String("gruvbox".to_string()),
+		);
 
 		let mut store2 = OptionStore::new();
 		store2.set(keys::TAB_WIDTH.untyped(), OptionValue::Int(2));
@@ -184,7 +190,10 @@ mod tests {
 	#[test]
 	fn test_string_option() {
 		let mut store = OptionStore::new();
-		store.set(keys::THEME.untyped(), OptionValue::String("monokai".to_string()));
+		store.set(
+			keys::THEME.untyped(),
+			OptionValue::String("monokai".to_string()),
+		);
 
 		assert_eq!(store.get_string(keys::THEME.untyped()), Some("monokai"));
 	}

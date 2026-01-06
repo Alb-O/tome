@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use ropey::Rope;
 use xeno_lsp::lsp_types::{InlayHint, InlayHintKind, InlayHintLabel};
-use xeno_lsp::{lsp_position_to_char, OffsetEncoding};
+use xeno_lsp::{OffsetEncoding, lsp_position_to_char};
 
 /// Display-ready inlay hint for a specific position.
 #[derive(Debug, Clone)]
@@ -72,7 +72,11 @@ impl PreparedInlayHints {
 	}
 
 	/// Returns all hints at or after a given character position on a line.
-	pub fn hints_after(&self, line_idx: usize, column: usize) -> impl Iterator<Item = &InlayHintDisplay> {
+	pub fn hints_after(
+		&self,
+		line_idx: usize,
+		column: usize,
+	) -> impl Iterator<Item = &InlayHintDisplay> {
 		self.by_line
 			.get(&line_idx)
 			.into_iter()
@@ -153,8 +157,9 @@ pub fn prepare_inlay_hints(
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use xeno_lsp::lsp_types::Position;
+
+	use super::*;
 
 	fn make_hint(line: u32, character: u32, label: &str, kind: Option<InlayHintKind>) -> InlayHint {
 		InlayHint {

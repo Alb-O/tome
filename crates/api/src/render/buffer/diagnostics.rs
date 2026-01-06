@@ -6,8 +6,8 @@
 use std::collections::HashMap;
 
 use ropey::Rope;
-use xeno_lsp::lsp_types::DiagnosticSeverity;
-use xeno_lsp::{OffsetEncoding, lsp_range_to_char_range, lsp_types::Diagnostic};
+use xeno_lsp::lsp_types::{Diagnostic, DiagnosticSeverity};
+use xeno_lsp::{OffsetEncoding, lsp_range_to_char_range};
 
 /// Display-ready diagnostic information for a single diagnostic.
 #[derive(Debug, Clone)]
@@ -147,8 +147,7 @@ pub fn prepare_diagnostics(
 
 	for diag in diagnostics {
 		// Convert LSP range to char range
-		let Some((char_start, char_end)) =
-			lsp_range_to_char_range(content, diag.range, encoding)
+		let Some((char_start, char_end)) = lsp_range_to_char_range(content, diag.range, encoding)
 		else {
 			continue;
 		};
@@ -217,8 +216,9 @@ pub fn prepare_diagnostics(
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use xeno_lsp::lsp_types::{DiagnosticSeverity, Position, Range};
+
+	use super::*;
 
 	fn make_diagnostic(
 		start_line: u32,

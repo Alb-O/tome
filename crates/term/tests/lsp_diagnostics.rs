@@ -192,7 +192,9 @@ fn diagnostics_underline_rendering() {
 			// Note: Testing actual underline/curly styling would require parsing raw terminal
 			// escape sequences for SGR (Select Graphic Rendition) codes.
 			// For now, we verify the line is visible and the LSP is working.
-			eprintln!("INFO: Underline rendering test - line visible. Full style testing would require raw escape sequence analysis.");
+			eprintln!(
+				"INFO: Underline rendering test - line visible. Full style testing would require raw escape sequence analysis."
+			);
 		});
 	});
 }

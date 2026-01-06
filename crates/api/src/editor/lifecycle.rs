@@ -131,7 +131,11 @@ impl Editor {
 	///
 	/// Opens and focuses the references panel, populating it with the given references.
 	#[cfg(feature = "lsp")]
-	pub fn show_references_panel(&mut self, locations: Vec<xeno_lsp::lsp_types::Location>, title: &str) {
+	pub fn show_references_panel(
+		&mut self,
+		locations: Vec<xeno_lsp::lsp_types::Location>,
+		title: &str,
+	) {
 		use crate::ui::ReferencesPanel;
 
 		let panel_id = ReferencesPanel::ID;
@@ -143,9 +147,10 @@ impl Editor {
 		// Register and open the panel
 		self.ui.register_panel(Box::new(panel));
 		self.ui.set_open(panel_id, true);
-		self.ui.apply_requests(vec![crate::ui::panel::UiRequest::Focus(
-			crate::ui::FocusTarget::panel(panel_id.to_string()),
-		)]);
+		self.ui
+			.apply_requests(vec![crate::ui::panel::UiRequest::Focus(
+				crate::ui::FocusTarget::panel(panel_id.to_string()),
+			)]);
 		self.needs_redraw = true;
 	}
 

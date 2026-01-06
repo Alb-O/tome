@@ -39,6 +39,7 @@ use lsp_types::{
 };
 use parking_lot::Mutex;
 use serde_json::Value;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::{Notify, OnceCell};
 use tracing::{debug, error, info, warn};
@@ -102,6 +103,11 @@ impl ClientHandle {
 	/// Check if the server has been initialized.
 	pub fn is_initialized(&self) -> bool {
 		self.capabilities.initialized()
+	}
+
+	/// Returns whether the LSP service loop is still running.
+	pub fn is_service_alive(&self) -> bool {
+		!self.socket.0.tx.is_closed()
 	}
 
 	/// Get the server's capabilities.
@@ -557,7 +563,24 @@ pub fn start_server(
 
 	let stdin = process.stdin.take().expect("Failed to open stdin");
 	let stdout = process.stdout.take().expect("Failed to open stdout");
-	let _stderr = process.stderr.take().expect("Failed to open stderr");
+	let stderr = process.stderr.take().expect("Failed to open stderr");
+	let stderr_name = name.clone();
+
+	tokio::spawn(async move {
+		let mut lines = BufReader::new(stderr).lines();
+		loop {
+			match lines.next_line().await {
+				Ok(Some(line)) => {
+					debug!(target: "lsp", server = %stderr_name, message = %line, "Server stderr");
+				}
+				Ok(None) => break,
+				Err(err) => {
+					debug!(target: "lsp", server = %stderr_name, error = %err, "Failed to read server stderr");
+					break;
+				}
+			}
+		}
+	});
 
 	let capabilities = Arc::new(OnceCell::new());
 	let initialize_notify = Arc::new(Notify::new());

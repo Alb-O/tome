@@ -41,7 +41,8 @@ impl Editor {
 	/// Resolves the `tab-width` option and delegates to Buffer.
 	pub(crate) fn handle_mouse_scroll(&mut self, direction: ScrollDirection, count: usize) {
 		let tab_width = self.tab_width();
-		self.buffer_mut().handle_mouse_scroll(direction, count, tab_width);
+		self.buffer_mut()
+			.handle_mouse_scroll(direction, count, tab_width);
 	}
 
 	/// Navigate to the next or previous diagnostic.
@@ -72,12 +73,17 @@ impl Editor {
 			// Find next/prev diagnostic relative to cursor
 			let target = if forward {
 				// Find first diagnostic after cursor (or wrap to first)
-				prepared.all.iter()
+				prepared
+					.all
+					.iter()
 					.find(|d| d.char_start > cursor)
 					.or_else(|| prepared.all.first())
 			} else {
 				// Find last diagnostic before cursor (or wrap to last)
-				prepared.all.iter().rev()
+				prepared
+					.all
+					.iter()
+					.rev()
 					.find(|d| d.char_start < cursor)
 					.or_else(|| prepared.all.last())
 			}?;

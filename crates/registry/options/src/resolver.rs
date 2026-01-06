@@ -199,7 +199,10 @@ mod tests {
 		global.set(keys::TAB_WIDTH.untyped(), OptionValue::Int(4));
 
 		let mut buffer = OptionStore::new();
-		buffer.set(keys::THEME.untyped(), OptionValue::String("monokai".to_string()));
+		buffer.set(
+			keys::THEME.untyped(),
+			OptionValue::String("monokai".to_string()),
+		);
 
 		let resolver = OptionResolver::new()
 			.with_global(&global)
@@ -214,7 +217,10 @@ mod tests {
 	#[test]
 	fn test_resolve_string() {
 		let mut global = OptionStore::new();
-		global.set(keys::THEME.untyped(), OptionValue::String("nord".to_string()));
+		global.set(
+			keys::THEME.untyped(),
+			OptionValue::String("nord".to_string()),
+		);
 
 		let resolver = OptionResolver::new().with_global(&global);
 
@@ -225,7 +231,10 @@ mod tests {
 	fn test_type_mismatch_falls_back_to_default() {
 		let mut global = OptionStore::new();
 		// Incorrectly set an int option with a string value
-		global.set(keys::TAB_WIDTH.untyped(), OptionValue::String("bad".to_string()));
+		global.set(
+			keys::TAB_WIDTH.untyped(),
+			OptionValue::String("bad".to_string()),
+		);
 
 		let resolver = OptionResolver::new().with_global(&global);
 

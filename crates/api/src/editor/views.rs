@@ -2,10 +2,11 @@
 //!
 //! Provides convenient methods for accessing buffers. Delegates to [`BufferManager`].
 
+use xeno_registry::options::keys;
+
 use super::{Editor, FocusTarget};
 use crate::buffer::{Buffer, BufferId, BufferView};
 use crate::window::Window;
-use xeno_registry::options::keys;
 
 impl Editor {
 	/// Returns a reference to the currently focused text buffer.

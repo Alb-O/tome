@@ -13,10 +13,11 @@ use xeno_core::editor_ctx::{
 	JumpAccess, MacroAccess, ModeAccess, NotificationAccess, OptionAccess, PaletteAccess,
 	SearchAccess, SelectionAccess, SplitOps, ThemeAccess, UndoAccess, ViewportAccess,
 };
-use xeno_registry::options::{OptionKey, OptionScope, OptionValue, find_by_kdl, parse};
-use xeno_registry::EditAction;
 use xeno_registry::commands::{CommandEditorOps, CommandError};
-use xeno_registry::{HookContext, HookEventData, emit_sync_with as emit_hook_sync_with};
+use xeno_registry::options::{OptionKey, OptionScope, OptionValue, find_by_kdl, parse};
+use xeno_registry::{
+	EditAction, HookContext, HookEventData, emit_sync_with as emit_hook_sync_with,
+};
 use xeno_registry_notifications::{Notification, keys};
 
 use crate::editor::Editor;
@@ -219,14 +220,13 @@ impl CommandEditorOps for Editor {
 
 	fn set_local_option(&mut self, kdl_key: &str, value: &str) -> Result<(), CommandError> {
 		// Validate that the option exists and is buffer-scoped
-		let def = find_by_kdl(kdl_key)
-			.ok_or_else(|| {
-				let suggestion = parse::suggest_option(kdl_key);
-				CommandError::InvalidArgument(match suggestion {
-					Some(s) => format!("unknown option '{kdl_key}'. Did you mean '{s}'?"),
-					None => format!("unknown option '{kdl_key}'"),
-				})
-			})?;
+		let def = find_by_kdl(kdl_key).ok_or_else(|| {
+			let suggestion = parse::suggest_option(kdl_key);
+			CommandError::InvalidArgument(match suggestion {
+				Some(s) => format!("unknown option '{kdl_key}'. Did you mean '{s}'?"),
+				None => format!("unknown option '{kdl_key}'"),
+			})
+		})?;
 
 		if def.scope == OptionScope::Global {
 			return Err(CommandError::InvalidArgument(format!(
@@ -235,7 +235,10 @@ impl CommandEditorOps for Editor {
 		}
 
 		let opt_value = parse_option_value(kdl_key, value)?;
-		let _ = self.buffer_mut().local_options.set_by_kdl(kdl_key, opt_value);
+		let _ = self
+			.buffer_mut()
+			.local_options
+			.set_by_kdl(kdl_key, opt_value);
 
 		emit_hook_sync_with(
 			&HookContext::new(
@@ -308,7 +311,9 @@ impl CommandEditorOps for Editor {
 	}
 
 	#[cfg(feature = "lsp")]
-	fn trigger_completion(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+	fn trigger_completion(
+		&mut self,
+	) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
 		Box::pin(async move {
 			// Get metadata and request completion first (immutable borrow)
 			let trigger_column = self.get_word_start_column();
@@ -344,36 +349,44 @@ impl CommandEditorOps for Editor {
 	}
 
 	#[cfg(not(feature = "lsp"))]
-	fn trigger_completion(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+	fn trigger_completion(
+		&mut self,
+	) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
 		Box::pin(async { false })
 	}
 
 	#[cfg(feature = "lsp")]
-	fn goto_definition(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
-		Box::pin(async move {
-			crate::lsp_ui::goto_definition(self).await
-		})
+	fn goto_definition(
+		&mut self,
+	) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async move { crate::lsp_ui::goto_definition(self).await })
 	}
 
 	#[cfg(not(feature = "lsp"))]
-	fn goto_definition(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+	fn goto_definition(
+		&mut self,
+	) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
 		Box::pin(async { false })
 	}
 
 	#[cfg(feature = "lsp")]
-	fn find_references(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
-		Box::pin(async move {
-			crate::lsp_ui::find_references(self).await
-		})
+	fn find_references(
+		&mut self,
+	) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+		Box::pin(async move { crate::lsp_ui::find_references(self).await })
 	}
 
 	#[cfg(not(feature = "lsp"))]
-	fn find_references(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+	fn find_references(
+		&mut self,
+	) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
 		Box::pin(async { false })
 	}
 
 	#[cfg(feature = "lsp")]
-	fn show_code_actions(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+	fn show_code_actions(
+		&mut self,
+	) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
 		Box::pin(async move {
 			// Request code actions first (immutable borrow)
 			let actions = {
@@ -404,7 +417,9 @@ impl CommandEditorOps for Editor {
 	}
 
 	#[cfg(not(feature = "lsp"))]
-	fn show_code_actions(&mut self) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
+	fn show_code_actions(
+		&mut self,
+	) -> std::pin::Pin<Box<dyn std::future::Future<Output = bool> + '_>> {
 		Box::pin(async { false })
 	}
 
@@ -642,8 +657,9 @@ impl EditorCapabilities for Editor {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use xeno_registry::commands::CommandEditorOps;
+
+	use super::*;
 
 	#[test]
 	fn test_setlocal_rejects_global_scoped_option() {

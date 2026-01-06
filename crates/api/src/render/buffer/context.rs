@@ -18,9 +18,9 @@ use super::gutter::GutterLayout;
 #[cfg(feature = "lsp")]
 use super::{PreparedDiagnostics, PreparedInlayHints};
 use crate::buffer::Buffer;
-use crate::window::GutterSelector;
 use crate::editor::extensions::StyleOverlays;
 use crate::render::types::{RenderResult, wrap_line};
+use crate::window::GutterSelector;
 
 /// Context for rendering a buffer.
 ///
@@ -205,7 +205,9 @@ impl<'a> BufferRenderContext<'a> {
 		}
 		// Apply underline with diagnostic color
 		let diag_color = self.theme.colors.diagnostic_color(severity);
-		style.underline_color(diag_color).add_modifier(Modifier::UNDERLINED)
+		style
+			.underline_color(diag_color)
+			.add_modifier(Modifier::UNDERLINED)
 	}
 
 	/// Returns virtual text for diagnostic display at end of line.
@@ -241,7 +243,10 @@ impl<'a> BufferRenderContext<'a> {
 
 		let max_msg_len = available_width.saturating_sub(prefix.len());
 		let truncated = if message.len() > max_msg_len {
-			let mut msg: String = message.chars().take(max_msg_len.saturating_sub(3)).collect();
+			let mut msg: String = message
+				.chars()
+				.take(max_msg_len.saturating_sub(3))
+				.collect();
 			msg.push_str("...");
 			msg
 		} else {
@@ -278,7 +283,11 @@ impl<'a> BufferRenderContext<'a> {
 
 	/// Renders an inlay hint as styled text.
 	#[cfg(feature = "lsp")]
-	fn render_inlay_hint(&self, hint: &super::InlayHintDisplay, is_cursor_line: bool) -> Vec<Span<'static>> {
+	fn render_inlay_hint(
+		&self,
+		hint: &super::InlayHintDisplay,
+		is_cursor_line: bool,
+	) -> Vec<Span<'static>> {
 		let mut spans = Vec::new();
 
 		// Use a dimmed style for inlay hints
@@ -605,7 +614,9 @@ impl<'a> BufferRenderContext<'a> {
 
 					// Add diagnostic virtual text after line content
 					let available = text_width.saturating_sub(seg_col);
-					if let Some((vtext, vstyle)) = self.diagnostic_virtual_text(current_line_idx, available) {
+					if let Some((vtext, vstyle)) =
+						self.diagnostic_virtual_text(current_line_idx, available)
+					{
 						let vtext_len = vtext.chars().count();
 						let vstyle = if is_cursor_line {
 							vstyle.bg(cursorline_bg)
@@ -672,7 +683,9 @@ impl<'a> BufferRenderContext<'a> {
 
 				// Add diagnostic virtual text for empty lines
 				let available = text_width.saturating_sub(cols_used);
-				if let Some((vtext, vstyle)) = self.diagnostic_virtual_text(current_line_idx, available) {
+				if let Some((vtext, vstyle)) =
+					self.diagnostic_virtual_text(current_line_idx, available)
+				{
 					let vtext_len = vtext.chars().count();
 					let vstyle = if is_cursor_line {
 						vstyle.bg(cursorline_bg)

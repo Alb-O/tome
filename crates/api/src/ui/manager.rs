@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 use termina::event::{KeyEvent, MouseEvent};
 use xeno_registry::themes::Theme;
-use xeno_tui::layout::Rect;
 use xeno_tui::Frame;
+use xeno_tui::layout::Rect;
 
 use super::dock::{DockLayout, DockManager};
 use super::focus::{FocusManager, FocusTarget};
@@ -205,6 +205,27 @@ impl UiManager {
 		key: &KeyEvent,
 	) -> Option<xeno_lsp::lsp_types::Location> {
 		let result = self.popups.try_accept_location_picker(key);
+		if result.is_some() {
+			self.wants_redraw = true;
+		}
+		result
+	}
+
+	/// Attempts to accept the currently selected code action.
+	///
+	/// If a code actions popup is active and Enter is pressed, this method:
+	/// 1. Gets the selected action from the code actions popup
+	/// 2. Dismisses the code actions popup
+	/// 3. Returns the selected action
+	///
+	/// Returns `None` if no code actions popup is active, the key is not Enter,
+	/// or no action is selected.
+	#[cfg(feature = "lsp")]
+	pub fn try_accept_code_actions(
+		&mut self,
+		key: &KeyEvent,
+	) -> Option<super::popup::CodeActionResult> {
+		let result = self.popups.try_accept_code_actions(key);
 		if result.is_some() {
 			self.wants_redraw = true;
 		}

@@ -93,9 +93,9 @@ pub use error::{ConfigError, ConfigWarning, Result};
 pub use keys::KeysConfig;
 pub use options::ParseContext;
 pub use theme::ParsedTheme;
-pub use xeno_registry::options::OptionStore;
 #[cfg(feature = "watch")]
 pub use watch::{ConfigChange, ConfigWatcher};
+pub use xeno_registry::options::OptionStore;
 
 /// Parsed configuration from a KDL file.
 ///
@@ -144,7 +144,11 @@ impl Config {
 		};
 
 		let mut languages = Vec::new();
-		for node in doc.nodes().iter().filter(|n| n.name().value() == "language") {
+		for node in doc
+			.nodes()
+			.iter()
+			.filter(|n| n.name().value() == "language")
+		{
 			if let Some(name) = node.get(0).and_then(|v| v.as_string()) {
 				let parsed = options::parse_options_with_context(node, ParseContext::Language)?;
 				warnings.extend(parsed.warnings);

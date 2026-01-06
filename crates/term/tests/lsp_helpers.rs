@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use kitty_test_harness::{pause_briefly, require_kitty, wait_for_screen_text_clean, KittyHarness};
+use kitty_test_harness::{KittyHarness, pause_briefly, require_kitty, wait_for_screen_text_clean};
 
 /// Check if LSP tests should run.
 ///

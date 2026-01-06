@@ -12,7 +12,9 @@ pub use xeno_registry::themes::{
 use xeno_registry::themes::{SyntaxStyle, SyntaxStyles};
 
 use crate::error::{ConfigError, Result};
-use crate::kdl_util::{ParseContext, get_color_field, get_color_field_optional, parse_modifier, parse_palette};
+use crate::kdl_util::{
+	ParseContext, get_color_field, get_color_field_optional, parse_modifier, parse_palette,
+};
 
 /// A parsed theme with owned data suitable for runtime use.
 #[derive(Debug, Clone)]
@@ -236,7 +238,8 @@ fn parse_popup_colors(node: Option<&KdlNode>, ctx: &ParseContext) -> Result<Popu
 		fg: get_color_field(children, "fg", ctx)?,
 		border: get_color_field(children, "border", ctx)?,
 		title: get_color_field(children, "title", ctx)?,
-		selection: get_color_field_optional(children, "selection", ctx)?.unwrap_or(default_selection),
+		selection: get_color_field_optional(children, "selection", ctx)?
+			.unwrap_or(default_selection),
 	})
 }
 

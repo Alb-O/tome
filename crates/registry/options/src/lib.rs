@@ -448,7 +448,10 @@ impl core::fmt::Display for OptionError {
 				expected,
 				got,
 			} => {
-				write!(f, "type mismatch for option '{option}': expected {expected:?}, got {got}")
+				write!(
+					f,
+					"type mismatch for option '{option}': expected {expected:?}, got {got}"
+				)
 			}
 			OptionError::InvalidValue { option, reason } => {
 				write!(f, "invalid value for option '{option}': {reason}")
@@ -464,7 +467,8 @@ impl std::error::Error for OptionError {}
 ///
 /// Returns `Ok(())` if valid, or an appropriate [`OptionError`] if not.
 pub fn validate(kdl_key: &str, value: &OptionValue) -> Result<(), OptionError> {
-	let def = find_by_kdl(kdl_key).ok_or_else(|| OptionError::UnknownOption(kdl_key.to_string()))?;
+	let def =
+		find_by_kdl(kdl_key).ok_or_else(|| OptionError::UnknownOption(kdl_key.to_string()))?;
 	if !value.matches_type(def.value_type) {
 		return Err(OptionError::TypeMismatch {
 			option: kdl_key.to_string(),

@@ -3,7 +3,7 @@
 //! This module consolidates all option value parsing logic, used by both
 //! config file loading and runtime `:set` commands.
 
-use crate::{OptionError, OptionType, OptionValue, find_by_kdl, all_sorted, validate};
+use crate::{OptionError, OptionType, OptionValue, all_sorted, find_by_kdl, validate};
 
 /// Parse a string value into an [`OptionValue`] based on the option's declared type.
 ///
@@ -19,11 +19,12 @@ use crate::{OptionError, OptionType, OptionValue, find_by_kdl, all_sorted, valid
 pub fn parse_value(kdl_key: &str, value: &str) -> Result<OptionValue, OptionError> {
 	let def =
 		find_by_kdl(kdl_key).ok_or_else(|| OptionError::UnknownOption(kdl_key.to_string()))?;
-	let opt_value =
-		parse_value_for_type(value, def.value_type).map_err(|reason| OptionError::InvalidValue {
+	let opt_value = parse_value_for_type(value, def.value_type).map_err(|reason| {
+		OptionError::InvalidValue {
 			option: kdl_key.to_string(),
 			reason,
-		})?;
+		}
+	})?;
 
 	// Run type checking and custom validator
 	validate(kdl_key, &opt_value)?;
@@ -54,7 +55,9 @@ pub fn parse_bool(value: &str) -> Result<bool, String> {
 	match value.to_lowercase().as_str() {
 		"true" | "1" | "yes" | "on" => Ok(true),
 		"false" | "0" | "no" | "off" => Ok(false),
-		_ => Err(format!("invalid boolean: '{value}' (expected true/false, yes/no, on/off, 1/0)")),
+		_ => Err(format!(
+			"invalid boolean: '{value}' (expected true/false, yes/no, on/off, 1/0)"
+		)),
 	}
 }
 
@@ -90,11 +93,28 @@ pub fn suggest_option(key: &str) -> Option<String> {
 
 /// Options that were removed (had no implementation).
 const REMOVED_OPTIONS: &[&str] = &[
-	"indent-width", "use-tabs", "line-numbers", "wrap-lines", "cursorline",
-	"cursorcolumn", "colorcolumn", "whitespace-visible", "scroll-margin",
-	"scroll-smooth", "backup", "undo-file", "auto-save", "final-newline",
-	"trim-trailing-whitespace", "search-case-sensitive", "search-smart-case",
-	"search-wrap", "incremental-search", "mouse", "line-ending", "idle-timeout",
+	"indent-width",
+	"use-tabs",
+	"line-numbers",
+	"wrap-lines",
+	"cursorline",
+	"cursorcolumn",
+	"colorcolumn",
+	"whitespace-visible",
+	"scroll-margin",
+	"scroll-smooth",
+	"backup",
+	"undo-file",
+	"auto-save",
+	"final-newline",
+	"trim-trailing-whitespace",
+	"search-case-sensitive",
+	"search-smart-case",
+	"search-wrap",
+	"incremental-search",
+	"mouse",
+	"line-ending",
+	"idle-timeout",
 ];
 
 /// Returns a deprecation message for removed options.

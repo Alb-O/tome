@@ -254,14 +254,14 @@ impl Editor {
 		let buffer = self.buffer();
 		let cursor = buffer.cursor;
 		let rope = &buffer.doc().content;
-		
+
 		// Find the start of the current line
 		let line_idx = rope.char_to_line(cursor);
 		let line_start = rope.line_to_char(line_idx);
-		
+
 		// Get the text from line start to cursor
 		let line_to_cursor: String = rope.slice(line_start..cursor).chars().collect();
-		
+
 		// Find the start of the word by scanning backwards
 		let mut word_start = line_to_cursor.len();
 		for (i, c) in line_to_cursor.chars().rev().enumerate() {
@@ -273,7 +273,7 @@ impl Editor {
 				word_start = 0;
 			}
 		}
-		
+
 		word_start
 	}
 
@@ -284,17 +284,17 @@ impl Editor {
 		let buffer = self.buffer();
 		let cursor = buffer.cursor;
 		let rope = &buffer.doc().content;
-		
+
 		// Find the start of the current line
 		let line_idx = rope.char_to_line(cursor);
 		let line_start = rope.line_to_char(line_idx);
-		
+
 		// Get the text from line start to cursor
 		let line_to_cursor: String = rope.slice(line_start..cursor).chars().collect();
-		
+
 		// Find the start of the word
 		let word_start = self.get_word_start_column();
-		
+
 		// Extract the word text
 		if word_start < line_to_cursor.len() {
 			line_to_cursor[word_start..].to_string()

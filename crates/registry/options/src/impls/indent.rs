@@ -2,9 +2,9 @@
 
 use linkme::distributed_slice;
 
+use crate::validators::positive_int;
 use crate::{
-	OptionDef, OptionScope, OptionType, OptionValue, RegistrySource, TypedOptionKey,
-	validators::positive_int, OPTIONS,
+	OPTIONS, OptionDef, OptionScope, OptionType, OptionValue, RegistrySource, TypedOptionKey,
 };
 
 /// Typed handle for the `TAB_WIDTH` option.

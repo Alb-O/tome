@@ -243,8 +243,8 @@ impl Buffer {
 					doc.content.len_chars()
 				};
 				let line_text: String = doc.content.slice(line_start..line_end).into();
-				let segments = self
-					.wrap_line(line_text.trim_end_matches('\n'), self.text_width, tab_width);
+				let segments =
+					self.wrap_line(line_text.trim_end_matches('\n'), self.text_width, tab_width);
 				(total_lines, segments.len().max(1))
 			} else {
 				(total_lines, 1)
@@ -359,5 +359,4 @@ impl Buffer {
 	pub fn wrap_line(&self, text: &str, width: usize, tab_width: usize) -> Vec<WrapSegment> {
 		crate::render::wrap_line(text, width, tab_width)
 	}
-
 }

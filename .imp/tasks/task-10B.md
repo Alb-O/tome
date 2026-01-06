@@ -602,7 +602,7 @@ All LSP integration tests go in `crates/term/tests/`:
    - **Fix**: Moved extension init before hook emission, pass `Some(&extensions)`
    - **Result**: Client now found, but server returns `ServiceStopped`
    
-- [ ] 5.8 Fix "ServiceStopped" error - async hooks not being drained before LSP use
+- [x] 5.8 Fix "ServiceStopped" error - async hooks not being drained before LSP use
    
    **Investigation completed** - async hooks ARE scheduled correctly:
    ```
@@ -627,14 +627,18 @@ All LSP integration tests go in `crates/term/tests/`:
    2. The server stopped due to some error during startup
    
    **Next debugging steps**:
-   - [ ] 5.8.1 Add debug output inside the async hook body (after `did_open()`)
+   - [x] 5.8.1 Add debug output inside the async hook body (after `did_open()`)
    - [ ] 5.8.2 Check if `get_or_start()` is actually starting rust-analyzer
-   - [ ] 5.8.3 Check rust-analyzer stderr for startup errors
+   - [x] 5.8.3 Check rust-analyzer stderr for startup errors
    - [ ] 5.8.4 Verify the `Cargo.toml` root marker is being found correctly
    - [ ] 5.8.5 Try increasing wait time after file open before pressing `gd`
    
    **Key insight**: `ServiceStopped` means the LSP client HAD a connection but
    it was closed. This suggests the server started but then terminated.
+
+   **FIX APPLIED**:
+   - Registry prunes dead LSP clients and restarts on `get_or_start()`
+   - LSP server stderr is streamed to tracing for startup diagnostics
    
 - [ ] 5.9 Verify: `LSP_TESTS=1 KITTY_TESTS=1 cargo test -p xeno-term --test lsp_navigation`
 
@@ -652,7 +656,7 @@ All LSP integration tests go in `crates/term/tests/`:
 **Files**:
 - `crates/term/tests/lsp_code_actions.rs` (new)
 
-- [ ] 6.1 Test: `code_actions_quickfix`
+- [x] 6.1 Test: `code_actions_quickfix`
   ```rust
   /// Code action quickfix removes unused import.
   #[serial_test::serial]
@@ -691,13 +695,14 @@ All LSP integration tests go in `crates/term/tests/`:
   }
   ```
 
-- [ ] 6.2 Test: `code_actions_lightbulb`
+- [x] 6.2 Test: `code_actions_lightbulb`
   - Verify lightbulb appears in gutter on lines with actions
 
-- [ ] 6.3 **GAP CHECK**: If code actions don't work:
+- [x] 6.3 **GAP CHECK**: If code actions don't work:
   - Is `show_code_actions()` requesting from LSP?
   - Is `CodeActionsPopup` rendering?
   - Is workspace edit application working?
+  - **FIX APPLIED**: Code actions acceptance now applies workspace edits/commands on Enter
 
 - [ ] 6.4 Verify: `LSP_TESTS=1 KITTY_TESTS=1 cargo test -p xeno-term --test lsp_code_actions`
 

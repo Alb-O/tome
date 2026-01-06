@@ -261,7 +261,12 @@ impl LspManager {
 	/// Get all diagnostics across all documents.
 	///
 	/// Returns a vector of (URI, diagnostics) pairs for all documents that have diagnostics.
-	pub fn all_diagnostics(&self) -> Vec<(xeno_lsp::lsp_types::Url, Vec<xeno_lsp::lsp_types::Diagnostic>)> {
+	pub fn all_diagnostics(
+		&self,
+	) -> Vec<(
+		xeno_lsp::lsp_types::Url,
+		Vec<xeno_lsp::lsp_types::Diagnostic>,
+	)> {
 		self.sync.all_diagnostics()
 	}
 
@@ -449,9 +454,8 @@ impl LspManager {
 				buffer.doc().content.len_chars()
 			};
 
-			let start =
-				xeno_lsp::char_to_lsp_position(&buffer.doc().content, line_start, encoding)
-					.ok_or_else(|| xeno_lsp::Error::Protocol("Invalid start position".into()))?;
+			let start = xeno_lsp::char_to_lsp_position(&buffer.doc().content, line_start, encoding)
+				.ok_or_else(|| xeno_lsp::Error::Protocol("Invalid start position".into()))?;
 			let end = xeno_lsp::char_to_lsp_position(&buffer.doc().content, line_end, encoding)
 				.ok_or_else(|| xeno_lsp::Error::Protocol("Invalid end position".into()))?;
 			xeno_lsp::lsp_types::Range { start, end }

@@ -4,7 +4,7 @@
 
 use xeno_base::Transaction;
 #[cfg(feature = "lsp")]
-use xeno_base::{range::CharIdx, Selection};
+use xeno_base::{Selection, range::CharIdx};
 use xeno_registry_notifications::keys;
 
 use super::Editor;
@@ -363,5 +363,21 @@ impl Editor {
 
 		// Navigate to the location
 		crate::lsp_ui::navigate_to_location(self, &location).await
+	}
+
+	/// Attempts to accept a code action from the code actions popup.
+	///
+	/// If a code actions popup is active and Enter is pressed, this method:
+	/// 1. Gets the selected action from the popup
+	/// 2. Applies the action to the editor
+	///
+	/// Returns `true` if an action was accepted and applied, `false` otherwise.
+	#[cfg(feature = "lsp")]
+	pub async fn try_accept_code_actions(&mut self, key: &termina::event::KeyEvent) -> bool {
+		let Some(result) = self.ui.try_accept_code_actions(key) else {
+			return false;
+		};
+
+		crate::lsp_ui::apply_code_action(self, result).await
 	}
 }

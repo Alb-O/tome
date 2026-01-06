@@ -450,7 +450,10 @@ impl Editor {
 		let floating_diagnostics: std::collections::HashMap<BufferId, PreparedDiagnostics> =
 			floating_windows
 				.iter()
-				.filter_map(|(_, w)| self.prepare_buffer_diagnostics(w.buffer).map(|d| (w.buffer, d)))
+				.filter_map(|(_, w)| {
+					self.prepare_buffer_diagnostics(w.buffer)
+						.map(|d| (w.buffer, d))
+				})
 				.collect();
 
 		for (window_id, window) in floating_windows {

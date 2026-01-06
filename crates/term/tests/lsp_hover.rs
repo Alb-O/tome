@@ -202,9 +202,8 @@ fn hover_shows_type_info() {
 
 			// Verify hover shows type information
 			// rust-analyzer should show: `let result: i32`
-			let has_type_info = clean.contains("i32")
-				|| clean.contains("result:")
-				|| clean.contains("let result");
+			let has_type_info =
+				clean.contains("i32") || clean.contains("result:") || clean.contains("let result");
 
 			if !has_type_info {
 				eprintln!(

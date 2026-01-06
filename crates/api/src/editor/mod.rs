@@ -26,9 +26,6 @@ mod command_queue;
 /// LSP completion state machine.
 #[cfg(feature = "lsp")]
 pub mod completion;
-/// LSP signature help state machine.
-#[cfg(feature = "lsp")]
-pub mod signature;
 /// Text editing operations.
 mod editing;
 /// Extension container and lifecycle.
@@ -41,6 +38,9 @@ mod focus;
 mod history;
 /// Async hook execution runtime.
 mod hook_runtime;
+/// Inlay hints management (LSP feature).
+#[cfg(feature = "lsp")]
+mod inlay_hints;
 /// Input handling.
 mod input;
 /// Split layout management.
@@ -51,17 +51,17 @@ mod lifecycle;
 mod messaging;
 /// Cursor navigation utilities.
 mod navigation;
-/// Inlay hints management (LSP feature).
-#[cfg(feature = "lsp")]
-mod inlay_hints;
+/// Option resolution.
+mod options;
 /// Command palette operations.
 mod palette;
 /// Search state and operations.
 mod search;
 /// Separator hit detection.
 mod separator;
-/// Option resolution.
-mod options;
+/// LSP signature help state machine.
+#[cfg(feature = "lsp")]
+pub mod signature;
 /// Split view operations.
 mod splits;
 /// Theme management.
@@ -249,10 +249,6 @@ impl Editor {
 			editor.buffer().set_readonly(true);
 		}
 
-		eprintln!(
-			"DEBUG Editor::new: returning editor, hook_runtime.pending_count={}",
-			editor.hook_runtime.pending_count()
-		);
 		Ok(editor)
 	}
 
@@ -313,11 +309,6 @@ impl Editor {
 				Some(&extensions),
 			),
 			&mut hook_runtime,
-		);
-
-		eprintln!(
-			"DEBUG from_content: after BufferOpen hook, pending_count={}",
-			hook_runtime.pending_count()
 		);
 
 		Self {
