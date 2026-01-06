@@ -177,27 +177,34 @@ fn clamp_rect(rect: Rect, bounds: Rect) -> Option<Rect> {
 	})
 }
 
+/// Type alias for Arc<Registry> stored in ExtensionMap by the LSP extension.
 #[cfg(feature = "lsp")]
-type LspManager = std::sync::Arc<crate::lsp::LspManager>;
+type LspRegistry = std::sync::Arc<xeno_lsp::Registry>;
 
 impl Editor {
 	/// Prepares diagnostics for a buffer by fetching from LSP.
 	#[cfg(feature = "lsp")]
 	fn prepare_buffer_diagnostics(&self, buffer_id: BufferId) -> Option<PreparedDiagnostics> {
 		let buffer = self.buffers.get_buffer(buffer_id)?;
-		// Check path exists (get_diagnostics requires it)
-		let _ = buffer.path()?;
+		let path = buffer.path()?;
+		let language = buffer.file_type()?;
 
-		// Get LspManager from extension map
-		let lsp_manager = self.extensions.get::<LspManager>()?;
-		let diagnostics = lsp_manager.get_diagnostics(buffer);
+		// Get Registry from extension map (inserted by LSP extension)
+		let registry = self.extensions.get::<LspRegistry>()?;
+
+		// Get the client for this language and path
+		let client = registry.get(&language, &path)?;
+
+		// Get diagnostics from the client
+		let uri = xeno_lsp::lsp_types::Url::from_file_path(&path).ok()?;
+		let diagnostics = client.diagnostics(&uri);
 
 		if diagnostics.is_empty() {
 			return None;
 		}
 
-		// Determine encoding - default to UTF-16 for LSP
-		let encoding = xeno_lsp::OffsetEncoding::Utf16;
+		// Determine encoding from client, default to UTF-16
+		let encoding = client.offset_encoding();
 
 		let prepared = prepare_diagnostics(&buffer.doc().content, &diagnostics, encoding);
 		Some(prepared)

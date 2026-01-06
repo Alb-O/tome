@@ -3,6 +3,9 @@
 //! Manages language server lifecycle and document synchronization via hooks for
 //! buffer events (open, change, close). [`LspManager`] wraps the LSP [`Registry`]
 //! and is stored in [`ExtensionMap`] as `Arc<LspManager>`.
+//!
+//! The `Arc<Registry>` is also stored separately in the ExtensionMap for direct
+//! access by rendering code that needs diagnostics.
 
 mod hooks;
 
@@ -19,8 +22,11 @@ use xeno_lsp::{LanguageServerConfig, Registry};
 ///
 /// Wraps the LSP [`Registry`] and provides high-level methods for document
 /// synchronization. This is stored in [`ExtensionMap`] as `Arc<LspManager>`.
+///
+/// The underlying `Arc<Registry>` is also stored in the ExtensionMap for direct
+/// access by rendering code.
 pub struct LspManager {
-	registry: Registry,
+	registry: Arc<Registry>,
 }
 
 impl Default for LspManager {
@@ -33,7 +39,7 @@ impl LspManager {
 	/// Create a new LSP manager with an empty registry.
 	pub fn new() -> Self {
 		Self {
-			registry: Registry::new(),
+			registry: Arc::new(Registry::new()),
 		}
 	}
 
@@ -45,6 +51,11 @@ impl LspManager {
 	/// Get the underlying registry for direct access.
 	pub fn registry(&self) -> &Registry {
 		&self.registry
+	}
+
+	/// Get a clone of the Arc<Registry> for sharing.
+	pub fn registry_arc(&self) -> Arc<Registry> {
+		Arc::clone(&self.registry)
 	}
 
 	/// Notify language servers that a document was opened.
@@ -207,6 +218,9 @@ fn init_lsp(map: &mut ExtensionMap) {
 		},
 	);
 
+	// Insert the registry Arc for direct access by rendering code
+	map.insert(manager.registry_arc());
+	// Insert the manager for hook-based document synchronization
 	map.insert(manager);
 }
 

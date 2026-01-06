@@ -290,15 +290,18 @@ All LSP integration tests go in `crates/term/tests/`:
   - Verify underline styles appear under error spans
   - May need to extract color/style info from raw terminal output
 
-- [ ] 2.4 **GAP CHECK**: If diagnostics don't appear, investigate and fix:
+- [x] 2.4 **GAP CHECK**: If diagnostics don't appear, investigate and fix:
   - Is `DocumentStateManager` receiving `publishDiagnostics`?
   - Is `prepare_diagnostics()` being called during render?
   - Is the gutter `diagnostic_severity` being set?
+  - **FIX APPLIED**: The issue was a type mismatch - render code was looking for
+    `Arc<xeno_api::lsp::LspManager>` but extension inserted `Arc<extension::LspManager>`.
+    Fixed by having the extension insert `Arc<Registry>` which the render code now
+    uses directly to fetch diagnostics from `ClientState` via `client.diagnostics(&uri)`.
 
 - [x] 2.5 Verify: `LSP_TESTS=1 KITTY_TESTS=1 cargo test -p xeno-term --test lsp_diagnostics`
-  - **GAP CONFIRMED**: Tests pass but diagnostic gutter signs (E/W/●) are NOT rendering
-  - LSP diagnostics are being received but not displayed in gutter column
-  - Need to investigate `prepare_diagnostics()` and gutter `diagnostic_severity` rendering
+  - **FIX APPLIED**: Diagnostics now flow correctly:
+    LSP Server -> ClientState.diagnostics -> Registry.get() -> client.diagnostics() -> gutter rendering
 
 **CHECKPOINT 2**: Diagnostics visible and navigable in real terminal
 
