@@ -2,3 +2,6 @@
 name = "rust-basic"
 version = "0.1.0"
 edition = "2021"
+
+# Make this a standalone project, not part of the xeno workspace
+[workspace]

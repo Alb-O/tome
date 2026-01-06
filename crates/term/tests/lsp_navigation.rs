@@ -3,12 +3,10 @@
 //! Tests go-to-definition, find-references, and navigation features.
 //! Requires: LSP_TESTS=1 KITTY_TESTS=1 DISPLAY=:0
 
-mod helpers;
 mod lsp_helpers;
 
 use std::time::Duration;
 
-use helpers::type_chars;
 use kitty_test_harness::{
 	kitty_send_keys, pause_briefly, run_with_timeout, wait_for_screen_text_clean,
 	with_kitty_capture,
@@ -42,48 +40,45 @@ fn goto_definition_jumps() {
 			wait_for_lsp_ready(kitty, LSP_INIT_TIMEOUT);
 			std::thread::sleep(Duration::from_secs(3));
 
-			// STEP 1: Initial state
+			// STEP 1: Initial state - file starts at line 1
 			debug_screen(kitty, "INITIAL STATE");
 
-			// STEP 2: Press / to enter search mode
-			kitty_send_keys!(kitty, KeyCode::Char('/'));
+			// STEP 2: Navigate to line 17 where helper_function(5) is called
+			// File structure:
+			//   Line 17: helper_function(5)
+			// Go to top first, then down 16 lines
+			kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('g'));
 			pause_briefly();
-			debug_screen(kitty, "AFTER / (should show search prompt)");
-
-			// STEP 3: Type search query
-			type_chars(kitty, "helper_function.5"); // . is regex wildcard for (
+			// Navigate down 16 lines to line 17
+			for _ in 0..16 {
+				kitty_send_keys!(kitty, KeyCode::Char('j'));
+			}
 			pause_briefly();
-			debug_screen(kitty, "AFTER TYPING QUERY (should show in prompt)");
+			debug_screen(kitty, "AFTER NAVIGATING TO LINE 17");
 
-			// STEP 4: Press Enter to execute search
-			kitty_send_keys!(kitty, KeyCode::Enter);
+			// STEP 3: Move to the start of the line to position on helper_function
+			kitty_send_keys!(kitty, KeyCode::Char('0'));
 			pause_briefly();
-			debug_screen(kitty, "AFTER ENTER (cursor should be on match)");
-
-			// STEP 5: Press Escape to exit search mode
-			kitty_send_keys!(kitty, KeyCode::Escape);
+			// Move forward to skip indentation and get to helper_function
+			kitty_send_keys!(kitty, KeyCode::Char('w'));
 			pause_briefly();
-			debug_screen(kitty, "AFTER ESCAPE (should be in NORMAL mode)");
+			debug_screen(kitty, "CURSOR ON helper_function");
 
-			// STEP 6: Move to start of identifier with b
-			kitty_send_keys!(kitty, KeyCode::Char('b'));
-			pause_briefly();
-			debug_screen(kitty, "AFTER b (cursor on helper_function)");
-
-			// STEP 7: Press gd to go to definition
+			// STEP 4: Press gd to go to definition
 			kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('d'));
 			pause_briefly();
 			debug_screen(kitty, "IMMEDIATELY AFTER gd");
 
-			// STEP 8: Wait for async LSP response
+			// STEP 5: Wait for async LSP response
 			std::thread::sleep(Duration::from_secs(3));
 			debug_screen(kitty, "AFTER 3s WAIT (should have jumped to line 9)");
 
-			// Final check
+			// Final check - should now be on line 9 where helper_function is defined
 			let (_, final_screen) =
 				wait_for_screen_text_clean(kitty, Duration::from_secs(2), |_, _| true);
 
 			// Verify we jumped to the definition (line 9)
+			// Status bar shows "9:" or ":9" for line number
 			let jumped_to_definition = final_screen.contains("lib.rs")
 				&& (final_screen.contains(" 9:") || final_screen.contains(":9 "));
 
@@ -116,18 +111,26 @@ fn find_references_shows_list() {
 			// Give rust-analyzer more time to index
 			std::thread::sleep(Duration::from_secs(3));
 
-			// Find the shared_function definition
-			kitty_send_keys!(kitty, KeyCode::Char('/'));
-			pause_briefly(); // Wait for search mode to activate
-			type_chars(kitty, "shared_function");
+			// Navigate to line 4 where shared_function is defined
+			// Line 4: pub fn shared_function() -> i32 {
+			kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('g'));
 			pause_briefly();
-			kitty_send_keys!(kitty, KeyCode::Enter);
-			pause_briefly();
-			kitty_send_keys!(kitty, KeyCode::Escape);
-			pause_briefly();
+			for _ in 0..3 {
+				kitty_send_keys!(kitty, KeyCode::Char('j'));
+			}
 			pause_briefly();
 
-			// Find references with gr (cursor is already on function name)
+			// Move to shared_function (skip "pub fn ")
+			kitty_send_keys!(kitty, KeyCode::Char('0'));
+			pause_briefly();
+			kitty_send_keys!(kitty, KeyCode::Char('w')); // pub
+			kitty_send_keys!(kitty, KeyCode::Char('w')); // fn
+			kitty_send_keys!(kitty, KeyCode::Char('w')); // shared_function
+			pause_briefly();
+
+			debug_screen(kitty, "CURSOR ON shared_function");
+
+			// Find references with gr
 			kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('r'));
 			pause_briefly();
 			pause_briefly();
@@ -189,18 +192,24 @@ fn references_panel_navigation() {
 			// Give rust-analyzer more time to index
 			std::thread::sleep(Duration::from_secs(3));
 
-			// Find the shared_function definition
-			kitty_send_keys!(kitty, KeyCode::Char('/'));
-			pause_briefly(); // Wait for search mode to activate
-			type_chars(kitty, "shared_function");
+			// Navigate to line 4 where shared_function is defined
+			// Line 4: pub fn shared_function() -> i32 {
+			kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('g'));
 			pause_briefly();
-			kitty_send_keys!(kitty, KeyCode::Enter);
-			pause_briefly();
-			kitty_send_keys!(kitty, KeyCode::Escape);
-			pause_briefly();
+			for _ in 0..3 {
+				kitty_send_keys!(kitty, KeyCode::Char('j'));
+			}
 			pause_briefly();
 
-			// Find references with gr (cursor is already on function name)
+			// Move to shared_function (skip "pub fn ")
+			kitty_send_keys!(kitty, KeyCode::Char('0'));
+			pause_briefly();
+			kitty_send_keys!(kitty, KeyCode::Char('w')); // pub
+			kitty_send_keys!(kitty, KeyCode::Char('w')); // fn
+			kitty_send_keys!(kitty, KeyCode::Char('w')); // shared_function
+			pause_briefly();
+
+			// Find references with gr
 			kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('r'));
 			pause_briefly();
 			pause_briefly();
@@ -269,30 +278,38 @@ fn goto_definition_from_import() {
 			// Give rust-analyzer more time to index
 			std::thread::sleep(Duration::from_secs(3));
 
+			debug_screen(kitty, "INITIAL STATE (other.rs)");
+
 			// Go to line 1 where the import is (use crate::shared_function;)
 			kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('g'));
 			pause_briefly();
 			pause_briefly();
 
 			// Move to shared_function in the import statement
-			// Line is: use crate::shared_function;
+			// Line 1 is: use crate::shared_function;
 			// Need to move past "use crate::" to get to shared_function
+			kitty_send_keys!(kitty, KeyCode::Char('0')); // go to start of line
+			pause_briefly();
 			kitty_send_keys!(kitty, KeyCode::Char('w')); // move to crate
 			pause_briefly();
-			kitty_send_keys!(kitty, KeyCode::Char('w')); // move to ::
+			kitty_send_keys!(kitty, KeyCode::Char('w')); // move past ::
 			pause_briefly();
 			kitty_send_keys!(kitty, KeyCode::Char('w')); // move to shared_function
 			pause_briefly();
 
+			debug_screen(kitty, "CURSOR ON shared_function IN IMPORT");
+
 			// Go to definition
 			kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('d'));
 			pause_briefly();
-			pause_briefly();
-			pause_briefly();
+
+			// Wait for async LSP response
+			std::thread::sleep(Duration::from_secs(3));
+			debug_screen(kitty, "AFTER gd (should be in lib.rs)");
 
 			// Should jump to lib.rs definition
 			let (_raw, clean) =
-				wait_for_screen_text_clean(kitty, Duration::from_secs(5), |_raw, clean| {
+				wait_for_screen_text_clean(kitty, Duration::from_secs(2), |_raw, clean| {
 					// After gd from import, should navigate to lib.rs
 					clean.contains("lib.rs")
 						|| clean.contains("pub fn shared_function")
