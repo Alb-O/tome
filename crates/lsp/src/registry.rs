@@ -195,6 +195,16 @@ impl Registry {
 		self.servers.read().get(&key).map(|s| s.handle.clone())
 	}
 
+	/// Get an active client for a language and file path, if one exists.
+	///
+	/// This method resolves the project root from the file path using
+	/// the configured root markers before looking up the server.
+	pub fn get_for_file(&self, language: &str, file_path: &Path) -> Option<ClientHandle> {
+		let config = self.get_config(language)?;
+		let root_path = find_root_path(file_path, &config.root_markers);
+		self.get(language, &root_path)
+	}
+
 	/// Get all active clients for a language.
 	pub fn get_all(&self, language: &str) -> Vec<ClientHandle> {
 		self.servers

@@ -269,7 +269,7 @@ impl LspManager {
 	pub fn get_client(&self, buffer: &Buffer) -> Option<ClientHandle> {
 		let path = buffer.path()?;
 		let language = buffer.file_type()?;
-		self.sync.registry().get(&language, &path)
+		self.sync.registry().get_for_file(&language, &path)
 	}
 
 	/// Request hover information at the cursor position.
@@ -527,7 +527,7 @@ impl LspManager {
 	fn get_encoding_for_path(&self, path: &Path, language: &str) -> OffsetEncoding {
 		self.sync
 			.registry()
-			.get(language, path)
+			.get_for_file(language, path)
 			.map(|c| c.offset_encoding())
 			.unwrap_or_default()
 	}

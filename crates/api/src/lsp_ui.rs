@@ -33,8 +33,7 @@ pub fn get_client_for_buffer(
 ) -> Option<ClientHandle> {
     let path = buffer.path()?;
     let language = buffer.file_type()?;
-    let root_path = path.parent()?;
-    lsp.registry().get(&language, root_path)
+    lsp.registry().get_for_file(&language, &path)
 }
 
 /// Converts a buffer cursor position to an LSP position.
