@@ -295,7 +295,10 @@ All LSP integration tests go in `crates/term/tests/`:
   - Is `prepare_diagnostics()` being called during render?
   - Is the gutter `diagnostic_severity` being set?
 
-- [ ] 2.5 Verify: `LSP_TESTS=1 KITTY_TESTS=1 cargo test -p xeno-term --test lsp_diagnostics`
+- [x] 2.5 Verify: `LSP_TESTS=1 KITTY_TESTS=1 cargo test -p xeno-term --test lsp_diagnostics`
+  - **GAP CONFIRMED**: Tests pass but diagnostic gutter signs (E/W/●) are NOT rendering
+  - LSP diagnostics are being received but not displayed in gutter column
+  - Need to investigate `prepare_diagnostics()` and gutter `diagnostic_severity` rendering
 
 **CHECKPOINT 2**: Diagnostics visible and navigable in real terminal
 
