@@ -515,7 +515,7 @@ All LSP integration tests go in `crates/term/tests/`:
 - `crates/term/tests/lsp_navigation.rs` (new)
 - `crates/term/tests/fixtures/lsp/rust-navigation/` (new)
 
-- [ ] 5.1 Create `rust-navigation` fixture
+- [x] 5.1 Create `rust-navigation` fixture
   ```rust
   // fixtures/lsp/rust-navigation/src/lib.rs
   pub fn shared_function() -> i32 {
@@ -534,7 +534,7 @@ All LSP integration tests go in `crates/term/tests/`:
   }
   ```
 
-- [ ] 5.2 Test: `goto_definition_jumps`
+- [x] 5.2 Test: `goto_definition_jumps`
   ```rust
   /// gd on function call jumps to definition.
   #[serial_test::serial]
@@ -569,7 +569,7 @@ All LSP integration tests go in `crates/term/tests/`:
   }
   ```
 
-- [ ] 5.3 Test: `find_references_shows_list`
+- [x] 5.3 Test: `find_references_shows_list`
   ```rust
   /// gr shows references panel with all usages.
   #[serial_test::serial]
@@ -581,7 +581,7 @@ All LSP integration tests go in `crates/term/tests/`:
   }
   ```
 
-- [ ] 5.4 Test: `references_panel_navigation`
+- [x] 5.4 Test: `references_panel_navigation`
   ```rust
   /// Enter on reference in panel jumps to that location.
   ```
