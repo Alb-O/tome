@@ -14,7 +14,8 @@ use kitty_test_harness::{
 	with_kitty_capture,
 };
 use lsp_helpers::{
-	fixtures_dir, require_lsp_tests, wait_for_lsp_ready, workspace_dir, xeno_cmd_with_file,
+	debug_screen, fixtures_dir, require_lsp_tests, wait_for_lsp_ready, workspace_dir,
+	xeno_cmd_with_file,
 };
 use termwiz::input::KeyCode;
 
@@ -39,50 +40,56 @@ fn goto_definition_jumps() {
 
 		with_kitty_capture(&workspace_dir(), &cmd, |kitty| {
 			wait_for_lsp_ready(kitty, LSP_INIT_TIMEOUT);
-
-			// Give rust-analyzer more time to index the project
 			std::thread::sleep(Duration::from_secs(3));
 
-			// Use search to navigate to the helper_function(5) call in test_caller
-			// This is more reliable than :17 command
+			// STEP 1: Initial state
+			debug_screen(kitty, "INITIAL STATE");
+
+			// STEP 2: Press / to enter search mode
 			kitty_send_keys!(kitty, KeyCode::Char('/'));
 			pause_briefly();
-			type_chars(kitty, "helper_function(5)");
+			debug_screen(kitty, "AFTER / (should show search prompt)");
+
+			// STEP 3: Type search query
+			type_chars(kitty, "helper_function.5"); // . is regex wildcard for (
 			pause_briefly();
+			debug_screen(kitty, "AFTER TYPING QUERY (should show in prompt)");
+
+			// STEP 4: Press Enter to execute search
 			kitty_send_keys!(kitty, KeyCode::Enter);
 			pause_briefly();
+			debug_screen(kitty, "AFTER ENTER (cursor should be on match)");
+
+			// STEP 5: Press Escape to exit search mode
 			kitty_send_keys!(kitty, KeyCode::Escape);
 			pause_briefly();
+			debug_screen(kitty, "AFTER ESCAPE (should be in NORMAL mode)");
+
+			// STEP 6: Move to start of identifier with b
+			kitty_send_keys!(kitty, KeyCode::Char('b'));
 			pause_briefly();
+			debug_screen(kitty, "AFTER b (cursor on helper_function)");
 
-			// Cursor should now be on helper_function(5) call
-
-			// Go to definition with gd
+			// STEP 7: Press gd to go to definition
 			kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('d'));
-
-			// Give async command more time to complete
-			// The command needs to: send LSP request -> wait response -> navigate
-			std::thread::sleep(Duration::from_secs(2));
 			pause_briefly();
-			pause_briefly();
+			debug_screen(kitty, "IMMEDIATELY AFTER gd");
 
-			// Wait for cursor to move to definition (line 9)
-			// helper_function is defined at line 9: pub fn helper_function(x: i32) -> i32
-			let (_raw, clean) =
-				wait_for_screen_text_clean(kitty, Duration::from_secs(8), |_raw, clean| {
-					// After gd, cursor should be on the definition line
-					// Check status bar shows we're near line 9, or we see a "no definition" message
-					clean.contains(" 9:") || clean.contains(":9 ") || clean.contains("No definition")
-				});
+			// STEP 8: Wait for async LSP response
+			std::thread::sleep(Duration::from_secs(3));
+			debug_screen(kitty, "AFTER 3s WAIT (should have jumped to line 9)");
 
-			// Verify we jumped to the definition (should still be in lib.rs, at line 9)
-			// The status bar format is: NORMAL path line:col filetype position
-			let jumped_to_definition = clean.contains("lib.rs")
-				&& (clean.contains(" 9:") || clean.contains(":9 "));
+			// Final check
+			let (_, final_screen) =
+				wait_for_screen_text_clean(kitty, Duration::from_secs(2), |_, _| true);
+
+			// Verify we jumped to the definition (line 9)
+			let jumped_to_definition = final_screen.contains("lib.rs")
+				&& (final_screen.contains(" 9:") || final_screen.contains(":9 "));
 
 			assert!(
 				jumped_to_definition,
-				"Should jump to helper_function definition at line 9. Screen:\n{clean}"
+				"Should jump to helper_function definition at line 9. Final screen:\n{final_screen}"
 			);
 		});
 	});

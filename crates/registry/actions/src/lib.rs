@@ -103,4 +103,30 @@ mod tests {
 		assert!(find_action("document_start").is_some());
 		assert!(find_action("document_end").is_some());
 	}
+
+	#[test]
+	fn test_lsp_actions_registered() {
+		assert!(
+			find_action("goto_definition").is_some(),
+			"goto_definition should be registered"
+		);
+		assert!(find_action("show_hover").is_some(), "show_hover should be registered");
+		assert!(
+			find_action("find_references").is_some(),
+			"find_references should be registered"
+		);
+	}
+
+	#[test]
+	fn test_lsp_keybindings_registered() {
+		// Check that LSP keybindings are in the KEYBINDINGS slice
+		let gd_binding = KEYBINDINGS
+			.iter()
+			.find(|b| b.action == "goto_definition" && b.keys.contains("g") && b.keys.contains("d"));
+		assert!(gd_binding.is_some(), "g d keybinding for goto_definition should exist. Bindings: {:?}", 
+			KEYBINDINGS.iter().filter(|b| b.action.contains("goto") || b.keys.contains("g")).collect::<Vec<_>>());
+
+		let hover_binding = KEYBINDINGS.iter().find(|b| b.action == "show_hover");
+		assert!(hover_binding.is_some(), "K keybinding for show_hover should exist");
+	}
 }

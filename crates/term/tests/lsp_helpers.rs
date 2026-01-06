@@ -58,3 +58,19 @@ pub fn xeno_cmd_with_file(file: &str) -> String {
 pub fn xeno_cmd() -> String {
 	env!("CARGO_BIN_EXE_xeno").to_string()
 }
+
+/// Capture and print current screen state with a label for debugging.
+///
+/// Use this at every key moment in tests to understand what's happening:
+/// ```ignore
+/// debug_screen(kitty, "AFTER PRESSING /");
+/// debug_screen(kitty, "AFTER TYPING SEARCH QUERY");
+/// debug_screen(kitty, "AFTER gd");
+/// ```
+#[allow(dead_code, reason = "debugging helper for test development")]
+pub fn debug_screen(kitty: &KittyHarness, label: &str) {
+	let (_, clean) = wait_for_screen_text_clean(kitty, Duration::from_secs(1), |_, _| true);
+	eprintln!("=== {label} ===");
+	eprintln!("{clean}");
+	eprintln!("=== END {label} ===\n");
+}

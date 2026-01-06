@@ -33,7 +33,7 @@ action!(
 	{
 		description: "Go to definition",
 		short_desc: "Go to def",
-		bindings: r#"normal "g" "d""#,
+		bindings: r#"normal "g d""#,
 	},
 	|_ctx| ActionResult::Command {
 		name: "definition",
@@ -46,7 +46,7 @@ action!(
 	{
 		description: "Find references",
 		short_desc: "References",
-		bindings: r#"normal "g" "r""#,
+		bindings: r#"normal "g r""#,
 	},
 	|_ctx| ActionResult::Command {
 		name: "references",

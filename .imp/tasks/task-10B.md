@@ -586,15 +586,19 @@ All LSP integration tests go in `crates/term/tests/`:
   /// Enter on reference in panel jumps to that location.
   ```
 
-- [ ] 5.5 **GAP CHECK**: If navigation doesn't work:
+- [x] 5.5 **GAP CHECK**: If navigation doesn't work:
   - Is `goto_definition()` opening the target file?
   - Is `find_references()` populating the panel?
   - Is the references panel wired to the dock system?
-  - **GAP FOUND**: `gd` (goto_definition_jumps, goto_definition_from_import) tests timeout
-  - Tests `find_references_shows_list` and `references_panel_navigation` pass
+  - **BUG FOUND AND FIXED**: Keybinding syntax was wrong!
+    - Was: `bindings: r#"normal "g" "d""#` (parsed as TWO separate bindings for "g" and "d")
+    - Fixed: `bindings: r#"normal "g d""#` (parsed as ONE sequence "g d")
+  - **REMAINING ISSUE**: Test has timing problem - `/` search mode doesn't activate fast enough
+    - Characters typed after `/` get interpreted as normal mode commands
+    - Need longer pause or wait-for-mode-change after pressing `/`
 
 - [ ] 5.6 Verify: `LSP_TESTS=1 KITTY_TESTS=1 cargo test -p xeno-term --test lsp_navigation`
-  - PARTIAL: 2/4 tests pass (references work, goto_definition times out)
+  - BLOCKED: Tests need timing fixes for search mode activation
 
 **CHECKPOINT 5**: Navigation features work with real LSP
 
@@ -755,3 +759,77 @@ with_kitty_capture(&workspace_dir(), &xeno_cmd_with_file(&fixture_file.display()
 1. rust-analyzer caches aggressively
 2. Delete `target/` in fixtures between runs
 3. Touch files to invalidate cache
+
+---
+
+## CRITICAL: Screen Capture Debugging Pattern
+
+**Tests MUST capture and print screen state at every key moment.** Flying blind leads to wasted debugging time.
+
+### Required Pattern
+
+Every test should capture screen BEFORE and AFTER each significant action:
+
+```rust
+fn my_test() {
+    with_kitty_capture(&workspace_dir(), &cmd, |kitty| {
+        wait_for_lsp_ready(kitty, LSP_INIT_TIMEOUT);
+        
+        // STEP 1: Capture initial state
+        let (_, initial) = wait_for_screen_text_clean(kitty, Duration::from_secs(2), |_, _| true);
+        eprintln!("=== INITIAL STATE ===\n{initial}\n");
+        
+        // STEP 2: Press / to enter search
+        kitty_send_keys!(kitty, KeyCode::Char('/'));
+        pause_briefly();
+        let (_, after_slash) = wait_for_screen_text_clean(kitty, Duration::from_secs(1), |_, _| true);
+        eprintln!("=== AFTER / (should show search prompt) ===\n{after_slash}\n");
+        
+        // STEP 3: Type search query
+        type_chars(kitty, "my_function");
+        pause_briefly();
+        let (_, after_type) = wait_for_screen_text_clean(kitty, Duration::from_secs(1), |_, _| true);
+        eprintln!("=== AFTER TYPING (should show query in prompt) ===\n{after_type}\n");
+        
+        // STEP 4: Press Enter to execute search
+        kitty_send_keys!(kitty, KeyCode::Enter);
+        pause_briefly();
+        let (_, after_enter) = wait_for_screen_text_clean(kitty, Duration::from_secs(1), |_, _| true);
+        eprintln!("=== AFTER ENTER (cursor should move to match) ===\n{after_enter}\n");
+        
+        // STEP 5: Press gd
+        kitty_send_keys!(kitty, KeyCode::Char('g'), KeyCode::Char('d'));
+        std::thread::sleep(Duration::from_secs(3)); // async command needs time
+        let (_, after_gd) = wait_for_screen_text_clean(kitty, Duration::from_secs(2), |_, _| true);
+        eprintln!("=== AFTER gd (should jump to definition) ===\n{after_gd}\n");
+        
+        // Now assert based on what we observed
+        assert!(after_gd.contains("expected"), "Assertion with context:\n{after_gd}");
+    });
+}
+```
+
+### Why This Matters
+
+Without screen captures at each step, you cannot tell:
+- Whether search mode actually activated (is `/` showing a prompt?)
+- Whether characters were typed into search vs the buffer
+- Whether the cursor moved after search
+- Whether `gd` did anything at all
+- What error message (if any) appeared
+
+### Debug Helper Function
+
+Add this to `lsp_helpers.rs`:
+
+```rust
+/// Capture and print current screen state with a label.
+pub fn debug_screen(kitty: &KittyHarness, label: &str) {
+    let (_, clean) = wait_for_screen_text_clean(kitty, Duration::from_secs(1), |_, _| true);
+    eprintln!("=== {label} ===");
+    eprintln!("{clean}");
+    eprintln!("=== END {label} ===\n");
+}
+```
+
+Then use: `debug_screen(kitty, "AFTER PRESSING gd");`
