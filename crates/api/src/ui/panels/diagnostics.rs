@@ -11,7 +11,7 @@ use xeno_registry::themes::Theme;
 use xeno_tui::layout::{Position, Rect};
 use xeno_tui::style::{Color, Modifier, Style};
 use xeno_tui::text::{Line, Span};
-use xeno_tui::widgets::Widget;
+
 use xeno_tui::Frame;
 
 use crate::editor::Editor;
@@ -79,7 +79,7 @@ impl DiagnosticEntry {
             2 => theme.colors.diagnostic.warning,
             3 => theme.colors.diagnostic.info,
             4 => theme.colors.diagnostic.hint,
-            _ => theme.colors.ui.text,
+            _ => theme.colors.ui.fg,
         }
     }
 }
@@ -282,7 +282,7 @@ impl DiagnosticsPanel {
                 self.cycle_filter();
                 EventResult::consumed()
             }
-            KeyCode::Esc | KeyCode::Char('q') => {
+            KeyCode::Escape | KeyCode::Char('q') => {
                 // Close panel
                 EventResult::consumed().with_request(UiRequest::ClosePanel(Self::ID.to_string()))
             }
@@ -355,10 +355,6 @@ impl DiagnosticsPanel {
         } else {
             // We can't async open here, so just return
             // The user can open the file manually
-            editor.queue_message(format!(
-                "File not open: {}",
-                entry.path.display()
-            ));
             return;
         };
 
@@ -389,12 +385,12 @@ impl DiagnosticsPanel {
             Span::styled(
                 " Diagnostics ",
                 Style::default()
-                    .fg(theme.colors.ui.text)
+                    .fg(theme.colors.ui.fg)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 format!("[{}] ", self.filter.label()),
-                Style::default().fg(theme.colors.ui.text_muted),
+                Style::default().fg(theme.colors.status.dim_fg),
             ),
             Span::styled(
                 format!("{} ", error_count),
@@ -420,7 +416,7 @@ impl DiagnosticsPanel {
             frame.render_widget(
                 xeno_tui::widgets::Paragraph::new(Line::styled(
                     sep,
-                    Style::default().fg(theme.colors.ui.border),
+                    Style::default().fg(theme.colors.popup.border),
                 )),
                 Rect::new(area.x, area.y + 1, area.width, 1),
             );
@@ -464,21 +460,21 @@ impl DiagnosticsPanel {
         };
 
         let bg = if selected {
-            theme.colors.ui.selection
+            theme.colors.popup.selection
         } else {
-            theme.colors.ui.background
+            theme.colors.ui.bg
         };
 
         Line::from(vec![
             Span::styled(
                 format!("{:<20}", location),
-                Style::default().fg(theme.colors.ui.text_muted).bg(bg),
+                Style::default().fg(theme.colors.status.dim_fg).bg(bg),
             ),
             Span::styled(
                 format!(" {} ", sev_icon),
                 Style::default().fg(sev_color).bg(bg).add_modifier(Modifier::BOLD),
             ),
-            Span::styled(msg, Style::default().fg(theme.colors.ui.text).bg(bg)),
+            Span::styled(msg, Style::default().fg(theme.colors.ui.fg).bg(bg)),
         ])
     }
 }
@@ -527,9 +523,9 @@ impl Panel for DiagnosticsPanel {
 
         // Draw background
         let bg = if focused {
-            theme.colors.ui.background
+            theme.colors.ui.bg
         } else {
-            theme.colors.ui.background
+            theme.colors.ui.bg
         };
         let block = xeno_tui::widgets::Block::default().style(Style::default().bg(bg));
         frame.render_widget(block, area);
@@ -543,7 +539,7 @@ impl Panel for DiagnosticsPanel {
         if self.diagnostics.is_empty() {
             let msg = Line::styled(
                 " No diagnostics",
-                Style::default().fg(theme.colors.ui.text_muted),
+                Style::default().fg(theme.colors.status.dim_fg),
             );
             frame.render_widget(
                 xeno_tui::widgets::Paragraph::new(msg),

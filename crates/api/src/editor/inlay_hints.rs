@@ -5,7 +5,7 @@
 
 use crate::buffer::BufferId;
 use crate::editor::Editor;
-use crate::render::buffer::{PreparedInlayHints, prepare_inlay_hints};
+use crate::render::{PreparedInlayHints, prepare_inlay_hints};
 
 /// Inlay hints refresh state for a buffer.
 #[derive(Debug, Clone, Default)]
@@ -75,8 +75,7 @@ impl Editor {
 		let mut result = Vec::new();
 
 		// Get all visible buffer views
-		for view in self.windows.base_window().layout.views() {
-			let buffer_id = view.buffer;
+		for buffer_id in self.windows.base_window().layout.views() {
 
 			// Check if inlay hints are enabled for this buffer
 			if !self.inlay_hints_enabled(buffer_id) {

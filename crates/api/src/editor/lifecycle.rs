@@ -144,7 +144,7 @@ impl Editor {
 		self.ui.register_panel(Box::new(panel));
 		self.ui.set_open(panel_id, true);
 		self.ui.apply_requests(vec![crate::ui::panel::UiRequest::Focus(
-			crate::ui::focus::FocusTarget::panel(panel_id.to_string()),
+			crate::ui::FocusTarget::panel(panel_id.to_string()),
 		)]);
 		self.needs_redraw = true;
 	}

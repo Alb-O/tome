@@ -227,7 +227,7 @@ pub struct Editor {
 
 	/// Cached inlay hints per buffer.
 	#[cfg(feature = "lsp")]
-	pub inlay_hints_cache: std::collections::HashMap<BufferId, crate::render::buffer::PreparedInlayHints>,
+	pub inlay_hints_cache: std::collections::HashMap<BufferId, crate::render::PreparedInlayHints>,
 }
 
 impl xeno_core::EditorOps for Editor {}

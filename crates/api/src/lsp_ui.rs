@@ -541,7 +541,7 @@ async fn apply_text_edits_to_uri(
         .filter_map(|edit| {
             let start = xeno_lsp::lsp_position_to_char(&content, edit.range.start, encoding)?;
             let end = xeno_lsp::lsp_position_to_char(&content, edit.range.end, encoding)?;
-            Some(xeno_base::Change {
+            Some(xeno_base::transaction::Change {
                 start,
                 end,
                 replacement: Some(edit.new_text.clone()),

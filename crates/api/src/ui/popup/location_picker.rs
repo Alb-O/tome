@@ -11,7 +11,7 @@ use xeno_lsp::lsp_types::{GotoDefinitionResponse, Location, LocationLink, Url};
 use xeno_registry::themes::Theme;
 use xeno_tui::buffer::Buffer;
 use xeno_tui::layout::Rect;
-use xeno_tui::style::{Modifier, Style};
+use xeno_tui::style::{Modifier, Style, Stylize};
 use xeno_tui::symbols::border;
 use xeno_tui::text::{Line, Span};
 use xeno_tui::widgets::Widget;
@@ -426,7 +426,7 @@ impl LocationPickerPopup {
         // Build the line: icon + location label
         let icon_span = Span::styled(
             " ",
-            Style::default().fg(theme.colors.ui.accent).bg(bg),
+            Style::default().fg(theme.colors.status.accent_fg).bg(bg),
         );
         let label = entry.display_label();
         let label_span = Span::styled(&label, Style::default().fg(fg).bg(bg));
@@ -448,7 +448,7 @@ impl LocationPickerPopup {
                     spans.push(Span::styled(
                         format!(" {}", truncated),
                         Style::default()
-                            .fg(theme.colors.ui.text_muted)
+                            .fg(theme.colors.status.dim_fg)
                             .bg(bg)
                             .add_modifier(Modifier::DIM),
                     ));

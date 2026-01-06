@@ -3,18 +3,18 @@
 //! Provides a persistent list of all references with navigation support.
 
 use std::path::PathBuf;
-use std::sync::Arc;
+
 
 use termina::event::{KeyCode, KeyEvent, MouseButton, MouseEvent, MouseEventKind};
 use xeno_lsp::lsp_types::{Location, Url};
 use xeno_registry::themes::Theme;
 use xeno_tui::layout::{Position, Rect};
-use xeno_tui::style::{Color, Modifier, Style};
+use xeno_tui::style::{Modifier, Style};
 use xeno_tui::text::{Line, Span};
-use xeno_tui::widgets::Widget;
+
 use xeno_tui::Frame;
 
-use crate::buffer::BufferId;
+
 use crate::editor::Editor;
 use crate::ui::dock::DockSlot;
 use crate::ui::panel::{CursorRequest, EventResult, Panel, UiEvent, UiRequest};
@@ -198,7 +198,7 @@ impl ReferencesPanel {
                 }
                 EventResult::consumed()
             }
-            KeyCode::Esc | KeyCode::Char('q') => {
+            KeyCode::Escape | KeyCode::Char('q') => {
                 // Close panel
                 EventResult::consumed().with_request(UiRequest::ClosePanel(Self::ID.to_string()))
             }
@@ -270,7 +270,6 @@ impl ReferencesPanel {
         } else {
             // We can't async open here, so just return
             // The user can open the file manually
-            editor.queue_message(format!("File not open: {}", entry.path.display()));
             return;
         };
 
@@ -298,12 +297,12 @@ impl ReferencesPanel {
             Span::styled(
                 format!(" {} ", self.title),
                 Style::default()
-                    .fg(theme.colors.ui.text)
+                    .fg(theme.colors.ui.fg)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 format!("({} results)", self.references.len()),
-                Style::default().fg(theme.colors.ui.text_muted),
+                Style::default().fg(theme.colors.status.dim_fg),
             ),
         ]);
 
@@ -321,7 +320,7 @@ impl ReferencesPanel {
             frame.render_widget(
                 xeno_tui::widgets::Paragraph::new(Line::styled(
                     sep,
-                    Style::default().fg(theme.colors.ui.border),
+                    Style::default().fg(theme.colors.popup.border),
                 )),
                 Rect::new(area.x, area.y + 1, area.width, 1),
             );
@@ -361,17 +360,17 @@ impl ReferencesPanel {
             .unwrap_or_default();
 
         let bg = if selected {
-            theme.colors.ui.selection
+            theme.colors.popup.selection
         } else {
-            theme.colors.ui.background
+            theme.colors.ui.bg
         };
 
         Line::from(vec![
             Span::styled(
                 format!(" {:<20}", location),
-                Style::default().fg(theme.colors.ui.accent).bg(bg),
+                Style::default().fg(theme.colors.status.accent_fg).bg(bg),
             ),
-            Span::styled(context, Style::default().fg(theme.colors.ui.text_muted).bg(bg)),
+            Span::styled(context, Style::default().fg(theme.colors.status.dim_fg).bg(bg)),
         ])
     }
 }
@@ -413,7 +412,7 @@ impl Panel for ReferencesPanel {
         }
 
         // Draw background
-        let bg = theme.colors.ui.background;
+        let bg = theme.colors.ui.bg;
         let block = xeno_tui::widgets::Block::default().style(Style::default().bg(bg));
         frame.render_widget(block, area);
 
@@ -426,7 +425,7 @@ impl Panel for ReferencesPanel {
         if self.references.is_empty() {
             let msg = Line::styled(
                 " No references found",
-                Style::default().fg(theme.colors.ui.text_muted),
+                Style::default().fg(theme.colors.status.dim_fg),
             );
             frame.render_widget(
                 xeno_tui::widgets::Paragraph::new(msg),
