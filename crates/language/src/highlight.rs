@@ -132,7 +132,7 @@ impl<'a> Iterator for Highlighter<'a> {
 			// Emit a span for the region from current_start to event_start
 			// using the current (previous) highlight, if any
 			let span = match event {
-				HighlightEvent::Push | HighlightEvent::Refresh => {
+				HighlightEvent::Push => {
 					let span = self.current_highlight.and_then(|h| {
 						if self.current_start < event_start {
 							Some(HighlightSpan {
@@ -145,6 +145,25 @@ impl<'a> Iterator for Highlighter<'a> {
 						}
 					});
 					// Update state: new highlight applies from event_start onwards
+					self.current_start = event_start;
+					if new_highlight.is_some() {
+						self.current_highlight = new_highlight;
+					}
+					span
+				}
+				HighlightEvent::Refresh => {
+					let span = self.current_highlight.and_then(|h| {
+						if self.current_start < event_start {
+							Some(HighlightSpan {
+								start: self.current_start,
+								end: event_start,
+								highlight: h,
+							})
+						} else {
+							None
+						}
+					});
+					// Update state: refresh replaces the active highlight stack.
 					self.current_start = event_start;
 					self.current_highlight = new_highlight;
 					span

@@ -351,6 +351,273 @@ fn test_incremental_syntax_update() {
 	println!("Incremental syntax updates work correctly!");
 }
 
+/// Tests that rustdoc injection highlighting works correctly.
+///
+/// This tests the injection chain:
+/// 1. Rust parses doc comments (`///`)
+/// 2. rust/injections.scm injects `markdown-rustdoc` for doc comment content
+/// 3. markdown-rustdoc inherits from markdown, injects `rust` for code fences
+/// 4. markdown/injections.scm injects `markdown.inline` for inline content
+/// 5. markdown.inline highlights links with `@markup.link.label`
+#[test]
+fn test_rustdoc_injection_chain() {
+	// Use the embedded loader which has all language configurations
+	let loader = LanguageLoader::from_embedded();
+
+	let rust_lang = loader.language_for_name("rust").unwrap();
+
+	// Test source with doc comments containing links and code
+	let source = Rope::from_str(
+		r#"/// A simple function.
+///
+/// # Examples
+///
+/// ```
+/// // Create a layout with fill proportional sizes for each element
+/// let x = 42;
+/// ```
+///
+/// See [`main`] for more info.
+fn main() {}
+"#,
+	);
+
+	let syntax = match Syntax::new(source.slice(..), rust_lang, &loader) {
+		Ok(s) => s,
+		Err(e) => {
+			println!(
+				"Skipping rustdoc injection test - no grammar available: {:?}",
+				e
+			);
+			return;
+		}
+	};
+
+	println!("=== Rustdoc Injection Chain Test ===");
+	println!("Source:\n{}", source);
+
+	// Check what layers exist
+	println!("\n--- Layers ---");
+	let mut layer_count = 0;
+	for layer in syntax.layers_for_byte_range(0, source.len_bytes() as u32) {
+		let layer_data = syntax.layer(layer);
+		let lang = loader.get(layer_data.language);
+		println!(
+			"Layer {}: language={:?} (id={})",
+			layer_count,
+			lang.map(|l| &l.name),
+			layer_data.language.idx()
+		);
+		layer_count += 1;
+	}
+
+	// Get highlights
+	let highlighter = syntax.highlighter(source.slice(..), &loader, ..);
+	let spans: Vec<_> = highlighter.collect();
+
+	println!("\n--- Highlight Spans ---");
+	for span in &spans {
+		let text = source.byte_slice(span.start as usize..span.end as usize);
+		println!(
+			"  bytes [{:3}-{:3}] highlight={:2} text={:?}",
+			span.start,
+			span.end,
+			span.highlight.idx(),
+			text.to_string().chars().take(40).collect::<String>()
+		);
+	}
+
+	// Check if we have markdown.inline language loaded
+	println!("\n--- Language Checks ---");
+	println!(
+		"markdown-rustdoc: {:?}",
+		loader.language_for_name("markdown-rustdoc").is_some()
+	);
+	println!(
+		"markdown.inline: {:?}",
+		loader.language_for_name("markdown.inline").is_some()
+	);
+	println!(
+		"markdown: {:?}",
+		loader.language_for_name("markdown").is_some()
+	);
+
+	// Look for the link text [`main`]
+	// It should be somewhere around byte position 100-110
+	let link_start = source.to_string().find("[`main`]").unwrap();
+	let link_end = link_start + "[`main`]".len();
+	println!(
+		"\nLink [`main`] is at bytes {}-{}: {:?}",
+		link_start,
+		link_end,
+		source.byte_slice(link_start..link_end).to_string()
+	);
+
+	// Check what layers cover the link
+	println!("\n--- Layers covering the link ---");
+	for layer in syntax.layers_for_byte_range(link_start as u32, link_end as u32) {
+		let layer_data = syntax.layer(layer);
+		let lang = loader.get(layer_data.language);
+		println!(
+			"  Layer: language={:?} (id={})",
+			lang.map(|l| &l.name),
+			layer_data.language.idx()
+		);
+	}
+
+	// Check highlights at the link position
+	let link_spans: Vec<_> = spans
+		.iter()
+		.filter(|s| s.start <= link_start as u32 && s.end > link_start as u32)
+		.collect();
+	println!("\n--- Spans covering link start ---");
+	for span in link_spans {
+		let text = source.byte_slice(span.start as usize..span.end as usize);
+		println!(
+			"  bytes [{:3}-{:3}] highlight={:2} text={:?}",
+			span.start,
+			span.end,
+			span.highlight.idx(),
+			text.to_string()
+		);
+	}
+
+	// Check if markdown.inline has syntax_config
+	println!("\n--- Config Checks ---");
+	if let Some(md_inline_lang) = loader.language_for_name("markdown.inline") {
+		let md_inline_data = loader.get(md_inline_lang).unwrap();
+		let has_config = md_inline_data.syntax_config().is_some();
+		println!(
+			"markdown.inline (lang_id={}) has syntax_config: {}",
+			md_inline_lang.idx(),
+			has_config
+		);
+		if has_config {
+			println!("  grammar_name: {}", md_inline_data.grammar_name);
+		}
+	}
+
+	if let Some(md_rustdoc_lang) = loader.language_for_name("markdown-rustdoc") {
+		let md_rustdoc_data = loader.get(md_rustdoc_lang).unwrap();
+		let has_config = md_rustdoc_data.syntax_config().is_some();
+		println!(
+			"markdown-rustdoc (lang_id={}) has syntax_config: {}",
+			md_rustdoc_lang.idx(),
+			has_config
+		);
+		if has_config {
+			println!("  grammar_name: {}", md_rustdoc_data.grammar_name);
+		}
+	}
+
+	// Print the rust tree
+	println!("\n--- Rust tree around doc comments ---");
+	let rust_tree = syntax.tree();
+	fn print_rust_tree(node: tree_house::tree_sitter::Node, depth: usize, max_depth: usize) {
+		if depth > max_depth {
+			return;
+		}
+		let indent = "  ".repeat(depth);
+		if node.kind().contains("comment")
+			|| node.kind() == "source_file"
+			|| node.kind() == "function_item"
+		{
+			println!(
+				"{}{} [{}-{}]",
+				indent,
+				node.kind(),
+				node.start_byte(),
+				node.end_byte()
+			);
+			for i in 0..node.child_count() {
+				if let Some(child) = node.child(i) {
+					print_rust_tree(child, depth + 1, max_depth);
+				}
+			}
+		} else {
+			// Just recurse without printing
+			for i in 0..node.child_count() {
+				if let Some(child) = node.child(i) {
+					print_rust_tree(child, depth, max_depth);
+				}
+			}
+		}
+	}
+	print_rust_tree(rust_tree.root_node(), 0, 5);
+
+	// Check ALL layers in the document
+	println!("\n--- All layers in document ---");
+	for layer in syntax.layers_for_byte_range(0, source.len_bytes() as u32) {
+		let layer_data = syntax.layer(layer);
+		let lang_id = layer_data.language;
+		let lang_name = loader
+			.get(lang_id)
+			.map(|d| d.name.as_str())
+			.unwrap_or("unknown");
+		if let Some(tree) = layer_data.tree() {
+			println!(
+				"  Layer {}: {} [{}-{}]",
+				lang_id.idx(),
+				lang_name,
+				tree.root_node().start_byte(),
+				tree.root_node().end_byte()
+			);
+		}
+	}
+
+	// Check via tree_house::LanguageLoader trait
+	use tree_house::LanguageLoader as TreeHouseLoader;
+	println!("\n--- tree_house::LanguageLoader.get_config checks ---");
+	for layer in syntax.layers_for_byte_range(link_start as u32, link_end as u32) {
+		let layer_data = syntax.layer(layer);
+		let lang_id = layer_data.language;
+		let has_config = loader.get_config(lang_id).is_some();
+		let lang_name = loader
+			.get(lang_id)
+			.map(|d| d.name.as_str())
+			.unwrap_or("unknown");
+		let has_tree = layer_data.tree().is_some();
+		println!(
+			"  Layer lang_id={}: {} -> get_config: {}, has_tree: {}",
+			lang_id.idx(),
+			lang_name,
+			has_config,
+			has_tree
+		);
+		if has_tree {
+			let tree = layer_data.tree().unwrap();
+			let root = tree.root_node();
+			println!(
+				"    Tree root: {} [{}-{}]",
+				root.kind(),
+				root.start_byte(),
+				root.end_byte()
+			);
+
+			// Print the tree structure for markdown.inline
+			if lang_name == "markdown.inline" {
+				fn print_tree(node: tree_house::tree_sitter::Node, depth: usize) {
+					let indent = "  ".repeat(depth);
+					println!(
+						"{}    {} {} [{}-{}]",
+						indent,
+						node.kind(),
+						if node.is_named() { "(named)" } else { "" },
+						node.start_byte(),
+						node.end_byte()
+					);
+					for i in 0..node.child_count() {
+						if let Some(child) = node.child(i) {
+							print_tree(child, depth + 1);
+						}
+					}
+				}
+				print_tree(root, 0);
+			}
+		}
+	}
+}
+
 /// Tests that highlight spans have correct byte positions for doc comments.
 ///
 /// This specifically tests the case where `//!` doc comments should have
