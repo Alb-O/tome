@@ -106,18 +106,6 @@ pub trait CommandEditorOps {
 		line: usize,
 		column: usize,
 	) -> Pin<Box<dyn Future<Output = Result<(), CommandError>> + '_>>;
-
-	/// Requests hover information from the language server at the cursor position.
-	///
-	/// Returns markdown-formatted hover content, or `None` if unavailable.
-	fn lsp_hover(&mut self) -> Pin<Box<dyn Future<Output = Option<String>> + '_>>;
-
-	/// Navigates to the definition of the symbol under the cursor.
-	///
-	/// Returns an error if no definition is found or LSP is unavailable.
-	fn lsp_goto_definition(
-		&mut self,
-	) -> Pin<Box<dyn Future<Output = Result<(), CommandError>> + '_>>;
 }
 
 /// Context provided to command handlers.

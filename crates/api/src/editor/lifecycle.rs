@@ -8,6 +8,7 @@ use xeno_registry::commands::{CommandContext, CommandOutcome, find_command};
 use xeno_registry::{HookContext, HookEventData, emit_sync_with as emit_hook_sync_with};
 
 use super::Editor;
+use crate::commands::{EditorCommandContext, find_editor_command};
 
 impl Editor {
 	/// Initializes the UI layer at editor startup.
@@ -161,21 +162,39 @@ impl Editor {
 
 	/// Drains and executes all queued commands.
 	///
-	/// Commands are queued when actions return [`ActionResult::Command`]. This
-	/// method should be called each tick after processing input events.
-	///
+	/// Checks [`EDITOR_COMMANDS`] first, then [`COMMANDS`].
 	/// Returns `true` if any command requested quit.
 	pub async fn drain_command_queue(&mut self) -> bool {
 		let commands: Vec<_> = self.workspace.command_queue.drain().collect();
 		for cmd in commands {
+			let args: Vec<&str> = cmd.args.iter().map(|s| s.as_str()).collect();
+
+			if let Some(editor_cmd) = find_editor_command(cmd.name) {
+				let mut ctx = EditorCommandContext {
+					editor: self,
+					args: &args,
+					count: 1,
+					register: None,
+					user_data: editor_cmd.user_data,
+				};
+				match (editor_cmd.handler)(&mut ctx).await {
+					Ok(CommandOutcome::Ok) => {}
+					Ok(CommandOutcome::Quit | CommandOutcome::ForceQuit) => return true,
+					Err(e) => {
+						self.show_notification(
+							xeno_registry_notifications::keys::command_error::call(&e.to_string()),
+						);
+					}
+				}
+				continue;
+			}
+
 			let Some(command_def) = find_command(cmd.name) else {
 				self.show_notification(xeno_registry_notifications::keys::unknown_command::call(
 					cmd.name,
 				));
 				continue;
 			};
-
-			let args: Vec<&str> = cmd.args.iter().map(|s| s.as_str()).collect();
 			let mut ctx = CommandContext {
 				editor: self,
 				args: &args,
@@ -183,7 +202,6 @@ impl Editor {
 				register: None,
 				user_data: command_def.user_data,
 			};
-
 			match (command_def.handler)(&mut ctx).await {
 				Ok(CommandOutcome::Ok) => {}
 				Ok(CommandOutcome::Quit | CommandOutcome::ForceQuit) => return true,

@@ -1,4 +1,7 @@
 //! Built-in command implementations.
+//!
+//! LSP commands (hover, goto-definition) are in `xeno-api::commands::lsp`
+//! since they need direct [`Editor`] access.
 
 /// Buffer navigation and management commands.
 mod buffer;
@@ -6,8 +9,6 @@ mod buffer;
 mod edit;
 /// Help and documentation commands.
 mod help;
-/// LSP commands (hover, goto-definition).
-mod lsp;
 /// Quit and exit commands.
 mod quit;
 /// Registry diagnostic commands.

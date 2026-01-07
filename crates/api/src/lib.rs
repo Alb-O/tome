@@ -25,6 +25,8 @@
 
 pub mod buffer;
 pub mod capabilities;
+/// Editor-direct commands that need full [`Editor`] access.
+pub mod commands;
 pub mod editor;
 /// Info popups for documentation and contextual help.
 pub mod info_popup;
