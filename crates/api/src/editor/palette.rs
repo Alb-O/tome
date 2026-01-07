@@ -1,6 +1,7 @@
 //! Command palette integration with editor.
 
 use xeno_base::Mode;
+use xeno_registry::options::{OptionValue, keys};
 
 use super::Editor;
 use crate::palette::{Palette, PaletteState, palette_rect, palette_style};
@@ -23,6 +24,11 @@ impl Editor {
 
 		let rect = palette_rect(width, height);
 		let buffer_id = self.buffers.create_scratch();
+		self.buffers
+			.get_buffer_mut(buffer_id)
+			.expect("just created")
+			.local_options
+			.set(keys::CURSORLINE.untyped(), OptionValue::Bool(false));
 		let window_id = self.create_floating_window(buffer_id, rect, palette_style());
 
 		let Window::Floating(float) = self.windows.get_mut(window_id).expect("just created") else {

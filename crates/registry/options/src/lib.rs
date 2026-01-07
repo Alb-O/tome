@@ -107,6 +107,7 @@ pub use store::OptionStore;
 /// println!("Default tab width: {:?}", (def.default)());
 /// ```
 pub mod keys {
+	pub use crate::impls::cursorline::*;
 	pub use crate::impls::indent::*;
 	pub use crate::impls::scroll::*;
 	pub use crate::impls::theme::*;

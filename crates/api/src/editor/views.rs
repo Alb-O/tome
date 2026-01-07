@@ -107,4 +107,12 @@ impl Editor {
 	pub fn tab_width(&self) -> usize {
 		(self.buffer().option(keys::TAB_WIDTH, self) as usize).max(1)
 	}
+
+	/// Returns whether cursorline is enabled for a specific buffer.
+	pub fn cursorline_for(&self, buffer_id: BufferId) -> bool {
+		self.buffers
+			.get_buffer(buffer_id)
+			.map(|b| b.option(keys::CURSORLINE, self))
+			.unwrap_or(true)
+	}
 }

@@ -54,6 +54,27 @@ pub struct CursorStyles {
 	pub unfocused: Style,
 }
 
+/// Cursor line highlight configuration.
+///
+/// Separates cursor position (needed for relative line numbers) from
+/// highlight enablement (can be toggled per-buffer).
+#[derive(Debug, Clone, Copy)]
+pub struct CursorlineConfig {
+	/// Whether cursorline highlighting is enabled.
+	pub enabled: bool,
+	/// Background color for cursorline (mode-aware).
+	pub bg: xeno_tui::style::Color,
+	/// Cursor line index (real position, used for relative line numbers).
+	pub line: usize,
+}
+
+impl CursorlineConfig {
+	/// Returns whether a given line should have cursorline styling.
+	pub fn should_highlight(&self, line_idx: usize) -> bool {
+		self.enabled && line_idx == self.line
+	}
+}
+
 impl<'a> BufferRenderContext<'a> {
 	/// Creates cursor styling configuration based on theme and mode.
 	pub fn make_cursor_styles(&self) -> CursorStyles {
@@ -211,6 +232,7 @@ impl<'a> BufferRenderContext<'a> {
 		use_block_cursor: bool,
 		is_focused: bool,
 		tab_width: usize,
+		cursorline: bool,
 	) -> RenderResult {
 		self.render_buffer_with_gutter(
 			buffer,
@@ -219,6 +241,7 @@ impl<'a> BufferRenderContext<'a> {
 			is_focused,
 			GutterSelector::Registry,
 			tab_width,
+			cursorline,
 		)
 	}
 
@@ -238,6 +261,7 @@ impl<'a> BufferRenderContext<'a> {
 	/// - `is_focused`: Whether this buffer is the focused/active buffer
 	/// - `gutter`: Gutter selection for this render pass
 	/// - `tab_width`: Number of spaces a tab character occupies (from options)
+	/// - `cursorline`: Whether to highlight the cursor line
 	pub fn render_buffer_with_gutter(
 		&self,
 		buffer: &Buffer,
@@ -246,6 +270,7 @@ impl<'a> BufferRenderContext<'a> {
 		is_focused: bool,
 		gutter: GutterSelector,
 		tab_width: usize,
+		cursorline: bool,
 	) -> RenderResult {
 		let total_lines = buffer.doc().content.len_lines();
 		let gutter_layout = GutterLayout::from_selector(gutter, total_lines, area.width);
@@ -261,8 +286,11 @@ impl<'a> BufferRenderContext<'a> {
 		let styles = self.make_cursor_styles();
 
 		let highlight_spans = self.collect_highlight_spans(buffer, area);
-		let cursor_line = buffer.cursor_line();
-		let cursorline_bg = self.cursorline_color_for_mode(buffer.mode());
+		let cursorline_config = CursorlineConfig {
+			enabled: cursorline,
+			bg: self.cursorline_color_for_mode(buffer.mode()),
+			line: buffer.cursor_line(),
+		};
 
 		// Shared empty annotations for lines without diagnostic/git data
 		let empty_annotations = GutterAnnotations::default();
@@ -275,7 +303,7 @@ impl<'a> BufferRenderContext<'a> {
 		let viewport_height = area.height as usize;
 
 		while output_lines.len() < viewport_height && current_line_idx < total_lines {
-			let is_cursor_line = current_line_idx == cursor_line;
+			let is_cursor_line = cursorline_config.should_highlight(current_line_idx);
 			let line_start: CharIdx = buffer.doc().content.line_to_char(current_line_idx);
 			let line_end: CharIdx = if current_line_idx + 1 < total_lines {
 				buffer.doc().content.line_to_char(current_line_idx + 1)
@@ -302,13 +330,12 @@ impl<'a> BufferRenderContext<'a> {
 				let mut spans = gutter_layout.render_line(
 					current_line_idx,
 					total_lines,
-					cursor_line,
+					&cursorline_config,
 					is_continuation,
 					buffer.doc().content.line(current_line_idx),
 					buffer_path,
 					&empty_annotations,
 					self.theme,
-					cursorline_bg,
 				);
 
 				let seg_char_offset = segment.start_offset;
@@ -355,7 +382,7 @@ impl<'a> BufferRenderContext<'a> {
 					} else {
 						let base = syntax_style.unwrap_or(styles.base);
 						if is_cursor_line && base.bg.is_none() {
-							base.bg(cursorline_bg)
+							base.bg(cursorline_config.bg)
 						} else {
 							base
 						}
@@ -411,7 +438,7 @@ impl<'a> BufferRenderContext<'a> {
 						.blend(self.theme.colors.ui.bg, 0.5);
 					let mut fill_style = Style::default().fg(dim_color);
 					if is_cursor_line {
-						fill_style = fill_style.bg(cursorline_bg);
+						fill_style = fill_style.bg(cursorline_config.bg);
 					}
 					spans.push(Span::styled(" ".repeat(fill_count), fill_style));
 				}
@@ -446,7 +473,7 @@ impl<'a> BufferRenderContext<'a> {
 					if is_cursor_line && seg_col < text_width {
 						spans.push(Span::styled(
 							" ".repeat(text_width - seg_col),
-							Style::default().bg(cursorline_bg),
+							Style::default().bg(cursorline_config.bg),
 						));
 					}
 				}
@@ -461,13 +488,12 @@ impl<'a> BufferRenderContext<'a> {
 				let mut spans = gutter_layout.render_line(
 					current_line_idx,
 					total_lines,
-					cursor_line,
+					&cursorline_config,
 					false, // not a continuation
 					buffer.doc().content.line(current_line_idx),
 					buffer_path,
 					&empty_annotations,
 					self.theme,
-					cursorline_bg,
 				);
 
 				let is_last_doc_line = current_line_idx + 1 >= total_lines;
@@ -499,7 +525,7 @@ impl<'a> BufferRenderContext<'a> {
 				if is_cursor_line && cols_used < text_width {
 					spans.push(Span::styled(
 						" ".repeat(text_width - cols_used),
-						Style::default().bg(cursorline_bg),
+						Style::default().bg(cursorline_config.bg),
 					));
 				}
 

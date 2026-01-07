@@ -11,6 +11,7 @@ use xeno_registry::themes::Theme;
 use xeno_tui::style::{Color, Style};
 use xeno_tui::text::Span;
 
+use super::context::CursorlineConfig;
 use crate::window::GutterSelector;
 
 enum GutterLayoutKind {
@@ -132,15 +133,14 @@ impl GutterLayout {
 		&self,
 		line_idx: usize,
 		total_lines: usize,
-		cursor_line: usize,
+		cursorline: &CursorlineConfig,
 		is_continuation: bool,
 		line_text: RopeSlice<'_>,
 		path: Option<&Path>,
 		annotations: &GutterAnnotations,
 		theme: &Theme,
-		cursorline_bg: Color,
 	) -> Vec<Span<'static>> {
-		let is_cursor_line = line_idx == cursor_line;
+		let is_cursor_line = cursorline.should_highlight(line_idx);
 
 		match &self.kind {
 			GutterLayoutKind::Hidden => Vec::new(),
@@ -157,8 +157,8 @@ impl GutterLayout {
 					})
 				};
 				vec![
-					self.format_cell(cell, 1, is_cursor_line, theme, cursorline_bg),
-					self.separator_span(is_cursor_line, cursorline_bg),
+					self.format_cell(cell, 1, is_cursor_line, theme, cursorline.bg),
+					self.separator_span(is_cursor_line, cursorline.bg),
 				]
 			}
 			GutterLayoutKind::Custom { width, render } => {
@@ -168,7 +168,7 @@ impl GutterLayout {
 				let ctx = GutterLineContext {
 					line_idx,
 					total_lines,
-					cursor_line,
+					cursor_line: cursorline.line,
 					is_cursor_line,
 					is_continuation,
 					line_text,
@@ -177,8 +177,8 @@ impl GutterLayout {
 				};
 				let cell = render(&ctx);
 				vec![
-					self.format_cell(cell, *width, is_cursor_line, theme, cursorline_bg),
-					self.separator_span(is_cursor_line, cursorline_bg),
+					self.format_cell(cell, *width, is_cursor_line, theme, cursorline.bg),
+					self.separator_span(is_cursor_line, cursorline.bg),
 				]
 			}
 			GutterLayoutKind::Columns(columns) => {
@@ -189,7 +189,7 @@ impl GutterLayout {
 				let ctx = GutterLineContext {
 					line_idx,
 					total_lines,
-					cursor_line,
+					cursor_line: cursorline.line,
 					is_cursor_line,
 					is_continuation,
 					line_text,
@@ -201,11 +201,11 @@ impl GutterLayout {
 
 				for (width, gutter_def) in columns {
 					let cell = (gutter_def.render)(&ctx);
-					let span = self.format_cell(cell, *width, is_cursor_line, theme, cursorline_bg);
+					let span = self.format_cell(cell, *width, is_cursor_line, theme, cursorline.bg);
 					spans.push(span);
 				}
 
-				spans.push(self.separator_span(is_cursor_line, cursorline_bg));
+				spans.push(self.separator_span(is_cursor_line, cursorline.bg));
 				spans
 			}
 		}

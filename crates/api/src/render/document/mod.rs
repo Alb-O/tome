@@ -333,9 +333,16 @@ impl Editor {
 			for (buffer_id, area) in view_areas {
 				let is_focused = *buffer_id == focused_view;
 				let tab_width = self.tab_width_for(*buffer_id);
+				let cursorline = self.cursorline_for(*buffer_id);
 				if let Some(buffer) = self.get_buffer(*buffer_id) {
-					let result =
-						ctx.render_buffer(buffer, *area, use_block_cursor, is_focused, tab_width);
+					let result = ctx.render_buffer(
+						buffer,
+						*area,
+						use_block_cursor,
+						is_focused,
+						tab_width,
+						cursorline,
+					);
 					frame.render_widget(result.widget, *area);
 				}
 			}
@@ -449,6 +456,7 @@ impl Editor {
 					.map(|(win, buf)| win == window_id && buf == window.buffer)
 					.unwrap_or(false);
 				let tab_width = self.tab_width_for(window.buffer);
+				let cursorline = self.cursorline_for(window.buffer);
 				let result = ctx.render_buffer_with_gutter(
 					buffer,
 					content_area,
@@ -456,6 +464,7 @@ impl Editor {
 					is_focused,
 					window.gutter,
 					tab_width,
+					cursorline,
 				);
 				frame.render_widget(result.widget, content_area);
 			}
