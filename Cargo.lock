@@ -4462,6 +4462,7 @@ dependencies = [
  "tree-house",
  "xeno-base",
  "xeno-core",
+ "xeno-registry-themes",
  "xeno-runtime",
 ]
 

@@ -6,6 +6,7 @@
 use once_cell::sync::OnceCell;
 use tracing::warn;
 use tree_house::LanguageConfig as TreeHouseConfig;
+use xeno_registry_themes::SyntaxStyles;
 
 use crate::grammar::load_grammar_or_build;
 use crate::query::read_query;
@@ -103,11 +104,14 @@ impl LanguageData {
 			Ok(config) => {
 				// Configure the highlight query with scope names.
 				// This maps capture names (e.g., "keyword") to Highlight indices.
-				// We assign sequential indices to each unique scope name.
-				let mut scope_idx = 0u32;
-				config.configure(|_scope| {
-					scope_idx += 1;
-					Some(tree_house::highlighter::Highlight::new(scope_idx))
+				// The index must match the position in SyntaxStyles::scope_names()
+				// so that style lookups resolve correctly.
+				let scope_names = SyntaxStyles::scope_names();
+				config.configure(|scope| {
+					scope_names
+						.iter()
+						.position(|&name| name == scope)
+						.map(|idx| tree_house::highlighter::Highlight::new(idx as u32))
 				});
 				Some(config)
 			}
