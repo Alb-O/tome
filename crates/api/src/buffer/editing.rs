@@ -1,6 +1,6 @@
 //! Text editing operations for buffers.
 
-use xeno_base::Transaction;
+use xeno_base::{Range, Transaction};
 use xeno_core::movement;
 use xeno_language::LanguageLoader;
 
@@ -14,22 +14,13 @@ impl Buffer {
 		self.ensure_valid_selection();
 
 		let mut insertion_points = self.selection.clone();
-		insertion_points.transform_mut(|r| {
-			let pos = r.min();
-			r.anchor = pos;
-			r.head = pos;
-		});
+		insertion_points.transform_mut(|r| *r = Range::point(r.head));
 
 		let tx = {
 			let doc = self.doc();
 			Transaction::insert(doc.content.slice(..), &insertion_points, text.to_string())
 		};
-		let mut new_selection = tx.map_selection(&insertion_points);
-		new_selection.transform_mut(|r| {
-			let pos = r.max();
-			r.anchor = pos;
-			r.head = pos;
-		});
+		let new_selection = tx.map_selection(&self.selection);
 
 		(tx, new_selection)
 	}
