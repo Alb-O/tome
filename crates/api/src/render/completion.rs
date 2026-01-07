@@ -6,27 +6,33 @@ use xeno_tui::widgets::list::ListItem;
 use xeno_tui::widgets::{Block, Borders, List, Widget};
 
 use crate::Editor;
+use crate::editor::types::CompletionState;
 
 impl Editor {
 	/// Creates a widget for rendering the completion popup menu.
 	pub fn render_completion_menu(&self, _area: Rect) -> impl Widget + '_ {
-		let max_label_len = self
-			.completions
+		let completions = self
+			.overlays
+			.get::<CompletionState>()
+			.cloned()
+			.unwrap_or_default();
+
+		let max_label_len = completions
 			.items
 			.iter()
 			.map(|it| it.label.len())
 			.max()
 			.unwrap_or(0);
 
-		let visible_range = self.completions.visible_range();
-		let items: Vec<ListItem> = self
-			.completions
+		let visible_range = completions.visible_range();
+		let selected_idx = completions.selected_idx;
+		let items: Vec<ListItem> = completions
 			.items
 			.iter()
 			.enumerate()
 			.filter(|(i, _)| visible_range.contains(i))
 			.map(|(i, item)| {
-				let is_selected = Some(i) == self.completions.selected_idx;
+				let is_selected = Some(i) == selected_idx;
 
 				let kind_icon = match item.kind {
 					CompletionKind::Command => "󰘳",

@@ -2,7 +2,7 @@
 
 use super::Editor;
 use crate::info_popup::{
-	InfoPopup, InfoPopupId, PopupAnchor, compute_popup_rect, info_popup_style,
+	InfoPopup, InfoPopupId, InfoPopupStore, PopupAnchor, compute_popup_rect, info_popup_style,
 };
 use crate::window::{GutterSelector, Window};
 
@@ -54,18 +54,14 @@ impl Editor {
 		float.dismiss_on_blur = true;
 		float.gutter = GutterSelector::Hidden;
 
-		let popup_id = InfoPopupId(self.next_info_popup_id);
-		self.next_info_popup_id += 1;
-
-		self.info_popups.insert(
-			popup_id,
-			InfoPopup {
-				id: popup_id,
-				window_id,
-				buffer_id,
-				anchor,
-			},
-		);
+		let store = self.overlays.get_or_default::<InfoPopupStore>();
+		let popup_id = store.next_id();
+		store.insert(InfoPopup {
+			id: popup_id,
+			window_id,
+			buffer_id,
+			anchor,
+		});
 
 		self.needs_redraw = true;
 		Some(popup_id)
@@ -73,7 +69,11 @@ impl Editor {
 
 	/// Closes an info popup by ID.
 	pub fn close_info_popup(&mut self, popup_id: InfoPopupId) {
-		let Some(popup) = self.info_popups.remove(&popup_id) else {
+		let Some(popup) = self
+			.overlays
+			.get_or_default::<InfoPopupStore>()
+			.remove(popup_id)
+		else {
 			return;
 		};
 		self.close_floating_window(popup.window_id);
@@ -83,7 +83,11 @@ impl Editor {
 
 	/// Closes all open info popups.
 	pub fn close_all_info_popups(&mut self) {
-		let popup_ids: Vec<_> = self.info_popups.keys().copied().collect();
+		let popup_ids: Vec<_> = self
+			.overlays
+			.get_or_default::<InfoPopupStore>()
+			.ids()
+			.collect();
 		for id in popup_ids {
 			self.close_info_popup(id);
 		}
@@ -96,10 +100,14 @@ impl Editor {
 		content: String,
 		file_type: Option<&str>,
 	) -> bool {
-		let Some(popup) = self.info_popups.get(&popup_id) else {
+		let Some(buffer_id) = self
+			.overlays
+			.get::<InfoPopupStore>()
+			.and_then(|s| s.get(popup_id))
+			.map(|p| p.buffer_id)
+		else {
 			return false;
 		};
-		let buffer_id = popup.buffer_id;
 
 		let Some(buffer) = self.buffers.get_buffer_mut(buffer_id) else {
 			return false;
@@ -124,6 +132,6 @@ impl Editor {
 
 	/// Returns the number of open info popups.
 	pub fn info_popup_count(&self) -> usize {
-		self.info_popups.len()
+		self.overlays.get::<InfoPopupStore>().map_or(0, |s| s.len())
 	}
 }

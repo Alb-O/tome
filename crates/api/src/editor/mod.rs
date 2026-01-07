@@ -85,8 +85,8 @@ use xeno_tui::widgets::menu::MenuState;
 pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
 use crate::buffer::{BufferId, BufferView, Layout};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
-use crate::editor::types::CompletionState;
 use crate::menu::{MenuAction, create_menu};
+use crate::overlay::OverlayManager;
 use crate::ui::UiManager;
 use crate::window::{BaseWindow, FloatingStyle, WindowId, WindowManager};
 
@@ -170,9 +170,6 @@ pub struct Editor {
 	/// Last tick timestamp.
 	pub last_tick: std::time::SystemTime,
 
-	/// Completion state.
-	pub completions: CompletionState,
-
 	/// Extension map (typemap for extension state).
 	pub extensions: ExtensionMap,
 
@@ -203,15 +200,8 @@ pub struct Editor {
 	/// Application menu bar state.
 	pub menu: MenuState<MenuAction>,
 
-	/// Command palette state.
-	pub palette: crate::palette::PaletteState,
-
-	/// Active info popups (keyed by popup ID).
-	pub info_popups:
-		std::collections::HashMap<crate::info_popup::InfoPopupId, crate::info_popup::InfoPopup>,
-
-	/// Counter for generating unique info popup IDs.
-	next_info_popup_id: u64,
+	/// Type-erased storage for UI overlays (popups, palette, completions).
+	pub overlays: OverlayManager,
 
 	/// Global user configuration options.
 	pub global_options: OptionStore,
@@ -308,7 +298,6 @@ impl Editor {
 				.max_visible(Some(5))
 				.overflow(xeno_tui::widgets::notifications::Overflow::DropOldest),
 			last_tick: std::time::SystemTime::now(),
-			completions: CompletionState::default(),
 			extensions: {
 				let mut map = ExtensionMap::new();
 				let mut sorted_exts: Vec<_> = EXTENSIONS.iter().collect();
@@ -327,9 +316,7 @@ impl Editor {
 			macro_state: MacroState::default(),
 			command_queue: CommandQueue::new(),
 			menu: create_menu(),
-			palette: crate::palette::PaletteState::default(),
-			info_popups: std::collections::HashMap::new(),
-			next_info_popup_id: 0,
+			overlays: OverlayManager::new(),
 			global_options: OptionStore::new(),
 			language_options: std::collections::HashMap::new(),
 		}

@@ -31,6 +31,8 @@ pub mod info_popup;
 #[cfg(feature = "lsp")]
 pub mod lsp;
 pub mod menu;
+/// Type-erased UI overlay storage.
+pub mod overlay;
 /// Command palette for executing commands.
 pub mod palette;
 /// Platform-specific configuration paths.

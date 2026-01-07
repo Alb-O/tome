@@ -13,7 +13,11 @@ impl Editor {
 	/// Creates a scratch buffer in a floating window for command input.
 	/// Returns `false` if the palette is already open or window dimensions are unavailable.
 	pub fn open_palette(&mut self) -> bool {
-		if self.palette.is_open() {
+		if self
+			.overlays
+			.get::<PaletteState>()
+			.is_some_and(|p| p.is_open())
+		{
 			return false;
 		}
 
@@ -45,16 +49,16 @@ impl Editor {
 			.input
 			.set_mode(Mode::Insert);
 
-		self.palette = PaletteState::Open(Palette {
+		self.overlays.insert(PaletteState::Open(Palette {
 			window_id,
 			buffer_id,
-		});
+		}));
 		true
 	}
 
 	/// Closes the command palette without executing.
 	pub fn close_palette(&mut self) {
-		let Some(palette) = self.palette.active() else {
+		let Some(palette) = self.overlays.get::<PaletteState>().and_then(|p| p.active()) else {
 			return;
 		};
 		let window_id = palette.window_id;
@@ -62,7 +66,7 @@ impl Editor {
 
 		self.close_floating_window(window_id);
 		self.buffers.remove_buffer(buffer_id);
-		self.palette = PaletteState::Closed;
+		self.overlays.insert(PaletteState::Closed);
 
 		self.focus_base_window();
 		self.focused_buffer_mut().input.set_mode(Mode::Normal);
@@ -74,7 +78,10 @@ impl Editor {
 	/// Returns the raw input string on success, or `None` if the palette wasn't
 	/// open, the input was empty, or the command was not found.
 	pub fn execute_palette(&mut self) -> Option<String> {
-		let buffer_id = self.palette.buffer_id()?;
+		let buffer_id = self
+			.overlays
+			.get::<PaletteState>()
+			.and_then(|p| p.buffer_id())?;
 		let input = self
 			.buffers
 			.get_buffer(buffer_id)?
@@ -106,7 +113,9 @@ impl Editor {
 
 	/// Returns `true` if the palette is currently open.
 	pub fn palette_is_open(&self) -> bool {
-		self.palette.is_open()
+		self.overlays
+			.get::<PaletteState>()
+			.is_some_and(|p| p.is_open())
 	}
 
 	fn focus_floating_window(&mut self, window_id: crate::window::WindowId) {

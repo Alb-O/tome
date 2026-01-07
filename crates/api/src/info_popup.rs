@@ -7,6 +7,8 @@
 //!
 //! They reuse the buffer renderer for syntax highlighting and text wrapping.
 
+use std::collections::HashMap;
+
 use xeno_tui::layout::Rect;
 use xeno_tui::widgets::BorderType;
 use xeno_tui::widgets::block::Padding;
@@ -121,5 +123,51 @@ mod tests {
 		let rect = compute_popup_rect(PopupAnchor::Point { x: 10, y: 5 }, 20, 5, bounds);
 		assert_eq!(rect.x, 10);
 		assert_eq!(rect.y, 5);
+	}
+}
+
+/// Storage for active info popups, keyed by [`InfoPopupId`].
+///
+/// Stored in [`OverlayManager`] to avoid adding fields to [`Editor`].
+///
+/// [`OverlayManager`]: crate::overlay::OverlayManager
+/// [`Editor`]: crate::editor::Editor
+#[derive(Default)]
+pub struct InfoPopupStore {
+	popups: HashMap<InfoPopupId, InfoPopup>,
+	next_id: u64,
+}
+
+impl InfoPopupStore {
+	/// Allocates a new unique popup ID.
+	pub fn next_id(&mut self) -> InfoPopupId {
+		let id = InfoPopupId(self.next_id);
+		self.next_id += 1;
+		id
+	}
+
+	/// Inserts a popup into the store.
+	pub fn insert(&mut self, popup: InfoPopup) {
+		self.popups.insert(popup.id, popup);
+	}
+
+	/// Removes and returns a popup by ID.
+	pub fn remove(&mut self, id: InfoPopupId) -> Option<InfoPopup> {
+		self.popups.remove(&id)
+	}
+
+	/// Returns a reference to a popup by ID.
+	pub fn get(&self, id: InfoPopupId) -> Option<&InfoPopup> {
+		self.popups.get(&id)
+	}
+
+	/// Returns an iterator over all popup IDs.
+	pub fn ids(&self) -> impl Iterator<Item = InfoPopupId> + '_ {
+		self.popups.keys().copied()
+	}
+
+	/// Returns the number of active popups.
+	pub fn len(&self) -> usize {
+		self.popups.len()
 	}
 }

@@ -7,6 +7,7 @@ use xeno_base::{Key, Mode, Selection};
 use xeno_input::KeyResult;
 
 use crate::editor::{Editor, FocusTarget};
+use crate::palette::PaletteState;
 use crate::window::Window;
 
 /// Result of attempting to dispatch an action from a key result.
@@ -254,7 +255,11 @@ impl Editor {
 			return false;
 		};
 
-		if Some(window) == self.palette.window_id() {
+		let palette_window = self
+			.overlays
+			.get::<PaletteState>()
+			.and_then(|p| p.window_id());
+		if Some(window) == palette_window {
 			self.close_palette();
 			self.needs_redraw = true;
 			return true;

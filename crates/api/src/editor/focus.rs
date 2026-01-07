@@ -7,6 +7,7 @@ use xeno_registry::{HookContext, HookEventData, ViewId, emit_sync_with as emit_h
 
 use super::Editor;
 use crate::buffer::{BufferId, BufferView, Direction};
+use crate::palette::PaletteState;
 use crate::window::{Window, WindowId};
 
 /// Panel identifier used by focus targets.
@@ -264,7 +265,11 @@ impl Editor {
 				Some(Window::Floating(floating)) if floating.dismiss_on_blur
 			);
 			if should_close {
-				if Some(window) == self.palette.window_id() {
+				let palette_window = self
+					.overlays
+					.get::<PaletteState>()
+					.and_then(|p| p.window_id());
+				if Some(window) == palette_window {
 					self.close_palette();
 				} else {
 					self.close_floating_window(window);
