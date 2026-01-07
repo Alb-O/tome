@@ -40,7 +40,12 @@ impl Editor {
 			.file_type()
 			.and_then(|ft| self.language_options.get(&ft));
 
-		Self::resolve_with_stores(&buffer.local_options, language_store, &self.global_options, key)
+		Self::resolve_with_stores(
+			&buffer.local_options,
+			language_store,
+			&self.global_options,
+			key,
+		)
 	}
 
 	/// Resolves a typed option for a specific buffer.

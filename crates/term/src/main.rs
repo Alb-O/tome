@@ -91,7 +91,10 @@ async fn main() -> anyhow::Result<()> {
 		if let Some(theme_name) = config.options.get_string(keys::THEME.untyped())
 			&& let Err(e) = editor.set_theme(theme_name)
 		{
-			eprintln!("Warning: failed to set config theme '{}': {}", theme_name, e);
+			eprintln!(
+				"Warning: failed to set config theme '{}': {}",
+				theme_name, e
+			);
 		}
 	}
 

@@ -13,10 +13,11 @@ use xeno_core::editor_ctx::{
 	JumpAccess, MacroAccess, ModeAccess, NotificationAccess, OptionAccess, PaletteAccess,
 	SearchAccess, SelectionAccess, SplitOps, ThemeAccess, UndoAccess, ViewportAccess,
 };
-use xeno_registry::options::{OptionKey, OptionScope, OptionValue, find_by_kdl, parse};
-use xeno_registry::EditAction;
 use xeno_registry::commands::{CommandEditorOps, CommandError};
-use xeno_registry::{HookContext, HookEventData, emit_sync_with as emit_hook_sync_with};
+use xeno_registry::options::{OptionKey, OptionScope, OptionValue, find_by_kdl, parse};
+use xeno_registry::{
+	EditAction, HookContext, HookEventData, emit_sync_with as emit_hook_sync_with,
+};
 use xeno_registry_notifications::{Notification, keys};
 
 use crate::editor::Editor;
@@ -218,14 +219,13 @@ impl CommandEditorOps for Editor {
 	}
 
 	fn set_local_option(&mut self, kdl_key: &str, value: &str) -> Result<(), CommandError> {
-		let def = find_by_kdl(kdl_key)
-			.ok_or_else(|| {
-				let suggestion = parse::suggest_option(kdl_key);
-				CommandError::InvalidArgument(match suggestion {
-					Some(s) => format!("unknown option '{kdl_key}'. Did you mean '{s}'?"),
-					None => format!("unknown option '{kdl_key}'"),
-				})
-			})?;
+		let def = find_by_kdl(kdl_key).ok_or_else(|| {
+			let suggestion = parse::suggest_option(kdl_key);
+			CommandError::InvalidArgument(match suggestion {
+				Some(s) => format!("unknown option '{kdl_key}'. Did you mean '{s}'?"),
+				None => format!("unknown option '{kdl_key}'"),
+			})
+		})?;
 
 		if def.scope == OptionScope::Global {
 			return Err(CommandError::InvalidArgument(format!(
@@ -234,7 +234,10 @@ impl CommandEditorOps for Editor {
 		}
 
 		let opt_value = parse_option_value(kdl_key, value)?;
-		let _ = self.buffer_mut().local_options.set_by_kdl(kdl_key, opt_value);
+		let _ = self
+			.buffer_mut()
+			.local_options
+			.set_by_kdl(kdl_key, opt_value);
 
 		emit_hook_sync_with(
 			&HookContext::new(
@@ -482,8 +485,9 @@ impl EditorCapabilities for Editor {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use xeno_registry::commands::CommandEditorOps;
+
+	use super::*;
 
 	#[test]
 	fn test_setlocal_rejects_global_scoped_option() {

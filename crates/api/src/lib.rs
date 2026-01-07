@@ -26,11 +26,11 @@
 pub mod buffer;
 pub mod capabilities;
 pub mod editor;
+/// Info popups for documentation and contextual help.
+pub mod info_popup;
 #[cfg(feature = "lsp")]
 pub mod lsp;
 pub mod menu;
-/// Info popups for documentation and contextual help.
-pub mod info_popup;
 /// Command palette for executing commands.
 pub mod palette;
 /// Platform-specific configuration paths.

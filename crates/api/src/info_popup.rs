@@ -66,8 +66,12 @@ pub fn compute_popup_rect(
 	content_height: u16,
 	bounds: Rect,
 ) -> Rect {
-	let width = content_width.saturating_add(2).min(bounds.width.saturating_sub(4));
-	let height = content_height.saturating_add(2).min(bounds.height.saturating_sub(2));
+	let width = content_width
+		.saturating_add(2)
+		.min(bounds.width.saturating_sub(4));
+	let height = content_height
+		.saturating_add(2)
+		.min(bounds.height.saturating_sub(2));
 
 	let (x, y) = match anchor {
 		PopupAnchor::Center => (
@@ -75,8 +79,10 @@ pub fn compute_popup_rect(
 			bounds.y + bounds.height.saturating_sub(height) / 2,
 		),
 		PopupAnchor::Point { x, y } => (
-			x.max(bounds.x).min(bounds.x + bounds.width.saturating_sub(width)),
-			y.max(bounds.y).min(bounds.y + bounds.height.saturating_sub(height)),
+			x.max(bounds.x)
+				.min(bounds.x + bounds.width.saturating_sub(width)),
+			y.max(bounds.y)
+				.min(bounds.y + bounds.height.saturating_sub(height)),
 		),
 		PopupAnchor::Window(_) => (
 			bounds.x + bounds.width.saturating_sub(width) / 2,

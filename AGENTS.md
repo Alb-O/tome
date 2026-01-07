@@ -64,6 +64,7 @@ pub static TAB_WIDTH: i64 = 4;
 ```
 
 This generates:
+
 - `OptionDef` registration in the `OPTIONS` slice
 - `TypedOptionKey<i64>` constant for compile-time type safety
 
@@ -84,6 +85,7 @@ let width: i64 = ctx.option(keys::TAB_WIDTH);  // TypedOptionKey<i64>
 **Resolution order**: Buffer-local → Language config → Global config → Compile-time default
 
 **Runtime storage**:
+
 - `OptionStore`: Holds option values, keyed by typed key
 - `OptionResolver`: Chains stores for layered resolution
 - Editor stores: `global_options`, `language_options` (per-language), `Buffer::local_options`
@@ -198,4 +200,3 @@ KITTY_TESTS=1 DISPLAY=:0 nix develop -c cargo test -p xeno-term --test kitty_mul
 # DEV NOTES
 
 <!-- Below this line, agents to add important operational details or unintuative notes that new developers should know. -->
-

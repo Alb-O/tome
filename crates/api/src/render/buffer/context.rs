@@ -16,9 +16,9 @@ use xeno_tui::widgets::Paragraph;
 
 use super::gutter::GutterLayout;
 use crate::buffer::Buffer;
-use crate::window::GutterSelector;
 use crate::editor::extensions::StyleOverlays;
 use crate::render::types::{RenderResult, wrap_line};
+use crate::window::GutterSelector;
 
 /// Context for rendering a buffer.
 ///

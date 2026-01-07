@@ -29,8 +29,6 @@ pub enum GutterSelector {
 	},
 }
 
-
-
 /// Window kinds.
 pub enum Window {
 	/// The base window containing the split tree.

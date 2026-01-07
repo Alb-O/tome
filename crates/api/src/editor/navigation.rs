@@ -38,6 +38,7 @@ impl Editor {
 	/// Resolves the `tab-width` option and delegates to Buffer.
 	pub(crate) fn handle_mouse_scroll(&mut self, direction: ScrollDirection, count: usize) {
 		let tab_width = self.tab_width();
-		self.buffer_mut().handle_mouse_scroll(direction, count, tab_width);
+		self.buffer_mut()
+			.handle_mouse_scroll(direction, count, tab_width);
 	}
 }

@@ -35,6 +35,8 @@ mod focus;
 mod history;
 /// Async hook execution runtime.
 mod hook_runtime;
+/// Info popup operations.
+mod info_popup;
 /// Input handling.
 mod input;
 /// Split layout management.
@@ -45,16 +47,14 @@ mod lifecycle;
 mod messaging;
 /// Cursor navigation utilities.
 mod navigation;
-/// Info popup operations.
-mod info_popup;
+/// Option resolution.
+mod options;
 /// Command palette operations.
 mod palette;
 /// Search state and operations.
 mod search;
 /// Separator hit detection.
 mod separator;
-/// Option resolution.
-mod options;
 /// Split view operations.
 mod splits;
 /// Theme management.
@@ -207,7 +207,8 @@ pub struct Editor {
 	pub palette: crate::palette::PaletteState,
 
 	/// Active info popups (keyed by popup ID).
-	pub info_popups: std::collections::HashMap<crate::info_popup::InfoPopupId, crate::info_popup::InfoPopup>,
+	pub info_popups:
+		std::collections::HashMap<crate::info_popup::InfoPopupId, crate::info_popup::InfoPopup>,
 
 	/// Counter for generating unique info popup IDs.
 	next_info_popup_id: u64,

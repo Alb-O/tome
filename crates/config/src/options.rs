@@ -23,8 +23,6 @@ pub struct ParsedOptions {
 	pub warnings: Vec<ConfigWarning>,
 }
 
-
-
 /// Parse options from a node with scope context validation.
 ///
 /// Returns both the parsed options and any warnings about scope mismatches.
@@ -99,8 +97,9 @@ fn option_type_name(ty: OptionType) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use xeno_registry::options::keys;
+
+	use super::*;
 
 	fn parse_global(node: &KdlNode) -> Result<ParsedOptions> {
 		parse_options_with_context(node, ParseContext::Global)
@@ -117,7 +116,10 @@ options {
 		let doc: kdl::KdlDocument = kdl.parse().unwrap();
 		let opts = parse_global(doc.get("options").unwrap()).unwrap().store;
 
-		assert_eq!(opts.get(keys::TAB_WIDTH.untyped()), Some(&OptionValue::Int(4)));
+		assert_eq!(
+			opts.get(keys::TAB_WIDTH.untyped()),
+			Some(&OptionValue::Int(4))
+		);
 		assert_eq!(
 			opts.get(keys::THEME.untyped()),
 			Some(&OptionValue::String("gruvbox".to_string()))
@@ -203,22 +205,35 @@ language "python" {
 		let config = Config::parse(kdl).unwrap();
 
 		// Global options
-		assert_eq!(config.options.get(keys::TAB_WIDTH.untyped()), Some(&OptionValue::Int(4)));
+		assert_eq!(
+			config.options.get(keys::TAB_WIDTH.untyped()),
+			Some(&OptionValue::Int(4))
+		);
 
 		// Language-specific options
 		assert_eq!(config.languages.len(), 2);
 
 		let rust = config.languages.iter().find(|l| l.name == "rust").unwrap();
-		assert_eq!(rust.options.get(keys::TAB_WIDTH.untyped()), Some(&OptionValue::Int(2)));
+		assert_eq!(
+			rust.options.get(keys::TAB_WIDTH.untyped()),
+			Some(&OptionValue::Int(2))
+		);
 
-		let python = config.languages.iter().find(|l| l.name == "python").unwrap();
-		assert_eq!(python.options.get(keys::TAB_WIDTH.untyped()), Some(&OptionValue::Int(8)));
+		let python = config
+			.languages
+			.iter()
+			.find(|l| l.name == "python")
+			.unwrap();
+		assert_eq!(
+			python.options.get(keys::TAB_WIDTH.untyped()),
+			Some(&OptionValue::Int(8))
+		);
 	}
 
 	#[test]
 	fn test_global_option_in_language_block_warns() {
-		use crate::error::ConfigWarning;
 		use crate::Config;
+		use crate::error::ConfigWarning;
 
 		let kdl = r##"
 language "rust" {
@@ -267,6 +282,9 @@ language "rust" {
 
 		// The option should be set
 		let rust = config.languages.iter().find(|l| l.name == "rust").unwrap();
-		assert_eq!(rust.options.get(keys::TAB_WIDTH.untyped()), Some(&OptionValue::Int(2)));
+		assert_eq!(
+			rust.options.get(keys::TAB_WIDTH.untyped()),
+			Some(&OptionValue::Int(2))
+		);
 	}
 }

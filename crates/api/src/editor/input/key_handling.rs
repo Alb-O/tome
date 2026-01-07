@@ -190,7 +190,9 @@ impl Editor {
 		extend: bool,
 	) {
 		let tab_width = self.tab_width();
-		if let Some(doc_pos) = self.buffer().screen_to_doc_position(local_row, local_col, tab_width)
+		if let Some(doc_pos) = self
+			.buffer()
+			.screen_to_doc_position(local_row, local_col, tab_width)
 		{
 			let buffer = self.buffer_mut();
 			if extend {
@@ -206,7 +208,9 @@ impl Editor {
 	/// Handles mouse drag with view-local coordinates.
 	pub(crate) fn handle_mouse_drag_local(&mut self, local_row: u16, local_col: u16) {
 		let tab_width = self.tab_width();
-		if let Some(doc_pos) = self.buffer().screen_to_doc_position(local_row, local_col, tab_width)
+		if let Some(doc_pos) = self
+			.buffer()
+			.screen_to_doc_position(local_row, local_col, tab_width)
 		{
 			let buffer = self.buffer_mut();
 			let anchor = buffer.selection.primary().anchor;

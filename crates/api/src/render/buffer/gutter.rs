@@ -7,15 +7,17 @@ use xeno_registry::gutter::{
 	GutterAnnotations, GutterCell, GutterLineContext, GutterStyle, GutterWidthContext,
 	column_width, column_widths, find as find_gutter, total_width,
 };
-
-use crate::window::GutterSelector;
 use xeno_registry::themes::Theme;
 use xeno_tui::style::{Color, Style};
 use xeno_tui::text::Span;
 
+use crate::window::GutterSelector;
+
 enum GutterLayoutKind {
 	Columns(Vec<(u16, &'static xeno_registry::gutter::GutterDef)>),
-	Prompt { prompt: char },
+	Prompt {
+		prompt: char,
+	},
 	Custom {
 		width: u16,
 		render: fn(&GutterLineContext) -> Option<GutterCell>,
@@ -112,11 +114,7 @@ impl GutterLayout {
 	}
 
 	fn column_total_width(width: u16) -> u16 {
-		if width > 0 {
-			width + 1
-		} else {
-			0
-		}
+		if width > 0 { width + 1 } else { 0 }
 	}
 
 	fn columns_total_width(columns: &[(u16, &'static xeno_registry::gutter::GutterDef)]) -> u16 {
@@ -221,7 +219,10 @@ impl GutterLayout {
 				if self.total_width == 0 {
 					return Vec::new();
 				}
-				vec![Span::styled(" ".repeat(self.total_width as usize), Style::default())]
+				vec![Span::styled(
+					" ".repeat(self.total_width as usize),
+					Style::default(),
+				)]
 			}
 			GutterLayoutKind::Columns(columns) => {
 				if columns.is_empty() {

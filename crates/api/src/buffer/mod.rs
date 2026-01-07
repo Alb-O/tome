@@ -22,7 +22,9 @@ use xeno_base::range::CharIdx;
 use xeno_base::{Mode, Selection};
 use xeno_input::InputHandler;
 use xeno_language::LanguageLoader;
-use xeno_registry::options::{FromOptionValue, OptionKey, OptionStore, OptionValue, TypedOptionKey};
+use xeno_registry::options::{
+	FromOptionValue, OptionKey, OptionStore, OptionValue, TypedOptionKey,
+};
 
 /// Unique identifier for a buffer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

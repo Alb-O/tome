@@ -1,7 +1,9 @@
 //! Info popup integration with editor.
 
 use super::Editor;
-use crate::info_popup::{InfoPopup, InfoPopupId, PopupAnchor, compute_popup_rect, info_popup_style};
+use crate::info_popup::{
+	InfoPopup, InfoPopupId, PopupAnchor, compute_popup_rect, info_popup_style,
+};
 use crate::window::{GutterSelector, Window};
 
 impl Editor {
@@ -30,10 +32,15 @@ impl Editor {
 
 		let buffer_id = self.buffers.create_scratch();
 		{
-			let buffer = self.buffers.get_buffer_mut(buffer_id).expect("just created");
+			let buffer = self
+				.buffers
+				.get_buffer_mut(buffer_id)
+				.expect("just created");
 			buffer.doc_mut().content = ropey::Rope::from_str(&content);
 			if let Some(ft) = file_type {
-				buffer.doc_mut().init_syntax_for_language(ft, &self.language_loader);
+				buffer
+					.doc_mut()
+					.init_syntax_for_language(ft, &self.language_loader);
 			}
 			buffer.set_readonly_override(Some(true));
 		}
@@ -104,7 +111,9 @@ impl Editor {
 		if let Some(ft) = file_type {
 			let current_ft = buffer.doc().file_type.clone();
 			if current_ft.as_deref() != Some(ft) {
-				buffer.doc_mut().init_syntax_for_language(ft, &self.language_loader);
+				buffer
+					.doc_mut()
+					.init_syntax_for_language(ft, &self.language_loader);
 			}
 		}
 
