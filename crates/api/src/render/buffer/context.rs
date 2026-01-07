@@ -101,6 +101,23 @@ impl<'a> BufferRenderContext<'a> {
 		(now_ms / 200).is_multiple_of(2)
 	}
 
+	/// Computes cursorline background color based on current mode.
+	///
+	/// Blends the mode's accent color with the editor background for a subtle
+	/// highlight that indicates the current mode.
+	fn cursorline_color_for_mode(&self, mode: Mode) -> xeno_tui::style::Color {
+		let status = &self.theme.colors.status;
+		let bg = self.theme.colors.ui.bg;
+
+		let mode_color = match mode {
+			Mode::Normal => status.normal_bg,
+			Mode::Insert => status.insert_bg,
+			Mode::PendingAction(_) => status.prefix_mode_bg,
+		};
+
+		mode_color.blend(bg, 0.15)
+	}
+
 	/// Collects syntax highlight spans for a buffer's visible viewport.
 	pub fn collect_highlight_spans(
 		&self,
@@ -245,7 +262,7 @@ impl<'a> BufferRenderContext<'a> {
 
 		let highlight_spans = self.collect_highlight_spans(buffer, area);
 		let cursor_line = buffer.cursor_line();
-		let cursorline_bg: xeno_tui::style::Color = self.theme.colors.ui.cursorline_bg;
+		let cursorline_bg = self.cursorline_color_for_mode(buffer.mode());
 
 		// Shared empty annotations for lines without diagnostic/git data
 		let empty_annotations = GutterAnnotations::default();
