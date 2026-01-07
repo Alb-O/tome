@@ -299,8 +299,9 @@ impl Editor {
 		for (_, _, view_areas, _) in &layer_data {
 			for (buffer_id, area) in view_areas {
 				let tab_width = self.tab_width_for(*buffer_id);
+				let scroll_margin = self.scroll_margin_for(*buffer_id);
 				if let Some(buffer) = self.get_buffer_mut(*buffer_id) {
-					ensure_buffer_cursor_visible(buffer, *area, tab_width);
+					ensure_buffer_cursor_visible(buffer, *area, tab_width, scroll_margin);
 				}
 			}
 		}
@@ -398,8 +399,9 @@ impl Editor {
 			}
 
 			let tab_width = self.tab_width_for(window.buffer);
+			let scroll_margin = self.scroll_margin_for(window.buffer);
 			if let Some(buffer) = self.get_buffer_mut(window.buffer) {
-				ensure_buffer_cursor_visible(buffer, content_area, tab_width);
+				ensure_buffer_cursor_visible(buffer, content_area, tab_width, scroll_margin);
 			}
 		}
 

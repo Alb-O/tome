@@ -115,4 +115,12 @@ impl Editor {
 			.map(|b| b.option(keys::CURSORLINE, self))
 			.unwrap_or(true)
 	}
+
+	/// Returns the scroll margin for a specific buffer.
+	pub fn scroll_margin_for(&self, buffer_id: BufferId) -> usize {
+		self.buffers
+			.get_buffer(buffer_id)
+			.map(|b| b.option(keys::SCROLL_MARGIN, self) as usize)
+			.unwrap_or(5)
+	}
 }

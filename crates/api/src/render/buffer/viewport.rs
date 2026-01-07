@@ -63,12 +63,18 @@ impl ViewportEnsureEvent {
 	}
 }
 
-/// Ensures the cursor is visible in the buffer's viewport.
+/// Ensures the cursor is visible in the buffer's viewport with scroll margins.
 ///
 /// This function adjusts `buffer.scroll_line` and `buffer.scroll_segment` to ensure
-/// the primary cursor is visible within the given area. It also updates
-/// `buffer.text_width` and `buffer.last_viewport_height` to match the current
-/// rendering context.
+/// the primary cursor is visible within the given area, maintaining a minimum
+/// distance from the viewport edges when possible.
+///
+/// # Scroll Margin
+///
+/// The `scroll_margin` parameter specifies the preferred minimum lines between
+/// the cursor and viewport edges. When the cursor moves within this zone, the
+/// viewport scrolls to restore the margin. At buffer boundaries (first/last line),
+/// the cursor is allowed to reach the edge since scrolling further is impossible.
 ///
 /// # Viewport Shrink Behavior
 ///
@@ -85,7 +91,13 @@ impl ViewportEnsureEvent {
 /// - `buffer`: The buffer to ensure cursor visibility for
 /// - `area`: The rectangular area the buffer is rendered into
 /// - `tab_width`: Number of spaces a tab character occupies (from options)
-pub fn ensure_buffer_cursor_visible(buffer: &mut Buffer, area: Rect, tab_width: usize) {
+/// - `scroll_margin`: Preferred minimum lines above/below cursor
+pub fn ensure_buffer_cursor_visible(
+	buffer: &mut Buffer,
+	area: Rect,
+	tab_width: usize,
+	scroll_margin: usize,
+) {
 	let total_lines = buffer.doc().content.len_lines();
 	let gutter_width = buffer.gutter_width();
 	let text_width = area.width.saturating_sub(gutter_width) as usize;
@@ -144,12 +156,15 @@ pub fn ensure_buffer_cursor_visible(buffer: &mut Buffer, area: Rect, tab_width: 
 	let cursor_segments = wrap_line(cursor_line_text, text_width, tab_width);
 	let cursor_segment = find_segment_for_col(&cursor_segments, cursor_col);
 
-	// Cursor is above viewport - always scroll up to show it
+	let effective_margin = scroll_margin.min(viewport_height.saturating_sub(1) / 2);
+	let ideal_scroll_for_top_margin = cursor_line.saturating_sub(effective_margin);
+
+	// Cursor above viewport - scroll up with margin
 	if cursor_line < buffer.scroll_line
 		|| (cursor_line == buffer.scroll_line && cursor_segment < buffer.scroll_segment)
 	{
-		buffer.scroll_line = cursor_line;
-		buffer.scroll_segment = cursor_segment;
+		buffer.scroll_line = ideal_scroll_for_top_margin;
+		buffer.scroll_segment = 0;
 		buffer.suppress_scroll_down = false;
 		ViewportEnsureEvent::log(
 			"scroll_up",
@@ -164,7 +179,7 @@ pub fn ensure_buffer_cursor_visible(buffer: &mut Buffer, area: Rect, tab_width: 
 		return;
 	}
 
-	let mut cursor_visible = cursor_visible_from(
+	let cursor_visible = cursor_visible_from(
 		buffer,
 		buffer.scroll_line,
 		buffer.scroll_segment,
@@ -176,6 +191,20 @@ pub fn ensure_buffer_cursor_visible(buffer: &mut Buffer, area: Rect, tab_width: 
 	);
 
 	if cursor_visible {
+		// Adjust scroll to maintain margins when cursor is visible but in margin zone
+		if buffer.scroll_line > ideal_scroll_for_top_margin {
+			buffer.scroll_line = ideal_scroll_for_top_margin;
+			buffer.scroll_segment = 0;
+		}
+
+		let viewport_bottom_line = buffer.scroll_line + viewport_height.saturating_sub(1);
+		let distance_from_bottom = viewport_bottom_line.saturating_sub(cursor_line);
+		if distance_from_bottom < effective_margin && cursor_line + 1 < total_lines {
+			let ideal_scroll = (cursor_line + 1 + effective_margin).saturating_sub(viewport_height);
+			buffer.scroll_line = ideal_scroll.min(total_lines.saturating_sub(viewport_height));
+			buffer.scroll_segment = 0;
+		}
+
 		buffer.suppress_scroll_down = false;
 		buffer.last_rendered_cursor = cursor_pos;
 		return;
@@ -219,29 +248,13 @@ pub fn ensure_buffer_cursor_visible(buffer: &mut Buffer, area: Rect, tab_width: 
 		return;
 	}
 
-	// Scroll down until cursor is visible
+	// Scroll down to show cursor with margin
 	let original_scroll = buffer.scroll_line;
-	let mut prev_scroll = (buffer.scroll_line, buffer.scroll_segment);
-	while !cursor_visible {
-		scroll_viewport_down(buffer, text_width, tab_width);
-
-		let new_scroll = (buffer.scroll_line, buffer.scroll_segment);
-		if new_scroll == prev_scroll {
-			break;
-		}
-		prev_scroll = new_scroll;
-
-		cursor_visible = cursor_visible_from(
-			buffer,
-			buffer.scroll_line,
-			buffer.scroll_segment,
-			cursor_line,
-			cursor_segment,
-			viewport_height,
-			text_width,
-			tab_width,
-		);
-	}
+	let ideal_scroll_for_bottom_margin =
+		(cursor_line + 1 + effective_margin).saturating_sub(viewport_height);
+	let max_scroll = total_lines.saturating_sub(viewport_height);
+	buffer.scroll_line = ideal_scroll_for_bottom_margin.min(max_scroll);
+	buffer.scroll_segment = 0;
 
 	if buffer.scroll_line != original_scroll {
 		debug!(
@@ -376,31 +389,4 @@ fn advance_one_visual_row(
 	}
 
 	false
-}
-
-/// Scrolls viewport down by one visual line.
-fn scroll_viewport_down(buffer: &mut Buffer, text_width: usize, tab_width: usize) {
-	let total_lines = buffer.doc().content.len_lines();
-	if buffer.scroll_line >= total_lines {
-		return;
-	}
-
-	let line_start: CharIdx = buffer.doc().content.line_to_char(buffer.scroll_line);
-	let line_end: CharIdx = if buffer.scroll_line + 1 < total_lines {
-		buffer.doc().content.line_to_char(buffer.scroll_line + 1)
-	} else {
-		buffer.doc().content.len_chars()
-	};
-
-	let line_text: String = buffer.doc().content.slice(line_start..line_end).into();
-	let line_text = line_text.trim_end_matches('\n');
-	let segments = wrap_line(line_text, text_width, tab_width);
-	let num_segments = segments.len().max(1);
-
-	if buffer.scroll_segment + 1 < num_segments {
-		buffer.scroll_segment += 1;
-	} else if buffer.scroll_line + 1 < total_lines {
-		buffer.scroll_line += 1;
-		buffer.scroll_segment = 0;
-	}
 }
