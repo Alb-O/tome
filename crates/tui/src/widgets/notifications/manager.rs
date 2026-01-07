@@ -230,7 +230,11 @@ fn calculate_toast_size(toast: &Toast, area: Rect, stack_count: u32) -> (u16, u1
 		})
 		.unwrap_or(area.height);
 
-	let content_lines = toast.content.lines().count().max(1) as u16;
+	let padding_h = toast.padding.left + toast.padding.right;
+	let padding_v = toast.padding.top + toast.padding.bottom;
+	let icon_width = toast.icon_column_width();
+	let counter_width = stack_counter_width(stack_count);
+
 	let content_width = toast
 		.content
 		.lines()
@@ -238,16 +242,32 @@ fn calculate_toast_size(toast: &Toast, area: Rect, stack_count: u32) -> (u16, u1
 		.max()
 		.unwrap_or(0) as u16;
 
-	let padding_h = toast.padding.left + toast.padding.right;
-	let padding_v = toast.padding.top + toast.padding.bottom;
-	let icon_width = toast.icon_column_width();
-	let counter_width = stack_counter_width(stack_count);
-
 	let width = (content_width.max(counter_width) + icon_width + 2 + padding_h)
 		.max(3)
 		.min(max_width);
+
+	// Account for text wrapping when calculating height
+	let inner_width = width.saturating_sub(2 + padding_h + icon_width);
+	let wrapped_lines: u16 = if inner_width > 0 {
+		toast
+			.content
+			.lines()
+			.map(|line| {
+				let len = line.chars().count() as u16;
+				if len == 0 {
+					1
+				} else {
+					len.div_ceil(inner_width)
+				}
+			})
+			.sum::<u16>()
+			.max(1)
+	} else {
+		1
+	};
+
 	let extra_lines = if stack_count > 1 { 1 } else { 0 };
-	let height = (content_lines + extra_lines + 2 + padding_v)
+	let height = (wrapped_lines + extra_lines + 2 + padding_v)
 		.max(3)
 		.min(max_height);
 
