@@ -91,6 +91,17 @@ pub struct Buffer {
 	/// This enables read-only views (e.g., info popups, documentation panels)
 	/// without affecting other buffers sharing the same document.
 	readonly_override: Option<bool>,
+
+	/// Remembered column position for vertical navigation.
+	///
+	/// When moving vertically (j/k, up/down, scroll), the cursor should return
+	/// to this column when reaching lines long enough to accommodate it. This
+	/// prevents the cursor from drifting left when crossing short or empty lines.
+	///
+	/// Set when vertical motion begins from current cursor column. Reset when
+	/// any horizontal or explicit cursor movement occurs (h/l, word motions,
+	/// goto, mouse click, etc.).
+	goal_column: Option<usize>,
 }
 
 impl Buffer {
@@ -111,6 +122,7 @@ impl Buffer {
 			suppress_scroll_down: false,
 			local_options: OptionStore::new(),
 			readonly_override: None,
+			goal_column: None,
 		}
 	}
 
@@ -141,6 +153,7 @@ impl Buffer {
 			suppress_scroll_down: false,
 			local_options: self.local_options.clone(),
 			readonly_override: None,
+			goal_column: None,
 		}
 	}
 
@@ -316,8 +329,8 @@ impl Buffer {
 
 	/// Maps selection and cursor through a [`Transaction`](xeno_base::Transaction).
 	pub fn map_selection_through(&mut self, tx: &xeno_base::Transaction) {
-		self.selection = tx.map_selection(&self.selection);
-		self.cursor = self.selection.primary().head;
+		self.set_selection(tx.map_selection(&self.selection));
+		self.sync_cursor_to_selection();
 	}
 
 	/// Resolves an option for this buffer using the layered configuration system.
@@ -361,5 +374,62 @@ impl Buffer {
 		T::from_option(&self.option_raw(key.untyped(), editor))
 			.or_else(|| T::from_option(&(key.def().default)()))
 			.expect("option type mismatch with registered default")
+	}
+
+	/// Sets cursor position and resets goal column.
+	///
+	/// Use this for horizontal motion, clicks, jumps, edits - any cursor
+	/// movement that should invalidate the remembered vertical column.
+	#[inline]
+	pub fn set_cursor(&mut self, pos: CharIdx) {
+		self.cursor = pos;
+		self.goal_column = None;
+	}
+
+	/// Sets selection and resets goal column.
+	///
+	/// Use this for horizontal motion, selections, edits - any selection
+	/// change that should invalidate the remembered vertical column.
+	#[inline]
+	pub fn set_selection(&mut self, sel: Selection) {
+		self.selection = sel;
+		self.goal_column = None;
+	}
+
+	/// Syncs cursor to selection head without resetting goal column.
+	///
+	/// Use after selection changes when cursor should track the selection's
+	/// primary head position. Does not affect goal column since the selection
+	/// change already handled that.
+	#[inline]
+	pub fn sync_cursor_to_selection(&mut self) {
+		self.cursor = self.selection.primary().head;
+	}
+
+	/// Sets both cursor and selection, resetting goal column.
+	///
+	/// Convenience method for the common pattern of updating both at once.
+	#[inline]
+	pub fn set_cursor_and_selection(&mut self, pos: CharIdx, sel: Selection) {
+		self.cursor = pos;
+		self.selection = sel;
+		self.goal_column = None;
+	}
+
+	/// Establishes goal column from current cursor position.
+	///
+	/// Use after explicit horizontal positioning (mouse click) to set the
+	/// goal column for subsequent vertical navigation.
+	#[inline]
+	pub fn establish_goal_column(&mut self) {
+		let col = {
+			let doc = self.doc();
+			let line = doc
+				.content
+				.char_to_line(self.cursor.min(doc.content.len_chars()));
+			let line_start = doc.content.line_to_char(line);
+			self.cursor.saturating_sub(line_start)
+		};
+		self.goal_column = Some(col);
 	}
 }

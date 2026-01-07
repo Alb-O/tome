@@ -9,6 +9,11 @@ use crate::render::WrapSegment;
 impl Buffer {
 	/// Moves cursors vertically, accounting for line wrapping.
 	///
+	/// Uses the remembered goal column to restore horizontal position when
+	/// crossing short or empty lines. The goal column is set from the primary
+	/// cursor's position on the first vertical motion, then preserved until
+	/// a horizontal motion resets it.
+	///
 	/// # Parameters
 	/// - `direction`: Forward (down) or Backward (up)
 	/// - `count`: Number of visual lines to move
@@ -24,12 +29,19 @@ impl Buffer {
 		self.ensure_valid_selection();
 		let ranges = self.selection.ranges().to_vec();
 		let primary_index = self.selection.primary_index();
+
+		let goal_col = self.goal_column.unwrap_or_else(|| {
+			let primary = &ranges[primary_index];
+			self.compute_column_in_line(primary.head)
+		});
+		self.goal_column = Some(goal_col);
+
 		let mut new_ranges = Vec::with_capacity(ranges.len());
 
 		for range in ranges.iter() {
 			let mut pos = range.head;
 			for _ in 0..count {
-				pos = self.visual_move_from(pos, direction, tab_width);
+				pos = self.visual_move_from(pos, direction, tab_width, goal_col);
 			}
 
 			let new_range = if extend {
@@ -47,9 +59,25 @@ impl Buffer {
 		self.cursor = self.selection.primary().head;
 	}
 
+	/// Computes the column position of a cursor within its line.
+	fn compute_column_in_line(&self, cursor: usize) -> usize {
+		let doc = self.doc();
+		let line = doc.content.char_to_line(cursor);
+		let line_start = doc.content.line_to_char(line);
+		cursor.saturating_sub(line_start)
+	}
+
 	/// Computes a new cursor position from visual line movement.
-	fn visual_move_from(&self, cursor: usize, direction: MoveDir, tab_width: usize) -> usize {
-		// Extract all needed data from doc in one block
+	///
+	/// Uses `goal_col` (column in original line) to restore horizontal position
+	/// when the target line is long enough.
+	fn visual_move_from(
+		&self,
+		cursor: usize,
+		direction: MoveDir,
+		tab_width: usize,
+		goal_col: usize,
+	) -> usize {
 		let (_doc_line, line_start, _total_lines, line_text, next_line_data, prev_line_data) = {
 			let doc = self.doc();
 			let doc_line = doc.content.char_to_line(cursor);
@@ -63,7 +91,6 @@ impl Buffer {
 			};
 			let line_text: String = doc.content.slice(line_start..line_end).into();
 
-			// Get next line data if needed
 			let next_line_data = if doc_line + 1 < total_lines {
 				let next_line_start = doc.content.line_to_char(doc_line + 1);
 				let next_line_end = if doc_line + 2 < total_lines {
@@ -77,7 +104,6 @@ impl Buffer {
 				None
 			};
 
-			// Get prev line data if needed
 			let prev_line_data = if doc_line > 0 {
 				let prev_line = doc_line - 1;
 				let prev_line_start = doc.content.line_to_char(prev_line);
@@ -102,18 +128,14 @@ impl Buffer {
 
 		let segments = self.wrap_line(line_text, self.text_width, tab_width);
 		let current_seg_idx = self.find_segment_for_col(&segments, col_in_line);
-		let col_in_seg = if current_seg_idx < segments.len() {
-			col_in_line.saturating_sub(segments[current_seg_idx].start_offset)
-		} else {
-			col_in_line
-		};
 
 		match direction {
 			MoveDir::Forward => {
 				if current_seg_idx + 1 < segments.len() {
 					let next_seg = &segments[current_seg_idx + 1];
-					let new_col = next_seg.start_offset
-						+ col_in_seg.min(next_seg.text.chars().count().saturating_sub(1));
+					let seg_len = next_seg.text.chars().count().saturating_sub(1);
+					let col_in_seg = goal_col.saturating_sub(next_seg.start_offset);
+					let new_col = next_seg.start_offset + col_in_seg.min(seg_len);
 					line_start + new_col
 				} else if let Some((next_line_start, next_line_text)) = next_line_data {
 					let next_line_text = next_line_text.trim_end_matches('\n');
@@ -123,8 +145,8 @@ impl Buffer {
 						next_line_start
 					} else {
 						let first_seg = &next_segments[0];
-						let new_col =
-							col_in_seg.min(first_seg.text.chars().count().saturating_sub(1).max(0));
+						let seg_len = first_seg.text.chars().count().saturating_sub(1).max(0);
+						let new_col = goal_col.min(seg_len);
 						next_line_start + new_col
 					}
 				} else {
@@ -134,8 +156,9 @@ impl Buffer {
 			MoveDir::Backward => {
 				if current_seg_idx > 0 {
 					let prev_seg = &segments[current_seg_idx - 1];
-					let new_col = prev_seg.start_offset
-						+ col_in_seg.min(prev_seg.text.chars().count().saturating_sub(1));
+					let seg_len = prev_seg.text.chars().count().saturating_sub(1);
+					let col_in_seg = goal_col.saturating_sub(prev_seg.start_offset);
+					let new_col = prev_seg.start_offset + col_in_seg.min(seg_len);
 					line_start + new_col
 				} else if let Some((prev_line_start, prev_line_text)) = prev_line_data {
 					let prev_line_text = prev_line_text.trim_end_matches('\n');
@@ -145,9 +168,8 @@ impl Buffer {
 						prev_line_start
 					} else {
 						let last_seg = &prev_segments[prev_segments.len() - 1];
-						let new_col = last_seg.start_offset
-							+ col_in_seg
-								.min(last_seg.text.chars().count().saturating_sub(1).max(0));
+						let seg_len = last_seg.text.chars().count().saturating_sub(1).max(0);
+						let new_col = last_seg.start_offset + goal_col.min(seg_len);
 						prev_line_start + new_col
 					}
 				} else {
@@ -358,5 +380,93 @@ impl Buffer {
 	/// - `tab_width`: Number of spaces a tab character occupies
 	pub fn wrap_line(&self, text: &str, width: usize, tab_width: usize) -> Vec<WrapSegment> {
 		crate::render::wrap_line(text, width, tab_width)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::buffer::{Buffer, BufferId};
+
+	fn make_buffer(content: &str) -> Buffer {
+		Buffer::new(BufferId(1), content.to_string(), None)
+	}
+
+	#[test]
+	fn goal_column_preserved_across_short_lines() {
+		// Lines: "long line with text" / "" / "short" / "another long line here"
+		let mut buffer = make_buffer("long line with text\n\nshort\nanother long line here");
+		buffer.text_width = 80;
+		buffer.cursor = 10;
+		buffer.selection = xeno_base::Selection::point(10);
+
+		// Move through empty line - snaps to col 0 but goal preserved
+		buffer.move_visual_vertical(MoveDir::Forward, 1, false, 4);
+		assert_eq!(buffer.cursor, 20);
+		assert_eq!(buffer.goal_column, Some(10));
+
+		// Move to "short" - clamps to end but goal preserved
+		buffer.move_visual_vertical(MoveDir::Forward, 1, false, 4);
+		assert_eq!(buffer.cursor, 25);
+		assert_eq!(buffer.goal_column, Some(10));
+
+		// Move to long line - restores to col 10
+		buffer.move_visual_vertical(MoveDir::Forward, 1, false, 4);
+		assert_eq!(buffer.cursor, 37);
+		assert_eq!(buffer.goal_column, Some(10));
+	}
+
+	#[test]
+	fn goal_column_reset_on_horizontal_movement() {
+		let mut buffer = make_buffer("long line\nshort\nanother long line");
+		buffer.text_width = 80;
+		buffer.cursor = 5;
+		buffer.selection = xeno_base::Selection::point(5);
+
+		buffer.move_visual_vertical(MoveDir::Forward, 1, false, 4);
+		assert_eq!(buffer.goal_column, Some(5));
+
+		buffer.set_cursor(12);
+		assert_eq!(buffer.goal_column, None);
+	}
+
+	#[test]
+	fn goal_column_set_from_current_position() {
+		// Lines: "hello world" / "hi" / "longer line here"
+		let mut buffer = make_buffer("hello world\nhi\nlonger line here");
+		buffer.text_width = 80;
+		buffer.cursor = 8;
+		buffer.selection = xeno_base::Selection::point(8);
+		assert_eq!(buffer.goal_column, None);
+
+		// First vertical move sets goal from current col
+		buffer.move_visual_vertical(MoveDir::Forward, 1, false, 4);
+		assert_eq!(buffer.goal_column, Some(8));
+		assert_eq!(buffer.cursor, 13); // end of "hi"
+
+		// Restore to col 8 on longer line
+		buffer.move_visual_vertical(MoveDir::Forward, 1, false, 4);
+		assert_eq!(buffer.cursor, 23);
+	}
+
+	#[test]
+	fn goal_column_preserved_moving_up() {
+		// Lines: "another long line here" / "short" / "" / "long line with text"
+		let mut buffer = make_buffer("another long line here\nshort\n\nlong line with text");
+		buffer.text_width = 80;
+		buffer.cursor = 45; // col 15 on last line
+		buffer.selection = xeno_base::Selection::point(45);
+
+		buffer.move_visual_vertical(MoveDir::Backward, 1, false, 4);
+		assert_eq!(buffer.cursor, 29); // empty line
+		assert_eq!(buffer.goal_column, Some(15));
+
+		buffer.move_visual_vertical(MoveDir::Backward, 1, false, 4);
+		assert_eq!(buffer.cursor, 27); // end of "short"
+		assert_eq!(buffer.goal_column, Some(15));
+
+		buffer.move_visual_vertical(MoveDir::Backward, 1, false, 4);
+		assert_eq!(buffer.cursor, 15); // restored to col 15
+		assert_eq!(buffer.goal_column, Some(15));
 	}
 }

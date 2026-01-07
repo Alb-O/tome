@@ -63,7 +63,7 @@ impl CursorAccess for Editor {
 	}
 
 	fn set_cursor(&mut self, pos: CharIdx) {
-		self.buffer_mut().cursor = pos;
+		self.buffer_mut().set_cursor(pos);
 	}
 }
 
@@ -77,7 +77,7 @@ impl SelectionAccess for Editor {
 	}
 
 	fn set_selection(&mut self, sel: Selection) {
-		self.buffer_mut().selection = sel;
+		self.buffer_mut().set_selection(sel);
 	}
 }
 
@@ -341,11 +341,10 @@ impl JumpAccess for Editor {
 		if let Some(loc) = self.jump_list.jump_forward() {
 			let buffer_id = loc.buffer_id;
 			let cursor = loc.cursor;
-			// Focus the buffer if different
 			if self.focused_view() != buffer_id {
 				self.focus_buffer(buffer_id);
 			}
-			self.buffer_mut().cursor = cursor;
+			self.buffer_mut().set_cursor(cursor);
 			true
 		} else {
 			false
@@ -355,7 +354,6 @@ impl JumpAccess for Editor {
 	fn jump_backward(&mut self) -> bool {
 		let buffer_id = self.focused_view();
 		let cursor = self.buffer().cursor;
-		// Only save if we're at the end of the jump list
 		self.jump_list
 			.push(crate::editor::JumpLocation { buffer_id, cursor });
 
@@ -365,7 +363,7 @@ impl JumpAccess for Editor {
 			if self.focused_view() != buffer_id {
 				self.focus_buffer(buffer_id);
 			}
-			self.buffer_mut().cursor = cursor;
+			self.buffer_mut().set_cursor(cursor);
 			true
 		} else {
 			false

@@ -36,9 +36,9 @@ impl Editor {
 							})
 							.collect()
 					};
-					let buffer = self.buffer_mut();
-					buffer.selection =
-						Selection::from_vec(new_ranges, buffer.selection.primary_index());
+					let primary_index = self.buffer().selection.primary_index();
+					self.buffer_mut()
+						.set_selection(Selection::from_vec(new_ranges, primary_index));
 				}
 				if !self.buffer().selection.primary().is_empty() {
 					self.save_undo_state();
@@ -49,7 +49,7 @@ impl Editor {
 						let new_sel = tx.map_selection(&buffer.selection);
 						(tx, new_sel)
 					};
-					self.buffer_mut().selection = new_sel;
+					self.buffer_mut().set_selection(new_sel);
 					self.apply_transaction(&tx);
 				}
 			}
@@ -66,7 +66,7 @@ impl Editor {
 						let new_sel = tx.map_selection(&buffer.selection);
 						(tx, new_sel)
 					};
-					self.buffer_mut().selection = new_sel;
+					self.buffer_mut().set_selection(new_sel);
 					self.apply_transaction(&tx);
 				}
 				self.set_mode(Mode::Insert);
@@ -103,7 +103,7 @@ impl Editor {
 						let new_sel = tx.map_selection(&buffer.selection);
 						(tx, new_sel)
 					};
-					self.buffer_mut().selection = new_sel;
+					self.buffer_mut().set_selection(new_sel);
 					self.apply_transaction(&tx);
 					let tx = {
 						let buffer = self.buffer();
@@ -111,12 +111,13 @@ impl Editor {
 						Transaction::insert(doc.content.slice(..), &buffer.selection, replacement)
 					};
 					self.apply_transaction(&tx);
-					let buffer = self.buffer_mut();
-					buffer.cursor = buffer.selection.primary().head + len;
-					buffer.selection = Selection::point(buffer.cursor);
+					let new_cursor = self.buffer().selection.primary().head + len;
+					self.buffer_mut()
+						.set_cursor_and_selection(new_cursor, Selection::point(new_cursor));
 				} else {
 					self.save_undo_state();
-					self.buffer_mut().selection = Selection::single(from, from + 1);
+					self.buffer_mut()
+						.set_selection(Selection::single(from, from + 1));
 					let (tx, new_sel) = {
 						let buffer = self.buffer();
 						let doc = buffer.doc();
@@ -124,7 +125,7 @@ impl Editor {
 						let new_sel = tx.map_selection(&buffer.selection);
 						(tx, new_sel)
 					};
-					self.buffer_mut().selection = new_sel;
+					self.buffer_mut().set_selection(new_sel);
 					self.apply_transaction(&tx);
 					let tx = {
 						let buffer = self.buffer();
@@ -136,9 +137,9 @@ impl Editor {
 						)
 					};
 					self.apply_transaction(&tx);
-					let buffer = self.buffer_mut();
-					buffer.cursor = buffer.selection.primary().head + 1;
-					buffer.selection = Selection::point(buffer.cursor);
+					let new_cursor = self.buffer().selection.primary().head + 1;
+					self.buffer_mut()
+						.set_cursor_and_selection(new_cursor, Selection::point(new_cursor));
 				}
 			}
 			EditAction::Undo => {
@@ -149,19 +150,19 @@ impl Editor {
 			}
 			EditAction::Indent => {
 				{
-					let new_ranges: Vec<_> = {
+					let (new_ranges, primary_index) = {
 						let buffer = self.buffer();
 						let doc = buffer.doc();
-						buffer
+						let ranges: Vec<_> = buffer
 							.selection
 							.ranges()
 							.iter()
 							.map(|r| movement::move_to_line_start(doc.content.slice(..), *r, false))
-							.collect()
+							.collect();
+						(ranges, buffer.selection.primary_index())
 					};
-					let buffer = self.buffer_mut();
-					buffer.selection =
-						Selection::from_vec(new_ranges, buffer.selection.primary_index());
+					self.buffer_mut()
+						.set_selection(Selection::from_vec(new_ranges, primary_index));
 				}
 				self.insert_text("    ");
 			}
@@ -178,8 +179,8 @@ impl Editor {
 				let _ = line;
 				if spaces > 0 {
 					self.save_undo_state();
-					self.buffer_mut().selection =
-						Selection::single(line_start, line_start + spaces);
+					self.buffer_mut()
+						.set_selection(Selection::single(line_start, line_start + spaces));
 					let (tx, new_sel) = {
 						let buffer = self.buffer();
 						let doc = buffer.doc();
@@ -187,10 +188,10 @@ impl Editor {
 						let new_sel = tx.map_selection(&buffer.selection);
 						(tx, new_sel)
 					};
-					self.buffer_mut().selection = new_sel;
+					self.buffer_mut().set_selection(new_sel);
 					self.apply_transaction(&tx);
-					let cursor = self.buffer().cursor;
-					self.buffer_mut().cursor = cursor.saturating_sub(spaces);
+					let new_cursor = self.buffer().cursor.saturating_sub(spaces);
+					self.buffer_mut().set_cursor(new_cursor);
 				}
 			}
 			EditAction::ToLowerCase => {
@@ -224,7 +225,8 @@ impl Editor {
 				};
 				if line + 1 < total_lines {
 					self.save_undo_state();
-					self.buffer_mut().selection = Selection::single(end_of_line, end_of_line + 1);
+					self.buffer_mut()
+						.set_selection(Selection::single(end_of_line, end_of_line + 1));
 					let (tx, new_sel) = {
 						let buffer = self.buffer();
 						let doc = buffer.doc();
@@ -232,7 +234,7 @@ impl Editor {
 						let new_sel = tx.map_selection(&buffer.selection);
 						(tx, new_sel)
 					};
-					self.buffer_mut().selection = new_sel;
+					self.buffer_mut().set_selection(new_sel);
 					self.apply_transaction(&tx);
 					let tx = {
 						let buffer = self.buffer();
@@ -244,9 +246,9 @@ impl Editor {
 						)
 					};
 					self.apply_transaction(&tx);
-					let buffer = self.buffer_mut();
-					buffer.cursor = buffer.selection.primary().head + 1;
-					buffer.selection = Selection::point(buffer.cursor);
+					let new_cursor = self.buffer().selection.primary().head + 1;
+					self.buffer_mut()
+						.set_cursor_and_selection(new_cursor, Selection::point(new_cursor));
 				}
 			}
 			EditAction::DeleteBack => {
@@ -290,51 +292,50 @@ impl Editor {
 				};
 				self.apply_transaction(&tx);
 
-				let buffer = self.buffer_mut();
-				buffer.selection = new_selection;
-				buffer.cursor = buffer.selection.primary().head;
+				self.buffer_mut().set_selection(new_selection);
+				self.buffer_mut().sync_cursor_to_selection();
 			}
 			EditAction::OpenBelow => {
 				{
-					let new_ranges: Vec<_> = {
+					let (new_ranges, primary_index) = {
 						let buffer = self.buffer();
 						let doc = buffer.doc();
-						buffer
+						let ranges: Vec<_> = buffer
 							.selection
 							.ranges()
 							.iter()
 							.map(|r| movement::move_to_line_end(doc.content.slice(..), *r, false))
-							.collect()
+							.collect();
+						(ranges, buffer.selection.primary_index())
 					};
-					let buffer = self.buffer_mut();
-					buffer.selection =
-						Selection::from_vec(new_ranges, buffer.selection.primary_index());
+					self.buffer_mut()
+						.set_selection(Selection::from_vec(new_ranges, primary_index));
 				}
 				self.insert_text("\n");
 				self.set_mode(Mode::Insert);
 			}
 			EditAction::OpenAbove => {
 				{
-					let new_ranges: Vec<_> = {
+					let (new_ranges, primary_index) = {
 						let buffer = self.buffer();
 						let doc = buffer.doc();
-						buffer
+						let ranges: Vec<_> = buffer
 							.selection
 							.ranges()
 							.iter()
 							.map(|r| movement::move_to_line_start(doc.content.slice(..), *r, false))
-							.collect()
+							.collect();
+						(ranges, buffer.selection.primary_index())
 					};
-					let buffer = self.buffer_mut();
-					buffer.selection =
-						Selection::from_vec(new_ranges, buffer.selection.primary_index());
+					self.buffer_mut()
+						.set_selection(Selection::from_vec(new_ranges, primary_index));
 				}
 				self.insert_text("\n");
 				{
-					let new_ranges: Vec<_> = {
+					let (new_ranges, primary_index) = {
 						let buffer = self.buffer();
 						let doc = buffer.doc();
-						buffer
+						let ranges: Vec<_> = buffer
 							.selection
 							.ranges()
 							.iter()
@@ -347,11 +348,11 @@ impl Editor {
 									false,
 								)
 							})
-							.collect()
+							.collect();
+						(ranges, buffer.selection.primary_index())
 					};
-					let buffer = self.buffer_mut();
-					buffer.selection =
-						Selection::from_vec(new_ranges, buffer.selection.primary_index());
+					self.buffer_mut()
+						.set_selection(Selection::from_vec(new_ranges, primary_index));
 				}
 				self.set_mode(Mode::Insert);
 			}
@@ -395,11 +396,10 @@ impl Editor {
 					};
 					(current_pos, line_end)
 				};
-				self.buffer_mut().cursor = line_end;
+				self.buffer_mut().set_cursor(line_end);
 				self.insert_text("\n");
-				let buffer = self.buffer_mut();
-				buffer.cursor = current_pos;
-				buffer.selection = Selection::point(current_pos);
+				self.buffer_mut()
+					.set_cursor_and_selection(current_pos, Selection::point(current_pos));
 			}
 			EditAction::AddLineAbove => {
 				let (current_pos, line_start) = {
@@ -410,11 +410,11 @@ impl Editor {
 					let line_start = doc.content.line_to_char(line);
 					(current_pos, line_start)
 				};
-				self.buffer_mut().cursor = line_start;
+				self.buffer_mut().set_cursor(line_start);
 				self.insert_text("\n");
-				let buffer = self.buffer_mut();
-				buffer.cursor = current_pos + 1;
-				buffer.selection = Selection::point(current_pos + 1);
+				let new_pos = current_pos + 1;
+				self.buffer_mut()
+					.set_cursor_and_selection(new_pos, Selection::point(new_pos));
 			}
 		}
 	}
@@ -446,7 +446,7 @@ impl Editor {
 				let new_sel = tx.map_selection(&buffer.selection);
 				(tx, new_sel)
 			};
-			self.buffer_mut().selection = new_sel;
+			self.buffer_mut().set_selection(new_sel);
 			self.apply_transaction(&tx);
 			let tx = {
 				let buffer = self.buffer();
@@ -454,9 +454,9 @@ impl Editor {
 				Transaction::insert(doc.content.slice(..), &buffer.selection, text)
 			};
 			self.apply_transaction(&tx);
-			let buffer = self.buffer_mut();
-			buffer.cursor = buffer.selection.primary().head + new_len;
-			buffer.selection = Selection::point(buffer.cursor);
+			let new_cursor = self.buffer().selection.primary().head + new_len;
+			self.buffer_mut()
+				.set_cursor_and_selection(new_cursor, Selection::point(new_cursor));
 		}
 	}
 }

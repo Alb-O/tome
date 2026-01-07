@@ -27,8 +27,8 @@ impl Editor {
 		for buffer in self.buffers.buffers_mut() {
 			if buffer.document_id() == doc_id {
 				if let Some(selection) = selections.get(&buffer.id) {
-					buffer.selection = selection.clone();
-					buffer.cursor = buffer.selection.primary().head;
+					buffer.set_selection(selection.clone());
+					buffer.sync_cursor_to_selection();
 				}
 				buffer.ensure_valid_selection();
 			}

@@ -155,8 +155,8 @@ impl Editor {
 
 						if let Some(doc_pos) = doc_pos {
 							let anchor = buffer.selection.primary().anchor;
-							buffer.selection = Selection::single(anchor, doc_pos);
-							buffer.cursor = buffer.selection.primary().head;
+							buffer.set_selection(Selection::single(anchor, doc_pos));
+							buffer.sync_cursor_to_selection();
 						}
 					}
 					self.needs_redraw = true;

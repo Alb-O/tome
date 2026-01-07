@@ -21,14 +21,16 @@ impl Editor {
 			};
 			match search_result {
 				Ok(Some(range)) => {
-					self.buffer_mut().cursor = range.head;
+					self.buffer_mut().set_cursor(range.head);
 					if add_selection {
 						self.buffer_mut().selection.push(range);
 					} else if extend {
 						let anchor = self.buffer().selection.primary().anchor;
-						self.buffer_mut().selection = Selection::single(anchor, range.max());
+						self.buffer_mut()
+							.set_selection(Selection::single(anchor, range.max()));
 					} else {
-						self.buffer_mut().selection = Selection::single(range.min(), range.max());
+						self.buffer_mut()
+							.set_selection(Selection::single(range.min(), range.max()));
 					}
 				}
 				Ok(None) => {
@@ -60,14 +62,16 @@ impl Editor {
 			};
 			match search_result {
 				Ok(Some(range)) => {
-					self.buffer_mut().cursor = range.head;
+					self.buffer_mut().set_cursor(range.head);
 					if add_selection {
 						self.buffer_mut().selection.push(range);
 					} else if extend {
 						let anchor = self.buffer().selection.primary().anchor;
-						self.buffer_mut().selection = Selection::single(anchor, range.min());
+						self.buffer_mut()
+							.set_selection(Selection::single(anchor, range.min()));
 					} else {
-						self.buffer_mut().selection = Selection::single(range.min(), range.max());
+						self.buffer_mut()
+							.set_selection(Selection::single(range.min(), range.max()));
 					}
 				}
 				Ok(None) => {
@@ -107,7 +111,8 @@ impl Editor {
 			};
 			match search_result {
 				Ok(Some(range)) => {
-					self.buffer_mut().selection = Selection::single(range.min(), range.max());
+					self.buffer_mut()
+						.set_selection(Selection::single(range.min(), range.max()));
 				}
 				Ok(None) => {
 					self.notify(keys::no_more_matches);
@@ -145,7 +150,8 @@ impl Editor {
 					.map(|r| xeno_base::range::Range::new(from + r.min(), from + r.max()))
 					.collect();
 				let count = new_ranges.len();
-				self.buffer_mut().selection = Selection::from_vec(new_ranges, 0);
+				self.buffer_mut()
+					.set_selection(Selection::from_vec(new_ranges, 0));
 				self.notify(keys::matches_count::call(count));
 			}
 			Ok(_) => {
@@ -190,7 +196,8 @@ impl Editor {
 				}
 				if !new_ranges.is_empty() {
 					let count = new_ranges.len();
-					self.buffer_mut().selection = Selection::from_vec(new_ranges, 0);
+					self.buffer_mut()
+						.set_selection(Selection::from_vec(new_ranges, 0));
 					self.notify(keys::splits_count::call(count));
 				} else {
 					self.notify(keys::split_no_ranges);
@@ -212,7 +219,6 @@ impl Editor {
 		reason = "keep-matching filter will be re-enabled via picker UI"
 	)]
 	pub(crate) fn keep_matching(&mut self, pattern: &str, invert: bool) -> bool {
-		// Collect ranges and text to process
 		let ranges_with_text: Vec<(xeno_base::range::Range, String)> = {
 			let buffer = self.buffer();
 			let doc = buffer.doc();
@@ -254,7 +260,8 @@ impl Editor {
 			self.notify(keys::no_selections_remain);
 		} else {
 			let count = kept_ranges.len();
-			self.buffer_mut().selection = Selection::from_vec(kept_ranges, 0);
+			self.buffer_mut()
+				.set_selection(Selection::from_vec(kept_ranges, 0));
 			self.notify(keys::selections_kept::call(count));
 		}
 		false

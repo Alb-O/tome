@@ -43,8 +43,8 @@ impl Buffer {
 		if !self.apply_transaction(&tx) {
 			return tx;
 		}
-		self.selection = new_selection;
-		self.cursor = self.selection.primary().head;
+		self.set_selection(new_selection);
+		self.sync_cursor_to_selection();
 		tx
 	}
 
@@ -96,7 +96,10 @@ impl Buffer {
 				})
 				.collect()
 		};
-		self.selection = xeno_base::Selection::from_vec(new_ranges, self.selection.primary_index());
+		self.set_selection(xeno_base::Selection::from_vec(
+			new_ranges,
+			self.selection.primary_index(),
+		));
 		Some(self.prepare_insert(text))
 	}
 
@@ -109,8 +112,8 @@ impl Buffer {
 		if !self.apply_transaction(&tx) {
 			return None;
 		}
-		self.selection = new_selection;
-		self.cursor = self.selection.primary().head;
+		self.set_selection(new_selection);
+		self.sync_cursor_to_selection();
 		Some(tx)
 	}
 
@@ -137,8 +140,8 @@ impl Buffer {
 		if !self.apply_transaction(&tx) {
 			return None;
 		}
-		self.selection = new_selection;
-		self.cursor = self.selection.primary().head;
+		self.set_selection(new_selection);
+		self.sync_cursor_to_selection();
 		Some(tx)
 	}
 
@@ -169,7 +172,7 @@ impl Buffer {
 		if !self.apply_transaction(&tx) {
 			return None;
 		}
-		self.selection = new_selection;
+		self.set_selection(new_selection);
 		Some(tx)
 	}
 
@@ -229,8 +232,8 @@ impl Buffer {
 
 	/// Finalizes selection/cursor after a transaction is applied.
 	pub fn finalize_selection(&mut self, new_selection: xeno_base::Selection) {
-		self.selection = new_selection;
-		self.cursor = self.selection.primary().head;
+		self.set_selection(new_selection);
+		self.sync_cursor_to_selection();
 	}
 }
 
