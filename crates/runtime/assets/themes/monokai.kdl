@@ -93,9 +93,9 @@ syntax {
 	// Functions - green
 	function fg=$green
 	function {
-		builtin fg=$green
+		builtin fg=$blue
 		method fg=$green
-		macro fg=$green
+		macro fg=$blue
 		special fg=$green
 	}
 	// Types - blue italic
@@ -110,10 +110,10 @@ syntax {
 	// Strings - yellow
 	string fg=$yellow
 	string {
-		regexp fg=$yellow
+		regexp fg=$orange
 		special fg=$orange
 		special {
-			path fg=$yellow
+			path fg=$orange
 			url fg=$yellow mod=underlined
 			symbol fg=$purple
 		}
@@ -157,8 +157,8 @@ syntax {
 	attribute fg=$green
 	tag fg=$red
 	namespace fg=$fg
-	constructor fg=$green
-	label fg=$fg
+	constructor fg=$blue
+	label fg=$purple
 	special fg=$blue
 	// Markup (Markdown, etc.)
 	markup {

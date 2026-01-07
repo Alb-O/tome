@@ -116,9 +116,9 @@ syntax {
 	// Functions - green
 	function fg=$green
 	function {
-		builtin fg=$green
+		builtin fg=$yellow
 		method fg=$green
-		macro fg=$aqua
+		macro fg=$blue
 		special fg=$green
 	}
 	// Types - yellow
@@ -133,12 +133,12 @@ syntax {
 	// Strings - green
 	string fg=$green
 	string {
-		regexp fg=$green
+		regexp fg=$orange
 		special fg=$orange
 		special {
-			path fg=$aqua
-			url fg=$aqua mod=underlined
-			symbol fg=$purple
+			path fg=$orange
+			url fg=$green mod=underlined
+			symbol fg=$yellow
 		}
 	}
 	// Constants - purple
@@ -158,31 +158,31 @@ syntax {
 			float fg=$purple
 		}
 	}
-	// Variables - blue
-	variable fg=$blue
+	// Variables
+	variable fg=$fg1
 	variable {
-		builtin fg=$orange
-		parameter fg=$blue
-		other fg=$blue
+		builtin fg=$orange mod=italic
+		parameter fg=$blue mod=italic
+		other fg=$fg1
 		other {
 			member fg=$blue
 		}
 	}
 	// Operators and punctuation
-	operator fg=$aqua
-	punctuation fg=$fg1
+	operator fg=$purple
+	punctuation fg=$orange
 	punctuation {
 		bracket fg=$fg1
 		delimiter fg=$fg1
 		special fg=$orange
 	}
 	// Other
-	attribute fg=$aqua
+	attribute fg=$aqua mod=italic
 	tag fg=$aqua
-	namespace fg=$blue
-	constructor fg=$yellow
-	label fg=$aqua
-	special fg=$orange
+	namespace fg=$fg1
+	constructor fg=$purple
+	label fg=$red
+	special fg=$purple
 	// Markup (Markdown, etc.)
 	markup {
 		heading fg=$yellow mod=bold
