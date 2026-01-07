@@ -54,7 +54,7 @@ impl Editor {
 	/// Respects sticky focus - won't steal focus from sticky views.
 	pub fn focus_view_implicit(&mut self, view: BufferView) -> bool {
 		let current = self.focused_view();
-		if current == view || self.sticky_views.contains(&current) {
+		if current == view || self.frame.sticky_views.contains(&current) {
 			return false;
 		}
 		let window_id = self.windows.base_id();
@@ -84,10 +84,10 @@ impl Editor {
 			self.base_window_mut().focused_buffer = view;
 		}
 		let _ = self.buffers.set_focused_view(view);
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 
 		if explicit && view != old_view {
-			self.sticky_views.remove(&old_view);
+			self.frame.sticky_views.remove(&old_view);
 		}
 
 		if view != old_view {

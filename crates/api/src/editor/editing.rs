@@ -57,7 +57,7 @@ impl Editor {
 		}
 
 		self.sync_sibling_selections(&tx);
-		self.dirty_buffers.insert(buffer_id);
+		self.frame.dirty_buffers.insert(buffer_id);
 	}
 
 	/// Copies the current selection to the yank register.
@@ -112,7 +112,7 @@ impl Editor {
 		}
 
 		self.sync_sibling_selections(&tx);
-		self.dirty_buffers.insert(buffer_id);
+		self.frame.dirty_buffers.insert(buffer_id);
 	}
 
 	/// Pastes the yank register content before the cursor.
@@ -159,7 +159,7 @@ impl Editor {
 		}
 
 		self.sync_sibling_selections(&tx);
-		self.dirty_buffers.insert(buffer_id);
+		self.frame.dirty_buffers.insert(buffer_id);
 	}
 
 	/// Deletes the currently selected text.
@@ -205,7 +205,7 @@ impl Editor {
 		}
 
 		self.sync_sibling_selections(&tx);
-		self.dirty_buffers.insert(buffer_id);
+		self.frame.dirty_buffers.insert(buffer_id);
 	}
 
 	/// Applies a transaction to the focused buffer.
@@ -220,7 +220,7 @@ impl Editor {
 			self.notify(keys::buffer_readonly);
 			return;
 		}
-		self.dirty_buffers.insert(buffer_id);
+		self.frame.dirty_buffers.insert(buffer_id);
 		self.sync_sibling_selections(tx);
 	}
 

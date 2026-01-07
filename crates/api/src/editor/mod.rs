@@ -64,7 +64,6 @@ pub mod types;
 /// Buffer access and viewport management.
 mod views;
 
-use std::collections::HashSet;
 use std::path::PathBuf;
 
 pub use buffer_manager::BufferManager;
@@ -72,7 +71,9 @@ pub use command_queue::CommandQueue;
 pub use focus::{FocusReason, FocusTarget, PanelId};
 pub use hook_runtime::HookRuntime;
 pub use layout::{LayoutManager, SeparatorHit, SeparatorId};
-pub use types::{HistoryEntry, JumpList, JumpLocation, MacroState, Registers};
+pub use types::{
+	FrameState, HistoryEntry, JumpList, JumpLocation, MacroState, Registers, Viewport,
+};
 use xeno_language::LanguageLoader;
 use xeno_registry::options::OptionStore;
 use xeno_registry::themes::Theme;
@@ -83,7 +84,7 @@ use xeno_tui::layout::Rect;
 use xeno_tui::widgets::menu::MenuState;
 
 pub use self::separator::{DragState, MouseVelocityTracker, SeparatorHoverAnimation};
-use crate::buffer::{BufferId, BufferView, Layout};
+use crate::buffer::{BufferId, Layout};
 use crate::editor::extensions::{EXTENSIONS, ExtensionMap, StyleOverlays};
 use crate::menu::{MenuAction, create_menu};
 use crate::overlay::OverlayManager;
@@ -148,27 +149,17 @@ pub struct Editor {
 	/// Current theme.
 	pub theme: &'static Theme,
 
-	/// Window dimensions.
-	pub window_width: Option<u16>,
-	/// Window height in rows.
-	pub window_height: Option<u16>,
-	/// Last computed document area (excludes chrome like menu/status bars).
-	pub doc_area: Option<xeno_tui::layout::Rect>,
+	/// Terminal viewport dimensions.
+	pub viewport: Viewport,
 
 	/// UI manager (panels, dock, etc.).
 	pub ui: UiManager,
 
-	/// Whether a redraw is needed.
-	pub needs_redraw: bool,
-
-	/// Whether a command requested the editor to quit.
-	pending_quit: bool,
+	/// Per-frame runtime state (redraw flags, dirty buffers, etc.).
+	pub frame: FrameState,
 
 	/// Notification system.
 	pub notifications: xeno_tui::widgets::notifications::ToastManager,
-
-	/// Last tick timestamp.
-	pub last_tick: std::time::SystemTime,
 
 	/// Extension map (typemap for extension state).
 	pub extensions: ExtensionMap,
@@ -181,12 +172,6 @@ pub struct Editor {
 
 	/// Runtime for scheduling async hooks during sync emission.
 	pub hook_runtime: HookRuntime,
-
-	/// Buffers with pending content changes for [`HookEvent::BufferChange`].
-	dirty_buffers: HashSet<BufferId>,
-
-	/// Views with sticky focus (resist mouse hover focus changes).
-	sticky_views: HashSet<BufferView>,
 
 	/// Jump list for `<C-o>` / `<C-i>` navigation.
 	pub jump_list: JumpList,
@@ -288,16 +273,12 @@ impl Editor {
 			registers: Registers::default(),
 			theme: xeno_registry::themes::get_theme(xeno_registry::themes::DEFAULT_THEME_ID)
 				.unwrap_or(&xeno_registry::themes::DEFAULT_THEME),
-			window_width: None,
-			window_height: None,
-			doc_area: None,
+			viewport: Viewport::default(),
 			ui: UiManager::new(),
-			needs_redraw: false,
-			pending_quit: false,
+			frame: FrameState::new(),
 			notifications: xeno_tui::widgets::notifications::ToastManager::new()
 				.max_visible(Some(5))
 				.overflow(xeno_tui::widgets::notifications::Overflow::DropOldest),
-			last_tick: std::time::SystemTime::now(),
 			extensions: {
 				let mut map = ExtensionMap::new();
 				let mut sorted_exts: Vec<_> = EXTENSIONS.iter().collect();
@@ -310,8 +291,6 @@ impl Editor {
 			language_loader,
 			style_overlays: StyleOverlays::new(),
 			hook_runtime,
-			dirty_buffers: HashSet::new(),
-			sticky_views: HashSet::new(),
 			jump_list: JumpList::default(),
 			macro_state: MacroState::default(),
 			command_queue: CommandQueue::new(),

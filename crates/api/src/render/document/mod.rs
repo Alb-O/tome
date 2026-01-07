@@ -185,9 +185,9 @@ impl Editor {
 	pub fn render(&mut self, frame: &mut xeno_tui::Frame) {
 		let now = SystemTime::now();
 		let delta = now
-			.duration_since(self.last_tick)
+			.duration_since(self.frame.last_tick)
 			.unwrap_or(Duration::from_millis(16));
-		self.last_tick = now;
+		self.frame.last_tick = now;
 		self.notifications.tick(delta);
 
 		// Update style overlays to reflect current cursor position.
@@ -198,8 +198,8 @@ impl Editor {
 		let use_block_cursor = true;
 
 		let area = frame.area();
-		self.window_width = Some(area.width);
-		self.window_height = Some(area.height);
+		self.viewport.width = Some(area.width);
+		self.viewport.height = Some(area.height);
 
 		frame.render_widget(Clear, area);
 
@@ -222,7 +222,7 @@ impl Editor {
 		let mut ui = std::mem::take(&mut self.ui);
 		let dock_layout = ui.compute_layout(main_area);
 		let doc_area = dock_layout.doc_area;
-		self.doc_area = Some(doc_area);
+		self.viewport.doc_area = Some(doc_area);
 
 		let doc_focused = ui.focus.focused().is_editor();
 
@@ -234,7 +234,7 @@ impl Editor {
 			frame.set_cursor_position(cursor_pos);
 		}
 		if ui.take_wants_redraw() {
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 		}
 		self.ui = ui;
 
@@ -315,11 +315,11 @@ impl Editor {
 			if old_hover != self.layout.hovered_separator {
 				self.layout
 					.update_hover_animation(old_hover, self.layout.hovered_separator);
-				self.needs_redraw = true;
+				self.frame.needs_redraw = true;
 			}
 		}
 		if self.layout.animation_needs_redraw() {
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 		}
 
 		let sep_style = SeparatorStyle::new(self, doc_area);

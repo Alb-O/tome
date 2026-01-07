@@ -89,8 +89,8 @@ pub async fn run_editor(mut editor: Editor) -> io::Result<()> {
 
 			let mut filter = |e: &Event| !e.is_escape();
 			// Check needs_redraw before clearing to determine timeout
-			let needs_fast_redraw = editor.needs_redraw;
-			editor.needs_redraw = false;
+			let needs_fast_redraw = editor.frame.needs_redraw;
+			editor.frame.needs_redraw = false;
 
 			let timeout = if matches!(editor.mode(), xeno_base::Mode::Insert)
 				|| editor.any_panel_open()

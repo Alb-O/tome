@@ -78,14 +78,14 @@ impl Editor {
 		if key.code == KeyCode::Char('m') && key.modifiers.contains(termina::event::Modifiers::ALT)
 		{
 			self.menu.activate();
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 			return false;
 		}
 
 		// UI global bindings (panels, focus, etc.)
 		if self.ui.handle_global_key(&key) {
 			if self.ui.take_wants_redraw() {
-				self.needs_redraw = true;
+				self.frame.needs_redraw = true;
 			}
 			self.sync_focus_from_ui();
 			return false;
@@ -95,7 +95,7 @@ impl Editor {
 			let mut ui = std::mem::take(&mut self.ui);
 			let _ = ui.handle_focused_key(self, key);
 			if ui.take_wants_redraw() {
-				self.needs_redraw = true;
+				self.frame.needs_redraw = true;
 			}
 			self.ui = ui;
 			self.sync_focus_from_ui();
@@ -113,7 +113,7 @@ impl Editor {
 
 		if self.palette_is_open() && key.code == KeyCode::Enter {
 			self.execute_palette();
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 			return false;
 		}
 
@@ -130,7 +130,7 @@ impl Editor {
 
 		match result {
 			KeyResult::Pending { .. } => {
-				self.needs_redraw = true;
+				self.frame.needs_redraw = true;
 				false
 			}
 			KeyResult::ModeChange(new_mode) => {
@@ -235,7 +235,7 @@ impl Editor {
 			KeyCode::Down | KeyCode::Char('j') => self.menu.down(),
 			_ => {}
 		}
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 	}
 
 	fn handle_floating_escape(&mut self, key: &termina::event::KeyEvent) -> bool {
@@ -261,7 +261,7 @@ impl Editor {
 			.and_then(|p| p.window_id());
 		if Some(window) == palette_window {
 			self.close_palette();
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 			return true;
 		}
 
@@ -271,7 +271,7 @@ impl Editor {
 
 		let base_buffer = self.base_window().focused_buffer;
 		self.focus_view(base_buffer);
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 		true
 	}
 }

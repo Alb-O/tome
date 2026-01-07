@@ -16,7 +16,7 @@ impl Editor {
 		let mut ui = std::mem::take(&mut self.ui);
 		ui.startup();
 		self.ui = ui;
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 	}
 
 	/// Ticks the UI layer, allowing it to update and request redraws.
@@ -24,7 +24,7 @@ impl Editor {
 		let mut ui = std::mem::take(&mut self.ui);
 		ui.tick(self);
 		if ui.take_wants_redraw() {
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 		}
 		self.ui = ui;
 	}
@@ -39,10 +39,10 @@ impl Editor {
 
 		// Check if separator animation needs continuous redraws
 		if self.layout.animation_needs_redraw() {
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 		}
 
-		let dirty_ids: Vec<_> = self.dirty_buffers.drain().collect();
+		let dirty_ids: Vec<_> = self.frame.dirty_buffers.drain().collect();
 		for buffer_id in dirty_ids {
 			if let Some(buffer) = self.buffers.get_buffer(buffer_id) {
 				let scratch_path = PathBuf::from("[scratch]");
@@ -81,7 +81,7 @@ impl Editor {
 		}
 
 		if self.style_overlays.has_animations() {
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 		}
 	}
 
@@ -92,8 +92,8 @@ impl Editor {
 
 	/// Handles terminal window resize events, updating buffer text widths and emitting hooks.
 	pub fn handle_window_resize(&mut self, width: u16, height: u16) {
-		self.window_width = Some(width);
-		self.window_height = Some(height);
+		self.viewport.width = Some(width);
+		self.viewport.height = Some(height);
 
 		// Update text width for all buffers
 		for buffer in self.buffers.buffers_mut() {
@@ -103,10 +103,10 @@ impl Editor {
 		let mut ui = std::mem::take(&mut self.ui);
 		ui.notify_resize(self, width, height);
 		if ui.take_wants_redraw() {
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 		}
 		self.ui = ui;
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 		emit_hook_sync_with(
 			&HookContext::new(
 				HookEventData::WindowResize { width, height },
@@ -118,7 +118,7 @@ impl Editor {
 
 	/// Handles terminal focus gained events, emitting the FocusGained hook.
 	pub fn handle_focus_in(&mut self) {
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 		emit_hook_sync_with(
 			&HookContext::new(HookEventData::FocusGained, Some(&self.extensions)),
 			&mut self.hook_runtime,
@@ -127,7 +127,7 @@ impl Editor {
 
 	/// Handles terminal focus lost events, emitting the FocusLost hook.
 	pub fn handle_focus_out(&mut self) {
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 		emit_hook_sync_with(
 			&HookContext::new(HookEventData::FocusLost, Some(&self.extensions)),
 			&mut self.hook_runtime,
@@ -139,13 +139,13 @@ impl Editor {
 		let mut ui = std::mem::take(&mut self.ui);
 		let handled = ui.handle_paste(self, content.clone());
 		if ui.take_wants_redraw() {
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 		}
 		self.ui = ui;
 		self.sync_focus_from_ui();
 
 		if handled {
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 			return;
 		}
 

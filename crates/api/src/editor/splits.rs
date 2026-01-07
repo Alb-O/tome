@@ -63,13 +63,13 @@ impl Editor {
 
 	/// Requests the editor to quit after the current event loop iteration.
 	pub fn request_quit(&mut self) {
-		self.pending_quit = true;
+		self.frame.pending_quit = true;
 	}
 
 	/// Consumes and returns the pending quit request, if any.
 	pub fn take_quit_request(&mut self) -> bool {
-		if self.pending_quit {
-			self.pending_quit = false;
+		if self.frame.pending_quit {
+			self.frame.pending_quit = false;
 			true
 		} else {
 			false
@@ -127,7 +127,7 @@ impl Editor {
 			self.focus_view(focus);
 		}
 
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 		true
 	}
 

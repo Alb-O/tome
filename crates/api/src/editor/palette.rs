@@ -21,7 +21,7 @@ impl Editor {
 			return false;
 		}
 
-		let (width, height) = match (self.window_width, self.window_height) {
+		let (width, height) = match (self.viewport.width, self.viewport.height) {
 			(Some(w), Some(h)) => (w, h),
 			_ => return false,
 		};
@@ -126,7 +126,7 @@ impl Editor {
 			window: window_id,
 			buffer: float.buffer,
 		};
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 	}
 
 	fn focus_base_window(&mut self) {
@@ -135,6 +135,6 @@ impl Editor {
 			window: base_id,
 			buffer: self.base_window().focused_buffer,
 		};
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 	}
 }

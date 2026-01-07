@@ -17,7 +17,7 @@ impl Editor {
 		file_type: Option<&str>,
 		anchor: PopupAnchor,
 	) -> Option<InfoPopupId> {
-		let bounds = self.doc_area?;
+		let bounds = self.viewport.doc_area?;
 
 		let lines: Vec<&str> = content.lines().collect();
 		let content_height = lines.len().min(20) as u16;
@@ -63,7 +63,7 @@ impl Editor {
 			anchor,
 		});
 
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 		Some(popup_id)
 	}
 
@@ -78,7 +78,7 @@ impl Editor {
 		};
 		self.close_floating_window(popup.window_id);
 		self.buffers.remove_buffer(popup.buffer_id);
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 	}
 
 	/// Closes all open info popups.
@@ -126,7 +126,7 @@ impl Editor {
 		}
 
 		buffer.set_readonly_override(Some(true));
-		self.needs_redraw = true;
+		self.frame.needs_redraw = true;
 		true
 	}
 

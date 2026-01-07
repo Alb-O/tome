@@ -21,7 +21,7 @@ impl Editor {
 			content,
 			path.clone(),
 			&self.language_loader,
-			self.window_width,
+			self.viewport.width,
 		);
 
 		let scratch_path = PathBuf::from("[scratch]");
@@ -52,7 +52,7 @@ impl Editor {
 			content,
 			path.clone(),
 			&self.language_loader,
-			self.window_width,
+			self.viewport.width,
 		);
 
 		let scratch_path = PathBuf::from("[scratch]");

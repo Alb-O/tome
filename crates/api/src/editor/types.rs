@@ -1,11 +1,12 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use termina::event::KeyEvent;
 use xeno_base::range::CharIdx;
 use xeno_base::{Rope, Selection};
 use xeno_core::CompletionItem;
+use xeno_tui::layout::Rect;
 
-use crate::buffer::BufferId;
+use crate::buffer::{BufferId, BufferView};
 
 /// Undo/redo history entry storing document state and per-view selections.
 #[derive(Clone)]
@@ -199,5 +200,94 @@ impl CompletionState {
 	pub fn visible_range(&self) -> std::ops::Range<usize> {
 		let end = (self.scroll_offset + Self::MAX_VISIBLE).min(self.items.len());
 		self.scroll_offset..end
+	}
+}
+
+/// Per-frame runtime state.
+///
+/// Groups hot fields that are accessed every frame for better cache locality.
+/// These fields change frequently during normal editor operation.
+pub struct FrameState {
+	/// Whether a redraw is needed.
+	pub needs_redraw: bool,
+	/// Whether a command requested the editor to quit.
+	pub pending_quit: bool,
+	/// Last tick timestamp.
+	pub last_tick: std::time::SystemTime,
+	/// Buffers with pending content changes for [`HookEvent::BufferChange`].
+	pub dirty_buffers: HashSet<BufferId>,
+	/// Views with sticky focus (resist mouse hover focus changes).
+	pub sticky_views: HashSet<BufferView>,
+}
+
+impl Default for FrameState {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+impl FrameState {
+	/// Creates a new frame state with current timestamp.
+	pub fn new() -> Self {
+		Self {
+			needs_redraw: false,
+			pending_quit: false,
+			last_tick: std::time::SystemTime::now(),
+			dirty_buffers: HashSet::new(),
+			sticky_views: HashSet::new(),
+		}
+	}
+
+	/// Requests a redraw on the next frame.
+	#[inline]
+	pub fn request_redraw(&mut self) {
+		self.needs_redraw = true;
+	}
+
+	/// Clears the redraw flag, returning its previous value.
+	#[inline]
+	pub fn take_redraw(&mut self) -> bool {
+		std::mem::take(&mut self.needs_redraw)
+	}
+
+	/// Requests the editor to quit.
+	pub fn request_quit(&mut self) {
+		self.pending_quit = true;
+	}
+
+	/// Marks a buffer as dirty (content changed).
+	pub fn mark_dirty(&mut self, buffer_id: BufferId) {
+		self.dirty_buffers.insert(buffer_id);
+	}
+}
+
+/// Terminal window dimensions and computed document area.
+///
+/// Groups viewport-related fields that change together on resize events.
+#[derive(Default, Clone, Copy)]
+pub struct Viewport {
+	/// Window width in columns.
+	pub width: Option<u16>,
+	/// Window height in rows.
+	pub height: Option<u16>,
+	/// Last computed document area (excludes chrome like menu/status bars).
+	pub doc_area: Option<Rect>,
+}
+
+impl Viewport {
+	/// Updates dimensions from a resize event.
+	pub fn resize(&mut self, width: u16, height: u16) {
+		self.width = Some(width);
+		self.height = Some(height);
+	}
+
+	/// Returns the document area, or a default fallback.
+	pub fn doc_area_or_default(&self) -> Rect {
+		self.doc_area.unwrap_or(Rect {
+			x: 0,
+			y: 0,
+			width: self.width.unwrap_or(80),
+			height: self.height.unwrap_or(24),
+		})
 	}
 }

@@ -12,8 +12,8 @@ use crate::window::Window;
 impl Editor {
 	/// Processes a mouse event, returning true if the event triggered a quit.
 	pub async fn handle_mouse(&mut self, mouse: termina::event::MouseEvent) -> bool {
-		let width = self.window_width.unwrap_or(80);
-		let height = self.window_height.unwrap_or(24);
+		let width = self.viewport.width.unwrap_or(80);
+		let height = self.viewport.height.unwrap_or(24);
 
 		// Handle menu bar clicks (row 0) or when menu is active
 		if mouse.row == 0 || self.menu.is_active() {
@@ -24,19 +24,19 @@ impl Editor {
 				MouseEventKind::Down(_) => {
 					if self.menu.handle_click(menu_x, menu_y) {
 						crate::menu::process_menu_events(&mut self.menu, &mut self.command_queue);
-						self.needs_redraw = true;
+						self.frame.needs_redraw = true;
 						return false;
 					}
 					// Click outside menu when active - close it
 					if self.menu.is_active() {
 						self.menu.reset();
-						self.needs_redraw = true;
+						self.frame.needs_redraw = true;
 						return false;
 					}
 				}
 				MouseEventKind::Moved | MouseEventKind::Drag(_) => {
 					if self.menu.is_active() && self.menu.handle_hover(menu_x, menu_y) {
-						self.needs_redraw = true;
+						self.frame.needs_redraw = true;
 						return false;
 					}
 				}
@@ -63,14 +63,14 @@ impl Editor {
 
 		if ui.handle_mouse(self, mouse, &dock_layout) {
 			if ui.take_wants_redraw() {
-				self.needs_redraw = true;
+				self.frame.needs_redraw = true;
 			}
 			self.ui = ui;
 			self.sync_focus_from_ui();
 			return false;
 		}
 		if ui.take_wants_redraw() {
-			self.needs_redraw = true;
+			self.frame.needs_redraw = true;
 		}
 		self.ui = ui;
 		self.sync_focus_from_ui();
@@ -112,12 +112,12 @@ impl Editor {
 						mouse_x,
 						mouse_y,
 					);
-					self.needs_redraw = true;
+					self.frame.needs_redraw = true;
 					return false;
 				}
 				MouseEventKind::Up(_) => {
 					self.layout.end_drag();
-					self.needs_redraw = true;
+					self.frame.needs_redraw = true;
 					return false;
 				}
 				_ => {}
@@ -159,12 +159,12 @@ impl Editor {
 							buffer.sync_cursor_to_selection();
 						}
 					}
-					self.needs_redraw = true;
+					self.frame.needs_redraw = true;
 					return false;
 				}
 				MouseEventKind::Up(_) => {
 					self.layout.text_selection_origin = None;
-					self.needs_redraw = true;
+					self.frame.needs_redraw = true;
 				}
 				_ => {}
 			}
@@ -200,7 +200,7 @@ impl Editor {
 					(Some(old), Some(new)) if old == new => Some(old),
 					(_, Some(sep)) if !is_fast_mouse => Some(sep),
 					(_, Some(_)) => {
-						self.needs_redraw = true;
+						self.frame.needs_redraw = true;
 						None
 					}
 					(_, None) => None,
@@ -209,7 +209,7 @@ impl Editor {
 				if old_hover != self.layout.hovered_separator {
 					self.layout
 						.update_hover_animation(old_hover, self.layout.hovered_separator);
-					self.needs_redraw = true;
+					self.frame.needs_redraw = true;
 				}
 
 				if self.layout.hovered_separator.is_some() {
@@ -219,27 +219,27 @@ impl Editor {
 			MouseEventKind::Down(_) => {
 				if let Some(hit) = &separator_hit {
 					self.layout.start_drag(hit);
-					self.needs_redraw = true;
+					self.frame.needs_redraw = true;
 					return false;
 				}
 				if self.layout.hovered_separator.is_some() {
 					let old_hover = self.layout.hovered_separator.take();
 					self.layout.update_hover_animation(old_hover, None);
-					self.needs_redraw = true;
+					self.frame.needs_redraw = true;
 				}
 			}
 			MouseEventKind::Drag(_) => {
 				if self.layout.hovered_separator.is_some() {
 					let old_hover = self.layout.hovered_separator.take();
 					self.layout.update_hover_animation(old_hover, None);
-					self.needs_redraw = true;
+					self.frame.needs_redraw = true;
 				}
 			}
 			_ => {
 				if separator_hit.is_none() && self.layout.hovered_separator.is_some() {
 					let old_hover = self.layout.hovered_separator.take();
 					self.layout.update_hover_animation(old_hover, None);
-					self.needs_redraw = true;
+					self.frame.needs_redraw = true;
 				}
 			}
 		}
@@ -349,8 +349,8 @@ impl Editor {
 
 	/// Computes the document area based on current window dimensions.
 	pub fn doc_area(&self) -> xeno_tui::layout::Rect {
-		let width = self.window_width.unwrap_or(80);
-		let height = self.window_height.unwrap_or(24);
+		let width = self.viewport.width.unwrap_or(80);
+		let height = self.viewport.height.unwrap_or(24);
 		// Exclude menu bar (1 row) and status line (1 row)
 		let main_height = height.saturating_sub(2);
 		let main_area = xeno_tui::layout::Rect {
