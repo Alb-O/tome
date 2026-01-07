@@ -222,7 +222,7 @@ impl Editor {
 		emit_hook_sync_with(
 			&HookContext::new(
 				HookEventData::WindowCreated {
-					window_id: xeno_registry::WindowId(window_manager.base_id().0),
+					window_id: window_manager.base_id().into(),
 					kind: WindowKind::Base,
 				},
 				None,
@@ -296,7 +296,7 @@ impl Editor {
 		emit_hook_sync_with(
 			&HookContext::new(
 				HookEventData::WindowCreated {
-					window_id: xeno_registry::WindowId(id.0),
+					window_id: id.into(),
 					kind: WindowKind::Floating,
 				},
 				Some(&self.extensions),
@@ -319,7 +319,7 @@ impl Editor {
 		emit_hook_sync_with(
 			&HookContext::new(
 				HookEventData::WindowClosed {
-					window_id: xeno_registry::WindowId(id.0),
+					window_id: id.into(),
 				},
 				Some(&self.extensions),
 			),

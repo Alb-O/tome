@@ -6,7 +6,7 @@ use xeno_base::Mode;
 use xeno_registry::{HookContext, HookEventData, ViewId, emit_sync_with as emit_hook_sync_with};
 
 use super::Editor;
-use crate::buffer::{BufferId, BufferView, Direction};
+use crate::buffer::{BufferId, BufferView, SpatialDirection};
 use crate::palette::PaletteState;
 use crate::window::{Window, WindowId};
 
@@ -151,7 +151,7 @@ impl Editor {
 	}
 
 	/// Focuses the view in the given direction, using cursor position as tiebreaker.
-	pub fn focus_direction(&mut self, direction: Direction) {
+	pub fn focus_direction(&mut self, direction: SpatialDirection) {
 		let area = self.doc_area();
 		let current = self.focused_view();
 		let hint = self.cursor_screen_pos(direction, area);
@@ -186,7 +186,7 @@ impl Editor {
 	}
 
 	/// Returns cursor screen position along the perpendicular axis for directional hints.
-	fn cursor_screen_pos(&self, direction: Direction, area: xeno_tui::layout::Rect) -> u16 {
+	fn cursor_screen_pos(&self, direction: SpatialDirection, area: xeno_tui::layout::Rect) -> u16 {
 		let buffer = self.buffer();
 		let view_rect = self
 			.layout
@@ -197,11 +197,11 @@ impl Editor {
 			.unwrap_or(area);
 
 		match direction {
-			Direction::Left | Direction::Right => {
+			SpatialDirection::Left | SpatialDirection::Right => {
 				let visible_line = buffer.cursor_line().saturating_sub(buffer.scroll_line);
 				view_rect.y + (visible_line as u16).min(view_rect.height.saturating_sub(1))
 			}
-			Direction::Up | Direction::Down => {
+			SpatialDirection::Up | SpatialDirection::Down => {
 				let gutter = buffer.gutter_width();
 				view_rect.x
 					+ gutter + (buffer.cursor_col() as u16)
@@ -235,7 +235,7 @@ impl Editor {
 				emit_hook_sync_with(
 					&HookContext::new(
 						HookEventData::WindowFocusChanged {
-							window_id: xeno_registry::WindowId(window.0),
+							window_id: window.into(),
 							focused: false,
 						},
 						Some(&self.extensions),
@@ -247,7 +247,7 @@ impl Editor {
 				emit_hook_sync_with(
 					&HookContext::new(
 						HookEventData::WindowFocusChanged {
-							window_id: xeno_registry::WindowId(window.0),
+							window_id: window.into(),
 							focused: true,
 						},
 						Some(&self.extensions),

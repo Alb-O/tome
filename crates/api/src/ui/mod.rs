@@ -5,7 +5,7 @@ mod manager;
 /// Panel traits and request types.
 pub mod panel;
 
-pub use focus::FocusTarget;
+pub use focus::UiFocus;
 pub use keymap::UiKeyChord;
 pub use manager::UiManager;
 pub use panel::UiRequest;

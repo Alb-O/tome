@@ -309,13 +309,7 @@ impl FocusOps for Editor {
 	}
 
 	fn focus(&mut self, direction: SpatialDirection) {
-		let dir = match direction {
-			SpatialDirection::Left => crate::buffer::Direction::Left,
-			SpatialDirection::Right => crate::buffer::Direction::Right,
-			SpatialDirection::Up => crate::buffer::Direction::Up,
-			SpatialDirection::Down => crate::buffer::Direction::Down,
-		};
-		self.focus_direction(dir);
+		self.focus_direction(direction);
 	}
 }
 

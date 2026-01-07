@@ -163,7 +163,9 @@ pub struct ScrollbarState {
 	position: usize,
 	/// The length of content in current viewport.
 	///
-	/// FIXME: this should be `Option<usize>`, but it will break serialization to change it.
+	/// When 0, the track size is used as the viewport length.
+	/// Ideally this would be `Option<usize>` where `None` means "use track size",
+	/// but that would break serde serialization compatibility.
 	viewport_content_length: usize,
 }
 

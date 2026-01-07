@@ -28,7 +28,7 @@ pub enum UiRequest {
 	/// Request a screen redraw.
 	Redraw,
 	/// Request focus change to a specific target.
-	Focus(super::FocusTarget),
+	Focus(super::UiFocus),
 	/// Request closing a panel by ID.
 	ClosePanel(String),
 	/// Request toggling a panel's open state by ID.

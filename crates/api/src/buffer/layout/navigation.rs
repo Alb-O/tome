@@ -1,19 +1,11 @@
 //! Layout navigation methods for traversing views and buffers.
 
+use xeno_base::SpatialDirection;
 use xeno_tui::layout::Rect;
 
 use super::Layout;
 use super::types::BufferView;
 use crate::buffer::BufferId;
-
-/// Direction for spatial navigation between views.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Direction {
-	Left,
-	Right,
-	Up,
-	Down,
-}
 
 impl Layout {
 	/// Returns the next view in the layout order (for `Ctrl+w w` navigation).
@@ -64,7 +56,7 @@ impl Layout {
 		&self,
 		area: Rect,
 		current: BufferView,
-		direction: Direction,
+		direction: SpatialDirection,
 		hint: u16,
 	) -> Option<BufferView> {
 		let views = self.compute_view_areas(area);
@@ -78,7 +70,7 @@ impl Layout {
 			return Some(*v);
 		}
 
-		let wrap = direction.opposite();
+		let wrap = opposite(direction);
 		views
 			.iter()
 			.filter(|(v, r)| *v != current && is_in_direction(current_rect, *r, wrap))
@@ -93,25 +85,23 @@ impl Layout {
 	}
 }
 
-impl Direction {
-	/// Returns the opposite direction.
-	fn opposite(self) -> Self {
-		match self {
-			Direction::Left => Direction::Right,
-			Direction::Right => Direction::Left,
-			Direction::Up => Direction::Down,
-			Direction::Down => Direction::Up,
-		}
+/// Returns the opposite direction.
+fn opposite(direction: SpatialDirection) -> SpatialDirection {
+	match direction {
+		SpatialDirection::Left => SpatialDirection::Right,
+		SpatialDirection::Right => SpatialDirection::Left,
+		SpatialDirection::Up => SpatialDirection::Down,
+		SpatialDirection::Down => SpatialDirection::Up,
 	}
 }
 
 /// Checks if `candidate` is strictly in `direction` from `current`.
-fn is_in_direction(current: Rect, candidate: Rect, direction: Direction) -> bool {
+fn is_in_direction(current: Rect, candidate: Rect, direction: SpatialDirection) -> bool {
 	match direction {
-		Direction::Left => candidate.x + candidate.width <= current.x,
-		Direction::Right => candidate.x >= current.x + current.width,
-		Direction::Up => candidate.y + candidate.height <= current.y,
-		Direction::Down => candidate.y >= current.y + current.height,
+		SpatialDirection::Left => candidate.x + candidate.width <= current.x,
+		SpatialDirection::Right => candidate.x >= current.x + current.width,
+		SpatialDirection::Up => candidate.y + candidate.height <= current.y,
+		SpatialDirection::Down => candidate.y >= current.y + current.height,
 	}
 }
 
@@ -119,14 +109,14 @@ fn is_in_direction(current: Rect, candidate: Rect, direction: Direction) -> bool
 ///
 /// For left/right movement, this is the vertical overlap.
 /// For up/down movement, this is the horizontal overlap.
-fn compute_overlap(current: Rect, candidate: Rect, direction: Direction) -> u16 {
+fn compute_overlap(current: Rect, candidate: Rect, direction: SpatialDirection) -> u16 {
 	match direction {
-		Direction::Left | Direction::Right => {
+		SpatialDirection::Left | SpatialDirection::Right => {
 			let start = current.y.max(candidate.y);
 			let end = (current.y + current.height).min(candidate.y + candidate.height);
 			end.saturating_sub(start)
 		}
-		Direction::Up | Direction::Down => {
+		SpatialDirection::Up | SpatialDirection::Down => {
 			let start = current.x.max(candidate.x);
 			let end = (current.x + current.width).min(candidate.x + candidate.width);
 			end.saturating_sub(start)
@@ -135,12 +125,12 @@ fn compute_overlap(current: Rect, candidate: Rect, direction: Direction) -> u16 
 }
 
 /// Computes edge distance between current and candidate in the given direction.
-fn compute_distance(current: Rect, candidate: Rect, direction: Direction) -> u16 {
+fn compute_distance(current: Rect, candidate: Rect, direction: SpatialDirection) -> u16 {
 	match direction {
-		Direction::Left => current.x.saturating_sub(candidate.x + candidate.width),
-		Direction::Right => candidate.x.saturating_sub(current.x + current.width),
-		Direction::Up => current.y.saturating_sub(candidate.y + candidate.height),
-		Direction::Down => candidate.y.saturating_sub(current.y + current.height),
+		SpatialDirection::Left => current.x.saturating_sub(candidate.x + candidate.width),
+		SpatialDirection::Right => candidate.x.saturating_sub(current.x + current.width),
+		SpatialDirection::Up => current.y.saturating_sub(candidate.y + candidate.height),
+		SpatialDirection::Down => candidate.y.saturating_sub(current.y + current.height),
 	}
 }
 
@@ -149,7 +139,7 @@ fn compare_candidates(
 	current: Rect,
 	a: Rect,
 	b: Rect,
-	direction: Direction,
+	direction: SpatialDirection,
 	hint: u16,
 ) -> std::cmp::Ordering {
 	let overlap =
@@ -169,9 +159,9 @@ fn compare_candidates(
 }
 
 /// Returns the center position along the perpendicular axis.
-fn perpendicular_center(rect: Rect, direction: Direction) -> u16 {
+fn perpendicular_center(rect: Rect, direction: SpatialDirection) -> u16 {
 	match direction {
-		Direction::Left | Direction::Right => rect.y + rect.height / 2,
-		Direction::Up | Direction::Down => rect.x + rect.width / 2,
+		SpatialDirection::Left | SpatialDirection::Right => rect.y + rect.height / 2,
+		SpatialDirection::Up | SpatialDirection::Down => rect.x + rect.width / 2,
 	}
 }

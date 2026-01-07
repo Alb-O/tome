@@ -7,7 +7,7 @@ use xeno_registry::themes::Theme;
 use xeno_tui::layout::Rect;
 
 use super::dock::{DockLayout, DockManager};
-use super::focus::{FocusManager, FocusTarget};
+use super::focus::{FocusManager, UiFocus};
 use super::keymap::{BindingScope, KeybindingRegistry};
 use super::panel::{Panel, PanelInitContext, UiEvent, UiRequest};
 
@@ -161,7 +161,7 @@ impl UiManager {
 
 		if let Some(id) = hit_panel {
 			// Focus follows mouse for panels.
-			self.apply_requests(vec![UiRequest::Focus(FocusTarget::panel(id.clone()))]);
+			self.apply_requests(vec![UiRequest::Focus(UiFocus::panel(id.clone()))]);
 			let focused = self.is_panel_focused(&id);
 			if let Some(panel) = self.panels.get_mut(&id) {
 				let res = panel.handle_event(UiEvent::Mouse(mouse), editor, focused);
@@ -173,7 +173,7 @@ impl UiManager {
 
 		// Click outside any panel: if we were focused on a panel, return focus to editor.
 		if self.focused_panel_id().is_some() {
-			self.apply_requests(vec![UiRequest::Focus(FocusTarget::editor())]);
+			self.apply_requests(vec![UiRequest::Focus(UiFocus::editor())]);
 		}
 		false
 	}
@@ -218,7 +218,7 @@ impl UiManager {
 			self.dock.close_panel(id);
 			panel.on_open_changed(false);
 			if self.is_panel_focused(id) {
-				self.focus.set_focused(FocusTarget::editor());
+				self.focus.set_focused(UiFocus::editor());
 			}
 		}
 		self.wants_redraw = true;
@@ -229,7 +229,7 @@ impl UiManager {
 		let open = self.dock.is_open(id);
 		self.set_open(id, !open);
 		if !open {
-			self.apply_requests(vec![UiRequest::Focus(FocusTarget::panel(id.to_string()))]);
+			self.apply_requests(vec![UiRequest::Focus(UiFocus::panel(id.to_string()))]);
 		}
 	}
 

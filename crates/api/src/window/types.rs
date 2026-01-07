@@ -11,6 +11,18 @@ use crate::buffer::{BufferId, Layout};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct WindowId(pub(crate) u64);
 
+impl From<WindowId> for xeno_registry::WindowId {
+	fn from(id: WindowId) -> Self {
+		xeno_registry::WindowId(id.0)
+	}
+}
+
+impl From<xeno_registry::WindowId> for WindowId {
+	fn from(id: xeno_registry::WindowId) -> Self {
+		WindowId(id.0)
+	}
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub enum GutterSelector {
 	/// Use enabled gutters from registry (default behavior).

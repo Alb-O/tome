@@ -5,7 +5,7 @@
 use xeno_tui::layout::Rect;
 
 use super::manager::LayoutManager;
-use crate::buffer::{BufferId, BufferView, Direction, Layout};
+use crate::buffer::{BufferId, BufferView, Layout, SpatialDirection};
 
 impl LayoutManager {
 	/// Returns the first view in the layout (from topmost non-empty layer).
@@ -159,7 +159,7 @@ impl LayoutManager {
 		base_layout: &Layout,
 		area: Rect,
 		current: BufferView,
-		direction: Direction,
+		direction: SpatialDirection,
 		hint: u16,
 	) -> Option<BufferView> {
 		if let Some(idx) = self.layer_of_view(base_layout, current)
