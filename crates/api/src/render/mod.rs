@@ -4,8 +4,8 @@ mod completion;
 mod document;
 /// Status line rendering.
 mod status;
-/// Rendering types: wrap segments, render results.
-pub mod types;
+/// Line wrapping with sticky punctuation.
+pub mod wrap;
 
-pub use buffer::{BufferRenderContext, ensure_buffer_cursor_visible};
-pub use types::{RenderResult, WrapSegment, wrap_line};
+pub use buffer::{BufferRenderContext, RenderResult, ensure_buffer_cursor_visible};
+pub use wrap::{WrapSegment, wrap_line};

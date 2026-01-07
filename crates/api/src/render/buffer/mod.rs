@@ -8,5 +8,5 @@ mod context;
 mod gutter;
 mod viewport;
 
-pub use context::BufferRenderContext;
+pub use context::{BufferRenderContext, RenderResult};
 pub use viewport::ensure_buffer_cursor_visible;

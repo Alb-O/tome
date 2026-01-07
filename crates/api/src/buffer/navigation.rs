@@ -4,7 +4,7 @@ use xeno_base::range::{Direction as MoveDir, Range};
 use xeno_base::{ScrollDirection, Selection};
 
 use super::Buffer;
-use crate::render::WrapSegment;
+use crate::render::wrap::WrapSegment;
 
 impl Buffer {
 	/// Moves cursors vertically, accounting for line wrapping.

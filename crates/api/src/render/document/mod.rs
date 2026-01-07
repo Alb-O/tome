@@ -3,9 +3,6 @@
 //! This module handles rendering of buffers in split views, including
 //! separator styling and junction glyphs.
 
-/// Line wrapping calculations for soft-wrapped text.
-mod wrapping;
-
 use std::time::{Duration, SystemTime};
 
 use xeno_tui::animation::Animatable;

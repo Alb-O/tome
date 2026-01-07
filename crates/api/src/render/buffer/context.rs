@@ -17,8 +17,14 @@ use xeno_tui::widgets::Paragraph;
 use super::gutter::GutterLayout;
 use crate::buffer::Buffer;
 use crate::editor::extensions::StyleOverlays;
-use crate::render::types::{RenderResult, wrap_line};
+use crate::render::wrap::wrap_line;
 use crate::window::GutterSelector;
+
+/// Result of rendering a buffer's content.
+pub struct RenderResult {
+	/// The rendered paragraph widget ready for display.
+	pub widget: Paragraph<'static>,
+}
 
 /// Context for rendering a buffer.
 ///

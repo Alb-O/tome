@@ -6,7 +6,7 @@ use xeno_base::range::CharIdx;
 use xeno_tui::layout::Rect;
 
 use crate::buffer::Buffer;
-use crate::render::types::{WrapSegment, wrap_line};
+use crate::render::wrap::{WrapSegment, wrap_line};
 
 /// Test event emitted when viewport scrolling occurs.
 #[derive(Serialize)]
