@@ -23,7 +23,10 @@ impl Editor {
 			match mouse.kind {
 				MouseEventKind::Down(_) => {
 					if self.menu.handle_click(menu_x, menu_y) {
-						crate::menu::process_menu_events(&mut self.menu, &mut self.command_queue);
+						crate::menu::process_menu_events(
+							&mut self.menu,
+							&mut self.workspace.command_queue,
+						);
 						self.frame.needs_redraw = true;
 						return false;
 					}

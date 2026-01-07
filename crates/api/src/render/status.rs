@@ -64,7 +64,7 @@ impl Editor {
 
 	/// Converts a statusline segment to a styled span.
 	pub fn segment_to_span(&self, segment: &RenderedSegment) -> Span<'static> {
-		let colors = &self.theme.colors;
+		let colors = &self.config.theme.colors;
 		let style = match segment.style {
 			SegmentStyle::Normal => Style::default().fg(colors.ui.fg),
 			SegmentStyle::Mode => colors.mode_style(&self.mode()).add_modifier(Modifier::BOLD),

@@ -44,7 +44,7 @@ impl Editor {
 				.buffers
 				.get_buffer_mut(buffer_id)
 				.expect("focused buffer must exist");
-			let applied = buffer.apply_transaction_with_syntax(&tx, &self.language_loader);
+			let applied = buffer.apply_transaction_with_syntax(&tx, &self.config.language_loader);
 			if applied {
 				buffer.finalize_selection(new_selection);
 			}
@@ -63,14 +63,14 @@ impl Editor {
 	/// Copies the current selection to the yank register.
 	pub fn yank_selection(&mut self) {
 		if let Some((text, count)) = self.buffer_mut().yank_selection() {
-			self.registers.yank = text;
+			self.workspace.registers.yank = text;
 			self.notify(keys::yanked_chars::call(count));
 		}
 	}
 
 	/// Pastes the yank register content after the cursor.
 	pub fn paste_after(&mut self) {
-		if self.registers.yank.is_empty() {
+		if self.workspace.registers.yank.is_empty() {
 			return;
 		}
 
@@ -81,7 +81,7 @@ impl Editor {
 		let buffer_id = self.focused_view();
 
 		self.save_undo_state();
-		let yank = self.registers.yank.clone();
+		let yank = self.workspace.registers.yank.clone();
 
 		// Prepare the transaction and new selection (without applying)
 		let Some((tx, new_selection)) = ({
@@ -99,7 +99,7 @@ impl Editor {
 				.buffers
 				.get_buffer_mut(buffer_id)
 				.expect("focused buffer must exist");
-			let applied = buffer.apply_transaction_with_syntax(&tx, &self.language_loader);
+			let applied = buffer.apply_transaction_with_syntax(&tx, &self.config.language_loader);
 			if applied {
 				buffer.finalize_selection(new_selection);
 			}
@@ -117,7 +117,7 @@ impl Editor {
 
 	/// Pastes the yank register content before the cursor.
 	pub fn paste_before(&mut self) {
-		if self.registers.yank.is_empty() {
+		if self.workspace.registers.yank.is_empty() {
 			return;
 		}
 
@@ -128,7 +128,7 @@ impl Editor {
 		let buffer_id = self.focused_view();
 
 		self.save_undo_state();
-		let yank = self.registers.yank.clone();
+		let yank = self.workspace.registers.yank.clone();
 
 		// Prepare the transaction and new selection (without applying)
 		let Some((tx, new_selection)) = ({
@@ -146,7 +146,7 @@ impl Editor {
 				.buffers
 				.get_buffer_mut(buffer_id)
 				.expect("focused buffer must exist");
-			let applied = buffer.apply_transaction_with_syntax(&tx, &self.language_loader);
+			let applied = buffer.apply_transaction_with_syntax(&tx, &self.config.language_loader);
 			if applied {
 				buffer.finalize_selection(new_selection);
 			}
@@ -192,7 +192,7 @@ impl Editor {
 				.buffers
 				.get_buffer_mut(buffer_id)
 				.expect("focused buffer must exist");
-			let applied = buffer.apply_transaction_with_syntax(&tx, &self.language_loader);
+			let applied = buffer.apply_transaction_with_syntax(&tx, &self.config.language_loader);
 			if applied {
 				buffer.finalize_selection(new_selection);
 			}
@@ -215,7 +215,7 @@ impl Editor {
 			.buffers
 			.get_buffer_mut(buffer_id)
 			.expect("focused buffer must exist")
-			.apply_transaction_with_syntax(tx, &self.language_loader);
+			.apply_transaction_with_syntax(tx, &self.config.language_loader);
 		if !applied {
 			self.notify(keys::buffer_readonly);
 			return;
@@ -233,6 +233,6 @@ impl Editor {
 			.buffers
 			.get_buffer_mut(buffer_id)
 			.expect("focused buffer must exist");
-		buffer.reparse_syntax(&self.language_loader);
+		buffer.reparse_syntax(&self.config.language_loader);
 	}
 }

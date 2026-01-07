@@ -70,15 +70,18 @@ impl SeparatorStyle {
 			}),
 			anim_rect: editor.layout.animation_rect(),
 			anim_intensity: editor.layout.animation_intensity(),
-			base_bg: [editor.theme.colors.ui.bg, editor.theme.colors.popup.bg],
-			base_fg: [
-				editor.theme.colors.ui.gutter_fg,
-				editor.theme.colors.popup.fg,
+			base_bg: [
+				editor.config.theme.colors.ui.bg,
+				editor.config.theme.colors.popup.bg,
 			],
-			hover_fg: editor.theme.colors.ui.cursor_fg,
-			hover_bg: editor.theme.colors.ui.selection_bg,
-			drag_fg: editor.theme.colors.ui.bg,
-			drag_bg: editor.theme.colors.ui.fg,
+			base_fg: [
+				editor.config.theme.colors.ui.gutter_fg,
+				editor.config.theme.colors.popup.fg,
+			],
+			hover_fg: editor.config.theme.colors.ui.cursor_fg,
+			hover_bg: editor.config.theme.colors.ui.selection_bg,
+			drag_fg: editor.config.theme.colors.ui.bg,
+			drag_bg: editor.config.theme.colors.ui.fg,
 		}
 	}
 
@@ -203,7 +206,7 @@ impl Editor {
 
 		frame.render_widget(Clear, area);
 
-		let bg_block = Block::default().style(Style::default().bg(self.theme.colors.ui.bg));
+		let bg_block = Block::default().style(Style::default().bg(self.config.theme.colors.ui.bg));
 		frame.render_widget(bg_block, area);
 
 		let chunks = Layout::default()
@@ -230,7 +233,7 @@ impl Editor {
 		self.render_split_buffers(frame, doc_area, use_block_cursor && doc_focused);
 		self.render_floating_windows(frame, use_block_cursor && doc_focused);
 
-		if let Some(cursor_pos) = ui.render_panels(self, frame, &dock_layout, self.theme) {
+		if let Some(cursor_pos) = ui.render_panels(self, frame, &dock_layout, self.config.theme) {
 			frame.set_cursor_position(cursor_pos);
 		}
 		if ui.take_wants_redraw() {
@@ -238,22 +241,24 @@ impl Editor {
 		}
 		self.ui = ui;
 
-		let menu_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
+		let menu_bg =
+			Block::default().style(Style::default().bg(self.config.theme.colors.popup.bg));
 		frame.render_widget(menu_bg, menu_area);
 		Menu::new()
 			.style(
 				Style::default()
-					.fg(self.theme.colors.popup.fg)
-					.bg(self.theme.colors.popup.bg),
+					.fg(self.config.theme.colors.popup.fg)
+					.bg(self.config.theme.colors.popup.bg),
 			)
 			.highlight_style(
 				Style::default()
-					.fg(self.theme.colors.ui.selection_fg)
-					.bg(self.theme.colors.ui.selection_bg),
+					.fg(self.config.theme.colors.ui.selection_fg)
+					.bg(self.config.theme.colors.ui.selection_bg),
 			)
 			.render(menu_area, frame.buffer_mut(), &mut self.menu);
 
-		let status_bg = Block::default().style(Style::default().bg(self.theme.colors.popup.bg));
+		let status_bg =
+			Block::default().style(Style::default().bg(self.config.theme.colors.popup.bg));
 		frame.render_widget(status_bg, status_area);
 		frame.render_widget(self.render_status_line(), status_area);
 
@@ -325,8 +330,8 @@ impl Editor {
 		let sep_style = SeparatorStyle::new(self, doc_area);
 
 		let ctx = BufferRenderContext {
-			theme: self.theme,
-			language_loader: &self.language_loader,
+			theme: self.config.theme,
+			language_loader: &self.config.language_loader,
 			style_overlays: &self.style_overlays,
 		};
 
@@ -406,8 +411,8 @@ impl Editor {
 		}
 
 		let ctx = BufferRenderContext {
-			theme: self.theme,
-			language_loader: &self.language_loader,
+			theme: self.config.theme,
+			language_loader: &self.config.language_loader,
 			style_overlays: &self.style_overlays,
 		};
 
@@ -425,7 +430,7 @@ impl Editor {
 				};
 				if let Some(shadow) = clamp_rect(shadow_rect, bounds) {
 					let shadow_block =
-						Block::default().style(Style::default().bg(self.theme.colors.ui.bg));
+						Block::default().style(Style::default().bg(self.config.theme.colors.ui.bg));
 					frame.render_widget(shadow_block, shadow);
 				}
 			}
@@ -433,13 +438,13 @@ impl Editor {
 			frame.render_widget(Clear, rect);
 
 			let mut block = Block::default()
-				.style(Style::default().bg(self.theme.colors.popup.bg))
+				.style(Style::default().bg(self.config.theme.colors.popup.bg))
 				.padding(window.style.padding);
 			if window.style.border {
 				block = block
 					.borders(Borders::ALL)
 					.border_type(window.style.border_type)
-					.border_style(Style::default().fg(self.theme.colors.popup.fg));
+					.border_style(Style::default().fg(self.config.theme.colors.popup.fg));
 				if let Some(title) = &window.style.title {
 					block = block.title(title.as_str());
 				}
@@ -670,12 +675,12 @@ impl Editor {
 		let block = Block::default()
 			.style(
 				Style::default()
-					.bg(self.theme.colors.popup.bg)
-					.fg(self.theme.colors.popup.fg),
+					.bg(self.config.theme.colors.popup.bg)
+					.fg(self.config.theme.colors.popup.fg),
 			)
 			.borders(Borders::ALL)
 			.border_type(BorderType::Stripe)
-			.border_style(Style::default().fg(self.theme.colors.status.warning_fg))
+			.border_style(Style::default().fg(self.config.theme.colors.status.warning_fg))
 			.padding(Padding::horizontal(1));
 
 		let inner = block.inner(hud_area);
@@ -684,15 +689,15 @@ impl Editor {
 
 		let mut tree = KeyTree::new(root, children)
 			.ancestors(ancestors)
-			.ancestor_style(Style::default().fg(self.theme.colors.ui.gutter_fg))
+			.ancestor_style(Style::default().fg(self.config.theme.colors.ui.gutter_fg))
 			.key_style(
 				Style::default()
-					.fg(self.theme.colors.status.warning_fg)
+					.fg(self.config.theme.colors.status.warning_fg)
 					.add_modifier(Modifier::BOLD),
 			)
-			.desc_style(Style::default().fg(self.theme.colors.popup.fg))
-			.suffix_style(Style::default().fg(self.theme.colors.ui.gutter_fg))
-			.line_style(Style::default().fg(self.theme.colors.ui.gutter_fg));
+			.desc_style(Style::default().fg(self.config.theme.colors.popup.fg))
+			.suffix_style(Style::default().fg(self.config.theme.colors.ui.gutter_fg))
+			.line_style(Style::default().fg(self.config.theme.colors.ui.gutter_fg));
 
 		if let Some(desc) = root_desc {
 			tree = tree.root_desc(desc);

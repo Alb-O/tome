@@ -227,7 +227,7 @@ impl Editor {
 			KeyCode::Escape => self.menu.reset(),
 			KeyCode::Enter => {
 				self.menu.select();
-				crate::menu::process_menu_events(&mut self.menu, &mut self.command_queue);
+				crate::menu::process_menu_events(&mut self.menu, &mut self.workspace.command_queue);
 			}
 			KeyCode::Left | KeyCode::Char('h') => self.menu.left(),
 			KeyCode::Right | KeyCode::Char('l') => self.menu.right(),

@@ -40,7 +40,7 @@ impl Editor {
 			Level::Debug => ("dim", icon_presets::DEBUG),
 		};
 
-		let notif_style: Style = self.theme.colors.notification_style(semantic);
+		let notif_style: Style = self.config.theme.colors.notification_style(semantic);
 		let accent = notif_style.fg.unwrap_or_default();
 
 		let toast = Toast::new(notification.message)

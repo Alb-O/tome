@@ -76,11 +76,12 @@ async fn main() -> anyhow::Result<()> {
 	// Apply user config to editor
 	if let Some(config) = user_config {
 		// Apply global options
-		editor.global_options.merge(&config.options);
+		editor.config.global_options.merge(&config.options);
 
 		// Apply language-specific options
 		for lang_config in config.languages {
 			editor
+				.config
 				.language_options
 				.entry(lang_config.name)
 				.or_default()

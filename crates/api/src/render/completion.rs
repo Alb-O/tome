@@ -43,21 +43,21 @@ impl Editor {
 				};
 
 				let kind_color = match item.kind {
-					CompletionKind::Command => self.theme.colors.status.command_bg,
-					CompletionKind::File => self.theme.colors.status.normal_bg,
-					CompletionKind::Buffer => self.theme.colors.status.accent_bg,
-					CompletionKind::Snippet => self.theme.colors.status.prefix_mode_bg,
-					CompletionKind::Theme => self.theme.colors.status.accent_bg,
+					CompletionKind::Command => self.config.theme.colors.status.command_bg,
+					CompletionKind::File => self.config.theme.colors.status.normal_bg,
+					CompletionKind::Buffer => self.config.theme.colors.status.accent_bg,
+					CompletionKind::Snippet => self.config.theme.colors.status.prefix_mode_bg,
+					CompletionKind::Theme => self.config.theme.colors.status.accent_bg,
 				};
 
 				let base_style = if is_selected {
 					Style::default()
-						.bg(self.theme.colors.ui.selection_bg)
-						.fg(self.theme.colors.ui.selection_fg)
+						.bg(self.config.theme.colors.ui.selection_bg)
+						.fg(self.config.theme.colors.ui.selection_fg)
 				} else {
 					Style::default()
-						.bg(self.theme.colors.popup.bg)
-						.fg(self.theme.colors.popup.fg)
+						.bg(self.config.theme.colors.popup.bg)
+						.fg(self.config.theme.colors.popup.fg)
 				};
 
 				let icon_style = if is_selected {
@@ -65,7 +65,7 @@ impl Editor {
 				} else {
 					Style::default()
 						.fg(kind_color)
-						.bg(self.theme.colors.popup.bg)
+						.bg(self.config.theme.colors.popup.bg)
 				};
 
 				let label_style = if is_selected {
@@ -85,11 +85,9 @@ impl Editor {
 				let dim_style = if is_selected {
 					base_style
 				} else {
-					Style::default().fg(self.theme.colors.status.dim_fg).bg(self
-						.theme
-						.colors
-						.popup
-						.bg)
+					Style::default()
+						.fg(self.config.theme.colors.status.dim_fg)
+						.bg(self.config.theme.colors.popup.bg)
 				};
 
 				let line = Line::from(vec![
@@ -105,7 +103,7 @@ impl Editor {
 			})
 			.collect();
 
-		let stripe_style = Style::default().fg(self.theme.colors.status.normal_bg);
+		let stripe_style = Style::default().fg(self.config.theme.colors.status.normal_bg);
 		let border_set = xeno_tui::symbols::border::Set {
 			top_left: "▏",
 			vertical_left: "▏",
@@ -114,7 +112,7 @@ impl Editor {
 		};
 
 		let block = Block::default()
-			.style(Style::default().bg(self.theme.colors.popup.bg))
+			.style(Style::default().bg(self.config.theme.colors.popup.bg))
 			.borders(Borders::LEFT)
 			.border_set(border_set)
 			.border_style(stripe_style);

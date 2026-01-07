@@ -20,7 +20,7 @@ impl Editor {
 		let buffer_id = self.buffers.create_buffer(
 			content,
 			path.clone(),
-			&self.language_loader,
+			&self.config.language_loader,
 			self.viewport.width,
 		);
 
@@ -51,7 +51,7 @@ impl Editor {
 		let buffer_id = self.buffers.create_buffer(
 			content,
 			path.clone(),
-			&self.language_loader,
+			&self.config.language_loader,
 			self.viewport.width,
 		);
 

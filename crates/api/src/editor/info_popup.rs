@@ -40,7 +40,7 @@ impl Editor {
 			if let Some(ft) = file_type {
 				buffer
 					.doc_mut()
-					.init_syntax_for_language(ft, &self.language_loader);
+					.init_syntax_for_language(ft, &self.config.language_loader);
 			}
 			buffer.set_readonly_override(Some(true));
 		}
@@ -121,7 +121,7 @@ impl Editor {
 			if current_ft.as_deref() != Some(ft) {
 				buffer
 					.doc_mut()
-					.init_syntax_for_language(ft, &self.language_loader);
+					.init_syntax_for_language(ft, &self.config.language_loader);
 			}
 		}
 

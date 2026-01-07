@@ -101,7 +101,7 @@ impl Editor {
 		let args: Vec<String> = parts.map(String::from).collect();
 
 		if let Some(cmd) = xeno_registry::commands::find_command(name) {
-			self.command_queue.push(cmd.name, args);
+			self.workspace.command_queue.push(cmd.name, args);
 			Some(input)
 		} else {
 			self.notify(xeno_registry::notifications::keys::unknown_command::call(

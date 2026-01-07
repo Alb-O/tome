@@ -72,11 +72,10 @@ pub use focus::{FocusReason, FocusTarget, PanelId};
 pub use hook_runtime::HookRuntime;
 pub use layout::{LayoutManager, SeparatorHit, SeparatorId};
 pub use types::{
-	FrameState, HistoryEntry, JumpList, JumpLocation, MacroState, Registers, Viewport,
+	Config, FrameState, HistoryEntry, JumpList, JumpLocation, MacroState, Registers, Viewport,
+	Workspace,
 };
 use xeno_language::LanguageLoader;
-use xeno_registry::options::OptionStore;
-use xeno_registry::themes::Theme;
 use xeno_registry::{
 	HookContext, HookEventData, WindowKind, emit_sync_with as emit_hook_sync_with,
 };
@@ -143,12 +142,6 @@ pub struct Editor {
 	/// Layout and split management.
 	pub layout: LayoutManager,
 
-	/// Workspace-level registers (yank buffer, etc.).
-	pub registers: Registers,
-
-	/// Current theme.
-	pub theme: &'static Theme,
-
 	/// Terminal viewport dimensions.
 	pub viewport: Viewport,
 
@@ -158,14 +151,17 @@ pub struct Editor {
 	/// Per-frame runtime state (redraw flags, dirty buffers, etc.).
 	pub frame: FrameState,
 
+	/// Workspace session state (registers, jumps, macros, command queue).
+	pub workspace: Workspace,
+
+	/// Editor configuration (theme, languages, options).
+	pub config: Config,
+
 	/// Notification system.
 	pub notifications: xeno_tui::widgets::notifications::ToastManager,
 
 	/// Extension map (typemap for extension state).
 	pub extensions: ExtensionMap,
-
-	/// Language configuration loader.
-	pub language_loader: LanguageLoader,
 
 	/// Style overlays for rendering modifications.
 	pub style_overlays: StyleOverlays,
@@ -173,26 +169,11 @@ pub struct Editor {
 	/// Runtime for scheduling async hooks during sync emission.
 	pub hook_runtime: HookRuntime,
 
-	/// Jump list for `<C-o>` / `<C-i>` navigation.
-	pub jump_list: JumpList,
-
-	/// Macro recording and playback state.
-	pub macro_state: MacroState,
-
-	/// Queue for deferred command execution from [`ActionResult::Command`].
-	pub command_queue: CommandQueue,
-
 	/// Application menu bar state.
 	pub menu: MenuState<MenuAction>,
 
 	/// Type-erased storage for UI overlays (popups, palette, completions).
 	pub overlays: OverlayManager,
-
-	/// Global user configuration options.
-	pub global_options: OptionStore,
-
-	/// Per-language option overrides.
-	pub language_options: std::collections::HashMap<String, OptionStore>,
 }
 
 impl xeno_core::EditorOps for Editor {}
@@ -270,12 +251,11 @@ impl Editor {
 			windows: window_manager,
 			focus,
 			layout: LayoutManager::new(),
-			registers: Registers::default(),
-			theme: xeno_registry::themes::get_theme(xeno_registry::themes::DEFAULT_THEME_ID)
-				.unwrap_or(&xeno_registry::themes::DEFAULT_THEME),
 			viewport: Viewport::default(),
 			ui: UiManager::new(),
-			frame: FrameState::new(),
+			frame: FrameState::default(),
+			workspace: Workspace::default(),
+			config: Config::new(language_loader),
 			notifications: xeno_tui::widgets::notifications::ToastManager::new()
 				.max_visible(Some(5))
 				.overflow(xeno_tui::widgets::notifications::Overflow::DropOldest),
@@ -288,16 +268,10 @@ impl Editor {
 				}
 				map
 			},
-			language_loader,
 			style_overlays: StyleOverlays::new(),
 			hook_runtime,
-			jump_list: JumpList::default(),
-			macro_state: MacroState::default(),
-			command_queue: CommandQueue::new(),
 			menu: create_menu(),
 			overlays: OverlayManager::new(),
-			global_options: OptionStore::new(),
-			language_options: std::collections::HashMap::new(),
 		}
 	}
 

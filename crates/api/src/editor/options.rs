@@ -38,12 +38,12 @@ impl Editor {
 
 		let language_store = buffer
 			.file_type()
-			.and_then(|ft| self.language_options.get(&ft));
+			.and_then(|ft| self.config.language_options.get(&ft));
 
 		Self::resolve_with_stores(
 			&buffer.local_options,
 			language_store,
-			&self.global_options,
+			&self.config.global_options,
 			key,
 		)
 	}

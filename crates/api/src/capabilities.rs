@@ -201,7 +201,7 @@ impl CommandEditorOps for Editor {
 
 	fn set_option(&mut self, kdl_key: &str, value: &str) -> Result<(), CommandError> {
 		let opt_value = parse_option_value(kdl_key, value)?;
-		let _ = self.global_options.set_by_kdl(kdl_key, opt_value);
+		let _ = self.config.global_options.set_by_kdl(kdl_key, opt_value);
 
 		if let Some(def) = find_by_kdl(kdl_key) {
 			emit_hook_sync_with(
@@ -338,7 +338,7 @@ impl ViewportAccess for Editor {
 
 impl JumpAccess for Editor {
 	fn jump_forward(&mut self) -> bool {
-		if let Some(loc) = self.jump_list.jump_forward() {
+		if let Some(loc) = self.workspace.jump_list.jump_forward() {
 			let buffer_id = loc.buffer_id;
 			let cursor = loc.cursor;
 			if self.focused_view() != buffer_id {
@@ -354,10 +354,11 @@ impl JumpAccess for Editor {
 	fn jump_backward(&mut self) -> bool {
 		let buffer_id = self.focused_view();
 		let cursor = self.buffer().cursor;
-		self.jump_list
+		self.workspace
+			.jump_list
 			.push(crate::editor::JumpLocation { buffer_id, cursor });
 
-		if let Some(loc) = self.jump_list.jump_backward() {
+		if let Some(loc) = self.workspace.jump_list.jump_backward() {
 			let buffer_id = loc.buffer_id;
 			let cursor = loc.cursor;
 			if self.focused_view() != buffer_id {
@@ -373,7 +374,8 @@ impl JumpAccess for Editor {
 	fn save_jump(&mut self) {
 		let buffer_id = self.focused_view();
 		let cursor = self.buffer().cursor;
-		self.jump_list
+		self.workspace
+			.jump_list
 			.push(crate::editor::JumpLocation { buffer_id, cursor });
 	}
 }
@@ -381,11 +383,11 @@ impl JumpAccess for Editor {
 impl MacroAccess for Editor {
 	fn record(&mut self) {
 		// Default to register 'q' if no register specified
-		self.macro_state.start_recording('q');
+		self.workspace.macro_state.start_recording('q');
 	}
 
 	fn stop_recording(&mut self) {
-		self.macro_state.stop_recording();
+		self.workspace.macro_state.stop_recording();
 	}
 
 	fn play(&mut self) {
@@ -393,13 +395,13 @@ impl MacroAccess for Editor {
 	}
 
 	fn is_recording(&self) -> bool {
-		self.macro_state.is_recording()
+		self.workspace.macro_state.is_recording()
 	}
 }
 
 impl CommandQueueAccess for Editor {
 	fn queue_command(&mut self, name: &'static str, args: Vec<String>) {
-		self.command_queue.push(name, args);
+		self.workspace.command_queue.push(name, args);
 	}
 }
 

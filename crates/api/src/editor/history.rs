@@ -85,7 +85,7 @@ impl Editor {
 			.get_buffer_mut(buffer_id)
 			.expect("focused buffer must exist")
 			.doc_mut()
-			.undo(current, &self.language_loader);
+			.undo(current, &self.config.language_loader);
 
 		let Some(selections) = restored else {
 			self.notify(keys::nothing_to_undo);
@@ -113,7 +113,7 @@ impl Editor {
 			.get_buffer_mut(buffer_id)
 			.expect("focused buffer must exist")
 			.doc_mut()
-			.redo(current, &self.language_loader);
+			.redo(current, &self.config.language_loader);
 
 		let Some(selections) = restored else {
 			self.notify(keys::nothing_to_redo);

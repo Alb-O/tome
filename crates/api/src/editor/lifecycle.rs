@@ -159,7 +159,7 @@ impl Editor {
 	///
 	/// Returns `true` if any command requested quit.
 	pub async fn drain_command_queue(&mut self) -> bool {
-		let commands: Vec<_> = self.command_queue.drain().collect();
+		let commands: Vec<_> = self.workspace.command_queue.drain().collect();
 		for cmd in commands {
 			let Some(command_def) = find_command(cmd.name) else {
 				self.show_notification(xeno_registry_notifications::keys::unknown_command::call(
