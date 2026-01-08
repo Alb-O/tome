@@ -32,6 +32,7 @@ pub struct LogViewer {
 	term_width: u16,
 	show_help: bool,
 	dirty: bool,
+	disconnected: bool,
 }
 
 struct ActiveSpan {
@@ -71,6 +72,7 @@ impl LogViewer {
 			term_width: width,
 			show_help: false,
 			dirty: true,
+			disconnected: false,
 		}
 	}
 
@@ -78,6 +80,7 @@ impl LogViewer {
 		match msg {
 			LogMessage::Event(event) => self.handle_event(event),
 			LogMessage::Span(span_event) => self.handle_span(span_event),
+			LogMessage::Disconnected => self.disconnected = true,
 		}
 		self.dirty = true;
 	}
@@ -325,7 +328,13 @@ impl LogViewer {
 			Level::Warn => "W",
 			Level::Error => "E",
 		};
-		let pause = if self.paused { "[PAUSED]" } else { "" };
+		let status = if self.disconnected {
+			"\x1b[31m EXITED \x1b[0m\x1b[7m "
+		} else if self.paused {
+			"PAUSED "
+		} else {
+			""
+		};
 		let scroll = if self.scroll_offset > 0 {
 			format!(" [+{}]", self.scroll_offset)
 		} else {
@@ -340,7 +349,7 @@ impl LogViewer {
 		write!(
 			stdout,
 			"\x1b[7m {}{} {} lines{}{} | ? help | q quit \x1b[0m",
-			pause, level, total_lines, scroll, filter
+			status, level, total_lines, scroll, filter
 		)
 	}
 
@@ -485,6 +494,7 @@ pub fn run_log_viewer(socket_path: &Path) -> io::Result<()> {
 								break;
 							}
 						}
+						let _ = tx.send(LogMessage::Disconnected);
 					});
 				}
 				Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {

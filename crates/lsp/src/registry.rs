@@ -37,7 +37,7 @@ use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::task::JoinHandle;
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 
 use crate::Result;
 use crate::client::{
@@ -158,11 +158,11 @@ impl Registry {
 	/// Register a language server configuration for a language.
 	pub fn register(&self, language: impl Into<String>, config: LanguageServerConfig) {
 		let language = language.into();
-		info!(
+		trace!(
 			language = %language,
 			command = %config.command,
 			root_markers = ?config.root_markers,
-			"Registry::register: configured language server"
+			"configured language server"
 		);
 		self.configs.write().insert(language, config);
 	}

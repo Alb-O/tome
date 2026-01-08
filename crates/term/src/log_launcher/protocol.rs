@@ -96,9 +96,10 @@ pub enum SpanEvent {
 	},
 }
 
-/// Wire message format - either a log event or span lifecycle.
+/// Wire message format, either a log event or span lifecycle.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogMessage {
 	Event(LogEvent),
 	Span(SpanEvent),
+	Disconnected,
 }
