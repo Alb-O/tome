@@ -94,8 +94,6 @@ struct ServerInstance {
 	handle: ClientHandle,
 	/// Task running the main loop.
 	task: JoinHandle<Result<()>>,
-	/// Root path this server was started with.
-	root_path: PathBuf,
 }
 
 impl ServerInstance {
@@ -259,7 +257,6 @@ impl Registry {
 		let instance = ServerInstance {
 			handle: handle.clone(),
 			task,
-			root_path: root_path.clone(),
 		};
 
 		self.servers.write().insert(key, instance);
