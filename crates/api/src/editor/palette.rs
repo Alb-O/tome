@@ -100,7 +100,11 @@ impl Editor {
 		let name = parts.next()?;
 		let args: Vec<String> = parts.map(String::from).collect();
 
-		if let Some(cmd) = xeno_registry::commands::find_command(name) {
+		// Check editor-direct commands first (e.g., LSP commands), then registry commands
+		if let Some(cmd) = crate::commands::find_editor_command(name) {
+			self.workspace.command_queue.push(cmd.name, args);
+			Some(input)
+		} else if let Some(cmd) = xeno_registry::commands::find_command(name) {
 			self.workspace.command_queue.push(cmd.name, args);
 			Some(input)
 		} else {

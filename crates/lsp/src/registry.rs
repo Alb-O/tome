@@ -237,12 +237,17 @@ impl Registry {
 		Ok(handle)
 	}
 
-	/// Get an active client for a language and root path, if one exists and is alive.
+	/// Get an active client for a language and file path, if one exists and is alive.
 	///
-	/// Returns `None` if no server exists or if the server has crashed.
+	/// Finds the project root from the file path using configured root markers,
+	/// then looks up the server for that root.
+	///
+	/// Returns `None` if no server exists, no config exists, or if the server has crashed.
 	/// Dead servers are cleaned up lazily on next `get_or_start` call.
-	pub fn get(&self, language: &str, root_path: &Path) -> Option<ClientHandle> {
-		let key = (language.to_string(), root_path.to_path_buf());
+	pub fn get(&self, language: &str, file_path: &Path) -> Option<ClientHandle> {
+		let config = self.get_config(language)?;
+		let root_path = find_root_path(file_path, &config.root_markers);
+		let key = (language.to_string(), root_path);
 		self.servers
 			.read()
 			.get(&key)
