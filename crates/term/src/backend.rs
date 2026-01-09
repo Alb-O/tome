@@ -82,11 +82,32 @@ impl<T: Terminal> Backend for TerminaBackend<T> {
 			if cell.modifier.contains(xeno_tui::style::Modifier::ITALIC) {
 				attrs.modifiers |= SgrModifiers::ITALIC;
 			}
-			if cell
-				.modifier
-				.contains(xeno_tui::style::Modifier::UNDERLINED)
-			{
-				attrs.modifiers |= SgrModifiers::UNDERLINE_SINGLE;
+			let underline_style =
+				if cell.underline_style != xeno_tui::style::UnderlineStyle::Reset {
+					cell.underline_style
+				} else if cell
+					.modifier
+					.contains(xeno_tui::style::Modifier::UNDERLINED)
+				{
+					xeno_tui::style::UnderlineStyle::Line
+				} else {
+					xeno_tui::style::UnderlineStyle::Reset
+				};
+
+			let underline_modifier = match underline_style {
+				xeno_tui::style::UnderlineStyle::Reset => None,
+				xeno_tui::style::UnderlineStyle::Line => Some(SgrModifiers::UNDERLINE_SINGLE),
+				xeno_tui::style::UnderlineStyle::Curl => Some(SgrModifiers::UNDERLINE_CURLY),
+				xeno_tui::style::UnderlineStyle::Dotted => Some(SgrModifiers::UNDERLINE_DOTTED),
+				xeno_tui::style::UnderlineStyle::Dashed => Some(SgrModifiers::UNDERLINE_DASHED),
+				xeno_tui::style::UnderlineStyle::DoubleLine => Some(SgrModifiers::UNDERLINE_DOUBLE),
+			};
+
+			if let Some(modifier) = underline_modifier {
+				if cell.underline_color != xeno_tui::style::Color::Reset {
+					attrs.underline_color = map_color(cell.underline_color);
+				}
+				attrs.modifiers |= modifier;
 			}
 			if cell
 				.modifier

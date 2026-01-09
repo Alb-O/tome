@@ -336,9 +336,12 @@ impl Editor {
 				let cursorline = self.cursorline_for(*buffer_id);
 				if let Some(buffer) = self.get_buffer(*buffer_id) {
 					#[cfg(feature = "lsp")]
-					let diag_map = {
+					let (diag_map, diag_ranges) = {
 						let diagnostics = self.lsp.get_diagnostics(buffer);
-						super::buffer::build_diagnostic_line_map(&diagnostics)
+						(
+							super::buffer::build_diagnostic_line_map(&diagnostics),
+							super::buffer::build_diagnostic_range_map(&diagnostics),
+						)
 					};
 
 					let ctx = BufferRenderContext {
@@ -349,6 +352,10 @@ impl Editor {
 						diagnostics: Some(&diag_map),
 						#[cfg(not(feature = "lsp"))]
 						diagnostics: None,
+						#[cfg(feature = "lsp")]
+						diagnostic_ranges: Some(&diag_ranges),
+						#[cfg(not(feature = "lsp"))]
+						diagnostic_ranges: None,
 					};
 					let result = ctx.render_buffer(
 						buffer,
@@ -469,9 +476,12 @@ impl Editor {
 				let cursorline = self.cursorline_for(window.buffer);
 
 				#[cfg(feature = "lsp")]
-				let diag_map = {
+				let (diag_map, diag_ranges) = {
 					let diagnostics = self.lsp.get_diagnostics(buffer);
-					super::buffer::build_diagnostic_line_map(&diagnostics)
+					(
+						super::buffer::build_diagnostic_line_map(&diagnostics),
+						super::buffer::build_diagnostic_range_map(&diagnostics),
+					)
 				};
 
 				let ctx = BufferRenderContext {
@@ -482,6 +492,10 @@ impl Editor {
 					diagnostics: Some(&diag_map),
 					#[cfg(not(feature = "lsp"))]
 					diagnostics: None,
+					#[cfg(feature = "lsp")]
+					diagnostic_ranges: Some(&diag_ranges),
+					#[cfg(not(feature = "lsp"))]
+					diagnostic_ranges: None,
 				};
 				let result = ctx.render_buffer_with_gutter(
 					buffer,

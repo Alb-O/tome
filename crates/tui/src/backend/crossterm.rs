@@ -88,6 +88,8 @@ use crate::backend::{Backend, ClearType, WindowSize};
 use crate::buffer::Cell;
 use crate::layout::{Position, Size};
 use crate::style::{Color, Modifier, Style};
+#[cfg(feature = "underline-color")]
+use crate::style::UnderlineStyle;
 
 /// A [`Backend`] implementation that uses [Crossterm] to render to the terminal.
 ///
@@ -214,6 +216,8 @@ where
 		let mut bg = Color::Reset;
 		#[cfg(feature = "underline-color")]
 		let mut underline_color = Color::Reset;
+		#[cfg(feature = "underline-color")]
+		let mut underline_style = UnderlineStyle::Reset;
 		let mut modifier = Modifier::empty();
 		let mut last_pos: Option<Position> = None;
 		for (x, y, cell) in content {
@@ -246,6 +250,19 @@ where
 				let color = cell.underline_color.into_crossterm();
 				queue!(self.writer, SetUnderlineColor(color))?;
 				underline_color = cell.underline_color;
+			}
+			#[cfg(feature = "underline-color")]
+			if cell.underline_style != underline_style {
+				let attr = match cell.underline_style {
+					UnderlineStyle::Reset => CrosstermAttribute::NoUnderline,
+					UnderlineStyle::Line => CrosstermAttribute::Underlined,
+					UnderlineStyle::Curl => CrosstermAttribute::Undercurled,
+					UnderlineStyle::Dotted => CrosstermAttribute::Underdotted,
+					UnderlineStyle::Dashed => CrosstermAttribute::Underdashed,
+					UnderlineStyle::DoubleLine => CrosstermAttribute::DoubleUnderlined,
+				};
+				queue!(self.writer, SetAttribute(attr))?;
+				underline_style = cell.underline_style;
 			}
 
 			queue!(self.writer, Print(cell.symbol()))?;
@@ -587,6 +604,8 @@ impl FromCrossterm<ContentStyle> for Style {
 			bg: value.background_color.map(FromCrossterm::from_crossterm),
 			#[cfg(feature = "underline-color")]
 			underline_color: value.underline_color.map(FromCrossterm::from_crossterm),
+			#[cfg(feature = "underline-color")]
+			underline_style: None, // ContentStyle doesn't track underline style
 			add_modifier: Modifier::from_crossterm(value.attributes),
 			sub_modifier,
 		}

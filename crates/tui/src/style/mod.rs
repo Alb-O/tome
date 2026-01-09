@@ -74,6 +74,7 @@ pub use color::{Color, ParseColorError};
 pub use modifier::Modifier;
 use stylize::ColorDebugKind;
 pub use stylize::{Styled, Stylize};
+pub use underline::UnderlineStyle;
 
 #[cfg(feature = "anstyle")]
 mod anstyle;
@@ -87,6 +88,8 @@ mod palette_conversion;
 /// Stylize trait and implementations.
 #[macro_use]
 mod stylize;
+/// Underline style types.
+mod underline;
 /// Style conversion implementations for From trait.
 mod conversions;
 #[cfg(test)]
@@ -152,7 +155,7 @@ where
 /// ```rust
 /// use xeno_tui::buffer::Buffer;
 /// use xeno_tui::layout::Rect;
-/// use xeno_tui::style::{Color, Modifier, Style};
+/// use xeno_tui::style::{Color, Modifier, Style, UnderlineStyle};
 ///
 /// let styles = [
 ///     Style::default()
@@ -177,6 +180,8 @@ where
 ///         bg: Some(Color::Red),
 ///         #[cfg(feature = "underline-color")]
 ///         underline_color: Some(Color::Green),
+///         #[cfg(feature = "underline-color")]
+///         underline_style: Some(UnderlineStyle::Reset),
 ///         add_modifier: Modifier::BOLD | Modifier::UNDERLINED,
 ///         sub_modifier: Modifier::empty(),
 ///     },
@@ -190,7 +195,7 @@ where
 /// ```
 /// use xeno_tui::buffer::Buffer;
 /// use xeno_tui::layout::Rect;
-/// use xeno_tui::style::{Color, Modifier, Style};
+/// use xeno_tui::style::{Color, Modifier, Style, UnderlineStyle};
 ///
 /// let styles = [
 ///     Style::default()
@@ -208,6 +213,8 @@ where
 ///         bg: Some(Color::Reset),
 ///         #[cfg(feature = "underline-color")]
 ///         underline_color: Some(Color::Reset),
+///         #[cfg(feature = "underline-color")]
+///         underline_style: Some(UnderlineStyle::Reset),
 ///         add_modifier: Modifier::empty(),
 ///         sub_modifier: Modifier::empty(),
 ///     },
@@ -227,6 +234,10 @@ pub struct Style {
 	#[cfg(feature = "underline-color")]
 	#[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
 	pub underline_color: Option<Color>,
+	/// The underline style (line, curl, dotted, etc.).
+	#[cfg(feature = "underline-color")]
+	#[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+	pub underline_style: Option<UnderlineStyle>,
 	/// The modifiers to add.
 	#[cfg_attr(
 		feature = "serde",
@@ -267,6 +278,8 @@ impl Style {
 			bg: None,
 			#[cfg(feature = "underline-color")]
 			underline_color: None,
+			#[cfg(feature = "underline-color")]
+			underline_style: None,
 			add_modifier: Modifier::empty(),
 			sub_modifier: Modifier::empty(),
 		}
@@ -279,6 +292,8 @@ impl Style {
 			bg: Some(Color::Reset),
 			#[cfg(feature = "underline-color")]
 			underline_color: Some(Color::Reset),
+			#[cfg(feature = "underline-color")]
+			underline_style: Some(UnderlineStyle::Reset),
 			add_modifier: Modifier::empty(),
 			sub_modifier: Modifier::all(),
 		}
@@ -350,6 +365,25 @@ impl Style {
 	#[must_use = "`underline_color` returns the modified style without modifying the original"]
 	pub const fn underline_color(mut self, color: Color) -> Self {
 		self.underline_color = Some(color);
+		self
+	}
+
+	/// Sets the underline style.
+	///
+	/// This controls the visual appearance of underlines (line, curl, dotted, etc.).
+	/// Modern terminals like Kitty, iTerm2, and WezTerm support these extended styles.
+	///
+	/// ## Examples
+	///
+	/// ```rust
+	/// use xeno_tui::style::{Style, UnderlineStyle};
+	///
+	/// let style = Style::default().underline_style(UnderlineStyle::Curl);
+	/// ```
+	#[cfg(feature = "underline-color")]
+	#[must_use = "`underline_style` returns the modified style without modifying the original"]
+	pub const fn underline_style(mut self, style: UnderlineStyle) -> Self {
+		self.underline_style = Some(style);
 		self
 	}
 
@@ -440,6 +474,7 @@ impl Style {
 		#[cfg(feature = "underline-color")]
 		{
 			self.underline_color = other.underline_color.or(self.underline_color);
+			self.underline_style = other.underline_style.or(self.underline_style);
 		}
 
 		self.add_modifier.remove(other.sub_modifier);

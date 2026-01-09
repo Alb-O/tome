@@ -1,6 +1,8 @@
 use compact_str::CompactString;
 
 use crate::style::{Color, Modifier, Style};
+#[cfg(feature = "underline-color")]
+use crate::style::UnderlineStyle;
 use crate::symbols::merge::MergeStrategy;
 
 /// A buffer cell
@@ -27,6 +29,10 @@ pub struct Cell {
 	#[cfg(feature = "underline-color")]
 	pub underline_color: Color,
 
+	/// The underline style of the cell.
+	#[cfg(feature = "underline-color")]
+	pub underline_style: UnderlineStyle,
+
 	/// The modifier of the cell.
 	pub modifier: Modifier,
 
@@ -42,6 +48,8 @@ impl Cell {
 		bg: Color::Reset,
 		#[cfg(feature = "underline-color")]
 		underline_color: Color::Reset,
+		#[cfg(feature = "underline-color")]
+		underline_style: UnderlineStyle::Reset,
 		modifier: Modifier::empty(),
 		skip: false,
 	};
@@ -161,6 +169,10 @@ impl Cell {
 		if let Some(c) = style.underline_color {
 			self.underline_color = c;
 		}
+		#[cfg(feature = "underline-color")]
+		if let Some(s) = style.underline_style {
+			self.underline_style = s;
+		}
 		self.modifier.insert(style.add_modifier);
 		self.modifier.remove(style.sub_modifier);
 		self
@@ -174,6 +186,8 @@ impl Cell {
 			bg: Some(self.bg),
 			#[cfg(feature = "underline-color")]
 			underline_color: Some(self.underline_color),
+			#[cfg(feature = "underline-color")]
+			underline_style: Some(self.underline_style),
 			add_modifier: self.modifier,
 			sub_modifier: Modifier::empty(),
 		}
@@ -205,12 +219,13 @@ impl PartialEq for Cell {
 		let symbols_eq = self.symbol() == other.symbol();
 
 		#[cfg(feature = "underline-color")]
-		let underline_color_eq = self.underline_color == other.underline_color;
+		let underline_eq = self.underline_color == other.underline_color
+			&& self.underline_style == other.underline_style;
 		#[cfg(not(feature = "underline-color"))]
-		let underline_color_eq = true;
+		let underline_eq = true;
 
 		symbols_eq
-			&& underline_color_eq
+			&& underline_eq
 			&& self.fg == other.fg
 			&& self.bg == other.bg
 			&& self.modifier == other.modifier
@@ -231,6 +246,8 @@ impl core::hash::Hash for Cell {
 		self.bg.hash(state);
 		#[cfg(feature = "underline-color")]
 		self.underline_color.hash(state);
+		#[cfg(feature = "underline-color")]
+		self.underline_style.hash(state);
 		self.modifier.hash(state);
 		self.skip.hash(state);
 	}
@@ -259,6 +276,8 @@ mod tests {
 				bg: Color::Reset,
 				#[cfg(feature = "underline-color")]
 				underline_color: Color::Reset,
+				#[cfg(feature = "underline-color")]
+				underline_style: UnderlineStyle::Reset,
 				modifier: Modifier::empty(),
 				skip: false,
 			}
@@ -348,6 +367,8 @@ mod tests {
 				bg: Some(Color::Reset),
 				#[cfg(feature = "underline-color")]
 				underline_color: Some(Color::Reset),
+				#[cfg(feature = "underline-color")]
+				underline_style: Some(UnderlineStyle::Reset),
 				add_modifier: Modifier::empty(),
 				sub_modifier: Modifier::empty(),
 			}

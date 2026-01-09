@@ -10,5 +10,6 @@ mod viewport;
 
 pub use context::{BufferRenderContext, DiagnosticLineMap, RenderResult};
 #[cfg(feature = "lsp")]
-pub use context::build_diagnostic_line_map;
+#[allow(unused_imports, reason = "re-exported for public API completeness")]
+pub use context::{build_diagnostic_line_map, build_diagnostic_range_map, DiagnosticRangeMap};
 pub use viewport::ensure_buffer_cursor_visible;

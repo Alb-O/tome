@@ -30,6 +30,22 @@ use crate::window::GutterSelector;
 /// - 0 = None
 pub type DiagnosticLineMap = HashMap<usize, u8>;
 
+/// A diagnostic span covering a character range within a single line.
+#[derive(Debug, Clone, Copy)]
+pub struct DiagnosticSpan {
+	/// Start character (column) on this line (0-indexed).
+	pub start_char: usize,
+	/// End character (column) on this line (exclusive, 0-indexed).
+	pub end_char: usize,
+	/// Severity level (same as gutter format: 4=Error, 3=Warning, 2=Info, 1=Hint).
+	pub severity: u8,
+}
+
+/// Map from line number to diagnostic spans on that line.
+///
+/// Used for rendering underlines under diagnostic ranges.
+pub type DiagnosticRangeMap = HashMap<usize, Vec<DiagnosticSpan>>;
+
 /// Builds a diagnostic line map from LSP diagnostics.
 ///
 /// Converts LSP severity to gutter severity and keeps only the highest
@@ -60,6 +76,43 @@ pub fn build_diagnostic_line_map(
 	map
 }
 
+/// Builds a diagnostic range map from LSP diagnostics.
+///
+/// Creates per-line spans with character ranges for rendering underlines.
+#[cfg(feature = "lsp")]
+pub fn build_diagnostic_range_map(
+	diagnostics: &[xeno_lsp::lsp_types::Diagnostic],
+) -> DiagnosticRangeMap {
+	use xeno_lsp::lsp_types::DiagnosticSeverity;
+
+	let mut map = DiagnosticRangeMap::new();
+
+	for diag in diagnostics {
+		let severity = match diag.severity {
+			Some(DiagnosticSeverity::ERROR) => 4,
+			Some(DiagnosticSeverity::WARNING) => 3,
+			Some(DiagnosticSeverity::INFORMATION) => 2,
+			Some(DiagnosticSeverity::HINT) => 1,
+			_ => 0,
+		};
+
+		if severity == 0 {
+			continue;
+		}
+
+		let start_line = diag.range.start.line as usize;
+		let end_line = diag.range.end.line as usize;
+
+		for line in start_line..=end_line {
+			let start_char = if line == start_line { diag.range.start.character as usize } else { 0 };
+			let end_char = if line == end_line { diag.range.end.character as usize } else { usize::MAX };
+			map.entry(line).or_default().push(DiagnosticSpan { start_char, end_char, severity });
+		}
+	}
+
+	map
+}
+
 /// Result of rendering a buffer's content.
 pub struct RenderResult {
 	/// The rendered paragraph widget ready for display.
@@ -80,6 +133,8 @@ pub struct BufferRenderContext<'a> {
 	pub style_overlays: &'a StyleOverlays,
 	/// Optional diagnostic line map for gutter signs.
 	pub diagnostics: Option<&'a DiagnosticLineMap>,
+	/// Optional diagnostic range map for underlines.
+	pub diagnostic_ranges: Option<&'a DiagnosticRangeMap>,
 }
 
 /// Cursor styling configuration for rendering.
@@ -259,6 +314,52 @@ impl<'a> BufferRenderContext<'a> {
 		Some(modified)
 	}
 
+	/// Gets the diagnostic severity for a character position on a line.
+	///
+	/// Returns the highest severity if multiple diagnostics overlap at this position.
+	pub fn diagnostic_severity_at(&self, line_idx: usize, char_idx: usize) -> Option<u8> {
+		let spans = self.diagnostic_ranges?.get(&line_idx)?;
+		let mut max_severity = 0u8;
+		for span in spans {
+			if char_idx >= span.start_char && char_idx < span.end_char {
+				max_severity = max_severity.max(span.severity);
+			}
+		}
+		if max_severity > 0 { Some(max_severity) } else { None }
+	}
+
+	/// Applies diagnostic underline styling to a style if the position has a diagnostic.
+	///
+	/// Uses colored curly underlines based on severity:
+	/// - Error (4): Red curly underline
+	/// - Warning (3): Yellow curly underline
+	/// - Info (2): Blue curly underline
+	/// - Hint (1): Cyan curly underline
+	pub fn apply_diagnostic_underline(
+		&self,
+		line_idx: usize,
+		char_idx: usize,
+		style: Style,
+	) -> Style {
+		let Some(severity) = self.diagnostic_severity_at(line_idx, char_idx) else {
+			return style;
+		};
+
+		use xeno_tui::style::{Color, UnderlineStyle};
+
+		let underline_color = match severity {
+			4 => self.theme.colors.status.error_fg,
+			3 => self.theme.colors.status.warning_fg,
+			2 => Color::Blue,
+			1 => Color::Cyan,
+			_ => return style,
+		};
+
+		style
+			.underline_style(UnderlineStyle::Curl)
+			.underline_color(underline_color)
+	}
+
 	/// Renders a buffer into a paragraph widget using registry gutters.
 	pub fn render_buffer(
 		&self,
@@ -433,6 +534,12 @@ impl<'a> BufferRenderContext<'a> {
 							base
 						}
 					};
+
+					// Apply diagnostic underlines based on character position
+					let char_in_line = seg_char_offset + i;
+					let non_cursor_style =
+						self.apply_diagnostic_underline(current_line_idx, char_in_line, non_cursor_style);
+
 					let style = if is_cursor && (use_block_cursor || !is_focused) {
 						if blink_on || !is_focused {
 							cursor_style
