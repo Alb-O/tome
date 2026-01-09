@@ -40,6 +40,11 @@ impl Editor {
 		}
 
 		#[cfg(feature = "lsp")]
+		if !self.lsp.poll_diagnostics().is_empty() {
+			self.frame.needs_redraw = true;
+		}
+
+		#[cfg(feature = "lsp")]
 		let mut lsp_docs: HashSet<crate::buffer::DocumentId> = HashSet::new();
 
 		let dirty_ids: Vec<_> = self.frame.dirty_buffers.drain().collect();

@@ -1,6 +1,6 @@
 //! Buffer rendering context and cursor styling.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use xeno_base::Mode;
@@ -20,6 +20,46 @@ use crate::editor::extensions::StyleOverlays;
 use crate::render::wrap::wrap_line;
 use crate::window::GutterSelector;
 
+/// Map from line number (0-indexed) to diagnostic severity (gutter format).
+///
+/// Severity values match `GutterAnnotations::diagnostic_severity`:
+/// - 4 = Error
+/// - 3 = Warning
+/// - 2 = Information
+/// - 1 = Hint
+/// - 0 = None
+pub type DiagnosticLineMap = HashMap<usize, u8>;
+
+/// Builds a diagnostic line map from LSP diagnostics.
+///
+/// Converts LSP severity to gutter severity and keeps only the highest
+/// severity per line.
+#[cfg(feature = "lsp")]
+pub fn build_diagnostic_line_map(
+	diagnostics: &[xeno_lsp::lsp_types::Diagnostic],
+) -> DiagnosticLineMap {
+	use xeno_lsp::lsp_types::DiagnosticSeverity;
+
+	let mut map = DiagnosticLineMap::new();
+
+	for diag in diagnostics {
+		let line = diag.range.start.line as usize;
+		// LSP: 1=Error, 2=Warning, 3=Info, 4=Hint → Gutter: 4, 3, 2, 1
+		let severity = match diag.severity {
+			Some(DiagnosticSeverity::ERROR) => 4,
+			Some(DiagnosticSeverity::WARNING) => 3,
+			Some(DiagnosticSeverity::INFORMATION) => 2,
+			Some(DiagnosticSeverity::HINT) => 1,
+			_ => 0,
+		};
+		map.entry(line)
+			.and_modify(|e| *e = (*e).max(severity))
+			.or_insert(severity);
+	}
+
+	map
+}
+
 /// Result of rendering a buffer's content.
 pub struct RenderResult {
 	/// The rendered paragraph widget ready for display.
@@ -38,6 +78,8 @@ pub struct BufferRenderContext<'a> {
 	pub language_loader: &'a LanguageLoader,
 	/// Style overlays (e.g., zen mode dimming).
 	pub style_overlays: &'a StyleOverlays,
+	/// Optional diagnostic line map for gutter signs.
+	pub diagnostics: Option<&'a DiagnosticLineMap>,
 }
 
 /// Cursor styling configuration for rendering.
@@ -286,8 +328,6 @@ impl<'a> BufferRenderContext<'a> {
 			line: buffer.cursor_line(),
 		};
 
-		// Shared empty annotations for lines without diagnostic/git data
-		let empty_annotations = GutterAnnotations::default();
 		let buffer_path_owned = buffer.path();
 		let buffer_path = buffer_path_owned.as_deref();
 
@@ -298,6 +338,17 @@ impl<'a> BufferRenderContext<'a> {
 
 		while output_lines.len() < viewport_height && current_line_idx < total_lines {
 			let is_cursor_line = cursorline_config.should_highlight(current_line_idx);
+
+			let line_annotations = if let Some(diags) = self.diagnostics
+				&& let Some(&severity) = diags.get(&current_line_idx)
+			{
+				GutterAnnotations {
+					diagnostic_severity: severity,
+					..Default::default()
+				}
+			} else {
+				GutterAnnotations::default()
+			};
 			let line_start: CharIdx = buffer.doc().content.line_to_char(current_line_idx);
 			let line_end: CharIdx = if current_line_idx + 1 < total_lines {
 				buffer.doc().content.line_to_char(current_line_idx + 1)
@@ -328,7 +379,7 @@ impl<'a> BufferRenderContext<'a> {
 					is_continuation,
 					buffer.doc().content.line(current_line_idx),
 					buffer_path,
-					&empty_annotations,
+					&line_annotations,
 					self.theme,
 				);
 
@@ -487,7 +538,7 @@ impl<'a> BufferRenderContext<'a> {
 					false, // not a continuation
 					buffer.doc().content.line(current_line_idx),
 					buffer_path,
-					&empty_annotations,
+					&line_annotations,
 					self.theme,
 				);
 

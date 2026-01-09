@@ -170,13 +170,26 @@ pub enum Error {
 
 /// Converts a filesystem path to an LSP URI.
 ///
-/// Returns `None` if the path cannot be converted (e.g., non-absolute paths on some platforms).
+/// Relative paths are canonicalized to absolute paths first.
+/// Returns `None` if the path cannot be converted.
 pub fn uri_from_path(path: &std::path::Path) -> Option<lsp_types::Uri> {
 	use std::str::FromStr;
-	let uri_string = if cfg!(windows) {
-		format!("file:///{}", path.display().to_string().replace('\\', "/"))
+
+	let abs_path = if path.is_absolute() {
+		path.to_path_buf()
 	} else {
-		format!("file://{}", path.display())
+		path.canonicalize()
+			.or_else(|_| std::env::current_dir().map(|cwd| cwd.join(path)))
+			.ok()?
+	};
+
+	let uri_string = if cfg!(windows) {
+		format!(
+			"file:///{}",
+			abs_path.display().to_string().replace('\\', "/")
+		)
+	} else {
+		format!("file://{}", abs_path.display())
 	};
 	lsp_types::Uri::from_str(&uri_string).ok()
 }

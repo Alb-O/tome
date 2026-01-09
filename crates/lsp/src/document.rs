@@ -287,9 +287,11 @@ impl DocumentStateManager {
 		self.documents.write().remove(&uri.to_string());
 	}
 
-	/// Update diagnostics for a document.
+	/// Updates diagnostics for a document.
+	///
+	/// Creates document state on-demand if the document isn't registered,
+	/// enabling project-wide diagnostics from LSP servers.
 	pub fn update_diagnostics(&self, uri: &Uri, diagnostics: Vec<Diagnostic>) {
-		// Count errors and warnings
 		let error_count = diagnostics
 			.iter()
 			.filter(|d| d.severity == Some(DiagnosticSeverity::ERROR))
@@ -299,16 +301,36 @@ impl DocumentStateManager {
 			.filter(|d| d.severity == Some(DiagnosticSeverity::WARNING))
 			.count();
 
-		// Update the document state
-		let docs = self.documents.read();
-		if let Some(state) = docs.get(&uri.to_string()) {
-			state.set_diagnostics(diagnostics);
+		let uri_str = uri.to_string();
+
+		// Try read lock first for the common case
+		{
+			let docs = self.documents.read();
+			if let Some(state) = docs.get(&uri_str) {
+				state.set_diagnostics(diagnostics);
+				self.diagnostics_version.fetch_add(1, Ordering::Relaxed);
+				self.send_diagnostics_event(uri, error_count, warning_count);
+				return;
+			}
 		}
 
-		// Increment version counter
-		self.diagnostics_version.fetch_add(1, Ordering::Relaxed);
+		// Document not registered - create on demand
+		{
+			let mut docs = self.documents.write();
+			if let Some(state) = docs.get(&uri_str) {
+				state.set_diagnostics(diagnostics);
+			} else {
+				let state = DocumentState::from_uri(uri.clone());
+				state.set_diagnostics(diagnostics);
+				docs.insert(uri_str, state);
+			}
+		}
 
-		// Send event if we have a sender
+		self.diagnostics_version.fetch_add(1, Ordering::Relaxed);
+		self.send_diagnostics_event(uri, error_count, warning_count);
+	}
+
+	fn send_diagnostics_event(&self, uri: &Uri, error_count: usize, warning_count: usize) {
 		if let Some(ref sender) = self.event_sender
 			&& let Some(path) = crate::path_from_uri(uri)
 		{

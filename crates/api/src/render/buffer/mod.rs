@@ -8,5 +8,7 @@ mod context;
 mod gutter;
 mod viewport;
 
-pub use context::{BufferRenderContext, RenderResult};
+pub use context::{BufferRenderContext, DiagnosticLineMap, RenderResult};
+#[cfg(feature = "lsp")]
+pub use context::build_diagnostic_line_map;
 pub use viewport::ensure_buffer_cursor_visible;

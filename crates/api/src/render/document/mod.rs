@@ -329,18 +329,27 @@ impl Editor {
 
 		let sep_style = SeparatorStyle::new(self, doc_area);
 
-		let ctx = BufferRenderContext {
-			theme: self.config.theme,
-			language_loader: &self.config.language_loader,
-			style_overlays: &self.style_overlays,
-		};
-
 		for (_, _, view_areas, separators) in &layer_data {
 			for (buffer_id, area) in view_areas {
 				let is_focused = *buffer_id == focused_view;
 				let tab_width = self.tab_width_for(*buffer_id);
 				let cursorline = self.cursorline_for(*buffer_id);
 				if let Some(buffer) = self.get_buffer(*buffer_id) {
+					#[cfg(feature = "lsp")]
+					let diag_map = {
+						let diagnostics = self.lsp.get_diagnostics(buffer);
+						super::buffer::build_diagnostic_line_map(&diagnostics)
+					};
+
+					let ctx = BufferRenderContext {
+						theme: self.config.theme,
+						language_loader: &self.config.language_loader,
+						style_overlays: &self.style_overlays,
+						#[cfg(feature = "lsp")]
+						diagnostics: Some(&diag_map),
+						#[cfg(not(feature = "lsp"))]
+						diagnostics: None,
+					};
 					let result = ctx.render_buffer(
 						buffer,
 						*area,
@@ -410,12 +419,6 @@ impl Editor {
 			}
 		}
 
-		let ctx = BufferRenderContext {
-			theme: self.config.theme,
-			language_loader: &self.config.language_loader,
-			style_overlays: &self.style_overlays,
-		};
-
 		for (window_id, window) in floating_windows {
 			let Some(rect) = clamp_rect(window.rect, bounds) else {
 				continue;
@@ -464,6 +467,22 @@ impl Editor {
 					.unwrap_or(false);
 				let tab_width = self.tab_width_for(window.buffer);
 				let cursorline = self.cursorline_for(window.buffer);
+
+				#[cfg(feature = "lsp")]
+				let diag_map = {
+					let diagnostics = self.lsp.get_diagnostics(buffer);
+					super::buffer::build_diagnostic_line_map(&diagnostics)
+				};
+
+				let ctx = BufferRenderContext {
+					theme: self.config.theme,
+					language_loader: &self.config.language_loader,
+					style_overlays: &self.style_overlays,
+					#[cfg(feature = "lsp")]
+					diagnostics: Some(&diag_map),
+					#[cfg(not(feature = "lsp"))]
+					diagnostics: None,
+				};
 				let result = ctx.render_buffer_with_gutter(
 					buffer,
 					content_area,

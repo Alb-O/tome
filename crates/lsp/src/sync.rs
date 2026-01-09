@@ -15,16 +15,16 @@
 //! and a [`Registry`] to manage language server connections.
 //!
 //! ```text
-//! ┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-//! │   Buffer    │────▶│ DocumentSync │────▶│ Language Server │
-//! │  (Editor)   │     │   (Bridge)   │     │   (rust-analyzer)│
-//! └─────────────┘     └──────────────┘     └─────────────────┘
+//! ┌────────────┐     ┌──────────────┐     ┌─────────────────┐
+//! │   Buffer   │────▶│ DocumentSync │────▶│ Language Server │
+//! │  (Editor)  │     │   (Bridge)   │     │ (rust-analyzer) │
+//! └────────────┘     └──────────────┘     └─────────────────┘
 //!                            │
 //!                            ▼
-//!                     ┌──────────────────┐
-//!                     │DocumentStateManager│
-//!                     │  (Version, Diags) │
-//!                     └──────────────────┘
+//!                 ┌────────────────────┐
+//!                 │DocumentStateManager│
+//!                 │  (Version, Diags)  │
+//!                 └────────────────────┘
 //! ```
 
 use std::path::Path;

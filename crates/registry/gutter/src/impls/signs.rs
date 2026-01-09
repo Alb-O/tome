@@ -6,7 +6,7 @@ gutter!(signs, {
 	description: "Sign column for diagnostics and markers",
 	priority: -10,
 	width: Fixed(2),
-	enabled: false
+	enabled: true
 }, |ctx| {
 	// Check for custom sign first
 	if let Some(sign) = ctx.annotations.sign {
