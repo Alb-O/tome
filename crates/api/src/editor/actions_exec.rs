@@ -1,4 +1,4 @@
-use tracing::{debug, info_span};
+use tracing::{trace, trace_span};
 use xeno_registry::actions::find_action;
 use xeno_registry::{
 	ActionArgs, ActionContext, ActionResult, EditorContext, HookContext, HookEventData,
@@ -45,7 +45,7 @@ impl Editor {
 			&mut self.hook_runtime,
 		);
 
-		let span = info_span!(
+		let span = trace_span!(
 			"action",
 			name = action.name,
 			id = action.id,
@@ -71,7 +71,7 @@ impl Editor {
 		};
 		let result = (action.handler)(&ctx);
 
-		debug!(result = ?result, "Action completed");
+		trace!(result = ?result, "Action completed");
 		self.apply_action_result(action.id, result, extend)
 	}
 
@@ -113,7 +113,7 @@ impl Editor {
 			&mut self.hook_runtime,
 		);
 
-		let span = info_span!(
+		let span = trace_span!(
 			"action",
 			name = action.name,
 			id = action.id,
@@ -143,7 +143,7 @@ impl Editor {
 		};
 		let result = (action.handler)(&ctx);
 
-		debug!(result = ?result, "Action completed");
+		trace!(result = ?result, "Action completed");
 		self.apply_action_result(action.id, result, extend)
 	}
 

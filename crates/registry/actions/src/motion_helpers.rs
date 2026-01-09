@@ -7,7 +7,7 @@
 //! The `effects_*` functions return [`ActionEffects`] instead of [`ActionResult`],
 //! demonstrating the data-oriented composition pattern.
 
-use tracing::debug;
+use tracing::trace;
 use xeno_base::range::Range;
 use xeno_base::{Mode, Selection};
 use xeno_registry_motions::MotionKey;
@@ -22,7 +22,7 @@ use crate::{ActionContext, ActionEffects, ActionResult, Effect};
 pub fn cursor_motion(ctx: &ActionContext, motion: MotionKey) -> ActionResult {
 	let motion_def = motion.def();
 
-	debug!(
+	trace!(
 		motion = motion.name(),
 		count = ctx.count,
 		extend = ctx.extend,
@@ -63,7 +63,7 @@ pub fn cursor_motion(ctx: &ActionContext, motion: MotionKey) -> ActionResult {
 pub fn selection_motion(ctx: &ActionContext, motion: MotionKey) -> ActionResult {
 	let motion_def = motion.def();
 
-	debug!(
+	trace!(
 		motion = motion.name(),
 		count = ctx.count,
 		extend = ctx.extend,
@@ -103,7 +103,7 @@ pub fn selection_motion(ctx: &ActionContext, motion: MotionKey) -> ActionResult 
 pub fn word_motion(ctx: &ActionContext, motion: MotionKey) -> ActionResult {
 	let motion_def = motion.def();
 
-	debug!(
+	trace!(
 		motion = motion.name(),
 		count = ctx.count,
 		extend = ctx.extend,
