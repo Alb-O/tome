@@ -216,6 +216,19 @@ impl Default for DocumentStateManager {
 }
 
 impl DocumentStateManager {
+	fn normalize_uri(&self, uri: &Uri) -> Uri {
+		if let Some(path) = crate::path_from_uri(uri)
+			&& let Some(normalized) = crate::uri_from_path(&path)
+		{
+			return normalized;
+		}
+		uri.clone()
+	}
+
+	fn uri_key(&self, uri: &Uri) -> String {
+		self.normalize_uri(uri).to_string()
+	}
+
 	/// Create a new empty manager.
 	pub fn new() -> Self {
 		Self {
@@ -251,7 +264,7 @@ impl DocumentStateManager {
 	/// Get document state by file path.
 	pub fn get_by_path(&self, path: &PathBuf) -> Option<Uri> {
 		let uri = crate::uri_from_path(path)?;
-		let key = uri.to_string();
+		let key = self.uri_key(&uri);
 		let docs = self.documents.read();
 		if docs.contains_key(&key) {
 			Some(uri)
@@ -262,13 +275,14 @@ impl DocumentStateManager {
 
 	/// Get document state by URI.
 	pub fn contains(&self, uri: &Uri) -> bool {
-		self.documents.read().contains_key(&uri.to_string())
+		let key = self.uri_key(uri);
+		self.documents.read().contains_key(&key)
 	}
 
 	/// Register a document.
 	pub fn register(&self, path: &PathBuf, language_id: Option<&str>) -> Option<Uri> {
 		let uri = crate::uri_from_path(path)?;
-		let key = uri.to_string();
+		let key = self.uri_key(&uri);
 
 		let mut docs = self.documents.write();
 		let state = docs
@@ -284,7 +298,8 @@ impl DocumentStateManager {
 
 	/// Unregister a document.
 	pub fn unregister(&self, uri: &Uri) {
-		self.documents.write().remove(&uri.to_string());
+		let key = self.uri_key(uri);
+		self.documents.write().remove(&key);
 	}
 
 	/// Updates diagnostics for a document.
@@ -301,12 +316,12 @@ impl DocumentStateManager {
 			.filter(|d| d.severity == Some(DiagnosticSeverity::WARNING))
 			.count();
 
-		let uri_str = uri.to_string();
+		let uri_key = self.uri_key(uri);
 
 		// Try read lock first for the common case
 		{
 			let docs = self.documents.read();
-			if let Some(state) = docs.get(&uri_str) {
+			if let Some(state) = docs.get(&uri_key) {
 				state.set_diagnostics(diagnostics);
 				self.diagnostics_version.fetch_add(1, Ordering::Relaxed);
 				self.send_diagnostics_event(uri, error_count, warning_count);
@@ -317,12 +332,12 @@ impl DocumentStateManager {
 		// Document not registered - create on demand
 		{
 			let mut docs = self.documents.write();
-			if let Some(state) = docs.get(&uri_str) {
+			if let Some(state) = docs.get(&uri_key) {
 				state.set_diagnostics(diagnostics);
 			} else {
-				let state = DocumentState::from_uri(uri.clone());
+				let state = DocumentState::from_uri(self.normalize_uri(uri));
 				state.set_diagnostics(diagnostics);
-				docs.insert(uri_str, state);
+				docs.insert(uri_key, state);
 			}
 		}
 
@@ -344,36 +359,41 @@ impl DocumentStateManager {
 
 	/// Get diagnostics for a document.
 	pub fn get_diagnostics(&self, uri: &Uri) -> Vec<Diagnostic> {
+		let key = self.uri_key(uri);
 		let docs = self.documents.read();
-		docs.get(&uri.to_string())
+		docs.get(&key)
 			.map(|s| s.diagnostics())
 			.unwrap_or_default()
 	}
 
 	/// Increment version for a document and return the new version.
 	pub fn increment_version(&self, uri: &Uri) -> Option<i32> {
+		let key = self.uri_key(uri);
 		let docs = self.documents.read();
-		docs.get(&uri.to_string()).map(|s| s.increment_version())
+		docs.get(&key).map(|s| s.increment_version())
 	}
 
 	/// Get version for a document.
 	pub fn get_version(&self, uri: &Uri) -> Option<i32> {
+		let key = self.uri_key(uri);
 		let docs = self.documents.read();
-		docs.get(&uri.to_string()).map(|s| s.version())
+		docs.get(&key).map(|s| s.version())
 	}
 
 	/// Mark a document as opened with a language server.
 	pub fn set_opened(&self, uri: &Uri, opened: bool) {
+		let key = self.uri_key(uri);
 		let docs = self.documents.read();
-		if let Some(state) = docs.get(&uri.to_string()) {
+		if let Some(state) = docs.get(&key) {
 			state.set_opened(opened);
 		}
 	}
 
 	/// Check if a document is opened with a language server.
 	pub fn is_opened(&self, uri: &Uri) -> bool {
+		let key = self.uri_key(uri);
 		let docs = self.documents.read();
-		docs.get(&uri.to_string())
+		docs.get(&key)
 			.map(|s| s.is_opened())
 			.unwrap_or(false)
 	}

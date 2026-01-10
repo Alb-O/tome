@@ -382,7 +382,7 @@ language name=nickel scope=source.nickel injection-regex=nickel comment-token="#
 language name=nix scope=source.nix injection-regex=nix comment-token="#" {
 	file-types nix
 	shebangs
-	language-servers nil nixd
+	language-servers nixd nil
 	indent tab-width=2 unit="  "
 	formatter nixfmt
 }

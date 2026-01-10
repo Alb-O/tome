@@ -171,43 +171,31 @@ pub enum Error {
 /// Converts a filesystem path to an LSP URI.
 ///
 /// Relative paths are canonicalized to absolute paths first.
+/// Paths are percent-encoded as required by the LSP URI format.
 /// Returns `None` if the path cannot be converted.
 pub fn uri_from_path(path: &std::path::Path) -> Option<lsp_types::Uri> {
 	use std::str::FromStr;
 
 	let abs_path = if path.is_absolute() {
-		path.to_path_buf()
+		path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
 	} else {
 		path.canonicalize()
 			.or_else(|_| std::env::current_dir().map(|cwd| cwd.join(path)))
 			.ok()?
 	};
 
-	let uri_string = if cfg!(windows) {
-		format!(
-			"file:///{}",
-			abs_path.display().to_string().replace('\\', "/")
-		)
-	} else {
-		format!("file://{}", abs_path.display())
-	};
-	lsp_types::Uri::from_str(&uri_string).ok()
+	let url = url::Url::from_file_path(abs_path).ok()?;
+	lsp_types::Uri::from_str(url.as_str()).ok()
 }
 
 /// Converts an LSP URI to a filesystem path.
 ///
 /// Returns `None` if the URI is not a `file://` scheme or cannot be parsed.
 pub fn path_from_uri(uri: &lsp_types::Uri) -> Option<std::path::PathBuf> {
-	let s = uri.as_str();
-	if !s.starts_with("file://") {
-		return None;
-	}
-	let path_str = &s[7..]; // strip "file://"
-	if cfg!(windows) && path_str.starts_with('/') {
-		Some(std::path::PathBuf::from(&path_str[1..].replace('/', "\\")))
-	} else {
-		Some(std::path::PathBuf::from(path_str))
-	}
+	use std::str::FromStr;
+
+	let url = url::Url::from_str(uri.as_str()).ok()?;
+	url.to_file_path().ok()
 }
 
 /// The core service abstraction, representing either a Language Server or Language Client.

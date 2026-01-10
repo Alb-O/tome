@@ -679,6 +679,13 @@ pub fn start_server(
 		let mut router = Router::new(state.clone());
 		router
 			.notification::<lsp_types::notification::PublishDiagnostics>(|state, params| {
+				debug!(
+					target: "lsp",
+					server_id = state.server_id.0,
+					uri = params.uri.as_str(),
+					count = params.diagnostics.len(),
+					"Received diagnostics"
+				);
 				state
 					.event_handler
 					.on_diagnostics(state.server_id, params.uri, params.diagnostics);
@@ -729,6 +736,20 @@ pub fn start_server(
 					}
 				}
 				ControlFlow::Continue(())
+			})
+			// Server->client requests
+			.request::<lsp_types::request::WorkspaceConfiguration, _>(|_state, params| {
+				// Return empty config object for each requested item
+				let result: Vec<serde_json::Value> = params
+					.items
+					.iter()
+					.map(|_| serde_json::json!({}))
+					.collect();
+				async move { Ok(result) }
+			})
+			.request::<lsp_types::request::WorkDoneProgressCreate, _>(|_state, _params| {
+				// Acknowledge work done progress creation
+				async move { Ok(()) }
 			})
 			// Catch-all for unhandled notifications
 			.unhandled_notification(|_state, notif| {

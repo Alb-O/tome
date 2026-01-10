@@ -39,6 +39,7 @@ tokio-util = { workspace = true, optional = true, features = ["compat"] }
 tower-layer = "0.3"
 tower-service = "0.3"
 tracing.workspace = true
+url = { workspace = true }
 waitpid-any = { version = "0.3", optional = true }
 xeno-base = { workspace = true, optional = true }
 

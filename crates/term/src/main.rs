@@ -525,10 +525,11 @@ fn configure_lsp_servers(editor: &mut Editor) {
 		server_defs.iter().map(|s| (s.name.as_str(), s)).collect();
 
 	for (language, info) in &lang_mapping {
-		let Some(server_name) = info.servers.first() else {
-			continue;
-		};
-		let Some(server_def) = server_map.get(server_name.as_str()) else {
+		// Try each configured server in order until one with an available binary is found
+		let Some(server_def) = info.servers.iter().find_map(|name| {
+			let def = server_map.get(name.as_str())?;
+			which::which(&def.command).ok().map(|_| def)
+		}) else {
 			continue;
 		};
 		editor.lsp.configure_server(
