@@ -63,13 +63,21 @@ pub struct GutterCell {
 /// Style hints for gutter cells.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GutterStyle {
-	/// Normal line number color.
+	/// Normal gutter foreground color.
 	#[default]
 	Normal,
 	/// Dimmed (continuations, empty lines).
 	Dim,
 	/// Highlighted (cursor line).
 	Cursor,
+	/// Error diagnostic (theme error color).
+	Error,
+	/// Warning diagnostic (theme warning color).
+	Warning,
+	/// Info diagnostic (theme info color).
+	Info,
+	/// Hint diagnostic (dimmed).
+	Hint,
 }
 
 /// Width calculation strategy.
@@ -83,27 +91,13 @@ pub enum GutterWidth {
 
 /// Per-line annotation data for gutter columns.
 ///
-/// Extended by LSP/git extensions via optional fields. Start with a minimal
-/// set and add fields as needed for diagnostics, git hunks, etc.
+/// Populated by the rendering layer with diagnostic info, custom signs, etc.
 #[derive(Debug, Clone, Default)]
 pub struct GutterAnnotations {
 	/// Diagnostic severity (0=none, 1=hint, 2=info, 3=warn, 4=error).
 	pub diagnostic_severity: u8,
-	/// Git hunk type.
-	pub git_status: Option<GitHunkStatus>,
 	/// Custom sign character (breakpoint, bookmark, etc.).
 	pub sign: Option<char>,
-}
-
-/// Git hunk status for gutter display.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum GitHunkStatus {
-	/// Line was added.
-	Added,
-	/// Line was modified.
-	Modified,
-	/// Line was removed (shown on adjacent line).
-	Removed,
 }
 
 /// Definition of a gutter column.

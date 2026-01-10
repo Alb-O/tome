@@ -8,7 +8,7 @@ gutter!(signs, {
 	width: Fixed(2),
 	enabled: true
 }, |ctx| {
-	// Check for custom sign first
+	// Custom signs take priority (breakpoints, bookmarks, etc.)
 	if let Some(sign) = ctx.annotations.sign {
 		return Some(GutterCell {
 			text: sign.to_string(),
@@ -16,24 +16,12 @@ gutter!(signs, {
 		});
 	}
 
-	// Then check diagnostic severity
+	// Diagnostic signs with semantic styling
 	match ctx.annotations.diagnostic_severity {
-		4 => Some(GutterCell {
-			text: "E".into(),
-			style: GutterStyle::Normal,
-		}),
-		3 => Some(GutterCell {
-			text: "W".into(),
-			style: GutterStyle::Normal,
-		}),
-		2 => Some(GutterCell {
-			text: "I".into(),
-			style: GutterStyle::Dim,
-		}),
-		1 => Some(GutterCell {
-			text: "H".into(),
-			style: GutterStyle::Dim,
-		}),
+		4 => Some(GutterCell { text: "●".into(), style: GutterStyle::Error }),
+		3 => Some(GutterCell { text: "●".into(), style: GutterStyle::Warning }),
+		2 => Some(GutterCell { text: "●".into(), style: GutterStyle::Info }),
+		1 => Some(GutterCell { text: "●".into(), style: GutterStyle::Hint }),
 		_ => None,
 	}
 });

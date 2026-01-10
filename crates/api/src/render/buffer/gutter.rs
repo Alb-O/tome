@@ -265,7 +265,12 @@ impl GutterLayout {
 			Some(cell) => {
 				let fg = match cell.style {
 					GutterStyle::Normal | GutterStyle::Cursor => theme.colors.ui.gutter_fg,
-					GutterStyle::Dim => theme.colors.ui.gutter_fg.blend(theme.colors.ui.bg, 0.5),
+					GutterStyle::Dim | GutterStyle::Hint => {
+						theme.colors.ui.gutter_fg.blend(theme.colors.ui.bg, 0.5)
+					}
+					GutterStyle::Error => theme.colors.status.error_fg,
+					GutterStyle::Warning => theme.colors.status.warning_fg,
+					GutterStyle::Info => Color::Blue,
 				};
 
 				let mut style = Style::default().fg(fg);
