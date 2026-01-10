@@ -1,188 +1,22 @@
-//! LSP document state tracking.
+//! Document state manager for LSP.
 //!
-//! This module provides types for tracking LSP-related state for documents,
-//! including version numbers, diagnostics, and language server associations.
+//! Manages LSP state across all open documents, including diagnostics,
+//! version tracking, and progress operations.
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
+use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-use lsp_types::{Diagnostic, DiagnosticSeverity, NumberOrString, ProgressParams, Uri};
+use lsp_types::{Diagnostic, DiagnosticSeverity, ProgressParams, Uri};
 use parking_lot::RwLock;
 use tokio::sync::mpsc;
 use tracing::debug;
 
+use super::progress::ProgressItem;
+use super::state::DocumentState;
+use super::{DiagnosticsEvent, DiagnosticsEventReceiver, DiagnosticsEventSender};
 use crate::client::LanguageServerId;
-
-/// Event emitted when diagnostics are updated for a document.
-#[derive(Debug, Clone)]
-pub struct DiagnosticsEvent {
-	/// Path to the document (derived from URI).
-	pub path: PathBuf,
-	/// Number of error diagnostics.
-	pub error_count: usize,
-	/// Number of warning diagnostics.
-	pub warning_count: usize,
-}
-
-/// Sender for diagnostic events.
-pub type DiagnosticsEventSender = mpsc::UnboundedSender<DiagnosticsEvent>;
-
-/// Receiver for diagnostic events.
-pub type DiagnosticsEventReceiver = mpsc::UnboundedReceiver<DiagnosticsEvent>;
-
-/// An active progress operation from a language server.
-#[derive(Debug, Clone)]
-pub struct ProgressItem {
-	/// Server that reported this progress.
-	pub server_id: LanguageServerId,
-	/// Progress token for tracking.
-	pub token: NumberOrString,
-	/// Title of the operation (e.g., "Indexing").
-	pub title: String,
-	/// Optional message with more details.
-	pub message: Option<String>,
-	/// Optional percentage (0-100).
-	pub percentage: Option<u32>,
-	/// When this progress started.
-	pub started_at: Instant,
-}
-
-/// LSP state for a single document.
-///
-/// Tracks version number for incremental sync, diagnostics, and other
-/// LSP-related metadata.
-#[derive(Debug)]
-pub struct DocumentState {
-	/// Document URI (derived from file path).
-	uri: Uri,
-	/// Document version for LSP sync. Incremented on each change.
-	version: AtomicI32,
-	/// Whether the document has been opened with the language server.
-	opened: RwLock<bool>,
-	/// Current diagnostics from the language server.
-	diagnostics: RwLock<Vec<Diagnostic>>,
-	/// Language ID for the document (e.g., "rust", "python").
-	language_id: RwLock<Option<String>>,
-}
-
-impl DocumentState {
-	/// Create a new document state from a file path.
-	///
-	/// Returns `None` if the path cannot be converted to a URL.
-	pub fn new(path: &Path) -> Option<Self> {
-		let uri = crate::uri_from_path(path)?;
-		Some(Self {
-			uri,
-			version: AtomicI32::new(0),
-			opened: RwLock::new(false),
-			diagnostics: RwLock::new(Vec::new()),
-			language_id: RwLock::new(None),
-		})
-	}
-
-	/// Create a document state from a URI directly.
-	pub fn from_uri(uri: Uri) -> Self {
-		Self {
-			uri,
-			version: AtomicI32::new(0),
-			opened: RwLock::new(false),
-			diagnostics: RwLock::new(Vec::new()),
-			language_id: RwLock::new(None),
-		}
-	}
-
-	/// Get the document URI.
-	pub fn uri(&self) -> &Uri {
-		&self.uri
-	}
-
-	/// Get the current document version.
-	pub fn version(&self) -> i32 {
-		self.version.load(Ordering::Relaxed)
-	}
-
-	/// Increment the version and return the new value.
-	///
-	/// Should be called whenever the document content changes.
-	pub fn increment_version(&self) -> i32 {
-		self.version.fetch_add(1, Ordering::Relaxed) + 1
-	}
-
-	/// Check if the document has been opened with a language server.
-	pub fn is_opened(&self) -> bool {
-		*self.opened.read()
-	}
-
-	/// Mark the document as opened with a language server.
-	pub fn set_opened(&self, opened: bool) {
-		*self.opened.write() = opened;
-	}
-
-	/// Get the language ID.
-	pub fn language_id(&self) -> Option<String> {
-		self.language_id.read().clone()
-	}
-
-	/// Set the language ID.
-	pub fn set_language_id(&self, lang: impl Into<String>) {
-		*self.language_id.write() = Some(lang.into());
-	}
-
-	/// Get all diagnostics for this document.
-	pub fn diagnostics(&self) -> Vec<Diagnostic> {
-		self.diagnostics.read().clone()
-	}
-
-	/// Set diagnostics for this document.
-	pub fn set_diagnostics(&self, diagnostics: Vec<Diagnostic>) {
-		*self.diagnostics.write() = diagnostics;
-	}
-
-	/// Clear all diagnostics.
-	pub fn clear_diagnostics(&self) {
-		self.diagnostics.write().clear();
-	}
-
-	/// Get diagnostics filtered by severity.
-	pub fn diagnostics_by_severity(&self, severity: DiagnosticSeverity) -> Vec<Diagnostic> {
-		self.diagnostics
-			.read()
-			.iter()
-			.filter(|d| d.severity == Some(severity))
-			.cloned()
-			.collect()
-	}
-
-	/// Get error count.
-	pub fn error_count(&self) -> usize {
-		self.diagnostics
-			.read()
-			.iter()
-			.filter(|d| d.severity == Some(DiagnosticSeverity::ERROR))
-			.count()
-	}
-
-	/// Get warning count.
-	pub fn warning_count(&self) -> usize {
-		self.diagnostics
-			.read()
-			.iter()
-			.filter(|d| d.severity == Some(DiagnosticSeverity::WARNING))
-			.count()
-	}
-
-	/// Check if there are any errors.
-	pub fn has_errors(&self) -> bool {
-		self.error_count() > 0
-	}
-
-	/// Check if there are any warnings.
-	pub fn has_warnings(&self) -> bool {
-		self.warning_count() > 0
-	}
-}
 
 /// Manager for document LSP state across all open documents.
 ///
@@ -427,8 +261,8 @@ impl DocumentStateManager {
 		use lsp_types::WorkDoneProgress;
 
 		let token_key = match &params.token {
-			NumberOrString::Number(n) => n.to_string(),
-			NumberOrString::String(s) => s.clone(),
+			lsp_types::NumberOrString::Number(n) => n.to_string(),
+			lsp_types::NumberOrString::String(s) => s.clone(),
 		};
 		let key = (server_id.0, token_key);
 
@@ -509,76 +343,5 @@ impl DocumentStateManager {
 		self.progress
 			.write()
 			.retain(|(sid, _), _| *sid != server_id.0);
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use lsp_types::Range;
-
-	use super::*;
-
-	fn make_diagnostic(severity: DiagnosticSeverity, message: &str) -> Diagnostic {
-		Diagnostic {
-			range: Range::default(),
-			severity: Some(severity),
-			code: None,
-			code_description: None,
-			source: Some("test".into()),
-			message: message.into(),
-			related_information: None,
-			tags: None,
-			data: None,
-		}
-	}
-
-	#[test]
-	fn test_document_state_version() {
-		let uri = "file:///test.rs".parse().unwrap();
-		let state = DocumentState::from_uri(uri);
-
-		assert_eq!(state.version(), 0);
-		assert_eq!(state.increment_version(), 1);
-		assert_eq!(state.increment_version(), 2);
-		assert_eq!(state.version(), 2);
-	}
-
-	#[test]
-	fn test_document_state_diagnostics() {
-		let uri = "file:///test.rs".parse().unwrap();
-		let state = DocumentState::from_uri(uri);
-
-		assert!(!state.has_errors());
-		assert!(!state.has_warnings());
-
-		let diagnostics = vec![
-			make_diagnostic(DiagnosticSeverity::ERROR, "error 1"),
-			make_diagnostic(DiagnosticSeverity::ERROR, "error 2"),
-			make_diagnostic(DiagnosticSeverity::WARNING, "warning 1"),
-		];
-		state.set_diagnostics(diagnostics);
-
-		assert!(state.has_errors());
-		assert!(state.has_warnings());
-		assert_eq!(state.error_count(), 2);
-		assert_eq!(state.warning_count(), 1);
-	}
-
-	#[test]
-	fn test_document_state_manager() {
-		let manager = DocumentStateManager::new();
-		let uri = "file:///test.rs".parse().unwrap();
-
-		let path = PathBuf::from("/test.rs");
-		manager.register(&path, Some("rust"));
-		assert!(manager.contains(&uri));
-
-		let diagnostics = vec![make_diagnostic(DiagnosticSeverity::ERROR, "test error")];
-		manager.update_diagnostics(&uri, diagnostics);
-		assert_eq!(manager.get_diagnostics(&uri).len(), 1);
-		assert_eq!(manager.total_error_count(), 1);
-
-		manager.unregister(&uri);
-		assert!(!manager.contains(&uri));
 	}
 }
