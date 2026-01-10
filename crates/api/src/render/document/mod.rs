@@ -300,11 +300,17 @@ impl Editor {
 			}
 		}
 
-		// Ensure cursor is visible for all buffers
+		// During mouse drag (text_selection_origin is Some), disable scroll margin
+		// to allow cursor to reach screen edges without triggering scrolloff.
+		let mouse_drag_active = self.layout.text_selection_origin.is_some();
 		for (_, _, view_areas, _) in &layer_data {
 			for (buffer_id, area) in view_areas {
 				let tab_width = self.tab_width_for(*buffer_id);
-				let scroll_margin = self.scroll_margin_for(*buffer_id);
+				let scroll_margin = if mouse_drag_active {
+					0
+				} else {
+					self.scroll_margin_for(*buffer_id)
+				};
 				if let Some(buffer) = self.get_buffer_mut(*buffer_id) {
 					ensure_buffer_cursor_visible(buffer, *area, tab_width, scroll_margin);
 				}
