@@ -1,6 +1,21 @@
 //! Catch panics of underlying handlers and turn them into error responses.
 //!
 //! *Applies to both Language Servers and Language Clients.*
+//!
+//! # Unwind Safety
+//!
+//! This middleware uses [`AssertUnwindSafe`] to catch panics from the wrapped service.
+//! After a panic is caught:
+//!
+//! - The service's internal state may be inconsistent
+//! - The error response is returned to the client, but subsequent requests may fail or behave
+//!   unexpectedly
+//! - Callers should consider restarting the service connection after encountering a panic-derived
+//!   error
+//!
+//! This is an inherent limitation of panic recovery in Rust. The middleware converts panics to
+//! structured error responses (preventing connection drops), but cannot guarantee service
+//! correctness after a panic.
 use std::any::Any;
 use std::future::Future;
 use std::ops::ControlFlow;
@@ -56,7 +71,7 @@ impl<S: LspService> Service<AnyRequest> for CatchUnwind<S> {
 
 	fn call(&mut self, req: AnyRequest) -> Self::Future {
 		let method = req.method.clone();
-		// FIXME: Clarify conditions of UnwindSafe.
+		// SAFETY: See module-level documentation on unwind safety implications.
 		match catch_unwind(AssertUnwindSafe(|| self.service.call(req)))
 			.map_err(|err| (self.handler)(&method, err))
 		{
@@ -110,7 +125,7 @@ where
 				method,
 				handler,
 			} => {
-				// FIXME: Clarify conditions of UnwindSafe.
+				// SAFETY: See module-level documentation on unwind safety implications.
 				match catch_unwind(AssertUnwindSafe(|| fut.poll(cx))) {
 					Ok(poll) => poll,
 					Err(payload) => Poll::Ready(Err(handler(method, payload))),
