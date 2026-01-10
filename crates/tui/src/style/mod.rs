@@ -88,12 +88,12 @@ mod palette_conversion;
 /// Stylize trait and implementations.
 #[macro_use]
 mod stylize;
-/// Underline style types.
-mod underline;
 /// Style conversion implementations for From trait.
 mod conversions;
 #[cfg(test)]
 mod tests;
+/// Underline style types.
+mod underline;
 
 #[cfg(feature = "serde")]
 /// Deserialize a [`Modifier`] while treating missing or `null` values as empty.

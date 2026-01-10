@@ -4,7 +4,7 @@
 //! including version numbers, diagnostics, and language server associations.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::time::Instant;
 
@@ -71,7 +71,7 @@ impl DocumentState {
 	/// Create a new document state from a file path.
 	///
 	/// Returns `None` if the path cannot be converted to a URL.
-	pub fn new(path: &PathBuf) -> Option<Self> {
+	pub fn new(path: &Path) -> Option<Self> {
 		let uri = crate::uri_from_path(path)?;
 		Some(Self {
 			uri,
@@ -262,7 +262,7 @@ impl DocumentStateManager {
 	}
 
 	/// Get document state by file path.
-	pub fn get_by_path(&self, path: &PathBuf) -> Option<Uri> {
+	pub fn get_by_path(&self, path: &Path) -> Option<Uri> {
 		let uri = crate::uri_from_path(path)?;
 		let key = self.uri_key(&uri);
 		let docs = self.documents.read();
@@ -280,7 +280,7 @@ impl DocumentStateManager {
 	}
 
 	/// Register a document.
-	pub fn register(&self, path: &PathBuf, language_id: Option<&str>) -> Option<Uri> {
+	pub fn register(&self, path: &Path, language_id: Option<&str>) -> Option<Uri> {
 		let uri = crate::uri_from_path(path)?;
 		let key = self.uri_key(&uri);
 
@@ -361,9 +361,7 @@ impl DocumentStateManager {
 	pub fn get_diagnostics(&self, uri: &Uri) -> Vec<Diagnostic> {
 		let key = self.uri_key(uri);
 		let docs = self.documents.read();
-		docs.get(&key)
-			.map(|s| s.diagnostics())
-			.unwrap_or_default()
+		docs.get(&key).map(|s| s.diagnostics()).unwrap_or_default()
 	}
 
 	/// Increment version for a document and return the new version.
@@ -393,9 +391,7 @@ impl DocumentStateManager {
 	pub fn is_opened(&self, uri: &Uri) -> bool {
 		let key = self.uri_key(uri);
 		let docs = self.documents.read();
-		docs.get(&key)
-			.map(|s| s.is_opened())
-			.unwrap_or(false)
+		docs.get(&key).map(|s| s.is_opened()).unwrap_or(false)
 	}
 
 	/// Get all documents with errors.

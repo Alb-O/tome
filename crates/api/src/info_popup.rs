@@ -170,4 +170,9 @@ impl InfoPopupStore {
 	pub fn len(&self) -> usize {
 		self.popups.len()
 	}
+
+	/// Returns true if there are no active popups.
+	pub fn is_empty(&self) -> bool {
+		self.popups.is_empty()
+	}
 }

@@ -82,17 +82,17 @@ impl<T: Terminal> Backend for TerminaBackend<T> {
 			if cell.modifier.contains(xeno_tui::style::Modifier::ITALIC) {
 				attrs.modifiers |= SgrModifiers::ITALIC;
 			}
-			let underline_style =
-				if cell.underline_style != xeno_tui::style::UnderlineStyle::Reset {
-					cell.underline_style
-				} else if cell
-					.modifier
-					.contains(xeno_tui::style::Modifier::UNDERLINED)
-				{
-					xeno_tui::style::UnderlineStyle::Line
-				} else {
-					xeno_tui::style::UnderlineStyle::Reset
-				};
+			let underline_style = if cell.underline_style != xeno_tui::style::UnderlineStyle::Reset
+			{
+				cell.underline_style
+			} else if cell
+				.modifier
+				.contains(xeno_tui::style::Modifier::UNDERLINED)
+			{
+				xeno_tui::style::UnderlineStyle::Line
+			} else {
+				xeno_tui::style::UnderlineStyle::Reset
+			};
 
 			let underline_modifier = match underline_style {
 				xeno_tui::style::UnderlineStyle::Reset => None,

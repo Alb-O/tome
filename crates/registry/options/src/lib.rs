@@ -115,6 +115,9 @@ pub mod keys {
 
 pub use xeno_registry_core::{Key, RegistryMetadata, RegistrySource, impl_registry_metadata};
 
+/// Validator function signature for option constraints.
+pub type OptionValidator = fn(&OptionValue) -> Result<(), String>;
+
 /// The value of an option.
 #[derive(Debug, Clone, PartialEq)]
 pub enum OptionValue {
@@ -293,7 +296,7 @@ pub struct OptionDef {
 	/// Optional validator for value constraints.
 	///
 	/// Returns `Ok(())` if valid, `Err(reason)` if invalid.
-	pub validator: Option<fn(&OptionValue) -> Result<(), String>>,
+	pub validator: Option<OptionValidator>,
 }
 
 impl core::fmt::Debug for OptionDef {

@@ -87,9 +87,9 @@ cfg_if::cfg_if! {
 use crate::backend::{Backend, ClearType, WindowSize};
 use crate::buffer::Cell;
 use crate::layout::{Position, Size};
-use crate::style::{Color, Modifier, Style};
 #[cfg(feature = "underline-color")]
 use crate::style::UnderlineStyle;
+use crate::style::{Color, Modifier, Style};
 
 /// A [`Backend`] implementation that uses [Crossterm] to render to the terminal.
 ///

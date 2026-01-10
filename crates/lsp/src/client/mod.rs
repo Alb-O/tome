@@ -740,11 +740,8 @@ pub fn start_server(
 			// Server->client requests
 			.request::<lsp_types::request::WorkspaceConfiguration, _>(|_state, params| {
 				// Return empty config object for each requested item
-				let result: Vec<serde_json::Value> = params
-					.items
-					.iter()
-					.map(|_| serde_json::json!({}))
-					.collect();
+				let result: Vec<serde_json::Value> =
+					params.items.iter().map(|_| serde_json::json!({})).collect();
 				async move { Ok(result) }
 			})
 			.request::<lsp_types::request::WorkDoneProgressCreate, _>(|_state, _params| {

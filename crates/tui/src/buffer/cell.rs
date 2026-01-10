@@ -1,8 +1,8 @@
 use compact_str::CompactString;
 
-use crate::style::{Color, Modifier, Style};
 #[cfg(feature = "underline-color")]
 use crate::style::UnderlineStyle;
+use crate::style::{Color, Modifier, Style};
 use crate::symbols::merge::MergeStrategy;
 
 /// A buffer cell

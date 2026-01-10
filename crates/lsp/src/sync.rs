@@ -174,7 +174,7 @@ impl DocumentSync {
 
 		let uri = self
 			.documents
-			.register(&path.to_path_buf(), Some(language))
+			.register(path, Some(language))
 			.ok_or_else(|| crate::Error::Protocol("Invalid path".into()))?;
 
 		let version = self.documents.get_version(&uri).unwrap_or(0);

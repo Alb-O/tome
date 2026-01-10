@@ -104,9 +104,21 @@ pub fn build_diagnostic_range_map(
 		let end_line = diag.range.end.line as usize;
 
 		for line in start_line..=end_line {
-			let start_char = if line == start_line { diag.range.start.character as usize } else { 0 };
-			let end_char = if line == end_line { diag.range.end.character as usize } else { usize::MAX };
-			map.entry(line).or_default().push(DiagnosticSpan { start_char, end_char, severity });
+			let start_char = if line == start_line {
+				diag.range.start.character as usize
+			} else {
+				0
+			};
+			let end_char = if line == end_line {
+				diag.range.end.character as usize
+			} else {
+				usize::MAX
+			};
+			map.entry(line).or_default().push(DiagnosticSpan {
+				start_char,
+				end_char,
+				severity,
+			});
 		}
 	}
 
@@ -325,7 +337,11 @@ impl<'a> BufferRenderContext<'a> {
 				max_severity = max_severity.max(span.severity);
 			}
 		}
-		if max_severity > 0 { Some(max_severity) } else { None }
+		if max_severity > 0 {
+			Some(max_severity)
+		} else {
+			None
+		}
 	}
 
 	/// Applies diagnostic underline styling to a style if the position has a diagnostic.
@@ -537,8 +553,11 @@ impl<'a> BufferRenderContext<'a> {
 
 					// Apply diagnostic underlines based on character position
 					let char_in_line = seg_char_offset + i;
-					let non_cursor_style =
-						self.apply_diagnostic_underline(current_line_idx, char_in_line, non_cursor_style);
+					let non_cursor_style = self.apply_diagnostic_underline(
+						current_line_idx,
+						char_in_line,
+						non_cursor_style,
+					);
 
 					let style = if is_cursor && (use_block_cursor || !is_focused) {
 						if blink_on || !is_focused {
